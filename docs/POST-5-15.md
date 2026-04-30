@@ -28,3 +28,25 @@ The orchestrator is channel-agnostic. Each new channel = MCP server with `receiv
 **Decision input needed from Antonio:** which channels do his clients ACTUALLY message him on today? Order matches real volume, not generic logic.
 
 ---
+
+## Document scanning — capture polish (post-5/15)
+
+The 4-phase docs-upload UX (empty → AI scanning → retake → parsed) ships in v0 with **vanilla `<input type="file" accept="image/*" capture="environment">`** + Sonnet 4.6 vision for extraction. The AI feedback loop (retake on low confidence, field-by-field missing-data prompts) is the actual moat. Camera UX polish is layer 2.
+
+**If Antonio reports upload quality issues from clients, layer in:**
+
+- **jscanify** ([colonelparrot/jscanify](https://github.com/ColonelParrot/jscanify)) — MIT, OpenCV.js WASM (~8MB), drops into Next.js. Auto edge detection + corner highlights + perspective correction in the browser. Tradeoff: WASM cold start, fragile detection on cluttered backgrounds.
+- Or **roll our own** with OpenCV.js using jscanify's source as reference. Lets us tune the auto-capture stability heuristic (N stable frames before snap).
+
+**Only if we ever ship a native shell (v2+, not on roadmap):**
+
+- `@dariyd/react-native-document-scanner` (MIT, updated, new RN architecture) — wraps Apple VisionKit `VNDocumentCameraViewController` (iOS) + Google ML Kit Document Scanner (Android). Both platform APIs are free and ship the full auto-capture UX you see in banking apps.
+
+**Explicit NOs:**
+
+- Scanbot SDK / Genius Scan SDK — commercial, expensive. Don't pay for capture polish when scanning isn't our wedge.
+- Building our own native scanner from scratch — wrong layer of the stack to compete on.
+
+**Reference apps for design study:** MakeACopy (Apache 2.0, ONNX corner detection), OSS Document Scanner (F-Droid).
+
+---

@@ -8,8 +8,8 @@ export type Density = 'comfortable' | 'cozy';
 
 export const DOCKET_TOKENS = {
   editorial: {
-    bg: '#F5F2EA',
-    bgElev: '#FBF9F3',
+    bg: '#F9F6EF',
+    bgElev: '#FDFBF6',
     ink: '#1A1612',
     inkSoft: '#4A4038',
     muted: '#8A7F72',

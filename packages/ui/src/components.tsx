@@ -1814,3 +1814,228 @@ export function IncomeIcon({ kind, size = 20 }: { kind: IncomeIconKind; size?: n
       );
   }
 }
+
+// ────────────────────────────────────────────────────────────────
+// LegalDoc — scrollable legal document viewer used by engagement
+// letter and §7216 consent screens.
+// ────────────────────────────────────────────────────────────────
+
+export function LegalDoc({
+  t,
+  title,
+  paras,
+}: {
+  t: Theme;
+  title: string;
+  paras: string[];
+}) {
+  return (
+    <div
+      style={{
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: t.radius,
+        padding: '20px 20px 18px',
+        maxHeight: 260,
+        overflowY: 'auto',
+        fontSize: 13,
+        lineHeight: 1.55,
+        color: t.inkSoft,
+        fontFamily: t.serif,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: t.ink,
+          marginBottom: 10,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          fontFamily: t.sans,
+        }}
+      >
+        {title}
+      </div>
+      {paras.map((p, i) => (
+        <p key={i} style={{ margin: '0 0 10px' }}>
+          {p}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// SignaturePad — tap-to-sign component. Renders the signer's
+// name in a script font + cryptographic-looking timestamp once
+// signed.
+// ────────────────────────────────────────────────────────────────
+
+function formatNowTimestamp(): string {
+  const now = new Date();
+  const month = now.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+  const day = now.getDate();
+  const year = now.getFullYear();
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `SIGNED ${month} ${day}, ${year} · ${hours}:${minutes} ${ampm} PT`;
+}
+
+export function SignaturePad({
+  t,
+  signed,
+  onSign,
+  name,
+  timestamp,
+}: {
+  t: Theme;
+  signed: boolean;
+  onSign: () => void;
+  name: string;
+  timestamp?: string;
+}) {
+  return (
+    <div
+      onClick={() => !signed && onSign()}
+      style={{
+        background: t.bgElev,
+        border: `1.5px dashed ${signed ? t.rust : t.border}`,
+        borderRadius: t.radius,
+        padding: signed ? '14px 18px' : '28px 18px',
+        cursor: signed ? 'default' : 'pointer',
+        transition: 'all 0.2s',
+      }}
+    >
+      {signed ? (
+        <div>
+          <div
+            style={{
+              fontFamily: '"Caveat", "Brush Script MT", cursive',
+              fontSize: 28,
+              color: t.ink,
+              lineHeight: 1,
+            }}
+          >
+            {name || 'Signature'}
+          </div>
+          <div
+            style={{
+              fontFamily: t.mono,
+              fontSize: 10,
+              color: t.muted,
+              letterSpacing: 0.5,
+              marginTop: 4,
+            }}
+          >
+            {timestamp || formatNowTimestamp()}
+          </div>
+        </div>
+      ) : (
+        <Row justify="center" gap={8}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M2 12l3-1 8-8 1 1-8 8-1 3-3-3z"
+              stroke={t.muted}
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span style={{ fontSize: 14, color: t.muted }}>Tap to sign</span>
+        </Row>
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// HandCheckmark — animated success mark used by ScreenDone and
+// the post-8879 sign success overlay (Batch D).
+// ────────────────────────────────────────────────────────────────
+
+export function HandCheckmark({ t, size = 120 }: { t: Theme; size?: number }) {
+  return (
+    <>
+      <style>{`
+        @keyframes hc-pop {
+          0%   { transform: scale(0);   opacity: 0; }
+          60%  { transform: scale(1.08); opacity: 1; }
+          100% { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes hc-draw {
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes hc-halo {
+          0%   { transform: scale(0.4); opacity: 0.6; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+      `}</style>
+      <svg width={size} height={size} viewBox="0 0 120 120" style={{ display: 'block', overflow: 'visible' }}>
+        <circle
+          cx="60"
+          cy="60"
+          r="46"
+          fill="none"
+          stroke={t.rust}
+          strokeWidth="1.5"
+          opacity="0"
+          style={{
+            transformOrigin: '60px 60px',
+            animation: 'hc-halo 1.1s ease-out 0.35s forwards',
+          }}
+        />
+        <g
+          style={{
+            transformOrigin: '60px 60px',
+            animation: 'hc-pop 0.55s cubic-bezier(.34,1.56,.64,1) both',
+          }}
+        >
+          <circle cx="60" cy="60" r="46" fill={t.rust} />
+        </g>
+        <path
+          d="M40 62 L54 76 L82 46"
+          stroke="#fff"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+          style={{
+            strokeDasharray: 70,
+            strokeDashoffset: 70,
+            animation: 'hc-draw 0.5s cubic-bezier(.65,0,.35,1) 0.45s forwards',
+          }}
+        />
+      </svg>
+    </>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// IntakeBottomBar — sticky footer pattern shared by intake screens
+// without the Ask Antonio bar (engagement, consent, done).
+// ────────────────────────────────────────────────────────────────
+
+export function IntakeBottomBar({
+  t,
+  children,
+}: {
+  t: Theme;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        position: 'sticky',
+        bottom: 0,
+        background: `linear-gradient(to top, ${t.bg} 70%, transparent)`,
+        padding: '24px 24px 32px',
+        display: 'flex',
+        gap: 10,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
