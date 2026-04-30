@@ -195,7 +195,8 @@ The product is **practice management surface + agentic engine** built as four la
 | Background jobs | **Inngest** | Durable execution. Critical for multi-minute browser automation runs. |
 | Vector | pgvector in same Postgres | No separate vector DB at v0. |
 | Observability | **OpenTelemetry → Honeycomb** (or Datadog) | Every tool call is a span. |
-| Hosting | **Vercel** (Next.js apps) + **Fly.io** (services + Playwright workers) | Hobby/free tiers during v0. |
+| Hosting | **Vercel Pro** (Next.js apps, $20/mo — NOT Hobby) + **Fly.io** for Playwright workers when browser automation lands (M2+) | Hobby is forbidden by Vercel for commercial use. See `docs/HOSTING.md`. |
+| Database | **Neon Launch** ($19/mo, auto-suspend OFF) | Was: Neon Free. Free tier auto-suspends after 5 min and adds cold-start latency that breaks the 10-min Gmail poll. |
 | Secrets | `.env.local` for dev → **Infisical** for prod | Per-tenant credential vault for browser automation. |
 
 ### What we explicitly REJECTED as base
