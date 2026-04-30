@@ -1659,3 +1659,158 @@ export function BackButton({
     </button>
   );
 }
+
+// ────────────────────────────────────────────────────────────────
+// ToggleCard — multi-select card with icon well + check square.
+// Used by self-employment, tax-questions, deductions, life-events.
+// `emphasis: true` switches selected accent from ink (default) to rust.
+// ────────────────────────────────────────────────────────────────
+
+export function ToggleCard({
+  t,
+  on,
+  onClick,
+  icon,
+  label,
+  sub,
+  emphasis = false,
+}: {
+  t: Theme;
+  on: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  sub?: string;
+  emphasis?: boolean;
+}) {
+  const accent = emphasis ? t.rust : t.ink;
+  const accentSoft = emphasis ? t.tintAccent : t.bgElev;
+  const borderColor = on ? accent : t.border;
+  const bg = on ? accentSoft : t.card;
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        width: '100%',
+        padding: '14px 16px',
+        background: bg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: t.radius,
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontFamily: t.sans,
+        transition: 'border-color 120ms, background 120ms',
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          background: on ? accent : t.bgElev,
+          border: `1px solid ${on ? 'transparent' : t.borderSoft}`,
+          color: on ? '#fff' : t.inkSoft,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 15,
+            color: t.ink,
+            fontWeight: 500,
+            letterSpacing: -0.1,
+            marginBottom: sub ? 2 : 0,
+          }}
+        >
+          {label}
+        </div>
+        {sub && <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.35 }}>{sub}</div>}
+      </div>
+
+      <div
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 6,
+          border: `1.5px solid ${on ? accent : t.border}`,
+          background: on ? accent : '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {on && (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2">
+            <path d="M2.5 6.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// IncomeIcon — 5-variant icon for ScreenIncomeSources.
+// kind: w2 | self | rental | invest | retire
+// ────────────────────────────────────────────────────────────────
+
+export type IncomeIconKind = 'w2' | 'self' | 'rental' | 'invest' | 'retire';
+
+export function IncomeIcon({ kind, size = 20 }: { kind: IncomeIconKind; size?: number }) {
+  const s = {
+    width: size,
+    height: size,
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.5,
+  } as const;
+  switch (kind) {
+    case 'w2':
+      return (
+        <svg {...s} viewBox="0 0 20 20">
+          <rect x="3" y="4" width="14" height="13" rx="1.5" />
+          <path d="M6 8h8M6 11h8M6 14h5" strokeLinecap="round" />
+        </svg>
+      );
+    case 'self':
+      return (
+        <svg {...s} viewBox="0 0 20 20">
+          <circle cx="10" cy="6.5" r="2.5" />
+          <path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" strokeLinecap="round" />
+        </svg>
+      );
+    case 'rental':
+      return (
+        <svg {...s} viewBox="0 0 20 20">
+          <path d="M3 9l7-5 7 5v8H3V9z" strokeLinejoin="round" />
+          <path d="M8 17v-4h4v4" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'invest':
+      return (
+        <svg {...s} viewBox="0 0 20 20">
+          <path d="M3 15l4-4 3 2 7-8" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M13 5h4v4" strokeLinecap="round" />
+        </svg>
+      );
+    case 'retire':
+      return (
+        <svg {...s} viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="7" />
+          <path d="M10 6v4l3 2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+  }
+}
