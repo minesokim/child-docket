@@ -39,12 +39,14 @@ Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__*
 
 | | |
 |---|---|
-| Vision | The agentic operator for a tax practice. Top-tier preparer-grade AI animates every surface; drives the existing tax stack via browser automation. |
+| Vision | The agentic operator for a tax practice. Top-tier preparer-grade AI animates every surface; drives the existing tax stack via API-first integrations + browser automation as fallback. |
 | Pitch | "Your practice. Every tool. One operator." |
+| Memory architecture (stolen from Practiq) | **"Memory scoped to the client."** Every action, doc, message lives on the client record — not in a chat thread. The practice ledger enforces this. |
 | Codename | Docket (final brand TBD; repo named `child-docket` to mark this as the consulting/services flywheel that becomes the platform) |
 | Founder | David Kim (legal: Minseo Kim) — `minseodavid@gmail.com` |
-| Stage | v0 scaffold complete (Apr 30, 2026). Pre-revenue. Forward-deployed build for first design partner. |
+| Stage | v0 scaffold complete (Apr 30, 2026). **Hard ship date: May 15, 2026** for child-product demo (15 days). Pre-revenue. Forward-deployed build for first design partner. |
 | Repo | `C:\Users\minse\projects\docket\` (local) ↔ [github.com/minesokim/child-docket](https://github.com/minesokim/child-docket) (private) |
+| Distribution unlock | Antonio's mentor commands 1000s+ tax preparers. Get her a Docket walk-through before 5/15 demo. |
 
 ---
 
@@ -77,12 +79,14 @@ Every consulting engagement runs on the same multi-tenant substrate. If a build 
 
 ## 3. Persona — Antonio at Vazant Consulting
 
-The first design partner is **Antonio**, a California EA running both prep AND representation work (the full lifecycle: prep → represent → defend). Already uses browser automation in current workflows.
+The first design partner is **Antonio**, a California EA running both prep AND representation work (the full lifecycle: prep → represent → defend).
 
 **His stack:**
-- **OLT (OnLine Taxes)** — primary tax prep software. No public API. Browser automation is the only integration path. **Critical: zero AI-native competitors integrate with OLT** — this is a forced moat for Docket.
-- **IRS Solutions** ([irssolutions.com](https://www.irssolutions.com/)) — tax resolution platform. Auto-fills and e-signs 2848 / 8821. Pulls IRS transcripts. IRS Advance Notice (IAN) monitors client transcripts for liens, audits, OIC activity, installment changes. OIC calculator trained on IRM.
+- **OLT (OnLine Taxes)** — primary tax prep software. No public API. Browser automation is the only integration path. **Critical: zero AI-native competitors integrate with OLT** — this is a forced moat for Docket. **Defer to M2+; not in 5/15 v0.**
+- **IRS Solutions** ([irssolutions.com](https://www.irssolutions.com/)) — tax resolution platform. **TOS forbids browser automation.** They have a **private API** Antonio can request via email. The API is the integration path. **Antonio emails them ASAP; v0 demo (5/15) ships without live integration.**
 - **Xero** — bookkeeping. API-first, mature MCP wrapper available.
+
+**Antonio's mentor:** Commands 1000s+ tax preparers in her network. The distribution unlock for partners #2–#10. Get her a Docket walk-through before 5/15. Decide before pitching: introducer? co-promoter? equity advisor? affiliate?
 
 ### Why this stack matters for build order
 - Partner does both prep + rep, so Docket spans both pillars from v1 (not "prep first, rep later")
@@ -417,7 +421,48 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 
 ---
 
-## 15. Build order — 12 weeks
+## 15. Build order — 15 DAYS to demo (5/15), then 12 weeks to first paying customer
+
+### 5/15 SHIP — demo-quality v0 for conventions + investor pitch
+
+**Days 1–3 (May 1–3) — Foundation:**
+- Neon free-tier Postgres + Drizzle migrations (multi-tenant RLS)
+- Antonio + 10 realistic seed clients
+- Practice ledger schema with mock historical actions
+
+**Days 4–7 (May 4–7) — Client Portal port (parallel track):**
+- Port the 36 screens from `C:\Users\minse\Downloads\docket-portal-design\` to Next.js app router
+- Login → SMS OTP (Twilio test) → 13-step intake → docs → engagement letter → §7216 consent → schedule → Stripe deposit → done
+- Returning portal 5-tab shell
+
+**Days 8–12 (May 8–12) — Command Room build (v3 architecture in v4 design language):**
+- Sidebar nav: Overview / Clients / Calendar / Messages / Documents / Settings
+- Morning Brief: metric cards + narrative (real Sonnet generation)
+- "Need You" kanban (Sign & file / New intakes / Ready to prep / Need calc)
+- Pipeline status header (Need You / Waiting / In Progress / Done)
+- Messages pane with Inbox Drafter ("Send as Antonio" / "Edit" buttons, real Sonnet calls)
+- To-do list + Action Feed (AI drafts staged for review)
+- **Ask Docket** — natural language Q&A over practice ledger + IRS knowledge layer (real Sonnet RAG)
+- Notice Triage demo: manual upload of CP2000 → AI classifies + drafts response (Approach A only — no IRS Solutions integration)
+- Search bar (Postgres ILIKE for v0)
+
+**Days 13–15 (May 13–15) — Polish + demo prep:**
+- Visual polish to match Vazant editorial design fidelity
+- Antonio's onboarding walkthrough
+- Bug fixes
+- 5–10 slide pitch deck v0
+- Loom demo video
+
+**5/15 DEFERS** (NOT in v0): IRS Solutions live integration · OLT browser automation · Bilingual UI strings · Stripe Identity KYC · KBA-compliant 8879 e-signature · Outcome Prediction (Blue J) · Practice Intelligence module · Voice agent · Doc-chase · SOC 2 Type II · Multi-state knowledge layer.
+
+**Surface ancestry to merge:**
+- **v3 Vazant Dashboard** (`vazant-dashboard-v3.vercel.app`) → information architecture
+- **v4 Vazant Client Portal** (`C:\Users\minse\Downloads\docket-portal-design\`) → editorial-warm design language
+- v0 = v3's IA in v4's design
+
+### Post-5/15 — 12 weeks to paying customer (Antonio onboarded)
+
+
 
 ### Phase 1 (Weeks 1–3) — Foundation infra + Client Portal port
 Port the design while the orchestrator is being built in parallel.
@@ -503,6 +548,11 @@ The rules that prevent services-revenue from killing the platform:
 - **TaxDome AI** — file detection, NL reporting, bundled
 - **Canopy** — direct IRS integration, transcript pulls; AI is shallow but shipping
 - **Karbon** — strongest email AI among PM incumbents
+
+### Practiq — horizontal-shallow adjacency (not direct competitor)
+[practiq.dev](https://practiq.dev/) — AI workspace for boutique professional services firms (multi-vertical: accounting, law, HR, consulting, marketing). Tagline: *"AI built around your clients, not your chats."* Client-scoped memory, autonomous overnight scanning, AI-generated deliverables in firm voice, anomaly detection. **Explicitly admit they have no client portal** — pair with TaxDome/Canopy. Owned by Grindworks/Cliwant (DE).
+
+**They have to build 12–18 months to reach our tax-vertical depth:** no IRS knowledge layer, no rep work pillar, no portal, no tax-software integration. Watch but don't react. Steal: "memory scoped to the client" framing (locked into Docket positioning), autonomous overnight scanning marketing pillar, "in firm voice + client preferred format" phrasing.
 
 ### Strategic read
 The well-funded AI-native competitors ($235M+ combined) are economically forced up-market. They cannot serve Antonio's segment. The PM incumbents ship shallow AI features but lack return intelligence. **The third layer — practice + relationship + rep — is open.** Docket's structural lane.
