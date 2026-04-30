@@ -1,0 +1,19 @@
+// Public API of @docket/workers — Inngest functions registered here are
+// served via the Next.js route handler at apps/command-room/src/app/api/inngest/route.ts.
+
+export { inngest } from './inngest-client.js';
+export { gmailPoll } from './functions/gmail-poll.js';
+export { classifyGmailMessage } from './functions/classify-gmail-message.js';
+
+// Re-export the agent factory for direct invocation in tests / scripts.
+export { classifySignal } from './agents/triage-classifier.js';
+export type {
+  ClassifierSignal,
+  ClassifierContext,
+  ClassifierOutput,
+} from './agents/triage-classifier.js';
+
+// Function array for Inngest serve() handler — Next.js route uses this.
+import { gmailPoll } from './functions/gmail-poll.js';
+import { classifyGmailMessage } from './functions/classify-gmail-message.js';
+export const functions = [gmailPoll, classifyGmailMessage];

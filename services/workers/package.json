@@ -1,0 +1,29 @@
+{
+  "name": "@docket/workers",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test:classifier": "tsx src/test/classifier.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@docket/shared": "workspace:*",
+    "@docket/db": "workspace:*",
+    "@docket/orchestrator": "workspace:*",
+    "@anthropic-ai/sdk": "^0.91.1",
+    "inngest": "^3.27.4",
+    "drizzle-orm": "^0.36.4",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
+    "dotenv": "^16.4.7"
+  }
+}

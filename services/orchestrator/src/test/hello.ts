@@ -28,7 +28,8 @@ async function main() {
     maxTokens: 200,
     cachedSystem: false,
     onAction: async (entry) => {
-      console.log(`  ▸ action logged: ${entry.toolName} (${entry.latencyMs}ms, $${entry.costUsd.toFixed(6)})`);
+      const cost = entry.costUsd?.toFixed(6) ?? '0.000000';
+      console.log(`  ▸ action logged: ${entry.toolName} (${entry.latencyMs}ms, $${cost})`);
     },
   });
 
