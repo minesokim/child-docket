@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./tokens": "./src/tokens.ts",
     "./components": "./src/components.tsx",
+    "./services-catalog": "./src/services-catalog.tsx",
     "./styles": "./src/styles.css"
   },
   "scripts": {

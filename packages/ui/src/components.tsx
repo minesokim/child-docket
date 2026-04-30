@@ -388,7 +388,7 @@ export function Placeholder({
 export function AvatarSlot({
   t,
   size = 56,
-  src,
+  src = '/antonio.webp',
   label = 'A',
   style,
 }: {
@@ -408,37 +408,592 @@ export function AvatarSlot({
         border: `1px solid ${t.border}`,
         flexShrink: 0,
         background: t.bgElev,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         ...style,
       }}
     >
-      {src ? (
-        <img
-          src={src}
-          alt={label}
+      <img
+        src={src}
+        alt={label}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: '50% 22%',
+          display: 'block',
+        }}
+      />
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// VideoPlaceholder — leafy green tinted "A message from Antonio"
+// video tile shown on Welcome screen.
+// ────────────────────────────────────────────────────────────────
+
+export function VideoPlaceholder({ t }: { t: Theme }) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        aspectRatio: '16 / 9',
+        borderRadius: t.radius,
+        overflow: 'hidden',
+        position: 'relative',
+        background: 'linear-gradient(135deg, #1a3a26 0%, #0c1f15 70%, #050a07 100%)',
+        cursor: 'pointer',
+        boxShadow: '0 8px 24px rgba(12, 31, 21, 0.18)',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse at 25% 20%, rgba(120, 180, 140, 0.12), transparent 55%)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 3px)',
+          mixBlendMode: 'overlay',
+        }}
+      />
+
+      <div style={{ position: 'absolute', top: 14, left: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: '50% 22%',
-            display: 'block',
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: '#d94545',
+            boxShadow: '0 0 0 3px rgba(217, 69, 69, 0.22)',
           }}
         />
-      ) : (
         <span
           style={{
-            fontFamily: t.serif,
-            fontSize: size * 0.4,
-            color: t.ink,
-            letterSpacing: -0.4,
+            fontFamily: t.mono,
+            fontSize: 9.5,
+            color: 'rgba(255,255,255,0.75)',
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
           }}
         >
-          {label}
+          REC · ANTONIO
         </span>
-      )}
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 68,
+            height: 68,
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.15)',
+            border: '1.5px solid rgba(255, 255, 255, 0.35)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+            transition: 'transform 0.15s',
+          }}
+        >
+          <svg width="22" height="24" viewBox="0 0 22 24" fill="none" style={{ marginLeft: 4 }}>
+            <path d="M2 2 L20 12 L2 22 Z" fill="#fff" />
+          </svg>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              fontFamily: t.serif,
+              fontSize: 17,
+              color: '#fff',
+              letterSpacing: -0.2,
+              fontStyle: 'italic',
+              marginBottom: 4,
+            }}
+          >
+            A message from Antonio
+          </div>
+          <div
+            style={{
+              fontFamily: t.mono,
+              fontSize: 10.5,
+              color: 'rgba(255,255,255,0.6)',
+              letterSpacing: 0.8,
+            }}
+          >
+            1:12 · TAP TO PLAY
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 10,
+          left: 14,
+          right: 14,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: t.mono,
+            fontSize: 9,
+            color: 'rgba(255,255,255,0.55)',
+            letterSpacing: 0.5,
+          }}
+        >
+          0:00
+        </span>
+        <div style={{ flex: 1, height: 2, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+        <span
+          style={{
+            fontFamily: t.mono,
+            fontSize: 9,
+            color: 'rgba(255,255,255,0.55)',
+            letterSpacing: 0.5,
+          }}
+        >
+          1:12
+        </span>
+      </div>
     </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// TrustPill — used on Welcome to display AES-256, EA, ~10 min badges.
+// ────────────────────────────────────────────────────────────────
+
+export function TrustPill({
+  t,
+  children,
+  icon,
+}: {
+  t: Theme;
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '5px 11px',
+        background: t.bgElev,
+        border: `1px solid ${t.borderSoft}`,
+        borderRadius: 999,
+        fontFamily: t.sans,
+        fontSize: 11,
+        color: t.inkSoft,
+        letterSpacing: 0.1,
+      }}
+    >
+      {icon}
+      {children}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// AskAntonioBar — sticky pill at the bottom of intake screens.
+// Click → dispatches `ask-antonio:open` event → AskAntonioChat opens.
+// ────────────────────────────────────────────────────────────────
+
+export function AskAntonioBar({
+  t,
+  onMessage,
+}: {
+  t: Theme;
+  onMessage?: () => void;
+}) {
+  const handleClick = () => {
+    if (onMessage) onMessage();
+    try {
+      window.dispatchEvent(new CustomEvent('ask-antonio:open'));
+    } catch {
+      // SSR / missing window — no-op
+    }
+  };
+  return (
+    <div
+      onClick={handleClick}
+      style={{
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 999,
+        padding: '6px 8px 6px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        boxShadow: '0 4px 12px rgba(60, 40, 28, 0.04)',
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <AvatarSlot t={t} size={30} />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -1,
+            right: -1,
+            width: 9,
+            height: 9,
+            borderRadius: '50%',
+            background: '#4a8f5f',
+            border: `2px solid ${t.card}`,
+          }}
+        />
+      </div>
+      <span style={{ flex: 1, fontSize: 12.5, color: t.inkSoft }}>
+        Not sure? Ask Antonio
+      </span>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleClick();
+        }}
+        style={{
+          padding: '6px 14px',
+          fontSize: 12,
+          fontWeight: 500,
+          background: t.rust,
+          color: '#fff',
+          border: 'none',
+          borderRadius: 999,
+          cursor: 'pointer',
+          fontFamily: t.sans,
+        }}
+      >
+        Message
+      </button>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// AskAntonioChat — global bottom-sheet modal. Listens for
+// `ask-antonio:open` events. Renders chat thread + composer.
+// Mount once at the (intake) layout level so any screen can trigger it.
+// ────────────────────────────────────────────────────────────────
+
+type ChatMsg = { from: 'a' | 'u'; text: string; time: string };
+
+export function AskAntonioChat({ t }: { t: Theme }) {
+  const [open, setOpen] = React.useState(false);
+  const [input, setInput] = React.useState('');
+  const [messages, setMessages] = React.useState<ChatMsg[]>([
+    { from: 'a', text: "Hey — I'm here. What can I help with?", time: '2:14 PM' },
+  ]);
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener('ask-antonio:open', onOpen);
+    return () => window.removeEventListener('ask-antonio:open', onOpen);
+  }, []);
+
+  React.useEffect(() => {
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    }
+  }, [messages, open]);
+
+  const send = () => {
+    if (!input.trim()) return;
+    const msg = input.trim();
+    const now = new Date();
+    const time = `${((now.getHours() + 11) % 12) + 1}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
+    setMessages((m) => [...m, { from: 'u', text: msg, time }]);
+    setInput('');
+    setTimeout(() => {
+      setMessages((m) => [
+        ...m,
+        { from: 'a', text: "Got it. Give me a few minutes — I'll come back with specifics.", time },
+      ]);
+    }, 1400);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(32, 22, 16, 0.42)',
+        zIndex: 60,
+        display: 'flex',
+        alignItems: 'flex-end',
+        backdropFilter: 'blur(2px)',
+        animation: 'docket-fade-in 160ms ease-out',
+      }}
+      onClick={() => setOpen(false)}
+    >
+      <style>{`
+        @keyframes docket-fade-in { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes docket-slide-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
+      `}</style>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          margin: '0 auto',
+          height: '78%',
+          background: t.bg,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'docket-slide-up 220ms cubic-bezier(.2,.8,.2,1)',
+          overflow: 'hidden',
+          boxShadow: '0 -12px 40px rgba(20,10,0,0.18)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 0' }}>
+          <div style={{ width: 40, height: 4, background: t.border, borderRadius: 2 }} />
+        </div>
+
+        <div
+          style={{
+            padding: '14px 18px 14px',
+            borderBottom: `1px solid ${t.borderSoft}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div style={{ position: 'relative' }}>
+            <AvatarSlot t={t} size={40} />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 11,
+                height: 11,
+                borderRadius: '50%',
+                background: '#4a8f5f',
+                border: `2px solid ${t.bg}`,
+              }}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 500, color: t.ink, letterSpacing: -0.1 }}>
+              Antonio Vazquez, EA
+            </div>
+            <div style={{ fontSize: 11.5, color: '#4a8f5f', fontFamily: t.mono, letterSpacing: 0.3 }}>
+              ● Online · typically replies within an hour
+            </div>
+          </div>
+          <button
+            onClick={() => setOpen(false)}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: '50%',
+              border: 'none',
+              background: t.bgElev,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={t.inkSoft} strokeWidth="1.6" strokeLinecap="round">
+              <path d="M3 3l6 6M9 3l-6 6" />
+            </svg>
+          </button>
+        </div>
+
+        <div
+          ref={scrollerRef}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px 18px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+          }}
+        >
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: m.from === 'u' ? 'flex-end' : 'flex-start',
+                gap: 3,
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: '80%',
+                  padding: '10px 14px',
+                  borderRadius: m.from === 'u' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                  background: m.from === 'u' ? t.rust : t.card,
+                  color: m.from === 'u' ? '#fff' : t.ink,
+                  border: m.from === 'u' ? 'none' : `1px solid ${t.border}`,
+                  fontSize: 14,
+                  lineHeight: 1.4,
+                  fontFamily: t.sans,
+                }}
+              >
+                {m.text}
+              </div>
+              <div
+                style={{
+                  fontFamily: t.mono,
+                  fontSize: 9.5,
+                  color: t.muted,
+                  letterSpacing: 0.4,
+                  padding: '0 4px',
+                }}
+              >
+                {m.time}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            padding: '12px 14px 18px',
+            borderTop: `1px solid ${t.borderSoft}`,
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: 8,
+            background: t.bg,
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: 20,
+              padding: '8px 14px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') send();
+              }}
+              placeholder="Type your question…"
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: 14,
+                fontFamily: t.sans,
+                color: t.ink,
+              }}
+            />
+          </div>
+          <button
+            onClick={send}
+            disabled={!input.trim()}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: input.trim() ? t.rust : t.border,
+              border: 'none',
+              cursor: input.trim() ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 120ms',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 8l10-5-5 10-1.5-4.5L3 8z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// IntakeRouteFrame — wraps the intake screen in a div with the
+// route-fwd / route-back / route-jump animation. Uses pathname
+// as key so the wrapper re-mounts (and thus replays the animation)
+// on every route change. Direction stored in sessionStorage by
+// the navigation helper in the page (see usePortalState).
+// ────────────────────────────────────────────────────────────────
+
+export function IntakeRouteFrame({
+  pathname,
+  direction,
+  children,
+}: {
+  pathname: string;
+  direction: 'forward' | 'back' | 'jump';
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <style>{`
+        @keyframes docket-route-fwd {
+          0%   { transform: translateX(22px); opacity: 0; }
+          60%  { opacity: 1; }
+          100% { transform: translateX(0);    opacity: 1; }
+        }
+        @keyframes docket-route-back {
+          0%   { transform: translateX(-22px); opacity: 0; }
+          60%  { opacity: 1; }
+          100% { transform: translateX(0);     opacity: 1; }
+        }
+        @keyframes docket-route-jump {
+          0%   { opacity: 0; }
+          100% { opacity: 1; }
+        }
+      `}</style>
+      <div
+        key={pathname}
+        style={{
+          minHeight: '100vh',
+          animation:
+            direction === 'forward'
+              ? 'docket-route-fwd 280ms cubic-bezier(.2,.8,.2,1) both'
+              : direction === 'back'
+              ? 'docket-route-back 280ms cubic-bezier(.2,.8,.2,1) both'
+              : 'docket-route-jump 180ms ease-out both',
+          willChange: 'transform, opacity',
+        }}
+      >
+        {children}
+      </div>
+    </>
   );
 }
 
@@ -593,7 +1148,7 @@ export function BottomBar({
 
 export function Footer({
   t,
-  text = 'ANTONIO RAMIREZ, ENROLLED AGENT · CLAREMONT, CA',
+  text = 'ANTONIO VAZQUEZ, ENROLLED AGENT · CLAREMONT, CA',
 }: {
   t: Theme;
   text?: string;

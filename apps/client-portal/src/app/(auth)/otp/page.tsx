@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   BackButton,
   Body,
@@ -13,10 +12,11 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalState } from '@/lib/portal-state';
+import { usePortalNav } from '@/lib/portal-nav';
 
 export default function OtpPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const router = useRouter();
+  const nav = usePortalNav();
   const [phone] = usePortalState<string>('phone', '');
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(47);
@@ -63,7 +63,7 @@ export default function OtpPage() {
       inputRefs.current[5]?.blur();
       setTimeout(() => {
         // TODO(week-2): POST to /api/auth/verify-otp via Clerk before advancing.
-        router.push('/welcome');
+        nav.next('/welcome');
       }, 1200);
     }
   };
@@ -100,7 +100,7 @@ export default function OtpPage() {
           minHeight: '100%',
         }}
       >
-        <BackButton t={t} onClick={() => router.push('/login')} />
+        <BackButton t={t} onClick={() => nav.back('/login')} />
 
         <Stack gap={32} style={{ flex: 1, marginTop: 24 }}>
           <Stack gap={10}>

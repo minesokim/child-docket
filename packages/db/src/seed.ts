@@ -68,14 +68,14 @@ async function seed() {
   if (!vazant) throw new Error('failed to insert tenant');
   console.log(`  ✓ tenant: ${vazant.name} (${vazant.id})`);
 
-  // Antonio Ramirez — Owner
+  // Antonio Vazquez — Owner
   const [antonio] = await db
     .insert(users)
     .values({
       tenantId: vazant.id,
       clerkUserId: 'user_seed_antonio',
       email: 'antonio@vazantconsulting.com',
-      name: 'Antonio Ramirez',
+      name: 'Antonio Vazquez',
       role: 'owner',
     })
     .returning();

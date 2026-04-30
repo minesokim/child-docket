@@ -1,130 +1,296 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+// Intake step 1A — Service path selection.
+// 1-to-1 port of ScreenServicePath from the JSX prototype.
+
 import {
+  AntonioNote,
+  AskAntonioBar,
   Body,
-  BottomBar,
   Button,
   buildTheme,
   Card,
-  Eyebrow,
-  Footer,
   H1,
   IntakeHeader,
   Row,
   Screen,
+  ServiceIcon,
+  type ServicePathId,
+  type ServiceOtherSubId,
+  SERVICE_CATALOG,
   Stack,
 } from '@docket/ui';
+import { usePortalNav } from '@/lib/portal-nav';
 import { usePortalState } from '@/lib/portal-state';
 
-type ServicePath = 'individual' | 'business' | 'representation' | null;
+type ServicePick = {
+  path: ServicePathId;
+  otherSub: ServiceOtherSubId | null;
+  addons: string[];
+};
 
-const PATH_OPTIONS: Array<{
-  value: Exclude<ServicePath, null>;
-  title: string;
-  blurb: string;
-  startingPrice: string;
-}> = [
-  {
-    value: 'individual',
-    title: 'Individual return',
-    blurb: 'W-2, 1099, side income, dependents — the classic 1040.',
-    startingPrice: 'starting at $300',
-  },
-  {
-    value: 'business',
-    title: 'Business + owner',
-    blurb: 'S-corp, LLC, sole-prop, partnership — entity + your personal return.',
-    startingPrice: 'starting at $850',
-  },
-  {
-    value: 'representation',
-    title: 'IRS notice or audit',
-    blurb: 'CP2000, audit defense, back taxes, installment plans.',
-    startingPrice: 'starting at $500',
-  },
-];
+const DEFAULT_PICK: ServicePick = { path: 'personal', otherSub: null, addons: [] };
 
-export default function ServicesPage() {
+export default function ServicesPathPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const router = useRouter();
-  const [path, setPath] = usePortalState<ServicePath>('service-path', null);
+  const nav = usePortalNav();
+  const [pick, setPick] = usePortalState<ServicePick>('service-pick', DEFAULT_PICK);
+
+  const setPath = (id: ServicePathId) => {
+    setPick({
+      path: id,
+      otherSub: id !== 'other' ? null : pick.otherSub,
+      addons: pick.addons,
+    });
+  };
+
+  const setOtherSub = (id: ServiceOtherSubId) => {
+    setPick({ ...pick, otherSub: id });
+  };
+
+  const currentPath = SERVICE_CATALOG.paths.find((p) => p.id === pick.path) ?? SERVICE_CATALOG.paths[0]!;
+  const currentOther = pick.otherSub
+    ? SERVICE_CATALOG.otherSub.find((o) => o.id === pick.otherSub) ?? null
+    : null;
+
+  const headline =
+    pick.path === 'other'
+      ? currentOther
+        ? currentOther.fee
+        : 'Pick a service below'
+      : currentPath.fee;
+
+  const canContinue = pick.path !== 'other' || !!pick.otherSub;
+
+  const handleNext = () => {
+    nav.next('/services-addons');
+  };
 
   return (
     <Screen t={t}>
-      <IntakeHeader t={t} step={1} subStep="A" label="What do you need?" />
-
-      <div style={{ padding: '24px 24px 0', display: 'flex', flexDirection: 'column', minHeight: 'calc(100% - 60px)' }}>
-        <Stack gap={28} style={{ flex: 1 }}>
+      <div
+        style={{
+          padding: '24px 0 0',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+        }}
+      >
+        <IntakeHeader t={t} step={1} subStep="A" label="Services" />
+        <div style={{ padding: '32px 24px 8px' }}>
           <Stack gap={10}>
-            <H1 t={t}>Pick your starting point.</H1>
+            <H1 t={t}>What brings you in this year?</H1>
             <Body t={t} size={15}>
-              You can always add things later. We&apos;ll make sure you only pay for what you actually need.
+              Pick the one that fits best. I&apos;ll ask about add-ons next.
             </Body>
           </Stack>
+        </div>
 
-          <Stack gap={12}>
-            {PATH_OPTIONS.map((opt) => {
-              const selected = path === opt.value;
-              return (
-                <Card
-                  key={opt.value}
-                  t={t}
-                  onClick={() => setPath(opt.value)}
-                  selected={selected}
-                  style={{ padding: 18 }}
+        <Stack gap={12} style={{ padding: '24px 24px 16px', flex: 1 }}>
+          {SERVICE_CATALOG.paths.map((p) => (
+            <Card
+              key={p.id}
+              t={t}
+              onClick={() => setPath(p.id)}
+              selected={pick.path === p.id}
+              tinted={pick.path === p.id}
+              style={{ padding: '16px 18px' }}
+            >
+              <Row gap={14} align="flex-start">
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: t.tone === 'magazine' ? 4 : 10,
+                    background: pick.path === p.id ? t.rustSoft : t.bgElev,
+                    border: `1px solid ${pick.path === p.id ? t.rust : t.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: 2,
+                  }}
                 >
-                  <Row justify="space-between" gap={12} align="flex-start">
-                    <Stack gap={6} style={{ flex: 1 }}>
+                  <ServiceIcon t={t} kind={p.icon} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Row justify="space-between" align="baseline" gap={10}>
+                    <div style={{ fontSize: 16, fontWeight: 500, color: t.ink }}>{p.name}</div>
+                    <div
+                      style={{
+                        fontFamily: t.mono,
+                        fontSize: 12,
+                        color: pick.path === p.id ? t.rustInk : t.muted,
+                        fontWeight: pick.path === p.id ? 500 : 400,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {p.fee}
+                    </div>
+                  </Row>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: t.muted,
+                      lineHeight: 1.45,
+                      marginTop: 3,
+                    }}
+                  >
+                    {p.sub}
+                  </div>
+
+                  {p.id === 'other' && pick.path === 'other' && (
+                    <div
+                      style={{
+                        marginTop: 14,
+                        paddingTop: 12,
+                        borderTop: `1px dashed ${t.borderSoft}`,
+                      }}
+                    >
                       <div
                         style={{
                           fontFamily: t.serif,
-                          fontSize: 18,
-                          color: t.ink,
-                          letterSpacing: -0.2,
-                          fontWeight: 400,
+                          fontStyle: 'italic',
+                          fontSize: 13,
+                          color: t.inkSoft,
+                          marginBottom: 10,
                         }}
                       >
-                        {opt.title}
+                        Which one?
                       </div>
-                      <Body t={t} size={14} style={{ color: t.muted }}>
-                        {opt.blurb}
-                      </Body>
-                    </Stack>
-                    <Eyebrow t={t} style={{ marginTop: 4, whiteSpace: 'nowrap', fontSize: 9.5 }}>
-                      {opt.startingPrice}
-                    </Eyebrow>
-                  </Row>
-                </Card>
-              );
-            })}
-          </Stack>
+                      <Stack gap={8}>
+                        {SERVICE_CATALOG.otherSub.map((o) => (
+                          <div
+                            key={o.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOtherSub(o.id);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 12,
+                              padding: '12px',
+                              background: pick.otherSub === o.id ? t.rustSoft : t.bgElev,
+                              border: `1px solid ${pick.otherSub === o.id ? t.rust : t.border}`,
+                              borderRadius: t.tone === 'magazine' ? 2 : 8,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 16,
+                                height: 16,
+                                borderRadius: '50%',
+                                border: `1.5px solid ${pick.otherSub === o.id ? t.rust : t.border}`,
+                                background: pick.otherSub === o.id ? t.rust : 'transparent',
+                                flexShrink: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginTop: 2,
+                              }}
+                            >
+                              {pick.otherSub === o.id && (
+                                <div
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: '#fff',
+                                  }}
+                                />
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <Row justify="space-between" align="baseline" gap={8} style={{ marginBottom: 2 }}>
+                                <div style={{ fontSize: 14, color: t.ink, fontWeight: 500 }}>
+                                  {o.name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontFamily: t.mono,
+                                    fontSize: 11,
+                                    color: pick.otherSub === o.id ? t.rustInk : t.muted,
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {o.fee}
+                                </div>
+                              </Row>
+                              <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.4 }}>
+                                {o.sub}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </Stack>
+                    </div>
+                  )}
+                </div>
+              </Row>
+            </Card>
+          ))}
 
-          <Body t={t} size={13} muted style={{ textAlign: 'center' }}>
-            Not sure? Pick the closest one — Antonio will adjust during your call.
-          </Body>
+          <div style={{ marginTop: 4 }}>
+            <AntonioNote t={t}>
+              Not sure? Pick the closest match — we can adjust once I see your documents.
+            </AntonioNote>
+          </div>
         </Stack>
 
-        <BottomBar t={t}>
-          <Button
-            t={t}
-            variant="ghost"
-            onClick={() => router.push('/welcome')}
-            style={{ flex: 1, padding: '16px 22px', fontSize: 16 }}
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            background: `linear-gradient(to top, ${t.bg} 70%, transparent)`,
+            padding: '20px 24px 28px',
+          }}
+        >
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: t.radius,
+              padding: '14px 16px',
+              marginBottom: 12,
+              boxShadow: '0 6px 18px rgba(60, 40, 28, 0.06)',
+            }}
           >
-            Back
-          </Button>
-          <Button
-            t={t}
-            onClick={() => router.push('/personal')}
-            disabled={!path}
-            style={{ flex: 2, padding: '16px 22px', fontSize: 16 }}
-          >
-            Continue
-          </Button>
-        </BottomBar>
-
-        <Footer t={t} />
+            <Row justify="space-between" align="center">
+              <div style={{ fontFamily: t.serif, fontStyle: 'italic', fontSize: 13, color: t.muted }}>
+                Starting estimate
+              </div>
+              <div
+                style={{
+                  fontFamily: t.serif,
+                  fontSize: 20,
+                  color: t.ink,
+                  letterSpacing: -0.3,
+                }}
+              >
+                {headline}
+              </div>
+            </Row>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <AskAntonioBar t={t} />
+          </div>
+          <Row gap={10}>
+            <Button
+              t={t}
+              variant="ghost"
+              onClick={() => nav.back('/welcome')}
+              style={{ flex: '0 0 auto' }}
+            >
+              Back
+            </Button>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }} disabled={!canContinue}>
+              {pick.path === 'other' ? 'Continue' : 'Next — add-ons'}
+            </Button>
+          </Row>
+        </div>
       </div>
     </Screen>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import {
   AvatarSlot,
   Body,
@@ -13,10 +12,11 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalState } from '@/lib/portal-state';
+import { usePortalNav } from '@/lib/portal-nav';
 
 export default function LoginPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const router = useRouter();
+  const nav = usePortalNav();
   const [phone, setPhone] = usePortalState<string>('phone', '');
 
   const format = (v: string) => {
@@ -28,14 +28,14 @@ export default function LoginPage() {
 
   const onSubmit = () => {
     // TODO(week-2): POST to /api/auth/send-otp via Clerk. For v0, advance optimistically.
-    router.push('/otp');
+    nav.next('/otp');
   };
 
   return (
     <Screen t={t}>
       <div style={{ padding: '60px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         <Stack gap={28} style={{ flex: 1 }}>
-          <AvatarSlot t={t} size={72} src="/antonio.webp" label="A" />
+          <AvatarSlot t={t} size={72} />
           <Stack gap={10}>
             <H1 t={t}>
               Welcome to
