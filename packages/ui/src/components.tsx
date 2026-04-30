@@ -944,6 +944,460 @@ export function AskAntonioChat({ t }: { t: Theme }) {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Intake form primitives — FieldLabel, TextField, SSNField.
+// Used across personal, spouse, state, dependents, business screens.
+// ────────────────────────────────────────────────────────────────
+
+export function FieldLabel({
+  t,
+  children,
+  hint,
+}: {
+  t: Theme;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <Row justify="space-between" align="baseline" style={{ marginBottom: 6 }}>
+      <span
+        style={{
+          fontFamily: t.sans,
+          fontSize: 12,
+          color: t.muted,
+          fontWeight: 500,
+          letterSpacing: 0,
+        }}
+      >
+        {children}
+      </span>
+      {hint && (
+        <span
+          style={{
+            fontFamily: t.mono,
+            fontSize: 10,
+            color: t.muted,
+            letterSpacing: 0.4,
+          }}
+        >
+          {hint}
+        </span>
+      )}
+    </Row>
+  );
+}
+
+export function TextField({
+  t,
+  value,
+  onChange,
+  placeholder,
+  mono,
+  inputMode,
+  type = 'text',
+  readOnly,
+  style,
+  autoComplete,
+}: {
+  t: Theme;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  mono?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  type?: 'text' | 'email' | 'tel';
+  readOnly?: boolean;
+  style?: StyleProp;
+  autoComplete?: string;
+}) {
+  return (
+    <input
+      type={type}
+      inputMode={inputMode}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      autoComplete={autoComplete}
+      style={{
+        width: '100%',
+        background: 'transparent',
+        border: 'none',
+        borderBottom: `1px solid ${t.border}`,
+        padding: '10px 0 10px',
+        fontSize: 16,
+        color: t.ink,
+        fontFamily: mono ? t.mono : t.sans,
+        letterSpacing: mono ? 0.3 : 0,
+        outline: 'none',
+        ...style,
+      }}
+      onFocus={(e) => {
+        e.target.style.borderBottomColor = t.rust;
+      }}
+      onBlur={(e) => {
+        e.target.style.borderBottomColor = t.border;
+      }}
+    />
+  );
+}
+
+// SSN field — masked display with last 4 visible + ENCRYPTED chip when complete.
+// While typing (< 9 digits), shows a controlled input with auto-format XXX-XX-XXXX.
+// On blur (when 9 digits), switches to the masked display from the JSX prototype.
+export function SSNField({
+  t,
+  value,
+  onChange,
+}: {
+  t: Theme;
+  value: string;          // raw 9-digit string (no dashes), or ''
+  onChange: (raw: string) => void;
+}) {
+  const [editing, setEditing] = React.useState(value.length < 9);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const formatted = formatSsn(value);
+  const lastFour = value.length >= 4 ? value.slice(-4) : '••••';
+  const complete = value.length === 9;
+
+  React.useEffect(() => {
+    if (!complete) setEditing(true);
+  }, [complete]);
+
+  if (editing) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 0 10px',
+          borderBottom: `1px solid ${t.border}`,
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={formatted}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '').slice(0, 9);
+            onChange(digits);
+          }}
+          onBlur={() => {
+            if (complete) setEditing(false);
+          }}
+          placeholder="•••–••–••••"
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            fontFamily: t.mono,
+            fontSize: 16,
+            color: t.ink,
+            letterSpacing: 1.5,
+            outline: 'none',
+          }}
+        />
+        <EncryptedPill t={t} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => {
+        setEditing(true);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 0 10px',
+        borderBottom: `1px solid ${t.border}`,
+        cursor: 'text',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1 }}>
+        <span
+          style={{
+            fontFamily: t.mono,
+            fontSize: 14,
+            color: t.muted,
+            letterSpacing: 2,
+            lineHeight: 1,
+          }}
+        >
+          •••
+        </span>
+        <span style={{ fontFamily: t.mono, fontSize: 14, color: t.muted }}>–</span>
+        <span
+          style={{
+            fontFamily: t.mono,
+            fontSize: 14,
+            color: t.muted,
+            letterSpacing: 2,
+            lineHeight: 1,
+          }}
+        >
+          ••
+        </span>
+        <span style={{ fontFamily: t.mono, fontSize: 14, color: t.muted }}>–</span>
+        <span
+          style={{
+            fontFamily: t.mono,
+            fontSize: 19,
+            color: t.ink,
+            letterSpacing: 1.5,
+            fontWeight: 500,
+          }}
+        >
+          {lastFour}
+        </span>
+      </div>
+      <EncryptedPill t={t} />
+    </div>
+  );
+}
+
+function formatSsn(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 9);
+  if (d.length <= 3) return d;
+  if (d.length <= 5) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)}`;
+}
+
+function EncryptedPill({ t }: { t: Theme }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '4px 9px',
+        background: t.tintAccent,
+        border: `1px solid ${t.rustSoft}`,
+        borderRadius: 999,
+        fontFamily: t.mono,
+        fontSize: 9,
+        color: t.rustInk,
+        letterSpacing: 0.8,
+      }}
+    >
+      <svg width="9" height="10" viewBox="0 0 9 10" fill="none" stroke="currentColor" strokeWidth="1.3">
+        <rect x="1.5" y="4.5" width="6" height="5" rx="0.8" />
+        <path d="M3 4.5V3a1.5 1.5 0 013 0v1.5" strokeLinecap="round" />
+      </svg>
+      ENCRYPTED
+    </span>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// IntakeBackButton — small "← Back" link at the top of intake screens.
+// Different from BackButton (which is the bigger one in OTP).
+// ────────────────────────────────────────────────────────────────
+
+export function IntakeBackButton({
+  t,
+  onClick,
+}: {
+  t: Theme;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        fontSize: 13,
+        color: t.muted,
+        fontFamily: t.sans,
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <path d="M9 3l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      Back
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// RentalTypeCard / RadioRowCard — radio card pattern shared by
+// state-and-prior-year, filing, and other single-select screens.
+// ────────────────────────────────────────────────────────────────
+
+export function RadioRowCard({
+  t,
+  selected,
+  onClick,
+  label,
+  sub,
+}: {
+  t: Theme;
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+  sub: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: '14px 14px',
+        background: selected ? t.tintAccent : t.card,
+        border: `1px solid ${selected ? t.rust : t.border}`,
+        borderRadius: t.radius,
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontFamily: t.sans,
+        transition: 'border-color 120ms, background 120ms',
+      }}
+    >
+      <div
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          border: `1.5px solid ${selected ? t.rust : t.border}`,
+          background: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          marginTop: 1,
+        }}
+      >
+        {selected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.rust }} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, letterSpacing: -0.1 }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 12.5, color: t.muted, marginTop: 3, lineHeight: 1.4 }}>
+          {sub}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// DependentCountCard — count-icon radio card for ScreenDependentsCount.
+// ────────────────────────────────────────────────────────────────
+
+export function DependentCountCard({
+  t,
+  selected,
+  onClick,
+  label,
+  sub,
+  icon,
+}: {
+  t: Theme;
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+  sub?: string;
+  icon: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        width: '100%',
+        padding: '18px 18px',
+        background: selected ? t.tintAccent : t.card,
+        border: `1px solid ${selected ? t.rust : t.border}`,
+        borderRadius: t.radius,
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontFamily: t.sans,
+        transition: 'border-color 120ms, background 120ms',
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 10,
+          background: selected ? t.rust : t.bgElev,
+          border: `1px solid ${selected ? t.rust : t.borderSoft}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          fontFamily: t.serif,
+          fontSize: 20,
+          fontWeight: 500,
+          color: selected ? '#fff' : t.ink,
+          letterSpacing: -0.4,
+        }}
+      >
+        {icon}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 16,
+            color: t.ink,
+            fontWeight: 500,
+            letterSpacing: -0.1,
+            marginBottom: sub ? 2 : 0,
+          }}
+        >
+          {label}
+        </div>
+        {sub && <div style={{ fontSize: 12.5, color: t.muted, lineHeight: 1.35 }}>{sub}</div>}
+      </div>
+
+      <div
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          border: `1.5px solid ${selected ? t.rust : t.border}`,
+          background: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {selected && (
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: t.rust,
+            }}
+          />
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
 // IntakeRouteFrame — wraps the intake screen in a div with the
 // route-fwd / route-back / route-jump animation. Uses pathname
 // as key so the wrapper re-mounts (and thus replays the animation)
