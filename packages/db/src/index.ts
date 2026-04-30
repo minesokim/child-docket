@@ -1,1 +1,9 @@
-export * from './schema';
+export * from './schema.js';
+export {
+  getAdminDb,
+  withTenant,
+  withTenantReadOnly,
+  disconnect,
+  schema,
+  type DocketDb,
+} from './client.js';
