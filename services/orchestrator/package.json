@@ -1,0 +1,24 @@
+{
+  "name": "@docket/orchestrator",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test:hello": "tsx src/test/hello.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@docket/shared": "workspace:*",
+    "@anthropic-ai/sdk": "^0.91.1",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.123"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
+    "dotenv": "^16.4.7"
+  }
+}

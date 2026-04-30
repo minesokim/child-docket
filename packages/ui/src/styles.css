@@ -1,0 +1,48 @@
+/* Docket UI — global styles. Imported by both apps. */
+
+@font-face {
+  font-family: 'Fraunces';
+  src: url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap');
+  font-display: swap;
+}
+
+:root {
+  /* Editorial tone — default. */
+  --bg: #F5F2EA;
+  --bg-elev: #FBF9F3;
+  --ink: #1A1612;
+  --ink-soft: #4A4038;
+  --muted: #8A7F72;
+  --border: #E4DDCE;
+  --border-soft: #EDE7D9;
+  --card: #FFFFFF;
+  --tint-accent: rgba(51, 94, 69, 0.06);
+  --tint-accent-strong: rgba(51, 94, 69, 0.11);
+
+  /* Forest green primary — oklch 150 hue. */
+  --rust: oklch(42% 0.09 150);
+  --rust-dark: oklch(32% 0.08 150);
+  --rust-soft: oklch(93% 0.03 150);
+  --rust-ink: oklch(28% 0.07 150);
+  --green: oklch(50% 0.10 150);
+
+  --serif: "Fraunces", "Georgia", serif;
+  --sans: "DM Sans", -apple-system, system-ui, sans-serif;
+  --mono: "DM Sans", -apple-system, system-ui, sans-serif;
+
+  --radius: 14px;
+  --radius-lg: 20px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

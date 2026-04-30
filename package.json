@@ -1,0 +1,23 @@
+{
+  "name": "docket",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Docket — agentic operator for tax practices",
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  }
+}
