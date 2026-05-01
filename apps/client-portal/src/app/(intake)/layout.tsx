@@ -1,44 +1,34 @@
-'use client';
-
 // (intake) route group layout.
-// Mounts AskAntonioChat globally as a fixed-position overlay (any intake screen
-// can open it via window.dispatchEvent(new CustomEvent('ask-antonio:open'))).
-// Wraps children in IntakeRouteFrame for the route-fwd / route-back / route-jump
-// transition. Direction is read from sessionStorage (set by usePortalNav helper).
+//
+// Server Component: loads (or creates on first visit) the active intake
+// row for the signed-in client, then wraps children in <IntakeProvider>
+// so every intake page can read/write IntakeState via useIntakeField.
+//
+// Inner client logic (route-transition direction, AskAntonioChat overlay)
+// lives in <IntakeFrame> so this file can stay a Server Component.
 
-import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { AskAntonioChat, buildTheme, IntakeRouteFrame } from '@docket/ui';
+import { getOrCreateIntakeAnswers } from '@/lib/intake-actions';
+import { IntakeProvider } from '@/lib/intake-context';
+import { IntakeFrame } from './_intake-frame';
 
-const NAV_KEY = 'docket:portal:nav-direction';
+export default async function IntakeLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Hydrate the intake state from Postgres on every (intake) page load.
+  // This is one round-trip per navigation, but it's a single-row primary-key
+  // lookup (~5-10ms) and gives us a server-validated source of truth.
+  const bundle = await getOrCreateIntakeAnswers();
 
-export default function IntakeLayout({ children }: { children: React.ReactNode }) {
-  const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const pathname = usePathname();
-  const [direction, setDirection] = useState<'forward' | 'back' | 'jump'>('jump');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const dir = window.sessionStorage.getItem(NAV_KEY) as
-        | 'forward'
-        | 'back'
-        | 'jump'
-        | null;
-      setDirection(dir ?? 'jump');
-      // Reset to "jump" so manual back-button (browser) doesn't reuse stale direction
-      window.sessionStorage.removeItem(NAV_KEY);
-    } catch {
-      // sessionStorage unavailable — fall back to jump
-    }
-  }, [pathname]);
+  // Defensive: if Vazant tenant isn't seeded or auth is missing, render
+  // with empty answers — pages still work via their default values, and
+  // the user gets bounced to /login by the route handlers downstream.
+  const initialAnswers = bundle?.answers ?? {};
 
   return (
-    <>
-      <IntakeRouteFrame pathname={pathname} direction={direction}>
-        {children}
-      </IntakeRouteFrame>
-      <AskAntonioChat t={t} />
-    </>
+    <IntakeProvider initialAnswers={initialAnswers}>
+      <IntakeFrame>{children}</IntakeFrame>
+    </IntakeProvider>
   );
 }

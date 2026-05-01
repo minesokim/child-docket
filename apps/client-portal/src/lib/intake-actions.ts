@@ -1,0 +1,350 @@
+'use server';
+
+// ────────────────────────────────────────────────────────────────
+// Server actions for intake state persistence.
+//
+// Three primitives:
+//   - getOrCreateIntakeAnswers()  — load (or create on first call) the
+//     active intake_responses row for the signed-in client. Returns
+//     answers with sensitive fields decrypted, ready for client render.
+//
+//   - saveIntakeField(path, value) — validate at the boundary, encrypt
+//     if path is sensitive, set value at path on the JSONB blob, write,
+//     audit-log to `actions`. Returns updated answers.
+//
+//   - completeIntake() — flip status to 'complete' once isIntakeComplete
+//     evaluates true. Called from the /done page after final step.
+//
+// Every call is RLS-bound via withTenant(). Sensitive paths
+// (SENSITIVE_INTAKE_PATHS) are AES-256-GCM encrypted at write time
+// and decrypted at read time.
+// ────────────────────────────────────────────────────────────────
+
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { eq, and } from 'drizzle-orm';
+import * as Sentry from '@sentry/nextjs';
+import {
+  getAdminDb,
+  withTenant,
+  schema,
+  encryptField,
+  isEncrypted,
+  decryptIfMarked,
+} from '@docket/db';
+import {
+  type IntakeState,
+  isSensitivePath,
+  setAtPath,
+  validateIntakeField,
+  asTenantId,
+} from '@docket/shared';
+
+// ────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────
+
+const VAZANT_TENANT_SLUG = 'vazant';
+
+/**
+ * Tax year for the active intake. May–October: prior year (most filings).
+ * November–April: current year (early filers + amendments). Antonio handles
+ * out-of-band cases (extensions, late amendments) directly.
+ */
+function getCurrentTaxYear(): number {
+  const now = new Date();
+  return now.getMonth() < 10 ? now.getFullYear() - 1 : now.getFullYear();
+}
+
+/**
+ * Walk a JSONB tree and decrypt every encrypted leaf marker. Used on the
+ * read path so the client receives plain values it can render directly.
+ */
+function decryptTree(node: unknown): unknown {
+  if (node == null || typeof node !== 'object') return node;
+  if (isEncrypted(node)) return decryptIfMarked(node);
+  if (Array.isArray(node)) return node.map(decryptTree);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    out[k] = decryptTree(v);
+  }
+  return out;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Auth + client provisioning
+// ────────────────────────────────────────────────────────────────
+
+type AuthedClient = {
+  clientId: string;
+  tenantId: string;
+  clerkUserId: string;
+};
+
+/**
+ * Resolve the Clerk session to a `clients` row, creating one tied to
+ * Antonio's tenant on first call. Multi-tenant routing lands in v1.
+ */
+async function getOrCreateClient(): Promise<AuthedClient | null> {
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  const db = getAdminDb();
+
+  const [existing] = await db
+    .select({ id: schema.clients.id, tenantId: schema.clients.tenantId })
+    .from(schema.clients)
+    .where(eq(schema.clients.clerkUserId, userId))
+    .limit(1);
+
+  if (existing) {
+    return { clientId: existing.id, tenantId: existing.tenantId, clerkUserId: userId };
+  }
+
+  // First sign-in for this Clerk user. Provision them under Vazant.
+  const [tenant] = await db
+    .select({ id: schema.tenants.id })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.slug, VAZANT_TENANT_SLUG))
+    .limit(1);
+
+  if (!tenant) {
+    Sentry.captureMessage('[intake] Vazant tenant not seeded — cannot provision client', 'error');
+    return null;
+  }
+
+  const clerkUser = await currentUser();
+  const phone = clerkUser?.primaryPhoneNumber?.phoneNumber ?? null;
+  const email = clerkUser?.primaryEmailAddress?.emailAddress ?? null;
+  const firstName = clerkUser?.firstName ?? '';
+  const lastName = clerkUser?.lastName ?? '';
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(' ') || phone || email || 'New client';
+
+  const [created] = await db
+    .insert(schema.clients)
+    .values({
+      tenantId: tenant.id,
+      clerkUserId: userId,
+      fullName,
+      email,
+      phone,
+      intakeStatus: 'in-progress',
+    })
+    .returning({ id: schema.clients.id, tenantId: schema.clients.tenantId });
+
+  if (!created) return null;
+  return { clientId: created.id, tenantId: created.tenantId, clerkUserId: userId };
+}
+
+// ────────────────────────────────────────────────────────────────
+// Public types
+// ────────────────────────────────────────────────────────────────
+
+export type IntakeBundle = {
+  clientId: string;
+  intakeId: string;
+  taxYear: number;
+  status: 'in_progress' | 'complete' | 'abandoned';
+  answers: IntakeState;
+};
+
+export type SaveIntakeFieldResult =
+  | { ok: true; answers: IntakeState }
+  | { ok: false; error: string; path: string };
+
+// ────────────────────────────────────────────────────────────────
+// Public API
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Load (or create on first visit) the active intake row for the signed-in
+ * client. Sensitive fields are decrypted before return, so the result can
+ * be passed straight to a client component for rendering.
+ *
+ * Returns null when:
+ *   - No Clerk session
+ *   - Vazant tenant not seeded (deployment misconfig)
+ */
+export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
+  const authed = await getOrCreateClient();
+  if (!authed) return null;
+
+  const taxYear = getCurrentTaxYear();
+
+  return withTenant(asTenantId(authed.tenantId), async (db) => {
+    const [existing] = await db
+      .select()
+      .from(schema.intakeResponses)
+      .where(
+        and(
+          eq(schema.intakeResponses.clientId, authed.clientId),
+          eq(schema.intakeResponses.taxYear, taxYear),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      const decrypted = decryptTree(existing.answers ?? {}) as IntakeState;
+      return {
+        clientId: authed.clientId,
+        intakeId: existing.id,
+        taxYear,
+        status: existing.status as IntakeBundle['status'],
+        answers: decrypted,
+      };
+    }
+
+    // First visit — create the row.
+    const [created] = await db
+      .insert(schema.intakeResponses)
+      .values({
+        tenantId: authed.tenantId,
+        clientId: authed.clientId,
+        taxYear,
+        status: 'in_progress',
+        answers: {},
+        completedSteps: [],
+      })
+      .returning();
+
+    if (!created) {
+      Sentry.captureMessage('[intake] Failed to create intake_responses row', 'error');
+      return null;
+    }
+
+    return {
+      clientId: authed.clientId,
+      intakeId: created.id,
+      taxYear,
+      status: 'in_progress',
+      answers: {},
+    };
+  });
+}
+
+/**
+ * Validate, encrypt-if-sensitive, and persist a single field write.
+ * Returns the full updated answers object so the caller can sync local
+ * state without an extra fetch.
+ */
+export async function saveIntakeField(
+  path: string,
+  value: unknown,
+): Promise<SaveIntakeFieldResult> {
+  const startedAt = Date.now();
+
+  // 1. Validate at the boundary. Reject malformed or unknown paths.
+  const validation = validateIntakeField(path, value);
+  if (!validation.ok) {
+    return { ok: false, error: validation.error, path: validation.path };
+  }
+  const validatedValue = validation.value;
+
+  // 2. Auth.
+  const authed = await getOrCreateClient();
+  if (!authed) return { ok: false, error: 'Not signed in', path };
+
+  const taxYear = getCurrentTaxYear();
+  const sensitive = isSensitivePath(path);
+
+  try {
+    return await withTenant(asTenantId(authed.tenantId), async (db) => {
+      // 3. Load current row to mutate. Drizzle .update() with JSONB merge
+      // is awkward; safer to read-modify-write inside the transaction.
+      const [existing] = await db
+        .select()
+        .from(schema.intakeResponses)
+        .where(
+          and(
+            eq(schema.intakeResponses.clientId, authed.clientId),
+            eq(schema.intakeResponses.taxYear, taxYear),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        return { ok: false, error: 'Intake row not found — call getOrCreateIntakeAnswers first', path };
+      }
+
+      // 4. Compute the storage value. Sensitive paths get encrypted leaves;
+      // everything else stores plain. Mixed encrypted/plain in the same
+      // JSONB tree is fine — decryptTree() handles both on read.
+      const valueToStore = sensitive
+        ? encryptField(String(validatedValue))
+        : validatedValue;
+
+      const currentStorage = (existing.answers as unknown) ?? {};
+      const updatedStorage = setAtPath(currentStorage, path, valueToStore);
+
+      // 5. Persist.
+      await db
+        .update(schema.intakeResponses)
+        .set({ answers: updatedStorage as Record<string, unknown> })
+        .where(eq(schema.intakeResponses.id, existing.id));
+
+      // 6. Audit log. Best-effort — never fail the save if logging dies.
+      const latencyMs = Date.now() - startedAt;
+      try {
+        await db.insert(schema.actions).values({
+          tenantId: authed.tenantId,
+          clientId: authed.clientId,
+          userId: null,
+          agentId: null,
+          actionClass: 'send-internal',
+          toolName: 'saveIntakeField',
+          toolInput: { path, sensitive, valueType: typeof validatedValue },
+          toolOutput: { ok: true },
+          latencyMs,
+          success: true,
+        });
+      } catch (logError) {
+        Sentry.captureException(logError, {
+          tags: { component: 'intake-actions', stage: 'audit-log' },
+        });
+      }
+
+      // 7. Return decrypted view for the client's local state.
+      const decrypted = decryptTree(updatedStorage) as IntakeState;
+      return { ok: true, answers: decrypted };
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: 'intake-actions', path, sensitive: String(sensitive) },
+    });
+    return { ok: false, error: 'Save failed — please try again', path };
+  }
+}
+
+/**
+ * Mark the intake complete. Called from /done after the final step.
+ * Idempotent — a re-call on an already-complete intake is a no-op.
+ */
+export async function completeIntake(): Promise<{ ok: boolean; error?: string }> {
+  const authed = await getOrCreateClient();
+  if (!authed) return { ok: false, error: 'Not signed in' };
+
+  const taxYear = getCurrentTaxYear();
+
+  try {
+    return await withTenant(asTenantId(authed.tenantId), async (db) => {
+      await db
+        .update(schema.intakeResponses)
+        .set({
+          status: 'complete',
+          completedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.intakeResponses.clientId, authed.clientId),
+            eq(schema.intakeResponses.taxYear, taxYear),
+          ),
+        );
+      return { ok: true };
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: 'intake-actions', stage: 'completeIntake' },
+    });
+    return { ok: false, error: 'Could not mark intake complete' };
+  }
+}
