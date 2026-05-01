@@ -701,9 +701,9 @@ export function AskAntonioBar({
     <div
       onClick={handleClick}
       style={{
-        // More pop: stronger background, slightly thicker border with
-        // rust accent, deeper shadow, hairline rust glow.
-        background: '#FFF8EE',
+        // Pure white per design call. Keep the rust border + shadow so
+        // it still pops off the cream-page background.
+        background: '#FFFFFF',
         border: `1.5px solid ${t.rustSoft}`,
         borderRadius: 999,
         padding: '7px 9px 7px 11px',
@@ -738,7 +738,7 @@ export function AskAntonioBar({
             height: 10,
             borderRadius: '50%',
             background: '#4a8f5f',
-            border: `2px solid #FFF8EE`,
+            border: `2px solid #FFFFFF`,
             boxShadow: '0 0 0 1px rgba(74, 143, 95, 0.20)',
           }}
         />
@@ -1560,10 +1560,10 @@ export function IntakeHeader({
     borderBottom: `1px solid ${t.borderSoft}`,
   };
 
-  // Logout pill — sits ABOVE the step row in its own line. Pill shape,
-  // breathing room. Only renders when a SignOutProvider is upstream.
+  // Logout pill — 20% smaller than the original. Sits above the step
+  // row in its own line. Only renders when SignOutProvider is upstream.
   const logoutPill = onSignOut ? (
-    <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
+    <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
       <button
         type="button"
         onClick={onSignOut}
@@ -1571,15 +1571,15 @@ export function IntakeHeader({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 6,
-          padding: '6px 12px',
+          gap: 5,
+          padding: '5px 10px',
           background: t.bgElev,
           border: `1px solid ${t.border}`,
           borderRadius: 999,
           cursor: 'pointer',
           fontFamily: t.mono,
-          fontSize: 10,
-          letterSpacing: 1.1,
+          fontSize: 9,
+          letterSpacing: 1,
           textTransform: 'uppercase',
           color: t.inkSoft,
           lineHeight: 1,
@@ -1587,12 +1587,12 @@ export function IntakeHeader({
         }}
       >
         <svg
-          width="10"
-          height="10"
+          width="8"
+          height="8"
           viewBox="0 0 10 10"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="1.6"
         >
           <path d="M2.2 2.2l5.6 5.6M7.8 2.2l-5.6 5.6" strokeLinecap="round" />
         </svg>
