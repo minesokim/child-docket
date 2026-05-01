@@ -17,8 +17,8 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { usePortalState } from '@/lib/portal-state';
-
-type FilingStatus = 'single' | 'mfj' | 'mfs' | 'hoh' | 'qw';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { FilingStatus } from '@docket/shared';
 
 const OPTIONS: Array<{ id: FilingStatus; label: string; hint: string }> = [
   { id: 'single', label: 'Single', hint: 'Unmarried or legally separated' },
@@ -33,13 +33,17 @@ export default function FilingPage() {
   const nav = usePortalNav();
   const [sel, setSel] = usePortalState<FilingStatus>('filing-status', 'single');
 
+  // Next step is computed from the central INTAKE_FLOW (see intake-flow.ts).
+  // Filing branches: mfj/mfs → /spouse, else → /deps. Logic lives in one
+  // place now — adding a new filing-status branch means editing intake-flow.ts,
+  // not this page.
   const next = () => {
-    // MFJ/MFS → spouse step. Otherwise skip to deps.
-    if (sel === 'mfj' || sel === 'mfs') {
-      nav.next('/spouse');
-    } else {
-      nav.next('/deps');
-    }
+    const target = getNextStep('/filing', { filing: { status: sel } });
+    if (target) nav.next(target);
+  };
+  const back = () => {
+    const target = getPrevStep('/filing', { filing: { status: sel } });
+    if (target) nav.back(target);
   };
 
   return (
@@ -123,7 +127,7 @@ export default function FilingPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/state')}
+              onClick={back}
               style={{ flex: '0 0 auto' }}
             >
               Back

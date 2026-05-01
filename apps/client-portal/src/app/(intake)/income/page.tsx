@@ -22,8 +22,12 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { usePortalState } from '@/lib/portal-state';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { IncomeType } from '@docket/shared';
 
-type IncomeId = 'w2' | 'self' | 'rental' | 'invest' | 'retire';
+// Local alias matches the existing UI catalog. Kept for parity with the
+// other places in this file that use IncomeId.
+type IncomeId = IncomeType;
 
 const OPTIONS: Array<{ id: IncomeId; name: string; sub: string; icon: IncomeIconKind }> = [
   { id: 'w2', name: 'W-2 Employee', sub: 'Regular paycheck from an employer', icon: 'w2' },
@@ -37,6 +41,9 @@ export default function IncomePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
   const [sel, setSel] = usePortalState<IncomeId[]>('income-sources', []);
+  // For back-nav, we need to know if dependents.count > 0 (deps-detail
+  // applies) so getPrevStep can decide where to bounce back to.
+  const [depsCount] = usePortalState<number>('deps-count', 0);
 
   const toggle = (id: IncomeId) => {
     setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]);
@@ -44,10 +51,17 @@ export default function IncomePage() {
 
   const canContinue = sel.length > 0;
 
+  // Branching (self → /self-employment, rental → /rental-detail, else →
+  // /tax-questions) lives in intake-flow.ts. Adding a new income type that
+  // requires its own detail page = edit one file, not three.
+  const stateSnapshot = { income: { types: sel }, dependents: { count: depsCount } };
   const handleContinue = () => {
-    if (sel.includes('self')) nav.next('/self-employment');
-    else if (sel.includes('rental')) nav.next('/rental-detail');
-    else nav.next('/tax-questions');
+    const target = getNextStep('/income', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/income', stateSnapshot);
+    if (target) nav.back(target);
   };
 
   return (
@@ -64,7 +78,7 @@ export default function IncomePage() {
 
         <div style={{ padding: '32px 24px 8px' }}>
           <Row gap={10} align="center" style={{ marginBottom: 18 }}>
-            <IntakeBackButton t={t} onClick={() => nav.back('/deps-detail')} />
+            <IntakeBackButton t={t} onClick={handleBack} />
           </Row>
           <Stack gap={10}>
             <H1 t={t}>How do you earn income?</H1>
@@ -161,7 +175,7 @@ export default function IncomePage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/deps-detail')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back

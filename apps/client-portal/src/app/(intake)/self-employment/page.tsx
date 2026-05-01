@@ -24,6 +24,8 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { usePortalState } from '@/lib/portal-state';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { IncomeType } from '@docket/shared';
 
 type SelfEmployment = {
   businessName: string;
@@ -51,14 +53,22 @@ export default function SelfEmploymentPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
   const [info, setInfo] = usePortalState<SelfEmployment>('self-employment', DEFAULT);
-  const [income] = usePortalState<string[]>('income-sources', []);
+  const [income] = usePortalState<IncomeType[]>('income-sources', []);
 
   const update = <K extends keyof SelfEmployment>(k: K, v: SelfEmployment[K]) =>
     setInfo({ ...info, [k]: v });
 
+  // Branch: rental in selection → /rental-detail next, else → /tax-questions.
+  // Logic in intake-flow.ts. Adding a third detail page (e.g. crypto) means
+  // editing one file, not two.
+  const stateSnapshot = { income: { types: income } };
   const handleContinue = () => {
-    if (income.includes('rental')) nav.next('/rental-detail');
-    else nav.next('/tax-questions');
+    const target = getNextStep('/self-employment', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/self-employment', stateSnapshot);
+    if (target) nav.back(target);
   };
 
   return (
@@ -74,7 +84,7 @@ export default function SelfEmploymentPage() {
         <IntakeHeader t={t} step={7} label="Self-employment" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/income')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 0' }}>
@@ -227,7 +237,7 @@ export default function SelfEmploymentPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/income')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
