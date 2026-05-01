@@ -173,9 +173,9 @@ export default function LoginPage() {
                 PHONE NUMBER
               </div>
               <input
-                value={phone}
+                value={format(phone)}
                 onChange={(e) => setPhone(format(e.target.value))}
-                placeholder="(555) 555-5555"
+                placeholder="(555)-555-5555"
                 inputMode="tel"
                 type="tel"
                 autoComplete="tel"
