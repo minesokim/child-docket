@@ -91,6 +91,18 @@ type AuthedClient = {
 /**
  * Resolve the Clerk session to a `clients` row, creating one tied to
  * Antonio's tenant on first call. Multi-tenant routing lands in v1.
+ *
+ * Race-safe: under concurrent first-visit calls (user double-clicks the
+ * welcome CTA, or two tabs hit /welcome simultaneously), the unique
+ * constraint on clients.clerk_user_id ensures only ONE INSERT succeeds.
+ * Without ON CONFLICT DO NOTHING, the loser would surface a unique-
+ * violation error and the user would see a 500 on first sign-in. With
+ * it, both calls converge on the same canonical row via a follow-up
+ * SELECT.
+ *
+ * Fast path: if a row already exists, the SELECT short-circuits before
+ * we even look up the tenant or fetch Clerk user details. The INSERT
+ * branch only runs on first sign-in.
  */
 async function getOrCreateClient(): Promise<AuthedClient | null> {
   const { userId } = await auth();
@@ -98,6 +110,8 @@ async function getOrCreateClient(): Promise<AuthedClient | null> {
 
   const db = getAdminDb();
 
+  // Fast path: already provisioned. The vast majority of requests land
+  // here after the very first sign-in for a user.
   const [existing] = await db
     .select({ id: schema.clients.id, tenantId: schema.clients.tenantId })
     .from(schema.clients)
@@ -128,7 +142,11 @@ async function getOrCreateClient(): Promise<AuthedClient | null> {
   const fullName =
     [firstName, lastName].filter(Boolean).join(' ') || phone || email || 'New client';
 
-  const [created] = await db
+  // Race-safe insert: if another concurrent request beat us to inserting
+  // a row for this Clerk user, ON CONFLICT DO NOTHING swallows the
+  // unique-violation error. The follow-up SELECT picks up whichever row
+  // ended up in the table — winner's or ours.
+  await db
     .insert(schema.clients)
     .values({
       tenantId: tenant.id,
@@ -138,10 +156,26 @@ async function getOrCreateClient(): Promise<AuthedClient | null> {
       phone,
       intakeStatus: 'in-progress',
     })
-    .returning({ id: schema.clients.id, tenantId: schema.clients.tenantId });
+    .onConflictDoNothing({ target: schema.clients.clerkUserId });
 
-  if (!created) return null;
-  return { clientId: created.id, tenantId: created.tenantId, clerkUserId: userId };
+  const [client] = await db
+    .select({ id: schema.clients.id, tenantId: schema.clients.tenantId })
+    .from(schema.clients)
+    .where(eq(schema.clients.clerkUserId, userId))
+    .limit(1);
+
+  if (!client) {
+    // Should never happen — the INSERT either succeeded (our row) or was
+    // a no-op because someone else's row already exists. Either way the
+    // SELECT should find a row. If we get here, something is wrong with
+    // RLS or the unique constraint.
+    Sentry.captureMessage(
+      '[intake] client row missing after upsert (RLS or constraint misconfig?)',
+      'error',
+    );
+    return null;
+  }
+  return { clientId: client.id, tenantId: client.tenantId, clerkUserId: userId };
 }
 
 // ────────────────────────────────────────────────────────────────
