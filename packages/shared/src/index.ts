@@ -3,6 +3,10 @@
 // the client portal and command room.
 export * from './intake.js';
 
+// Zod validation schemas for IntakeState. Used by saveIntakeField server
+// action to reject malformed writes before they touch JSONB.
+export * from './intake-schemas.js';
+
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.
 // ────────────────────────────────────────────────────────────────
