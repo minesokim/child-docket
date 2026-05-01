@@ -1,25 +1,13 @@
 'use client';
 
-// Real Clerk phone-OTP verification.
-// Continues the flow started on /login. Supports both new sign-up and
-// returning sign-in modes via ?mode=signup or ?mode=signin URL param.
-//
-// On 6-digit code entry → calls signIn.attemptFirstFactor or
-// signUp.attemptPhoneNumberVerification, activates session via setActive,
-// redirects to /welcome.
+// Phone-OTP step 2: enter the 6-digit code Clerk just SMS'd.
+// Layout copied from Arcade Coffee Roasters reference: single big input with
+// dash placeholder, "Resend code" inline (no countdown), dark Verify button.
 
 import { Suspense, useEffect, useRef, useState } from 'react';
-import {
-  BackButton,
-  Body,
-  buildTheme,
-  Footer,
-  H1,
-  Row,
-  Screen,
-  Stack,
-} from '@docket/ui';
+import { buildTheme } from '@docket/ui';
 import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePortalState } from '@/lib/portal-state';
 
@@ -27,8 +15,40 @@ type ClerkError = {
   errors?: Array<{ code?: string; message?: string }>;
 };
 
-// useSearchParams forces this page to dynamic rendering. Wrap in Suspense
-// so Next 15 doesn't bail prerender (would error at build time otherwise).
+const COUNTRY_DIALS: Record<string, string> = {
+  US: '+1',
+  CA: '+1',
+  MX: '+52',
+  KR: '+82',
+  CN: '+86',
+  IN: '+91',
+  PH: '+63',
+  VN: '+84',
+  JP: '+81',
+  BR: '+55',
+  GB: '+44',
+  FR: '+33',
+  DE: '+49',
+  IT: '+39',
+  ES: '+34',
+  AU: '+61',
+  CO: '+57',
+  PE: '+51',
+  AR: '+54',
+  CL: '+56',
+  EC: '+593',
+  GT: '+502',
+  HN: '+504',
+  SV: '+503',
+};
+
+function formatUSDisplay(digits: string): string {
+  const d = digits.slice(0, 10);
+  if (d.length < 4) return d;
+  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 export default function OtpPage() {
   return (
     <Suspense fallback={null}>
@@ -46,28 +66,26 @@ function OtpFlow() {
   const { signIn, setActive: setActiveSignIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp, setActive: setActiveSignUp, isLoaded: signUpLoaded } = useSignUp();
 
-  const [phone] = usePortalState<string>('phone', '');
-  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [countdown, setCountdown] = useState(47);
+  const [countryCode] = usePortalState<string>('phone-country', 'US');
+  const [phoneDigits] = usePortalState<string>('phone-digits', '');
+
+  const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resentToast, setResentToast] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    inputRefs.current[0]?.focus();
+    inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const id = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(id);
-  }, [countdown]);
-
-  // Mask the last 4 digits of the phone number for display
-  const phoneDigits = phone.replace(/\D/g, '');
-  const lastFour = phoneDigits.slice(-4);
-  const areaCode = phoneDigits.slice(0, 3);
-  const maskedPhone = phone ? `(${areaCode}) •••-${lastFour}` : '(•••) •••-••••';
+  // Phone display: reveal full number — no masking. Matches Arcade reference.
+  const dial = COUNTRY_DIALS[countryCode] ?? '+1';
+  const display =
+    countryCode === 'US' || countryCode === 'CA'
+      ? formatUSDisplay(phoneDigits)
+      : `${dial} ${phoneDigits}`;
 
   const verify = async (fullCode: string) => {
     if (!signInLoaded || !signUpLoaded || !signIn || !signUp) return;
@@ -96,160 +114,270 @@ function OtpFlow() {
       }
     } catch (e) {
       const err = e as ClerkError;
+      console.error('[otp] verify error', err);
       setError(err.errors?.[0]?.message ?? 'Code did not verify');
-      setDigits(['', '', '', '', '', '']);
+      setCode('');
       setVerifying(false);
-      inputRefs.current[0]?.focus();
+      inputRef.current?.focus();
     }
   };
 
-  const set = (i: number, v: string) => {
-    const clean = v.replace(/\D/g, '');
-    if (clean.length === 0) {
-      const next = [...digits];
-      next[i] = '';
-      setDigits(next);
-      return;
-    }
-
-    const next = [...digits];
-    for (let k = 0; k < clean.length && i + k < 6; k++) {
-      next[i + k] = clean[k] ?? '';
-    }
-    setDigits(next);
-
-    const nextIdx = Math.min(i + clean.length, 5);
-    inputRefs.current[nextIdx]?.focus();
-    if (nextIdx < 5) inputRefs.current[nextIdx]?.select?.();
-
-    if (next.every((x) => x)) {
-      inputRefs.current[5]?.blur();
-      verify(next.join(''));
+  const onCodeChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 6);
+    setCode(digits);
+    setError(null);
+    if (digits.length === 6) {
+      verify(digits);
     }
   };
 
-  const onKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      if (digits[i]) {
-        const next = [...digits];
-        next[i] = '';
-        setDigits(next);
-      } else if (i > 0) {
-        const next = [...digits];
-        next[i - 1] = '';
-        setDigits(next);
-        inputRefs.current[i - 1]?.focus();
+  const resend = async () => {
+    if (resending || !signInLoaded || !signUpLoaded || !signIn || !signUp) return;
+    setResending(true);
+    setError(null);
+    try {
+      if (mode === 'signin') {
+        const phoneFactor = signIn.supportedFirstFactors?.find(
+          (f): f is typeof f & { strategy: 'phone_code'; phoneNumberId: string } =>
+            f.strategy === 'phone_code',
+        );
+        if (phoneFactor) {
+          await signIn.prepareFirstFactor({
+            strategy: 'phone_code',
+            phoneNumberId: phoneFactor.phoneNumberId,
+          });
+        }
+      } else {
+        await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
       }
-      e.preventDefault();
-    } else if (e.key === 'ArrowLeft' && i > 0) {
-      inputRefs.current[i - 1]?.focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowRight' && i < 5) {
-      inputRefs.current[i + 1]?.focus();
-      e.preventDefault();
+      setResentToast(true);
+      setTimeout(() => setResentToast(false), 2400);
+    } catch (e) {
+      const err = e as ClerkError;
+      console.error('[otp] resend error', err);
+      setError(err.errors?.[0]?.message ?? 'Could not resend code');
+    } finally {
+      setResending(false);
     }
   };
+
+  const canVerify = code.length === 6 && !verifying;
 
   return (
-    <Screen t={t}>
-      <div
-        style={{
-          padding: '24px 24px 40px',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100%',
-        }}
-      >
-        <BackButton t={t} onClick={() => router.back()} />
+    <main
+      style={{
+        minHeight: '100dvh',
+        background: t.bg,
+        color: t.ink,
+        fontFamily: t.sans,
+        display: 'flex',
+        flexDirection: 'column',
+        paddingTop: 20,
+        paddingBottom: 28,
+        paddingLeft: 'max(28px, env(safe-area-inset-left, 28px))',
+        paddingRight: 'max(28px, env(safe-area-inset-right, 28px))',
+      }}
+    >
+      {/* Top bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+        <Link
+          href="/login"
+          aria-label="Back"
+          style={{
+            padding: 8,
+            marginLeft: -8,
+            color: t.inkSoft,
+            display: 'flex',
+            alignItems: 'center',
+            textDecoration: 'none',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <path d="M12 4l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
 
-        <Stack gap={32} style={{ flex: 1, marginTop: 24 }}>
-          <Stack gap={10}>
-            <H1 t={t}>Enter verification code</H1>
-            <Body t={t} size={15}>
-              We sent a 6-digit code to{' '}
-              <span style={{ fontFamily: t.mono, color: t.ink, whiteSpace: 'nowrap' }}>{maskedPhone}</span>
-            </Body>
-          </Stack>
+        {/* Resend toast — appears center-top after Resend click */}
+        {resentToast && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: 0,
+              transform: 'translate(-50%, 0)',
+              background: t.card,
+              border: `1px solid ${t.borderSoft}`,
+              borderRadius: 999,
+              padding: '6px 14px 6px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 6px 18px rgba(40,30,20,0.10)',
+              fontSize: 13,
+              color: t.ink,
+              fontFamily: t.sans,
+              animation: 'toast-in 220ms cubic-bezier(.2,.8,.2,1)',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <circle cx="7" cy="7" r="7" fill="#4a8f5f" />
+              <path d="M4 7l2 2 4-5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Code resent
+          </div>
+        )}
 
-          <Row gap={6} justify="center">
-            {digits.map((d, i) => (
-              <input
-                key={i}
-                ref={(el) => {
-                  inputRefs.current[i] = el;
-                }}
-                value={d}
-                onChange={(e) => set(i, e.target.value)}
-                onKeyDown={(e) => onKeyDown(i, e)}
-                onFocus={(e) => e.target.select()}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                disabled={verifying}
-                style={{
-                  width: 48,
-                  height: 62,
-                  textAlign: 'center',
-                  fontSize: 26,
-                  fontFamily: t.mono,
-                  fontWeight: 500,
-                  background: d ? t.tintAccent : t.card,
-                  border: `1.5px solid ${error ? t.rust : d ? t.rust : t.border}`,
-                  borderRadius: t.radius,
-                  color: t.ink,
-                  outline: 'none',
-                  transition: 'all 0.15s',
-                  caretColor: t.rust,
-                }}
-              />
-            ))}
-          </Row>
-
-          {error && (
-            <Row justify="center">
-              <Body t={t} size={13} style={{ color: t.rust }}>
-                {error}
-              </Body>
-            </Row>
-          )}
-
-          {verifying ? (
-            <Row gap={10} justify="center">
-              <div
-                style={{
-                  width: 16,
-                  height: 16,
-                  border: `2px solid ${t.border}`,
-                  borderTopColor: t.rust,
-                  borderRadius: '50%',
-                  animation: 'spin 0.9s linear infinite',
-                }}
-              />
-              <Body t={t} size={14} muted>
-                Verifying…
-              </Body>
-            </Row>
-          ) : (
-            <Row justify="center">
-              <Body t={t} size={13} muted>
-                Didn&apos;t get it?{' '}
-                {countdown > 0 ? (
-                  <span style={{ fontFamily: t.mono, color: t.muted }}>
-                    Resend in 0:{String(countdown).padStart(2, '0')}
-                  </span>
-                ) : (
-                  <span style={{ color: t.rust, cursor: 'pointer', fontWeight: 500 }}>
-                    Resend
-                  </span>
-                )}
-              </Body>
-            </Row>
-          )}
-        </Stack>
-
-        <Footer t={t} />
+        <img
+          src="/vazant-logo.png"
+          alt="Vazant"
+          style={{ width: 36, height: 36, objectFit: 'contain' }}
+        />
+        <div style={{ width: 36 }} />
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </Screen>
+
+      <div style={{ flex: 1, paddingTop: 28, maxWidth: 420, marginInline: 'auto', width: '100%' }}>
+        <div
+          style={{
+            fontFamily: t.mono,
+            fontSize: 10.5,
+            color: t.muted,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+            marginBottom: 10,
+          }}
+        >
+          Step 2 of 2
+        </div>
+        <h1
+          style={{
+            fontFamily: t.serif,
+            fontSize: 28,
+            color: t.ink,
+            letterSpacing: -0.5,
+            lineHeight: 1.2,
+            margin: 0,
+            marginBottom: 24,
+          }}
+        >
+          Enter the 6 digit code sent to{' '}
+          <span style={{ whiteSpace: 'nowrap' }}>{display || 'your phone'}</span>
+        </h1>
+
+        {/* Label row + Resend */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: 8,
+          }}
+        >
+          <label
+            htmlFor="otp-code"
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: t.ink,
+              fontFamily: t.sans,
+            }}
+          >
+            6-digit verification code
+          </label>
+          <button
+            type="button"
+            onClick={resend}
+            disabled={resending}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontSize: 13,
+              color: t.muted,
+              cursor: resending ? 'not-allowed' : 'pointer',
+              fontFamily: t.sans,
+              opacity: resending ? 0.5 : 1,
+            }}
+          >
+            {resending ? 'Resending…' : 'Resend code'}
+          </button>
+        </div>
+
+        {/* Code input */}
+        <input
+          ref={inputRef}
+          id="otp-code"
+          value={code}
+          onChange={(e) => onCodeChange(e.target.value)}
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="– – – – – –"
+          disabled={verifying}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '16px 18px',
+            fontSize: 22,
+            fontFamily: t.mono,
+            letterSpacing: code ? 8 : 4,
+            background: t.card,
+            border: `1px solid ${error ? t.rust : t.border}`,
+            borderRadius: 10,
+            color: t.ink,
+            outline: 'none',
+            textAlign: code ? 'left' : 'center',
+          }}
+        />
+
+        {error && (
+          <p
+            style={{
+              fontSize: 13,
+              color: t.rust,
+              margin: '10px 0 0',
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        {/* Verify button */}
+        <div style={{ marginTop: 28, width: '100%' }}>
+          <button
+            type="button"
+            onClick={() => code.length === 6 && verify(code)}
+            disabled={!canVerify}
+            style={{
+              display: 'block',
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '14px 22px',
+              fontSize: 15,
+              fontFamily: t.sans,
+              fontWeight: 500,
+              letterSpacing: -0.1,
+              background: t.ink,
+              color: t.bgElev,
+              border: `1px solid ${t.ink}`,
+              borderRadius: 999,
+              textAlign: 'center',
+              cursor: canVerify ? 'pointer' : 'not-allowed',
+              opacity: verifying ? 0.6 : code.length === 6 ? 1 : 0.5,
+              transition: 'opacity 0.15s',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            {verifying ? 'Verifying…' : 'Verify'}
+          </button>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes toast-in {
+          from { opacity: 0; transform: translate(-50%, -8px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
+      `}</style>
+    </main>
   );
 }
