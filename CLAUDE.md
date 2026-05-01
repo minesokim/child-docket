@@ -190,7 +190,8 @@ The product is **practice management surface + agentic engine** built as four la
 | DB | **Postgres 16** (Neon free tier dev, hosted prod TBD) + **pgvector** | Multi-tenant via RLS. Vector embeddings in same DB. |
 | Auth | **Clerk** | Phone-based magic auth + SMS OTP via Twilio. Organizations primitive. Free up to 10k MAU. |
 | SMS | **Twilio** | OTP + future unified inbox |
-| Payments | **Stripe** (deposit + future invoicing) + **Stripe Identity** (KYC for 8879 e-signing) | IRS requires identity verification before 8879. ~$1.50–$2/verification. |
+| Payments | **Square API** (deposit + future invoicing) | Antonio already uses Square day-to-day. Checkout link + webhook for deposit collection. 2.9% + $0.30 / txn. |
+| 8879 e-signature + KBA | **DocuSign embedded signing API** (v0) → **Documenso self-hosted + LexisNexis InstantID Q&A** (v1+) | IRS Pub 1345 requires credit-bureau KBA on every remote 8879 signing — NIST IAL2 standard. Stripe Identity does NOT satisfy this (it's selfie+ID, not credit-bureau-sourced). DocuSign's KBA add-on uses LexisNexis under the hood. ~$3/KBA via DocuSign, ~$1.50/KBA wholesale via direct integration. |
 | Storage | **Cloudflare R2** | S3-compatible, no egress fees |
 | Background jobs | **Inngest** | Durable execution. Critical for multi-minute browser automation runs. |
 | Vector | pgvector in same Postgres | No separate vector DB at v0. |
@@ -467,12 +468,23 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 - Email + SMS notifications for status changes
 - ✅ Day 12: bidirectional real messaging working end-to-end
 
-**Days 13–14 — Onboard Antonio's first cohort**
-- Antonio's first 5–10 real clients invited
-- Manual workarounds for what isn't wired yet: Stripe payments via Venmo/manual link,
-  8879 via DocuSign or paper (defer KBA + Stripe Identity to next cycle)
+**Days 8–9 — Square deposit + hardening (rate limiting, refactor auth pages)**
+- Square Checkout API integration (per-client payment links, webhook for paid status)
+- Rate limiting (Upstash) on Twilio + Square + KBA hot routes
+- Auth pages refactored — extract phone formatter / country picker / error mapper
+- ✅ Day 9: Real $50 deposit collected via Antonio's Square account, mid-flow
+
+**Day 13 — DocuSign + KBA wiring + hardening Phase 2**
+- DocuSign embedded signing API for 8879 (white-label, KBA via DocuSign's LexisNexis path)
+- Per-tenant encryption keys (HKDF DEK from master key + tenant_id)
+- E2E intake flow tests (Bun + Playwright)
+- Audit log review — every Server Action writes to actions table
+- ✅ Day 13: Real 8879 signed with KBA in sandbox; per-tenant DEKs in place
+
+**Days 14–15 — Onboard Antonio's first cohort**
+- Antonio's first 5–10 real clients invited (friends + family for testing)
 - Pitch deck (5–10 slides), Loom demo
-- ✅ Day 14: production app onboarded with real clients
+- ✅ Day 15: production app onboarded with real clients
 
 ### Status of the original 5/15 DEFERS list (revised for production)
 
@@ -488,10 +500,15 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 - Multi-state knowledge ingestion beyond CA
 
 **MOVED INTO SCOPE (was deferred, now required for IRS-compliant production):**
-- Stripe Identity KYC — required before legal e-filing of 8879
-- KBA-compliant 8879 e-signature — required by IRS publication 1345
-  → BOTH deferred to week 3 (after 5/15) — first cohort uses DocuSign/paper for 8879 +
-    manual Stripe charges for deposit, while we wire these properly
+- KBA-compliant 8879 e-signature — required by IRS Pub 1345 (NIST IAL2)
+  → Wired Day 13 via DocuSign embedded signing (LexisNexis under the hood, $3/KBA)
+  → v1+ migration: self-host Documenso + direct LexisNexis InstantID Q&A integration ($1.50/KBA wholesale)
+
+**CORRECTED (was wrong in earlier version):**
+- ❌ "Stripe Identity for KYC for 8879" — Stripe Identity is selfie+ID document verification.
+  IRS Pub 1345 requires credit-bureau-sourced KBA (NIST IAL2). Stripe Identity does NOT satisfy this.
+- ✅ Use DocuSign + KBA (LexisNexis) for 8879. Use Square (Antonio's existing tool) for payments.
+- ✅ No Stripe products needed in v0. Drop STRIPE_* env vars until/unless they earn a job.
 
 ### Surface ancestry to merge
 - **v3 Vazant Dashboard** (`vazant-dashboard-v3.vercel.app`) → Command Room information architecture
@@ -508,7 +525,7 @@ Port the design while the orchestrator is being built in parallel.
 
 - Repo scaffolding (Turborepo + pnpm + TS) ✅
 - Postgres + Drizzle schema + RLS policies
-- Clerk auth (phone-based) + Stripe Connect ($50 deposit) + Stripe Identity (KYC for 8879)
+- Clerk auth (phone-based) + Square Checkout ($50 deposit) + DocuSign+KBA (8879 e-sign)
 - Twilio for SMS OTP
 - Two Next.js app shells ✅
 - Practice ledger schema + audit middleware
