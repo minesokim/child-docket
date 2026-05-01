@@ -65,20 +65,93 @@ export function IntakeProvider({
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const pendingRef = useRef<Map<string, unknown>>(new Map());
 
-  // On unmount, flush any in-flight saves immediately.
-  useEffect(() => {
-    return () => {
-      const timers = timersRef.current;
-      const pending = pendingRef.current;
-      timers.forEach((t) => clearTimeout(t));
-      pending.forEach((value, path) => {
-        // Best-effort flush — fire and forget.
-        void saveIntakeField(path, value);
-      });
-      timers.clear();
-      pending.clear();
-    };
+  // Flush every pending debounced write to the server. Used by THREE
+  // triggers (registered in the effect below):
+  //
+  //   1. React unmount  — user navigates AWAY from the (intake) layout
+  //      via Next.js client-side nav. The cleanup runs synchronously
+  //      and we have no reliable way to await server actions, so we
+  //      use sendBeacon for guaranteed delivery during nav teardown.
+  //
+  //   2. beforeunload   — user closes the tab / hard refreshes / closes
+  //      the browser. Browsers cancel pending fetches but sendBeacon is
+  //      explicitly carved out to survive unload.
+  //
+  //   3. visibilitychange (hidden) — mobile-specific. iOS Safari often
+  //      doesn't fire beforeunload at all; the user navigating to home
+  //      screen or switching apps fires visibilitychange instead. This
+  //      catches the data-loss case the other two miss.
+  //
+  // The flush hits /api/intake/flush which runs each pending write
+  // through the same saveIntakeField pipeline (auth + validation +
+  // per-tenant encryption + audit log). Failures land in Sentry — the
+  // tab is closing so a toast wouldn't help anyone.
+  const flushPending = useCallback(() => {
+    const pending = pendingRef.current;
+    if (pending.size === 0) return;
+
+    const writes = Array.from(pending.entries()).map(([path, value]) => ({
+      path,
+      value,
+    }));
+
+    if (typeof window === 'undefined') return;
+
+    const url = '/api/intake/flush';
+    const payload = JSON.stringify({ writes });
+
+    // Prefer sendBeacon — explicitly designed for unload-time delivery,
+    // browser-managed queue, no response handling needed.
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      try {
+        const blob = new Blob([payload], { type: 'application/json' });
+        const ok = navigator.sendBeacon(url, blob);
+        if (ok) {
+          timersRef.current.forEach((t) => clearTimeout(t));
+          timersRef.current.clear();
+          pendingRef.current.clear();
+          return;
+        }
+      } catch {
+        // sendBeacon failed (e.g., payload too large) — fall through to
+        // keepalive fetch.
+      }
+    }
+
+    // Fallback: fetch with keepalive: true. Works the same way (browser
+    // commits to delivering) but lets us see a response if there's still
+    // a context to receive it.
+    void fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current.clear();
+    pendingRef.current.clear();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onBeforeUnload = () => flushPending();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushPending();
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      // React-level navigation away from the (intake) layout. Flush here
+      // too in case neither beforeunload nor visibilitychange fired.
+      flushPending();
+    };
+  }, [flushPending]);
 
   const setField = useCallback<SetFieldFn>((path, value) => {
     // 1. Synchronous local update — UI feels instant.
