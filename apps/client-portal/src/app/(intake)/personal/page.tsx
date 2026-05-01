@@ -165,7 +165,7 @@ export default function PersonalPage() {
             style={{
               marginTop: 14,
               padding: '20px 18px 4px',
-              background: t.bgElev,
+              background: t.card,
               border: `1px solid ${t.borderSoft}`,
               borderRadius: t.radius,
             }}

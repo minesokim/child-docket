@@ -38,6 +38,12 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Prevent iOS Safari from auto-resizing text on rotation / first paint */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -45,4 +51,7 @@ body {
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Disable touch-action delays + double-tap zoom on the body. Inputs still
+     allow normal interaction. */
+  touch-action: manipulation;
 }

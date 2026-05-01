@@ -27,7 +27,10 @@ export function Screen({
         background: t.bg,
         color: t.ink,
         fontFamily: t.sans,
-        height: '100%',
+        // 100dvh = dynamic viewport height (Mobile Safari excludes the URL bar
+        // when collapsed). This makes Screen the scroll container so sticky
+        // header + sticky bottom bar both anchor reliably.
+        height: '100dvh',
         overflowY: 'auto',
         overflowX: 'hidden',
         WebkitFontSmoothing: 'antialiased',
@@ -911,7 +914,8 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                 border: 'none',
                 outline: 'none',
                 background: 'transparent',
-                fontSize: 14,
+                // 16px+ prevents iOS Safari auto-zoom on focus
+                fontSize: 16,
                 fontFamily: t.sans,
                 color: t.ink,
               }}
