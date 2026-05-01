@@ -122,7 +122,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     label: 'State',
     section: 'about-you',
     isApplicable: () => true,
-    isComplete: (s) => !!s.state?.residentState,
+    isComplete: (s) => !!s.state?.primaryState,
     next: () => '/filing',
   },
   {

@@ -307,7 +307,7 @@ describe('getResumeStep', () => {
       tutorial: { completed: true },
       service: { kind: 'personal' },
       personal: { fullName: 'A B', dateOfBirth: '1990-01-01', ssn: '123' },
-      state: { residentState: 'CA' },
+      state: { primaryState: 'California' },
       filing: { status: 'single' },
     };
     expect(getResumeStep(state)).toBe('/deps');
@@ -318,7 +318,7 @@ describe('getResumeStep', () => {
       tutorial: { completed: true },
       service: { kind: 'personal' },
       personal: { fullName: 'A B', dateOfBirth: '1990-01-01', ssn: '123' },
-      state: { residentState: 'CA' },
+      state: { primaryState: 'California' },
       filing: { status: 'single' },
       dependents: { count: 0 },
     };
@@ -402,7 +402,7 @@ describe('isIntakeComplete', () => {
         dateOfBirth: '1990-01-01',
         ssn: '123-45-6789',
       },
-      state: { residentState: 'CA' },
+      state: { primaryState: 'California' },
       filing: { status: 'single' },
       dependents: { count: 0 },
       income: { types: ['w2'] },

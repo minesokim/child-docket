@@ -114,16 +114,17 @@ export type IntakeState = {
     // Home / mailing address that goes on the return
     street?: string;
     city?: string;
-    addressState?: string;       // 2-letter; named to avoid colliding with state.residentState
+    addressState?: string;       // 2-letter; named to avoid colliding with state.primaryState
     zip?: string;
   };
 
+  // State + prior-year filing context. Free-form strings to match the
+  // /state UX ("California" not "CA") — Antonio normalizes during prep.
   state?: {
-    residentState?: string;      // 2-letter code: 'CA', 'NY', etc.
-    movedDuringYear?: boolean;
-    otherStates?: string[];
-    filedLastYear?: boolean;
-    priorYearAGI?: number;
+    primaryState?: string;        // e.g. "California"
+    additionalState?: string;     // optional second state
+    filedLast?: 'yes' | 'no';
+    preparer?: string;            // last year's preparer (only when filedLast === 'yes')
   };
 
   filing?: {

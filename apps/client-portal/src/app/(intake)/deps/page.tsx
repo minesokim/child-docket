@@ -18,7 +18,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { FilingStatus } from '@docket/shared';
 
@@ -83,13 +83,12 @@ function StepperButton({
 export default function DepsCountPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [count, setCount] = usePortalState<number>('deps-count', 0);
-  // We need filing-status here too because back-nav from /deps goes to
-  // /spouse (when mfj/mfs) vs /filing (otherwise) — getPrevStep handles it.
-  const [filingStatus] = usePortalState<FilingStatus>('filing-status', 'single');
+  const [count, setCount] = useIntakeField<number>('dependents.count', 0);
+  // Filing status drives back-nav: /spouse when MFJ/MFS, else /filing.
+  const [filingStatus] = useIntakeField<FilingStatus>('filing.status', 'single');
 
-  const dec = () => setCount(Math.max(0, count - 1));
-  const inc = () => setCount(Math.min(MAX_DEPS, count + 1));
+  const dec = () => void setCount(Math.max(0, count - 1));
+  const inc = () => void setCount(Math.min(MAX_DEPS, count + 1));
 
   // Branching logic (count===0 → /income, count>0 → /deps-detail) lives in
   // intake-flow.ts. Adding new criteria (e.g. age check) means editing that

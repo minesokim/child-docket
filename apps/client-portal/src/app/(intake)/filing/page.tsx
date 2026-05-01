@@ -16,7 +16,7 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { FilingStatus } from '@docket/shared';
 
@@ -31,7 +31,7 @@ const OPTIONS: Array<{ id: FilingStatus; label: string; hint: string }> = [
 export default function FilingPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [sel, setSel] = usePortalState<FilingStatus>('filing-status', 'single');
+  const [sel, setSel] = useIntakeField<FilingStatus>('filing.status', 'single');
 
   // Next step is computed from the central INTAKE_FLOW (see intake-flow.ts).
   // Filing branches: mfj/mfs → /spouse, else → /deps. Logic lives in one
@@ -72,7 +72,7 @@ export default function FilingPage() {
             <Card
               key={o.id}
               t={t}
-              onClick={() => setSel(o.id)}
+              onClick={() => void setSel(o.id)}
               selected={sel === o.id}
               tinted={sel === o.id}
               style={{ padding: '16px 18px' }}

@@ -1,7 +1,8 @@
 'use client';
 
-// Intake step 5/13 — Spouse info (conditional, MFJ/MFS only).
-// 1-to-1 port of ScreenSpouseInfo.
+// Intake step 5 — Spouse info (conditional, MFJ/MFS only).
+// Migrated to Postgres-backed state. Spouse SSN is encrypted at rest
+// (same path as personal.ssn — see SENSITIVE_INTAKE_PATHS in @docket/shared).
 
 import {
   AntonioNote,
@@ -19,31 +20,60 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
+import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { FilingStatus } from '@docket/shared';
 
-type SpouseInfo = {
-  fullName: string;
-  dob: string;
-  ssn: string;
-  occupation: string;
-};
-
-const DEFAULT: SpouseInfo = { fullName: '', dob: '', ssn: '', occupation: '' };
-
-function formatDob(raw: string): string {
+// DOB format helpers — shared with /personal. UI uses "MM / DD / YYYY",
+// storage uses ISO YYYY-MM-DD.
+function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
   if (d.length <= 4) return `${d.slice(0, 2)} / ${d.slice(2)}`;
   return `${d.slice(0, 2)} / ${d.slice(2, 4)} / ${d.slice(4)}`;
 }
+function dobDisplayToIso(display: string): string {
+  const d = display.replace(/\D/g, '');
+  if (d.length !== 8) return '';
+  return `${d.slice(4, 8)}-${d.slice(0, 2)}-${d.slice(2, 4)}`;
+}
+function dobIsoToDisplay(iso: string): string {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  return `${m[2]} / ${m[3]} / ${m[1]}`;
+}
 
 export default function SpousePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<SpouseInfo>('spouse', DEFAULT);
-  const update = <K extends keyof SpouseInfo>(k: K, v: SpouseInfo[K]) =>
-    setInfo({ ...info, [k]: v });
+
+  const [fullName, setFullName] = useIntakeField<string>('spouse.fullName', '');
+  const [dobIso, setDobIso] = useIntakeField<string>('spouse.dateOfBirth', '');
+  const [ssn, setSsn] = useIntakeField<string>('spouse.ssn', '');
+  const [occupation, setOccupation] = useIntakeField<string>('spouse.occupation', '');
+  const [filingStatus] = useIntakeField<FilingStatus>('filing.status', 'single');
+
+  const [dobDisplay, setDobDisplay] = useState(() => dobIsoToDisplay(dobIso));
+
+  const handleDobChange = (raw: string) => {
+    const shaped = dobShape(raw);
+    setDobDisplay(shaped);
+    const iso = dobDisplayToIso(shaped);
+    if (iso) void setDobIso(iso);
+  };
+
+  const stateSnapshot = { filing: { status: filingStatus }, spouse: { fullName, dateOfBirth: dobIso, ssn } };
+  const handleNext = () => {
+    const target = getNextStep('/spouse', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/spouse', stateSnapshot);
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -58,7 +88,7 @@ export default function SpousePage() {
         <IntakeHeader t={t} step={5} label="Spouse" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/filing')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 0' }}>
@@ -99,8 +129,8 @@ export default function SpousePage() {
             <FieldLabel t={t}>Spouse&apos;s full legal name</FieldLabel>
             <TextField
               t={t}
-              value={info.fullName}
-              onChange={(v) => update('fullName', v)}
+              value={fullName}
+              onChange={(v) => void setFullName(v)}
               placeholder="First Middle Last"
               autoComplete="name"
             />
@@ -110,8 +140,8 @@ export default function SpousePage() {
             <FieldLabel t={t}>Date of birth</FieldLabel>
             <TextField
               t={t}
-              value={info.dob}
-              onChange={(v) => update('dob', formatDob(v))}
+              value={dobDisplay}
+              onChange={handleDobChange}
               placeholder="MM / DD / YYYY"
               mono
               inputMode="numeric"
@@ -122,15 +152,15 @@ export default function SpousePage() {
             <FieldLabel t={t} hint="LAST 4 SHOWN">
               Social Security Number
             </FieldLabel>
-            <SSNField t={t} value={info.ssn} onChange={(v) => update('ssn', v)} />
+            <SSNField t={t} value={ssn} onChange={(v) => void setSsn(v)} />
           </div>
 
           <div>
             <FieldLabel t={t}>Occupation</FieldLabel>
             <TextField
               t={t}
-              value={info.occupation}
-              onChange={(v) => update('occupation', v)}
+              value={occupation}
+              onChange={(v) => void setOccupation(v)}
               placeholder="What do they do?"
             />
           </div>
@@ -156,15 +186,10 @@ export default function SpousePage() {
             <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
-            <Button
-              t={t}
-              variant="ghost"
-              onClick={() => nav.back('/filing')}
-              style={{ flex: '0 0 auto' }}
-            >
+            <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/deps')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

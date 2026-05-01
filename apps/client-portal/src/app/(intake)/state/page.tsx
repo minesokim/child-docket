@@ -19,28 +19,31 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type StateInfo = {
-  primaryState: string;
-  additionalState: string;
-  filedLast: 'yes' | 'no' | null;
-  preparer: string;
-};
-
-const DEFAULT: StateInfo = {
-  primaryState: '',
-  additionalState: '',
-  filedLast: null,
-  preparer: '',
-};
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function StatePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<StateInfo>('state-prior', DEFAULT);
 
-  const setFiled = (v: 'yes' | 'no') => setInfo({ ...info, filedLast: v });
+  const [primaryState, setPrimaryState] = useIntakeField<string>('state.primaryState', '');
+  const [additionalState, setAdditionalState] = useIntakeField<string>(
+    'state.additionalState',
+    '',
+  );
+  const [filedLast, setFiledLast] = useIntakeField<'yes' | 'no' | ''>('state.filedLast', '');
+  const [preparer, setPreparer] = useIntakeField<string>('state.preparer', '');
+
+  const setFiled = (v: 'yes' | 'no') => void setFiledLast(v);
+
+  const handleNext = () => {
+    const target = getNextStep('/state', { state: { primaryState } });
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/state', { state: { primaryState } });
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -55,7 +58,7 @@ export default function StatePage() {
         <IntakeHeader t={t} step={3} label="State & prior year" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/personal')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '20px 24px 8px' }}>
@@ -85,8 +88,8 @@ export default function StatePage() {
                 <FieldLabel t={t}>Which state(s) did you live or work in during 2025?</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.primaryState}
-                  onChange={(v) => setInfo({ ...info, primaryState: v })}
+                  value={primaryState}
+                  onChange={(v) => void setPrimaryState(v)}
                   placeholder="California"
                 />
               </div>
@@ -94,8 +97,8 @@ export default function StatePage() {
                 <FieldLabel t={t}>Additional state (if applicable)</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.additionalState}
-                  onChange={(v) => setInfo({ ...info, additionalState: v })}
+                  value={additionalState}
+                  onChange={(v) => void setAdditionalState(v)}
                   placeholder="Oregon"
                 />
               </div>
@@ -118,34 +121,34 @@ export default function StatePage() {
             <Stack gap={8}>
               <RadioRowCard
                 t={t}
-                selected={info.filedLast === 'yes'}
+                selected={filedLast === 'yes'}
                 onClick={() => setFiled('yes')}
                 label="Yes, I filed last year"
                 sub="Upload a copy in the documents step"
               />
               <RadioRowCard
                 t={t}
-                selected={info.filedLast === 'no'}
+                selected={filedLast === 'no'}
                 onClick={() => setFiled('no')}
                 label="No, I didn't file"
                 sub="Antonio will help you figure out the right steps"
               />
             </Stack>
 
-            {info.filedLast === 'yes' && (
+            {filedLast === 'yes' && (
               <div style={{ marginTop: 16 }}>
                 <FieldLabel t={t}>Who prepared your return?</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.preparer}
-                  onChange={(v) => setInfo({ ...info, preparer: v })}
+                  value={preparer}
+                  onChange={(v) => void setPreparer(v)}
                   placeholder="Self, H&R Block, another preparer"
                 />
               </div>
             )}
           </div>
 
-          {info.filedLast === 'yes' && (
+          {filedLast === 'yes' && (
             <AntonioNote t={t}>
               If you have a copy of last year&apos;s return, upload it in the documents step — it
               helps me catch things you might have missed. Unless I see it, you lose the expense.
@@ -169,12 +172,12 @@ export default function StatePage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/personal')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/filing')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

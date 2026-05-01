@@ -14,6 +14,7 @@ import {
 import type { Theme } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
+import { useIntakeField } from '@/lib/intake-context';
 
 // ─── Step 1 demo: tap-to-select cards ───────────────────────────
 
@@ -425,8 +426,14 @@ export default function TutorialPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
   const [step, setStep] = React.useState(1);
+  const [, setTutorialCompleted] = useIntakeField<boolean>('tutorial.completed', false);
 
-  const finish = () => nav.next('/services');
+  const finish = () => {
+    // Mark tutorial complete so the welcome page knows to show
+    // "Continue where you left off" on next visit.
+    void setTutorialCompleted(true);
+    nav.next('/services');
+  };
 
   return (
     <Screen t={t}>

@@ -165,12 +165,11 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'personal.addressState': StateCodeSchema,
   'personal.zip': z.string().regex(/^\d{5}(-\d{4})?$/, 'ZIP must be 5 or 9 digits'),
 
-  // State + prior year
-  'state.residentState': StateCodeSchema,
-  'state.movedDuringYear': z.boolean(),
-  'state.otherStates': z.array(StateCodeSchema).max(50),
-  'state.filedLastYear': z.boolean(),
-  'state.priorYearAGI': MoneySchema,
+  // State + prior year (free-form strings — see intake.ts comment)
+  'state.primaryState': z.string().min(1).max(100),
+  'state.additionalState': z.string().max(100),
+  'state.filedLast': z.enum(['yes', 'no']),
+  'state.preparer': z.string().max(200),
 
   // Filing status
   'filing.status': FilingStatusSchema,
