@@ -690,55 +690,16 @@ export function AskAntonioBar({
   t: Theme;
   onMessage?: () => void;
   /**
-   * Optional tooltip — displays as a speech bubble above the avatar,
-   * arrow pointing down at the avatar (so it reads like Antonio is
-   * saying it). Auto-dismisses after 8s. User can dismiss with the X.
-   * Setting a new `tip` re-shows the bubble (resets the dismiss state).
+   * Optional contextual tip from Antonio. Renders INLINE at the top of
+   * the bar (NOT a floating overlay). User-tested feedback: the floating
+   * speech bubble blocked too much form content. Inline keeps the tip
+   * always-visible without obscuring anything else on the page.
+   *
+   * Border + tint match the bar's rust-soft palette so the whole
+   * component reads as one unified element.
    */
   tip?: string;
 }) {
-  // Three-phase lifecycle: hidden → entering (animated in) → entered →
-  // exiting (animated out) → hidden. The exit phase plays a fade-out
-  // animation before unmounting so dismissals feel intentional, not
-  // abrupt.
-  const [phase, setPhase] = React.useState<'hidden' | 'entering' | 'exiting'>('hidden');
-
-  const ENTER_DELAY_MS = 700;   // brief settle before the tip appears
-  const HOLD_MS = 12_000;       // visible duration before auto-dismiss
-  const EXIT_MS = 420;          // fade-out animation duration
-
-  // When tip text changes, restart the lifecycle.
-  React.useEffect(() => {
-    if (!tip) {
-      setPhase('hidden');
-      return;
-    }
-    setPhase('hidden');
-    const enterTimer = window.setTimeout(() => setPhase('entering'), ENTER_DELAY_MS);
-    return () => window.clearTimeout(enterTimer);
-  }, [tip]);
-
-  // Schedule the auto-exit + actual unmount once the tip is visible.
-  React.useEffect(() => {
-    if (phase !== 'entering') return;
-    const holdTimer = window.setTimeout(() => setPhase('exiting'), HOLD_MS);
-    return () => window.clearTimeout(holdTimer);
-  }, [phase]);
-
-  // Once we're exiting, schedule the unmount after the fade-out completes.
-  React.useEffect(() => {
-    if (phase !== 'exiting') return;
-    const unmountTimer = window.setTimeout(() => setPhase('hidden'), EXIT_MS);
-    return () => window.clearTimeout(unmountTimer);
-  }, [phase]);
-
-  const dismissTip = () => {
-    if (phase === 'entering') setPhase('exiting');
-  };
-
-  const tipMounted = phase !== 'hidden';
-  const tipExiting = phase === 'exiting';
-
   const handleClick = () => {
     if (onMessage) onMessage();
     try {
@@ -748,148 +709,22 @@ export function AskAntonioBar({
     }
   };
 
+  // When a tip is present the whole component becomes a rounded card with
+  // two stacked rows (tip on top + ask on bottom). Without a tip it stays
+  // the original pill shape.
+  const hasTip = !!tip;
+
   return (
-    <div style={{ position: 'relative' }}>
-      <style>{`
-        @keyframes antonio-tip-in {
-          from { opacity: 0; transform: translateY(14px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0)    scale(1);    }
-        }
-        @keyframes antonio-tip-out {
-          from { opacity: 1; transform: translateY(0)    scale(1);    }
-          to   { opacity: 0; transform: translateY(8px)  scale(0.98); }
-        }
-      `}</style>
-
-      {/* Speech bubble — floats above the bar, arrow on left aligned to avatar */}
-      {tip && tipMounted && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 12px)',
-            left: 0,
-            right: 0,
-            pointerEvents: 'none', // bubble allows touches through; X button overrides
-            animation: tipExiting
-              ? `antonio-tip-out ${EXIT_MS}ms cubic-bezier(.4,0,.2,1) both`
-              : 'antonio-tip-in 540ms cubic-bezier(.2,.8,.2,1) both',
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              maxWidth: 360,
-              background: '#FFFFFF',
-              border: `1px solid ${t.borderSoft}`,
-              borderRadius: 16,
-              padding: '14px 38px 14px 18px',
-              boxShadow:
-                '0 10px 28px rgba(60, 40, 28, 0.12), 0 2px 4px rgba(60, 40, 28, 0.06)',
-              pointerEvents: 'auto',
-            }}
-          >
-            <button
-              type="button"
-              onClick={dismissTip}
-              aria-label="Dismiss tip"
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 24,
-                height: 24,
-                padding: 0,
-                background: 'transparent',
-                border: 'none',
-                borderRadius: 999,
-                cursor: 'pointer',
-                color: t.muted,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = t.bgElev;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-              }}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" strokeLinecap="round" />
-              </svg>
-            </button>
-
-            <div
-              style={{
-                fontFamily: t.sans,
-                fontSize: 14,
-                lineHeight: 1.5,
-                color: t.inkSoft,
-                letterSpacing: -0.05,
-              }}
-            >
-              {tip}
-            </div>
-            <div
-              style={{
-                marginTop: 8,
-                fontFamily: t.sans,
-                fontSize: 12.5,
-                color: t.ink,
-                fontWeight: 500,
-              }}
-            >
-              —Antonio
-            </div>
-
-            {/* Arrow pointing down at the avatar. Avatar center sits at
-                left:11 (bar padding) + 16 (half of 32px avatar) = 27px.
-                Arrow center at left:27 places its tip directly over the avatar. */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: -8,
-                left: 21,
-                width: 14,
-                height: 8,
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  top: -7,
-                  left: 0,
-                  width: 14,
-                  height: 14,
-                  background: '#FFFFFF',
-                  border: `1px solid ${t.borderSoft}`,
-                  transform: 'rotate(45deg)',
-                  transformOrigin: 'center',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div
-        onClick={handleClick}
+    <div
+      onClick={handleClick}
       style={{
-        // Pure white per design call. Keep the rust border + shadow so
-        // it still pops off the cream-page background.
         background: '#FFFFFF',
         border: `1.5px solid ${t.rustSoft}`,
-        borderRadius: 999,
-        padding: '7px 9px 7px 11px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 11,
+        borderRadius: hasTip ? 18 : 999,
         boxShadow:
           '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)',
         cursor: 'pointer',
+        overflow: 'hidden',
         transition:
           'transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
       }}
@@ -904,46 +739,101 @@ export function AskAntonioBar({
           '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)';
       }}
     >
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <AvatarSlot t={t} size={32} />
+      {/* Tip row — only renders when a tip is provided. Sits ABOVE the
+          ask row, separated by a hairline divider in the same rust-soft
+          tone as the outer border so the whole component reads as one. */}
+      {hasTip && (
         <div
           style={{
-            position: 'absolute',
-            bottom: -1,
-            right: -1,
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: '#4a8f5f',
-            border: `2px solid #FFFFFF`,
-            boxShadow: '0 0 0 1px rgba(74, 143, 95, 0.20)',
+            padding: '10px 14px 11px',
+            borderBottom: `1px solid ${t.rustSoft}`,
+            background: t.tintAccent,
+            display: 'flex',
+            gap: 9,
+            alignItems: 'flex-start',
           }}
-        />
-      </div>
-      <span style={{ flex: 1, fontSize: 13, color: t.ink, fontWeight: 500 }}>
-        Not sure? Ask Antonio
-      </span>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleClick();
-        }}
+        >
+          {/* Lightbulb glyph — reads as 'Antonio is hinting'. */}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke={t.rustInk}
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0, marginTop: 2 }}
+            aria-hidden
+          >
+            <path d="M7 1.5a3.8 3.8 0 0 0-2.3 6.85c.55.42.85.93.85 1.55V11h2.9V9.9c0-.62.3-1.13.85-1.55A3.8 3.8 0 0 0 7 1.5z" />
+            <path d="M5.55 12.5h2.9M6.1 13.5h1.8" />
+          </svg>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontFamily: t.sans,
+              fontSize: 12.5,
+              lineHeight: 1.45,
+              color: t.inkSoft,
+              letterSpacing: -0.05,
+            }}
+          >
+            {tip}
+          </div>
+        </div>
+      )}
+
+      {/* Ask row — same shape regardless of whether a tip is present. */}
+      <div
         style={{
-          padding: '7px 16px',
-          fontSize: 12.5,
-          fontWeight: 600,
-          background: t.rust,
-          color: '#fff',
-          border: 'none',
-          borderRadius: 999,
-          cursor: 'pointer',
-          fontFamily: t.sans,
-          letterSpacing: -0.05,
-          boxShadow: '0 2px 4px rgba(150, 60, 28, 0.20)',
+          padding: '7px 9px 7px 11px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 11,
         }}
       >
-        Message
-      </button>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <AvatarSlot t={t} size={32} />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: -1,
+              right: -1,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#4a8f5f',
+              border: `2px solid #FFFFFF`,
+              boxShadow: '0 0 0 1px rgba(74, 143, 95, 0.20)',
+            }}
+          />
+        </div>
+        <span style={{ flex: 1, fontSize: 13, color: t.ink, fontWeight: 500 }}>
+          Not sure? Ask Antonio
+        </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClick();
+          }}
+          style={{
+            padding: '7px 16px',
+            fontSize: 12.5,
+            fontWeight: 600,
+            background: t.rust,
+            color: '#fff',
+            border: 'none',
+            borderRadius: 999,
+            cursor: 'pointer',
+            fontFamily: t.sans,
+            letterSpacing: -0.05,
+            boxShadow: '0 2px 4px rgba(150, 60, 28, 0.20)',
+          }}
+        >
+          Message
+        </button>
       </div>
     </div>
   );
