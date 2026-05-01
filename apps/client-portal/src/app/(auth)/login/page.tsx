@@ -1,25 +1,14 @@
 'use client';
 
-// Real Clerk phone-OTP sign-in (custom UI, not Clerk's drop-in).
-// Flow:
-//   1. User types phone → submit
-//   2. Try signIn.create({ identifier: phone })
-//      → if user exists, prepareFirstFactor sends SMS, advance to /otp?mode=signin
-//      → if 'form_identifier_not_found', fall back to signUp.create({ phoneNumber })
-//        + preparePhoneNumberVerification, advance to /otp?mode=signup
-//   3. /otp page handles code verification + activates session.
+// Phone-OTP step 1: enter phone number with country selector.
+// Uses Clerk's useSignIn / useSignUp (legacy hooks for the .create + .prepareFirstFactor
+// pattern). Tries sign-in first; falls back to sign-up on identifier-not-found.
 
 import {
-  AvatarSlot,
-  Body,
   Button,
   buildTheme,
-  Footer,
-  H1,
-  Row,
-  Screen,
-  Stack,
 } from '@docket/ui';
+import type { Theme } from '@docket/ui';
 import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
 import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
@@ -30,13 +19,56 @@ type ClerkError = {
   errors?: Array<{ code?: string; message?: string }>;
 };
 
-function toE164(formatted: string): string {
-  const digits = formatted.replace(/\D/g, '');
-  // Default to US country code if 10 digits and no leading 1.
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  // Anything else → assume already-prefixed international format.
-  return `+${digits}`;
+// Most common countries in Antonio's market. Ordered by usage prior — US/CA top,
+// then Latino markets, then APAC. Full international list can land later.
+const COUNTRIES: Array<{ code: string; name: string; dial: string; flag: string }> = [
+  { code: 'US', name: 'United States', dial: '+1', flag: '🇺🇸' },
+  { code: 'CA', name: 'Canada', dial: '+1', flag: '🇨🇦' },
+  { code: 'MX', name: 'Mexico', dial: '+52', flag: '🇲🇽' },
+  { code: 'KR', name: 'South Korea', dial: '+82', flag: '🇰🇷' },
+  { code: 'CN', name: 'China', dial: '+86', flag: '🇨🇳' },
+  { code: 'IN', name: 'India', dial: '+91', flag: '🇮🇳' },
+  { code: 'PH', name: 'Philippines', dial: '+63', flag: '🇵🇭' },
+  { code: 'VN', name: 'Vietnam', dial: '+84', flag: '🇻🇳' },
+  { code: 'JP', name: 'Japan', dial: '+81', flag: '🇯🇵' },
+  { code: 'BR', name: 'Brazil', dial: '+55', flag: '🇧🇷' },
+  { code: 'GB', name: 'United Kingdom', dial: '+44', flag: '🇬🇧' },
+  { code: 'FR', name: 'France', dial: '+33', flag: '🇫🇷' },
+  { code: 'DE', name: 'Germany', dial: '+49', flag: '🇩🇪' },
+  { code: 'IT', name: 'Italy', dial: '+39', flag: '🇮🇹' },
+  { code: 'ES', name: 'Spain', dial: '+34', flag: '🇪🇸' },
+  { code: 'AU', name: 'Australia', dial: '+61', flag: '🇦🇺' },
+  { code: 'CO', name: 'Colombia', dial: '+57', flag: '🇨🇴' },
+  { code: 'PE', name: 'Peru', dial: '+51', flag: '🇵🇪' },
+  { code: 'AR', name: 'Argentina', dial: '+54', flag: '🇦🇷' },
+  { code: 'CL', name: 'Chile', dial: '+56', flag: '🇨🇱' },
+  { code: 'EC', name: 'Ecuador', dial: '+593', flag: '🇪🇨' },
+  { code: 'GT', name: 'Guatemala', dial: '+502', flag: '🇬🇹' },
+  { code: 'HN', name: 'Honduras', dial: '+504', flag: '🇭🇳' },
+  { code: 'SV', name: 'El Salvador', dial: '+503', flag: '🇸🇻' },
+];
+
+type Country = (typeof COUNTRIES)[number];
+
+// Format a US/Canada 10-digit phone for display.
+function formatUS(digits: string): string {
+  const d = digits.slice(0, 10);
+  if (d.length < 4) return d;
+  if (d.length < 7) return `(${d.slice(0, 3)})-${d.slice(3)}`;
+  return `(${d.slice(0, 3)})-${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+// Strip non-digits + cap length per country.
+function normalizeDigits(raw: string, country: Country): string {
+  const cap = country.code === 'US' || country.code === 'CA' ? 10 : 15;
+  return raw.replace(/\D/g, '').slice(0, cap);
+}
+
+// Display value for the input field.
+function formatForCountry(digits: string, country: Country): string {
+  if (country.code === 'US' || country.code === 'CA') return formatUS(digits);
+  // Most other countries — break into groups of 3 for readability.
+  return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
 }
 
 export default function LoginPage() {
@@ -47,49 +79,36 @@ export default function LoginPage() {
   const { signOut } = useClerk();
   const { signIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp, isLoaded: signUpLoaded } = useSignUp();
-  const [phone, setPhone] = usePortalState<string>('phone', '');
+
+  // State persisted across page loads
+  const [countryCode, setCountryCode] = usePortalState<string>('phone-country', 'US');
+  const [phoneDigits, setPhoneDigits] = usePortalState<string>('phone-digits', '');
+
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
 
-  // If user already has an active session (e.g. signed into command-room
-  // earlier — both apps share the same Clerk app/cookie), surface a
-  // "continue or switch account" prompt instead of failing on session_exists.
   if (authLoaded && isSignedIn) {
     return <AlreadySignedIn t={t} user={user} signOut={signOut} router={router} />;
   }
 
-  // Format US-style phone numbers as the user types.
-  // 5 → 5
-  // 562 → 562
-  // 5622 → (562)-2
-  // 5622736 → (562)-273-6
-  // 5622736682 → (562)-273-6682
-  const format = (v: string) => {
-    const d = v.replace(/\D/g, '').slice(0, 10);
-    if (d.length < 4) return d;
-    if (d.length < 7) return `(${d.slice(0, 3)})-${d.slice(3)}`;
-    return `(${d.slice(0, 3)})-${d.slice(3, 6)}-${d.slice(6)}`;
-  };
-
-  const phoneDigits = phone.replace(/\D/g, '').length;
-  const phoneLooksValid = phoneDigits >= 7;
+  const country = COUNTRIES.find((c) => c.code === countryCode) ?? COUNTRIES[0]!;
+  const display = formatForCountry(phoneDigits, country);
+  const e164 = `${country.dial}${phoneDigits}`;
+  const phoneLooksValid = phoneDigits.length >= 7;
 
   const onSubmit = async () => {
     if (submitting) return;
-
-    // Surface SDK loading state so users aren't silently blocked
     if (!signInLoaded || !signUpLoaded) {
       setError('Auth still loading — try again in a sec');
       return;
     }
     if (!signIn || !signUp) {
-      setError('Sign-in service unavailable. Check NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.');
+      setError('Sign-in service unavailable');
       return;
     }
-
-    const e164 = toE164(phone);
-    if (e164.replace(/\D/g, '').length < 7) {
-      setError('Enter a valid phone number');
+    if (!phoneLooksValid) {
+      setError('Enter your phone number');
       return;
     }
 
@@ -98,7 +117,6 @@ export default function LoginPage() {
     let navigated = false;
 
     try {
-      // Try sign-in first.
       const attempt = await signIn.create({ identifier: e164 });
       const phoneFactor = attempt.supportedFirstFactors?.find(
         (f): f is typeof f & { strategy: 'phone_code'; phoneNumberId: string } =>
@@ -119,7 +137,6 @@ export default function LoginPage() {
       console.error('[login] signIn error', { code, raw: err });
 
       if (code === 'form_identifier_not_found') {
-        // No existing user — create account via sign-up.
         try {
           await signUp.create({ phoneNumber: e164 });
           await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
@@ -131,134 +148,334 @@ export default function LoginPage() {
           setError(sErr.errors?.[0]?.message ?? 'Could not start sign-up');
         }
       } else if (code === 'session_exists') {
-        // Edge case: race between auth-loaded check and submit.
         navigated = true;
         router.push('/welcome');
       } else {
         setError(err.errors?.[0]?.message ?? `Could not send code${code ? ` (${code})` : ''}`);
       }
     } finally {
-      // Always reset submitting unless we already navigated away.
       if (!navigated) setSubmitting(false);
     }
   };
 
   return (
-    <Screen t={t}>
-      <div style={{ padding: '60px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-        <Stack gap={28} style={{ flex: 1 }}>
-          <AvatarSlot t={t} size={72} />
-          <Stack gap={10}>
-            <H1 t={t}>
-              Welcome to
-              <br />
-              Vazant Consulting
-            </H1>
-            <Body t={t} size={16}>
-              Antonio will personally handle your return. Enter your phone number to get started.
-            </Body>
-          </Stack>
+    <main
+      style={{
+        minHeight: '100dvh',
+        background: t.bg,
+        color: t.ink,
+        fontFamily: t.sans,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px 24px 28px',
+      }}
+    >
+      {/* Top bar with back button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button
+          onClick={() => router.push('/')}
+          aria-label="Back"
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 8,
+            marginLeft: -8,
+            cursor: 'pointer',
+            color: t.inkSoft,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <path d="M12 4l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <img
+          src="/vazant-logo.png"
+          alt="Vazant"
+          style={{ width: 36, height: 36, objectFit: 'contain' }}
+        />
+        <div style={{ width: 36 }} />
+      </div>
 
-          <Stack gap={14}>
-            <div>
-              <div
-                style={{
-                  fontFamily: t.mono,
-                  fontSize: 10,
-                  color: t.muted,
-                  letterSpacing: 1.2,
-                  marginBottom: 8,
-                }}
-              >
-                PHONE NUMBER
-              </div>
-              <input
-                value={format(phone)}
-                onChange={(e) => setPhone(format(e.target.value))}
-                placeholder="(555)-555-5555"
-                inputMode="tel"
-                type="tel"
-                autoComplete="tel"
-                disabled={submitting}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '16px 18px',
-                  fontSize: 18,
-                  fontFamily: t.sans,
-                  background: t.card,
-                  border: `1px solid ${error ? t.rust : t.border}`,
-                  borderRadius: t.radius,
-                  color: t.ink,
-                  outline: 'none',
-                  letterSpacing: 0.2,
-                }}
-              />
-              {error && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 12.5,
-                    color: t.rust,
-                    fontFamily: t.sans,
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-            </div>
-            <Button
-              t={t}
-              onClick={onSubmit}
+      <div style={{ flex: 1, paddingTop: 28, maxWidth: 420, marginInline: 'auto', width: '100%' }}>
+        <div
+          style={{
+            fontFamily: t.mono,
+            fontSize: 10.5,
+            color: t.muted,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+            marginBottom: 10,
+          }}
+        >
+          Step 1 of 2
+        </div>
+        <h1
+          style={{
+            fontFamily: t.serif,
+            fontSize: 30,
+            color: t.ink,
+            letterSpacing: -0.5,
+            margin: 0,
+            marginBottom: 24,
+          }}
+        >
+          Your phone number
+        </h1>
+
+        {/* Country picker + phone input row */}
+        <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
+          <CountryPickerButton
+            t={t}
+            country={country}
+            open={pickerOpen}
+            onClick={() => setPickerOpen((v) => !v)}
+            disabled={submitting}
+          />
+          <div style={{ flex: 1, position: 'relative' }}>
+            <span
+              style={{
+                position: 'absolute',
+                left: 14,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontFamily: t.mono,
+                fontSize: 16,
+                color: t.muted,
+                pointerEvents: 'none',
+              }}
+            >
+              {country.dial}
+            </span>
+            <input
+              value={display}
+              onChange={(e) => setPhoneDigits(normalizeDigits(e.target.value, country))}
+              placeholder={
+                country.code === 'US' || country.code === 'CA'
+                  ? '(234)-567-8900'
+                  : '234 567 8900'
+              }
+              inputMode="tel"
+              type="tel"
+              autoComplete="tel-national"
               disabled={submitting}
               style={{
                 width: '100%',
-                padding: '16px 22px',
+                boxSizing: 'border-box',
+                padding: '14px 16px 14px',
+                paddingLeft: country.dial.length === 2 ? 38 : country.dial.length === 3 ? 46 : 52,
                 fontSize: 16,
-                opacity: submitting ? 0.6 : phoneLooksValid ? 1 : 0.55,
-                transition: 'opacity 0.15s ease',
+                fontFamily: t.sans,
+                background: t.card,
+                border: `1px solid ${error ? t.rust : t.border}`,
+                borderRadius: 10,
+                color: t.ink,
+                outline: 'none',
               }}
-            >
-              {submitting ? 'Sending…' : 'Send verification code'}
-            </Button>
-            <Row justify="center" gap={10}>
-              <span
-                style={{
-                  fontFamily: t.mono,
-                  fontSize: 10,
-                  color: t.muted,
-                  letterSpacing: 1,
-                }}
-              >
-                SECURE · ENCRYPTED · IRS-COMPLIANT
-              </span>
-            </Row>
-          </Stack>
-        </Stack>
+            />
+          </div>
 
-        <div style={{ marginTop: 40 }}>
-          <div
+          {pickerOpen && (
+            <CountryPicker
+              t={t}
+              selected={countryCode}
+              onSelect={(code) => {
+                setCountryCode(code);
+                setPickerOpen(false);
+              }}
+              onClose={() => setPickerOpen(false)}
+            />
+          )}
+        </div>
+
+        {/* Help text */}
+        <p
+          style={{
+            fontSize: 13,
+            color: t.muted,
+            lineHeight: 1.5,
+            margin: '14px 0 0',
+          }}
+        >
+          To access your account, enter your mobile number. You&apos;ll receive a single message
+          with a passcode. Message and data rates may apply.
+        </p>
+
+        {error && (
+          <p
             style={{
-              padding: '14px 16px',
-              background: t.bgElev,
-              borderRadius: t.radius,
-              border: `1px solid ${t.borderSoft}`,
               fontSize: 13,
-              color: t.inkSoft,
-              textAlign: 'center',
-              lineHeight: 1.5,
+              color: t.rust,
+              margin: '10px 0 0',
             }}
           >
-            Need help? Text Antonio directly at
-            <br />
-            <span style={{ color: t.rust, fontWeight: 500 }}>(951) 555-0234</span>
-          </div>
-          <Footer t={t} />
+            {error}
+          </p>
+        )}
+
+        {/* Next button */}
+        <div style={{ marginTop: 28 }}>
+          <Button
+            t={t}
+            variant="dark"
+            onClick={onSubmit}
+            disabled={submitting}
+            style={{
+              width: '100%',
+              padding: '14px 22px',
+              fontSize: 15,
+              opacity: submitting ? 0.6 : phoneLooksValid ? 1 : 0.5,
+              transition: 'opacity 0.15s',
+            }}
+          >
+            {submitting ? 'Sending…' : 'Next'}
+          </Button>
         </div>
       </div>
-    </Screen>
+    </main>
   );
 }
+
+// ─── Country picker button ─────────────────────────────────────
+
+function CountryPickerButton({
+  t,
+  country,
+  open,
+  onClick,
+  disabled,
+}: {
+  t: Theme;
+  country: Country;
+  open: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 10,
+        padding: '0 14px',
+        height: 50,
+        fontSize: 15,
+        fontFamily: t.sans,
+        color: t.ink,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        minWidth: 88,
+      }}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+    >
+      <span style={{ fontWeight: 500 }}>{country.code}</span>
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        stroke={t.muted}
+        strokeWidth="1.6"
+        style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 120ms' }}
+      >
+        <path d="M2 3.5l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
+
+// ─── Country picker dropdown ───────────────────────────────────
+
+function CountryPicker({
+  t,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  t: Theme;
+  selected: string;
+  onSelect: (code: string) => void;
+  onClose: () => void;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      role="listbox"
+      style={{
+        position: 'absolute',
+        top: 58,
+        left: 0,
+        width: 320,
+        maxWidth: '100%',
+        maxHeight: 320,
+        overflowY: 'auto',
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 12,
+        boxShadow: '0 12px 36px rgba(40, 30, 20, 0.18)',
+        zIndex: 50,
+      }}
+    >
+      {COUNTRIES.map((c) => {
+        const on = c.code === selected;
+        return (
+          <button
+            key={c.code}
+            onClick={() => onSelect(c.code)}
+            role="option"
+            aria-selected={on}
+            style={{
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+              gap: 12,
+              padding: '11px 14px',
+              background: on ? t.tintAccent : 'transparent',
+              border: 'none',
+              borderBottom: `1px solid ${t.borderSoft}`,
+              cursor: 'pointer',
+              fontFamily: t.sans,
+              fontSize: 14,
+              color: t.ink,
+              textAlign: 'left',
+            }}
+          >
+            <span
+              style={{
+                fontFamily: t.mono,
+                fontSize: 11,
+                color: t.muted,
+                letterSpacing: 0.5,
+                minWidth: 30,
+              }}
+            >
+              {c.code}
+            </span>
+            <span style={{ flex: 1 }}>{c.name}</span>
+            <span style={{ fontFamily: t.mono, fontSize: 12, color: t.inkSoft }}>{c.dial}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Already-signed-in fallback ────────────────────────────────
 
 function AlreadySignedIn({
   t,
@@ -266,7 +483,7 @@ function AlreadySignedIn({
   signOut,
   router,
 }: {
-  t: ReturnType<typeof buildTheme>;
+  t: Theme;
   user: ReturnType<typeof useUser>['user'];
   signOut: ReturnType<typeof useClerk>['signOut'];
   router: ReturnType<typeof useRouter>;
@@ -278,47 +495,70 @@ function AlreadySignedIn({
     'your existing account';
 
   return (
-    <Screen t={t}>
-      <div
-        style={{
-          padding: '60px 24px 40px',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100%',
-          gap: 24,
-        }}
-      >
-        <Stack gap={28} style={{ flex: 1 }}>
-          <AvatarSlot t={t} size={72} />
-          <Stack gap={10}>
-            <H1 t={t}>You&apos;re already signed in</H1>
-            <Body t={t} size={15}>
-              Active session for{' '}
-              <span style={{ fontFamily: t.mono, color: t.ink }}>{identifier}</span>. Continue to
-              your portal, or sign out to use a different number.
-            </Body>
-          </Stack>
-
-          <Stack gap={10}>
-            <Button
-              t={t}
-              onClick={() => router.push('/welcome')}
-              style={{ width: '100%', padding: '16px 22px', fontSize: 16 }}
-            >
-              Continue to portal
-            </Button>
-            <Button
-              t={t}
-              variant="ghost"
-              onClick={() => signOut().then(() => router.refresh())}
-              style={{ width: '100%', padding: '14px 22px', fontSize: 14 }}
-            >
-              Sign out and use a different number
-            </Button>
-          </Stack>
-        </Stack>
-        <Footer t={t} />
+    <main
+      style={{
+        minHeight: '100dvh',
+        background: t.bg,
+        color: t.ink,
+        fontFamily: t.sans,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px 24px 28px',
+        gap: 24,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <img src="/vazant-logo.png" alt="Vazant" style={{ width: 48, height: 48 }} />
       </div>
-    </Screen>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 360, marginInline: 'auto', textAlign: 'center' }}>
+        <div
+          style={{
+            fontFamily: t.mono,
+            fontSize: 10.5,
+            color: t.muted,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+            marginBottom: 10,
+          }}
+        >
+          Already signed in
+        </div>
+        <h1
+          style={{
+            fontFamily: t.serif,
+            fontSize: 26,
+            color: t.ink,
+            letterSpacing: -0.5,
+            margin: 0,
+            marginBottom: 14,
+          }}
+        >
+          You have an active session
+        </h1>
+        <p style={{ fontSize: 14, color: t.inkSoft, lineHeight: 1.5, margin: 0, marginBottom: 20 }}>
+          Active session for{' '}
+          <span style={{ fontFamily: t.mono, color: t.ink }}>{identifier}</span>. Continue to your
+          portal, or sign out to use a different number.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Button
+            t={t}
+            variant="dark"
+            onClick={() => router.push('/welcome')}
+            style={{ width: '100%', padding: '14px 22px', fontSize: 15 }}
+          >
+            Continue to portal
+          </Button>
+          <Button
+            t={t}
+            variant="ghost"
+            onClick={() => signOut().then(() => router.refresh())}
+            style={{ width: '100%', padding: '12px 22px', fontSize: 14 }}
+          >
+            Sign out and use a different number
+          </Button>
+        </div>
+      </div>
+    </main>
   );
 }
