@@ -21,34 +21,25 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type ServicePick = {
-  path: ServicePathId;
-  otherSub: ServiceOtherSubId | null;
-  addons: string[];
-};
-
-const DEFAULT_PICK: ServicePick = { path: 'personal', otherSub: null, addons: [] };
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function ServicesAddonsPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [pick, setPick] = usePortalState<ServicePick>('service-pick', DEFAULT_PICK);
 
-  const pathDef =
-    SERVICE_CATALOG.paths.find((p) => p.id === pick.path) ?? SERVICE_CATALOG.paths[0]!;
-  const list = SERVICE_CATALOG.addons[pick.path] ?? [];
-  const addonsSet = new Set(pick.addons);
+  const [path] = useIntakeField<ServicePathId>('service.kind', 'personal');
+  const [addons, setAddons] = useIntakeField<string[]>('service.addons', []);
+
+  const pathDef = SERVICE_CATALOG.paths.find((p) => p.id === path) ?? SERVICE_CATALOG.paths[0]!;
+  const list = SERVICE_CATALOG.addons[path] ?? [];
+  const addonsSet = new Set(addons);
 
   const toggleAddon = (id: string) => {
     const next = new Set(addonsSet);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setPick({ ...pick, addons: [...next] });
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setAddons([...next]);
   };
 
   // Build breakdown
@@ -63,8 +54,14 @@ export default function ServicesAddonsPage() {
   const lo = breakdown.reduce((acc, s) => acc + s.lo, 0);
   const hi = breakdown.reduce((acc, s) => acc + s.hi, 0);
 
+  const stateSnapshot = { service: { kind: path, addons } };
   const handleNext = () => {
-    nav.next('/personal');
+    const target = getNextStep('/services-addons', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/services-addons', stateSnapshot);
+    if (target) nav.back(target);
   };
 
   return (
@@ -103,7 +100,7 @@ export default function ServicesAddonsPage() {
                 <span style={{ color: t.ink, fontWeight: 500 }}>{pathDef.name}</span>
               </span>
               <span
-                onClick={() => nav.back('/services')}
+                onClick={handleBack}
                 style={{
                   fontFamily: t.serif,
                   fontStyle: 'italic',
@@ -304,7 +301,7 @@ export default function ServicesAddonsPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/services')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back

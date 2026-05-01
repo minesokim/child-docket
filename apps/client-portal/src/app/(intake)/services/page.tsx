@@ -21,49 +21,48 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type ServicePick = {
-  path: ServicePathId;
-  otherSub: ServiceOtherSubId | null;
-  addons: string[];
-};
-
-const DEFAULT_PICK: ServicePick = { path: 'personal', otherSub: null, addons: [] };
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { ServiceOtherSubKind } from '@docket/shared';
 
 export default function ServicesPathPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [pick, setPick] = usePortalState<ServicePick>('service-pick', DEFAULT_PICK);
+
+  const [path, setPathField] = useIntakeField<ServicePathId>('service.kind', 'personal');
+  const [otherSub, setOtherSub] = useIntakeField<ServiceOtherSubKind | ''>(
+    'service.otherSub',
+    '',
+  );
 
   const setPath = (id: ServicePathId) => {
-    setPick({
-      path: id,
-      otherSub: id !== 'other' ? null : pick.otherSub,
-      addons: pick.addons,
-    });
+    setPathField(id);
+    // When switching off 'other', clear the otherSub (only relevant for 'other' path).
+    if (id !== 'other' && otherSub) setOtherSub('');
   };
 
-  const setOtherSub = (id: ServiceOtherSubId) => {
-    setPick({ ...pick, otherSub: id });
-  };
-
-  const currentPath = SERVICE_CATALOG.paths.find((p) => p.id === pick.path) ?? SERVICE_CATALOG.paths[0]!;
-  const currentOther = pick.otherSub
-    ? SERVICE_CATALOG.otherSub.find((o) => o.id === pick.otherSub) ?? null
+  const currentPath = SERVICE_CATALOG.paths.find((p) => p.id === path) ?? SERVICE_CATALOG.paths[0]!;
+  const currentOther = otherSub
+    ? SERVICE_CATALOG.otherSub.find((o) => o.id === otherSub) ?? null
     : null;
 
   const headline =
-    pick.path === 'other'
+    path === 'other'
       ? currentOther
         ? currentOther.fee
         : 'Pick a service below'
       : currentPath.fee;
 
-  const canContinue = pick.path !== 'other' || !!pick.otherSub;
+  const canContinue = path !== 'other' || !!otherSub;
 
+  const stateSnapshot = { service: { kind: path, otherSub: otherSub || undefined } };
   const handleNext = () => {
-    nav.next('/services-addons');
+    const target = getNextStep('/services', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/services', stateSnapshot);
+    if (target) nav.back(target);
   };
 
   return (
@@ -92,8 +91,8 @@ export default function ServicesPathPage() {
               key={p.id}
               t={t}
               onClick={() => setPath(p.id)}
-              selected={pick.path === p.id}
-              tinted={pick.path === p.id}
+              selected={path === p.id}
+              tinted={path === p.id}
               style={{ padding: '16px 18px' }}
             >
               <Row gap={14} align="flex-start">
@@ -102,8 +101,8 @@ export default function ServicesPathPage() {
                     width: 44,
                     height: 44,
                     borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    background: pick.path === p.id ? t.rustSoft : t.bgElev,
-                    border: `1px solid ${pick.path === p.id ? t.rust : t.border}`,
+                    background: path === p.id ? t.rustSoft : t.bgElev,
+                    border: `1px solid ${path === p.id ? t.rust : t.border}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -120,8 +119,8 @@ export default function ServicesPathPage() {
                       style={{
                         fontFamily: t.mono,
                         fontSize: 12,
-                        color: pick.path === p.id ? t.rustInk : t.muted,
-                        fontWeight: pick.path === p.id ? 500 : 400,
+                        color: path === p.id ? t.rustInk : t.muted,
+                        fontWeight: path === p.id ? 500 : 400,
                         whiteSpace: 'nowrap',
                       }}
                     >
@@ -139,7 +138,7 @@ export default function ServicesPathPage() {
                     {p.sub}
                   </div>
 
-                  {p.id === 'other' && pick.path === 'other' && (
+                  {p.id === 'other' && path === 'other' && (
                     <div
                       style={{
                         marginTop: 14,
@@ -171,8 +170,8 @@ export default function ServicesPathPage() {
                               alignItems: 'flex-start',
                               gap: 12,
                               padding: '12px',
-                              background: pick.otherSub === o.id ? t.rustSoft : t.bgElev,
-                              border: `1px solid ${pick.otherSub === o.id ? t.rust : t.border}`,
+                              background: otherSub === o.id ? t.rustSoft : t.bgElev,
+                              border: `1px solid ${otherSub === o.id ? t.rust : t.border}`,
                               borderRadius: t.tone === 'magazine' ? 2 : 8,
                               cursor: 'pointer',
                             }}
@@ -182,8 +181,8 @@ export default function ServicesPathPage() {
                                 width: 16,
                                 height: 16,
                                 borderRadius: '50%',
-                                border: `1.5px solid ${pick.otherSub === o.id ? t.rust : t.border}`,
-                                background: pick.otherSub === o.id ? t.rust : 'transparent',
+                                border: `1.5px solid ${otherSub === o.id ? t.rust : t.border}`,
+                                background: otherSub === o.id ? t.rust : 'transparent',
                                 flexShrink: 0,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -191,7 +190,7 @@ export default function ServicesPathPage() {
                                 marginTop: 2,
                               }}
                             >
-                              {pick.otherSub === o.id && (
+                              {otherSub === o.id && (
                                 <div
                                   style={{
                                     width: 6,
@@ -211,7 +210,7 @@ export default function ServicesPathPage() {
                                   style={{
                                     fontFamily: t.mono,
                                     fontSize: 11,
-                                    color: pick.otherSub === o.id ? t.rustInk : t.muted,
+                                    color: otherSub === o.id ? t.rustInk : t.muted,
                                     whiteSpace: 'nowrap',
                                     flexShrink: 0,
                                   }}
@@ -281,13 +280,13 @@ export default function ServicesPathPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/welcome')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
             <Button t={t} onClick={handleNext} style={{ flex: 1 }} disabled={!canContinue}>
-              {pick.path === 'other' ? 'Continue' : 'Next — add-ons'}
+              {path === 'other' ? 'Continue' : 'Next — add-ons'}
             </Button>
           </Row>
         </div>

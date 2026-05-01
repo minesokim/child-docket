@@ -25,53 +25,44 @@ import {
   ToggleCard,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
-type LifeEvents = {
-  marriage: boolean;
-  baby: boolean;
-  home: boolean;
-  business: boolean;
-  inherit: boolean;
-  retire: boolean;
-  none: boolean;
-};
-
-const DEFAULT: LifeEvents = {
-  marriage: false,
-  baby: false,
-  home: false,
-  business: false,
-  inherit: false,
-  retire: false,
-  none: false,
-};
-
-type ItemKey = Exclude<keyof LifeEvents, 'none'>;
+type ItemKey = 'marriage' | 'baby' | 'home' | 'business' | 'inherit' | 'retire';
 
 export default function LifeEventsPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [state, setState] = usePortalState<LifeEvents>('life-events', DEFAULT);
+  const answers = useIntakeAnswers();
+  const setField = useSetIntakeField();
 
-  const toggle = (k: keyof LifeEvents) => {
+  const state = answers.lifeEvents ?? {};
+
+  const toggle = (k: ItemKey | 'none') => {
     if (k === 'none') {
-      setState(
-        state.none
-          ? { ...state, none: false }
-          : {
-              marriage: false,
-              baby: false,
-              home: false,
-              business: false,
-              inherit: false,
-              retire: false,
-              none: true,
-            },
-      );
+      if (state.none) {
+        setField('lifeEvents.none', false);
+      } else {
+        // Clear all other selections + set none
+        (['marriage', 'baby', 'home', 'business', 'inherit', 'retire'] as const).forEach((key) =>
+          setField(`lifeEvents.${key}`, false),
+        );
+        setField('lifeEvents.none', true);
+      }
     } else {
-      setState({ ...state, [k]: !state[k], none: false });
+      setField(`lifeEvents.${k}`, !state[k]);
+      if (state.none) setField('lifeEvents.none', false);
     }
+  };
+
+  const stateSnapshot = { lifeEvents: state };
+  const handleNext = () => {
+    const target = getNextStep('/life-events', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/life-events', stateSnapshot);
+    if (target) nav.back(target);
   };
 
   const items: Array<{ k: ItemKey; icon: React.ReactNode; label: string }> = [
@@ -96,7 +87,7 @@ export default function LifeEventsPage() {
         <IntakeHeader t={t} step={10} label="Life events" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/deductions')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -113,7 +104,7 @@ export default function LifeEventsPage() {
             <ToggleCard
               key={item.k}
               t={t}
-              on={state[item.k]}
+              on={!!state[item.k]}
               onClick={() => toggle(item.k)}
               icon={item.icon}
               label={item.label}
@@ -123,7 +114,7 @@ export default function LifeEventsPage() {
           <div style={{ marginTop: 2 }}>
             <ToggleCard
               t={t}
-              on={state.none}
+              on={!!state.none}
               onClick={() => toggle('none')}
               icon={<IconMinus />}
               label="None of these"
@@ -155,12 +146,12 @@ export default function LifeEventsPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/deductions')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/refund')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

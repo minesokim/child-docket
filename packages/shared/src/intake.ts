@@ -217,9 +217,16 @@ export type IntakeState = {
     };
   };
 
+  // Field names match the /life-events UI toggles. "none" is mutually
+  // exclusive with the rest (page handles that gating).
   lifeEvents?: {
-    events?: LifeEvent[];
-    notes?: string;
+    marriage?: boolean;
+    baby?: boolean;
+    home?: boolean;
+    business?: boolean;
+    inherit?: boolean;
+    retire?: boolean;
+    none?: boolean;
   };
 
   strategicTopics?: {

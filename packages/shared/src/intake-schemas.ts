@@ -247,9 +247,14 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'deductions.childcareDetails.providerEin': EinSchema,
   'deductions.childcareDetails.amountPaid': z.string().max(50),
 
-  // Life events
-  'lifeEvents.events': z.array(LifeEventSchema).max(10),
-  'lifeEvents.notes': z.string().max(2000),
+  // Life events — booleans matching /life-events UI toggles
+  'lifeEvents.marriage': z.boolean(),
+  'lifeEvents.baby': z.boolean(),
+  'lifeEvents.home': z.boolean(),
+  'lifeEvents.business': z.boolean(),
+  'lifeEvents.inherit': z.boolean(),
+  'lifeEvents.retire': z.boolean(),
+  'lifeEvents.none': z.boolean(),
 
   // Strategic topics
   'strategicTopics.selected': z.array(StrategicTopicSchema).max(10),
