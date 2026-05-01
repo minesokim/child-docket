@@ -422,44 +422,82 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 
 ---
 
-## 15. Build order — 15 DAYS to demo (5/15), then 12 weeks to first paying customer
+## 15. Build order — production rebuild for Antonio's first cohort by 5/15
 
-### 5/15 SHIP — demo-quality v0 for conventions + investor pitch
+> **Status flip (May 1, 2026):** Demo client portal is shipped + live on Vercel
+> at `docket-client-portal.vercel.app`. 38 routes walking. Now building the
+> ACTUAL production app. Antonio's real clients will type real SSNs and submit
+> real returns through it. No more "v0 magic" — every shortcut becomes real.
 
-**Days 1–3 (May 1–3) — Foundation:**
-- Neon free-tier Postgres + Drizzle migrations (multi-tenant RLS)
-- Antonio + 10 realistic seed clients
-- Practice ledger schema with mock historical actions
+### Demo state (preserved as the marketing surface)
+- `apps/client-portal` — 38-route walk-through. sessionStorage forms, mocked
+  AI, hardcoded everything. Stays live for pitch / Loom / Antonio walkthrough.
 
-**Days 4–7 (May 4–7) — Client Portal port (parallel track):**
-- Port the 36 screens from `C:\Users\minse\Downloads\docket-portal-design\` to Next.js app router
-- Login → SMS OTP (Twilio test) → 13-step intake → docs → engagement letter → §7216 consent → schedule → Stripe deposit → done
-- Returning portal 5-tab shell
+### Production rebuild — phased so Antonio gets value early
 
-**Days 8–12 (May 8–12) — Command Room build (v3 architecture in v4 design language):**
-- Sidebar nav: Overview / Clients / Calendar / Messages / Documents / Settings
-- Morning Brief: metric cards + narrative (real Sonnet generation)
-- "Need You" kanban (Sign & file / New intakes / Ready to prep / Need calc)
-- Pipeline status header (Need You / Waiting / In Progress / Done)
-- Messages pane with Inbox Drafter ("Send as Antonio" / "Edit" buttons, real Sonnet calls)
-- To-do list + Action Feed (AI drafts staged for review)
-- **Ask Docket** — natural language Q&A over practice ledger + IRS knowledge layer (real Sonnet RAG)
-- Notice Triage demo: manual upload of CP2000 → AI classifies + drafts response (Approach A only — no IRS Solutions integration)
-- Search bar (Postgres ILIKE for v0)
+**Days 1–3 — Antonio's admin layer (Command Room MVP)**
+- Clerk app (Google sign-in only for Antonio)
+- New schema: `users`, `clients`, `messages` tables linked to Clerk userIds
+- Seed Antonio's user + tenant + 10 mock clients into Neon
+- `apps/command-room/` v0 pages: client list + per-client view + message thread
+- Antonio signs in, sees something real
+- ✅ Day 3: Antonio can log into a real admin dashboard
 
-**Days 13–15 (May 13–15) — Polish + demo prep:**
-- Visual polish to match Vazant editorial design fidelity
-- Antonio's onboarding walkthrough
-- Bug fixes
-- 5–10 slide pitch deck v0
-- Loom demo video
+**Days 4–7 — Client auth + persistent intake**
+- Clerk phone-OTP strategy enabled (Twilio for SMS delivery)
+- Real `/login` → `/otp` → real session in `apps/client-portal`
+- All intake forms migrated: `usePortalState` (sessionStorage) → Server Actions
+  → Postgres writes via `withTenant()` (RLS-bound to client's tenant)
+- Field-level encryption for SSN / EIN / bank account numbers (libsodium or pgcrypto)
+- Resume mid-flow on any device
+- ✅ Day 7: real client signs up, walks intake, data persists; Antonio sees the row
 
-**5/15 DEFERS** (NOT in v0): IRS Solutions live integration · OLT browser automation · Bilingual UI strings · Stripe Identity KYC · KBA-compliant 8879 e-signature · Outcome Prediction (Blue J) · Practice Intelligence module · Voice agent · Doc-chase · SOC 2 Type II · Multi-state knowledge layer.
+**Days 8–10 — Docs pipeline (per `docs/DOCS-CAPTURE-PIPELINE.md`)**
+- Cloudflare R2 bucket + presigned URL helper
+- Inngest job: image → Haiku 4.5 vision (legibility + classification + filename JSON)
+  → pdf-lib wrap → R2 upload → `documents` row with `awaiting_review` status
+- `/docs` page swaps mocked `setTimeout` for real fetch
+- Command Room shows uploaded docs queued for Antonio's review (filename approve/edit)
+- ✅ Day 10: real docs flowing through real AI
 
-**Surface ancestry to merge:**
-- **v3 Vazant Dashboard** (`vazant-dashboard-v3.vercel.app`) → information architecture
+**Days 11–12 — Real messages + notifications**
+- `messages` table with channel kind (sms / email / portal)
+- Inbox Drafter wired to inbound client message → drafts queued in Command Room
+- "Send as Antonio" approval flow (Sonnet generates, Antonio approves, sent via Twilio/Gmail)
+- Email + SMS notifications for status changes
+- ✅ Day 12: bidirectional real messaging working end-to-end
+
+**Days 13–14 — Onboard Antonio's first cohort**
+- Antonio's first 5–10 real clients invited
+- Manual workarounds for what isn't wired yet: Stripe payments via Venmo/manual link,
+  8879 via DocuSign or paper (defer KBA + Stripe Identity to next cycle)
+- Pitch deck (5–10 slides), Loom demo
+- ✅ Day 14: production app onboarded with real clients
+
+### Status of the original 5/15 DEFERS list (revised for production)
+
+**Still deferred (out of scope for first cohort):**
+- IRS Solutions live integration (no API access yet — Antonio emails them)
+- OLT browser automation (Antonio uses OLT directly for first month)
+- Bilingual UI strings (English-only first cohort, translate Spanish in week 3)
+- Outcome Prediction (Blue J) integration
+- Practice Intelligence module
+- Voice agent (voicemail → AI transcribe → drafted reply)
+- Auto Doc-chase
+- SOC 2 Type II (~6+ months of work, not a 14-day item)
+- Multi-state knowledge ingestion beyond CA
+
+**MOVED INTO SCOPE (was deferred, now required for IRS-compliant production):**
+- Stripe Identity KYC — required before legal e-filing of 8879
+- KBA-compliant 8879 e-signature — required by IRS publication 1345
+  → BOTH deferred to week 3 (after 5/15) — first cohort uses DocuSign/paper for 8879 +
+    manual Stripe charges for deposit, while we wire these properly
+
+### Surface ancestry to merge
+- **v3 Vazant Dashboard** (`vazant-dashboard-v3.vercel.app`) → Command Room information architecture
 - **v4 Vazant Client Portal** (`C:\Users\minse\Downloads\docket-portal-design\`) → editorial-warm design language
-- v0 = v3's IA in v4's design
+- v0 = v3's IA in v4's design (already shipped in demo)
+- production = real backend behind same UI
 
 ### Post-5/15 — 12 weeks to paying customer (Antonio onboarded)
 
