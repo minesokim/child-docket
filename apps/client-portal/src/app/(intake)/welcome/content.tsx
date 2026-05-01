@@ -39,10 +39,12 @@ export function WelcomeContent() {
           minHeight: '100%',
         }}
       >
-        <Stack gap={40} style={{ flex: 1 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <VideoPlaceholder t={t} youtubeId="P8nQkkkWJl4" startSeconds={15} />
 
-          <Stack gap={14} style={{ textAlign: 'center' }}>
+          {/* Heading group floats to the bottom of the available space —
+              hugs the pills + CTA below rather than sitting right under the video. */}
+          <Stack gap={14} style={{ textAlign: 'center', marginTop: 'auto', paddingTop: 32 }}>
             <div>
               <div
                 style={{
@@ -64,7 +66,7 @@ export function WelcomeContent() {
               Answer a few questions — takes about 10 minutes.
             </Body>
           </Stack>
-        </Stack>
+        </div>
 
         <Stack gap={16} style={{ marginTop: 28 }}>
           <Row gap={6} justify="center" style={{ flexWrap: 'wrap' }}>
