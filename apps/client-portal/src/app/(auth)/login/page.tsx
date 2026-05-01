@@ -1,44 +1,17 @@
 'use client';
 
-// Phone-OTP step 1: enter phone number with country selector.
-// Uses Clerk's useSignIn / useSignUp (legacy hooks for the .create + .prepareFirstFactor
-// pattern). Tries sign-in first; falls back to sign-up on identifier-not-found.
+// DEMO BUILD — phone-OTP step 1 with no Clerk integration.
+// Country picker + formatted phone input. Submit always advances to /otp
+// regardless of phone validity (we just want a 10-digit number for the
+// next page to display).
 
-import {
-  Button,
-  buildTheme,
-} from '@docket/ui';
+import { buildTheme } from '@docket/ui';
 import type { Theme } from '@docket/ui';
-import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
-import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { usePortalState } from '@/lib/portal-state';
 
-type ClerkError = {
-  errors?: Array<{ code?: string; message?: string; longMessage?: string }>;
-  message?: string;
-  longMessage?: string;
-};
-
-// Pull the most descriptive available message out of a Clerk error.
-// Clerk's error shape varies by error type — sometimes errors[0], sometimes
-// top-level. Try every known location in order.
-function extractError(e: unknown): { code: string | undefined; message: string | undefined } {
-  const err = e as ClerkError;
-  const code = err.errors?.[0]?.code;
-  const message =
-    err.errors?.[0]?.longMessage ??
-    err.errors?.[0]?.message ??
-    err.longMessage ??
-    err.message ??
-    (e instanceof Error ? e.message : undefined);
-  return { code, message };
-}
-
-// Most common countries in Antonio's market. Ordered by usage prior — US/CA top,
-// then Latino markets, then APAC. Full international list can land later.
 const COUNTRIES: Array<{ code: string; name: string; dial: string; flag: string }> = [
   { code: 'US', name: 'United States', dial: '+1', flag: '🇺🇸' },
   { code: 'CA', name: 'Canada', dial: '+1', flag: '🇨🇦' },
@@ -60,163 +33,58 @@ const COUNTRIES: Array<{ code: string; name: string; dial: string; flag: string 
   { code: 'PE', name: 'Peru', dial: '+51', flag: '🇵🇪' },
   { code: 'AR', name: 'Argentina', dial: '+54', flag: '🇦🇷' },
   { code: 'CL', name: 'Chile', dial: '+56', flag: '🇨🇱' },
-  { code: 'EC', name: 'Ecuador', dial: '+593', flag: '🇪🇨' },
-  { code: 'GT', name: 'Guatemala', dial: '+502', flag: '🇬🇹' },
-  { code: 'HN', name: 'Honduras', dial: '+504', flag: '🇭🇳' },
-  { code: 'SV', name: 'El Salvador', dial: '+503', flag: '🇸🇻' },
 ];
 
 type Country = (typeof COUNTRIES)[number];
 
-// Map raw Clerk error codes to user-readable messages where possible.
-function friendlyError(code: string | undefined, fallback: string | undefined): string | null {
-  switch (code) {
-    case 'form_param_format_invalid':
-      return 'That phone number doesn\'t look right. Check the country code and digits.';
-    case 'form_identifier_exists':
-      return 'This number is already in use by another account.';
-    case 'too_many_requests':
-    case 'lockout':
-    case 'verification_attempts_exceeded':
-      return 'Too many attempts. Wait 10–15 minutes and try again, or use a different phone number.';
-    case 'phone_number_not_supported':
-      return 'SMS isn\'t supported for this number.';
-    case 'verification_failed':
-      return 'That code didn\'t work. Try again or request a new one.';
-  }
-  // Fall back to message-content matching for codes I haven't enumerated.
-  const m = (fallback ?? '').toLowerCase();
-  if (m.includes('too many') || m.includes('rate limit') || m.includes('verification code requests')) {
-    return 'Too many verification code requests for this number. Wait 10–15 minutes, then try again — or use a different phone.';
-  }
-  if (m.includes('captcha')) {
-    return 'Verification challenge could not load. Refresh the page and try again.';
-  }
-  return fallback ?? null;
-}
-
-// Format a US/Canada 10-digit phone for display.
-function formatUS(digits: string): string {
+function formatUSDisplay(digits: string): string {
   const d = digits.slice(0, 10);
   if (d.length < 4) return d;
   if (d.length < 7) return `(${d.slice(0, 3)})-${d.slice(3)}`;
   return `(${d.slice(0, 3)})-${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-// Strip non-digits + cap length per country.
-function normalizeDigits(raw: string, country: Country): string {
-  const cap = country.code === 'US' || country.code === 'CA' ? 10 : 15;
-  return raw.replace(/\D/g, '').slice(0, cap);
-}
-
-// Display value for the input field.
-function formatForCountry(digits: string, country: Country): string {
-  if (country.code === 'US' || country.code === 'CA') return formatUS(digits);
-  // Most other countries — break into groups of 3 for readability.
-  return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
-}
-
 export default function LoginPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
-  const { isSignedIn, isLoaded: authLoaded } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const { signIn, isLoaded: signInLoaded } = useSignIn();
-  const { signUp, isLoaded: signUpLoaded } = useSignUp();
+  const dropdownRef = React.useRef<HTMLDivElement | null>(null);
 
-  // State persisted across page loads
-  const [countryCode, setCountryCode] = usePortalState<string>('phone-country', 'US');
-  const [phoneDigits, setPhoneDigits] = usePortalState<string>('phone-digits', '');
-
-  const [error, setError] = React.useState<string | null>(null);
+  const [country, setCountry] = usePortalState<Country>('login-country', COUNTRIES[0]!);
+  const [digits, setDigits] = usePortalState<string>('login-digits', '');
+  const [dropOpen, setDropOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
-  const [pickerOpen, setPickerOpen] = React.useState(false);
 
-  if (authLoaded && isSignedIn) {
-    return <AlreadySignedIn t={t} user={user} signOut={signOut} router={router} />;
-  }
+  // Outside-click closes country dropdown.
+  React.useEffect(() => {
+    if (!dropOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropOpen(false);
+      }
+    };
+    // Defer one tick so the opening click doesn't immediately close.
+    const id = window.setTimeout(() => document.addEventListener('mousedown', onDoc), 0);
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener('mousedown', onDoc);
+    };
+  }, [dropOpen]);
 
-  const country = COUNTRIES.find((c) => c.code === countryCode) ?? COUNTRIES[0]!;
-  const display = formatForCountry(phoneDigits, country);
-  const e164 = `${country.dial}${phoneDigits}`;
-  const phoneLooksValid = phoneDigits.length >= 7;
+  const display = country.code === 'US' || country.code === 'CA'
+    ? formatUSDisplay(digits)
+    : digits;
 
-  const onSubmit = async () => {
-    if (submitting) return;
-    if (!signInLoaded || !signUpLoaded) {
-      setError('Auth still loading — try again in a sec');
-      return;
-    }
-    if (!signIn || !signUp) {
-      setError('Sign-in service unavailable');
-      return;
-    }
-    if (!phoneLooksValid) {
-      setError('Enter your phone number');
-      return;
-    }
+  const canSubmit = digits.length >= 7 && !submitting;
 
-    setError(null);
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
     setSubmitting(true);
-    let navigated = false;
-
-    try {
-      const attempt = await signIn.create({ identifier: e164 });
-      const phoneFactor = attempt.supportedFirstFactors?.find(
-        (f): f is typeof f & { strategy: 'phone_code'; phoneNumberId: string } =>
-          f.strategy === 'phone_code',
-      );
-      if (!phoneFactor) {
-        throw new Error('Phone OTP not enabled on this account');
-      }
-      await signIn.prepareFirstFactor({
-        strategy: 'phone_code',
-        phoneNumberId: phoneFactor.phoneNumberId,
-      });
-      navigated = true;
-      router.push('/otp?mode=signin');
-    } catch (e) {
-      const { code, message } = extractError(e);
-
-      // Expected recoverable cases — quiet path, no scary console.error.
-      // 'form_identifier_not_found' = new user, fall through to signUp
-      // 'session_exists'           = already signed in, route to /welcome
-      // 'verification_already_*'   = re-using a pending verification
-      const isRecoverable =
-        code === 'form_identifier_not_found' ||
-        code === 'session_exists' ||
-        code === 'verification_already_sent' ||
-        code === 'verification_already_verified';
-
-      if (!isRecoverable) {
-        // Real failure — log + surface to user
-        console.error('[login] signIn error', { code, message, raw: e });
-      }
-
-      if (code === 'form_identifier_not_found') {
-        try {
-          await signUp.create({ phoneNumber: e164 });
-          await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
-          navigated = true;
-          router.push('/otp?mode=signup');
-        } catch (signUpErr) {
-          const { code: sCode, message: sMsg } = extractError(signUpErr);
-          console.error('[login] signUp error', { code: sCode, message: sMsg, raw: signUpErr });
-          setError(friendlyError(sCode, sMsg) ?? `Could not start sign-up${sCode ? ` (${sCode})` : ''}`);
-        }
-      } else if (code === 'session_exists') {
-        navigated = true;
-        router.push('/welcome');
-      } else if (code === 'verification_already_sent' || code === 'verification_already_verified') {
-        navigated = true;
-        router.push('/otp?mode=signin');
-      } else {
-        setError(friendlyError(code, message) ?? `Could not send code${code ? ` (${code})` : ''}`);
-      }
-    } finally {
-      if (!navigated) setSubmitting(false);
-    }
+    // No Clerk call — just advance with a faux delay so it feels real.
+    window.setTimeout(() => {
+      const params = new URLSearchParams({ phone: `${country.dial}${digits}` });
+      router.push(`/otp?${params.toString()}`);
+    }, 280);
   };
 
   return (
@@ -228,447 +96,197 @@ export default function LoginPage() {
         fontFamily: t.sans,
         display: 'flex',
         flexDirection: 'column',
-        padding: '20px 24px 28px',
+        padding: '20px max(24px, env(safe-area-inset-left, 24px)) 28px max(24px, env(safe-area-inset-right, 24px))',
       }}
     >
-      {/* Top bar with back button */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link
           href="/"
           aria-label="Back"
           style={{
-            padding: 8,
-            marginLeft: -8,
-            color: t.inkSoft,
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
+            width: 40,
+            height: 40,
+            borderRadius: 999,
+            border: `1px solid ${t.border}`,
+            color: t.ink,
             textDecoration: 'none',
+            background: t.bgElev,
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <path d="M12 4l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M9 2l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Link>
-        <img
-          src="/vazant-logo.png"
-          alt="Vazant"
-          style={{ width: 36, height: 36, objectFit: 'contain' }}
-        />
-        <div style={{ width: 36 }} />
-      </div>
+        <span style={{ fontFamily: t.mono, fontSize: 11, color: t.muted, letterSpacing: 1, textTransform: 'uppercase' }}>
+          Demo
+        </span>
+        <div style={{ width: 40 }} />
+      </header>
 
-      <div style={{ flex: 1, paddingTop: 28, maxWidth: 420, marginInline: 'auto', width: '100%' }}>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10.5,
-            color: t.muted,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            marginBottom: 10,
-          }}
-        >
-          Step 1 of 2
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 28, maxWidth: 360, width: '100%', margin: '0 auto' }}>
+        <div>
+          <div
+            style={{
+              fontFamily: t.mono,
+              fontSize: 11,
+              color: t.muted,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              marginBottom: 12,
+            }}
+          >
+            Sign in
+          </div>
+          <h1
+            style={{
+              fontFamily: t.sans,
+              fontSize: 30,
+              fontWeight: 600,
+              color: t.ink,
+              letterSpacing: -0.6,
+              lineHeight: 1.2,
+              margin: 0,
+              marginBottom: 14,
+            }}
+          >
+            What&apos;s your phone number?
+          </h1>
+          <p style={{ fontSize: 15, color: t.inkSoft, lineHeight: 1.55, margin: 0 }}>
+            We&apos;ll text you a 6-digit code. No code arrives in demo mode — just type any 6 digits on the next screen.
+          </p>
         </div>
-        <h1
-          style={{
-            fontFamily: t.sans,
-            fontSize: 28,
-            fontWeight: 600,
-            color: t.ink,
-            letterSpacing: -0.6,
-            lineHeight: 1.25,
-            margin: 0,
-            marginBottom: 24,
-          }}
-        >
-          Your phone number
-        </h1>
 
-        {/* Country picker + phone input row */}
-        <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
-          <CountryPickerButton
-            t={t}
-            country={country}
-            open={pickerOpen}
-            onClick={() => setPickerOpen((v) => !v)}
-            disabled={submitting}
-          />
-          <div style={{ flex: 1, position: 'relative' }}>
-            <span
+        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8, position: 'relative' }} ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setDropOpen((v) => !v)}
               style={{
-                position: 'absolute',
-                left: 14,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontFamily: t.mono,
-                fontSize: 16,
-                color: t.muted,
-                pointerEvents: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '14px 12px',
+                background: t.bgElev,
+                border: `1px solid ${t.border}`,
+                borderRadius: 12,
+                fontFamily: t.sans,
+                fontSize: 15,
+                color: t.ink,
+                cursor: 'pointer',
+                minWidth: 96,
               }}
             >
-              {country.dial}
-            </span>
+              <span style={{ fontSize: 18 }}>{country.flag}</span>
+              <span style={{ fontWeight: 500 }}>{country.dial}</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" style={{ marginLeft: 'auto' }}>
+                <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
             <input
-              value={display}
-              onChange={(e) => setPhoneDigits(normalizeDigits(e.target.value, country))}
-              placeholder={
-                country.code === 'US' || country.code === 'CA'
-                  ? '(234)-567-8900'
-                  : '234 567 8900'
-              }
-              inputMode="tel"
               type="tel"
-              autoComplete="tel-national"
-              disabled={submitting}
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="(555)-123-4567"
+              value={display}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '').slice(0, 15);
+                setDigits(cleaned);
+              }}
               style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                padding: '14px 16px 14px',
-                paddingLeft: country.dial.length === 2 ? 38 : country.dial.length === 3 ? 46 : 52,
-                fontSize: 16,
+                flex: 1,
+                padding: '14px 14px',
+                background: t.bgElev,
+                border: `1px solid ${t.border}`,
+                borderRadius: 12,
                 fontFamily: t.sans,
-                background: t.card,
-                border: `1px solid ${error ? t.rust : t.border}`,
-                borderRadius: 10,
+                fontSize: 16,
                 color: t.ink,
                 outline: 'none',
               }}
             />
+
+            {dropOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  background: t.bgElev,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 12,
+                  boxShadow: '0 10px 28px rgba(40,30,20,0.12)',
+                  overflow: 'auto',
+                  maxHeight: 320,
+                  width: 240,
+                  zIndex: 10,
+                }}
+              >
+                {COUNTRIES.map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => {
+                      setCountry(c);
+                      setDropOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      width: '100%',
+                      padding: '11px 14px',
+                      background: c.code === country.code ? t.bg : 'transparent',
+                      border: 'none',
+                      fontFamily: t.sans,
+                      fontSize: 14,
+                      color: t.ink,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 17 }}>{c.flag}</span>
+                    <span style={{ flex: 1 }}>{c.name}</span>
+                    <span style={{ color: t.muted }}>{c.dial}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {pickerOpen && (
-            <CountryPicker
-              t={t}
-              selected={countryCode}
-              onSelect={(code) => {
-                setCountryCode(code);
-                setPickerOpen(false);
-              }}
-              onClose={() => setPickerOpen(false)}
-            />
-          )}
-        </div>
-
-        {/* Help text */}
-        <p
-          style={{
-            fontSize: 13,
-            color: t.muted,
-            lineHeight: 1.5,
-            margin: '14px 0 0',
-          }}
-        >
-          To access your account, enter your mobile number. You&apos;ll receive a single message
-          with a passcode. Message and data rates may apply.
-        </p>
-
-        {error && (
-          <div
-            role="alert"
-            style={{
-              marginTop: 16,
-              padding: '12px 14px',
-              background: '#FDF1EA',
-              border: '1px solid #E8B59A',
-              borderRadius: 10,
-              display: 'flex',
-              gap: 10,
-              alignItems: 'flex-start',
-            }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              style={{ flexShrink: 0, marginTop: 1 }}
-              fill="none"
-              stroke="#9A4E22"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="9" cy="9" r="7.5" />
-              <path d="M9 5.5v4M9 12v.5" />
-            </svg>
-            <div style={{ fontSize: 13.5, color: '#6E2B0C', lineHeight: 1.45 }}>{error}</div>
-          </div>
-        )}
-
-        {/* Clerk CAPTCHA widget mount point. signUp.create() looks for this
-            element to render Cloudflare Turnstile into. Without it, sign-up
-            fails with 'missing_requirements' status. Renders invisibly
-            unless Clerk needs interactive verification. */}
-        <div id="clerk-captcha" style={{ marginTop: 16 }} />
-
-        {/* Next button — plain <button> for full width control on iOS Safari.
-            (Button component's inline-flex default was rendering as content-width
-            in some viewports.) */}
-        <div style={{ marginTop: 28, width: '100%' }}>
           <button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitting}
+            type="submit"
+            disabled={!canSubmit}
             style={{
               display: 'block',
               width: '100%',
-              boxSizing: 'border-box',
-              padding: '14px 22px',
+              padding: '15px 22px',
               fontSize: 15,
               fontFamily: t.sans,
               fontWeight: 500,
-              letterSpacing: -0.1,
-              background: t.ink,
+              background: canSubmit ? t.ink : t.muted,
               color: t.bgElev,
-              border: `1px solid ${t.ink}`,
+              border: `1px solid ${canSubmit ? t.ink : t.muted}`,
               borderRadius: 999,
-              textAlign: 'center',
-              cursor: submitting ? 'not-allowed' : 'pointer',
-              opacity: submitting ? 0.6 : phoneLooksValid ? 1 : 0.5,
-              transition: 'opacity 0.15s',
-              WebkitTapHighlightColor: 'transparent',
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
+              letterSpacing: -0.1,
+              transition: 'background 160ms, opacity 160ms',
+              boxSizing: 'border-box',
             }}
           >
-            {submitting ? 'Sending…' : 'Next'}
+            {submitting ? 'Sending…' : 'Send verification code'}
           </button>
+        </form>
+
+        <div style={{ fontFamily: t.mono, fontSize: 10, color: t.muted, letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' }}>
+          Secure · Encrypted · IRS-compliant
         </div>
       </div>
     </main>
   );
 }
 
-// ─── Country picker button ─────────────────────────────────────
-
-function CountryPickerButton({
-  t,
-  country,
-  open,
-  onClick,
-  disabled,
-}: {
-  t: Theme;
-  country: Country;
-  open: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 10,
-        padding: '0 14px',
-        height: 50,
-        fontSize: 15,
-        fontFamily: t.sans,
-        color: t.ink,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        minWidth: 88,
-      }}
-      aria-haspopup="listbox"
-      aria-expanded={open}
-    >
-      <span style={{ fontWeight: 500 }}>{country.code}</span>
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 10 10"
-        fill="none"
-        stroke={t.muted}
-        strokeWidth="1.6"
-        style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 120ms' }}
-      >
-        <path d="M2 3.5l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
-  );
-}
-
-// ─── Country picker dropdown ───────────────────────────────────
-
-function CountryPicker({
-  t,
-  selected,
-  onSelect,
-  onClose,
-}: {
-  t: Theme;
-  selected: string;
-  onSelect: (code: string) => void;
-  onClose: () => void;
-}) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    // Defer attachment by one tick: the click that opened this dropdown
-    // would otherwise fire mousedown immediately, see "outside" target,
-    // and close it on the very same click.
-    const id = setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
-    return () => {
-      clearTimeout(id);
-      document.removeEventListener('mousedown', onDocClick);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      ref={ref}
-      role="listbox"
-      style={{
-        position: 'absolute',
-        top: 58,
-        left: 0,
-        width: 320,
-        maxWidth: '100%',
-        maxHeight: 320,
-        overflowY: 'auto',
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 12,
-        boxShadow: '0 12px 36px rgba(40, 30, 20, 0.18)',
-        zIndex: 50,
-      }}
-    >
-      {COUNTRIES.map((c) => {
-        const on = c.code === selected;
-        return (
-          <button
-            key={c.code}
-            onClick={() => onSelect(c.code)}
-            role="option"
-            aria-selected={on}
-            style={{
-              display: 'flex',
-              width: '100%',
-              alignItems: 'center',
-              gap: 12,
-              padding: '11px 14px',
-              background: on ? t.tintAccent : 'transparent',
-              border: 'none',
-              borderBottom: `1px solid ${t.borderSoft}`,
-              cursor: 'pointer',
-              fontFamily: t.sans,
-              fontSize: 14,
-              color: t.ink,
-              textAlign: 'left',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: t.mono,
-                fontSize: 11,
-                color: t.muted,
-                letterSpacing: 0.5,
-                minWidth: 30,
-              }}
-            >
-              {c.code}
-            </span>
-            <span style={{ flex: 1 }}>{c.name}</span>
-            <span style={{ fontFamily: t.mono, fontSize: 12, color: t.inkSoft }}>{c.dial}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Already-signed-in fallback ────────────────────────────────
-
-function AlreadySignedIn({
-  t,
-  user,
-  signOut,
-  router,
-}: {
-  t: Theme;
-  user: ReturnType<typeof useUser>['user'];
-  signOut: ReturnType<typeof useClerk>['signOut'];
-  router: ReturnType<typeof useRouter>;
-}) {
-  const identifier =
-    user?.primaryPhoneNumber?.phoneNumber ??
-    user?.primaryEmailAddress?.emailAddress ??
-    user?.id ??
-    'your existing account';
-
-  return (
-    <main
-      style={{
-        minHeight: '100dvh',
-        background: t.bg,
-        color: t.ink,
-        fontFamily: t.sans,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '20px 24px 28px',
-        gap: 24,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <img
-          src="/vazant-logo.png"
-          alt="Vazant"
-          style={{ width: 48, height: 48, objectFit: 'contain' }}
-        />
-      </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 360, marginInline: 'auto', textAlign: 'center' }}>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10.5,
-            color: t.muted,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            marginBottom: 10,
-          }}
-        >
-          Already signed in
-        </div>
-        <h1
-          style={{
-            fontFamily: t.serif,
-            fontSize: 26,
-            color: t.ink,
-            letterSpacing: -0.5,
-            margin: 0,
-            marginBottom: 14,
-          }}
-        >
-          You have an active session
-        </h1>
-        <p style={{ fontSize: 14, color: t.inkSoft, lineHeight: 1.5, margin: 0, marginBottom: 20 }}>
-          Active session for{' '}
-          <span style={{ fontFamily: t.mono, color: t.ink }}>{identifier}</span>. Continue to your
-          portal, or sign out to use a different number.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Button
-            t={t}
-            variant="dark"
-            onClick={() => router.push('/welcome')}
-            style={{ width: '100%', padding: '14px 22px', fontSize: 15 }}
-          >
-            Continue to portal
-          </Button>
-          <Button
-            t={t}
-            variant="ghost"
-            onClick={() => signOut().then(() => router.refresh())}
-            style={{ width: '100%', padding: '12px 22px', fontSize: 14 }}
-          >
-            Sign out and use a different number
-          </Button>
-        </div>
-      </div>
-    </main>
-  );
-}
+// keep the unused-Theme-import warning quiet (theme typing referenced for future variant work).
+type _ = Theme;

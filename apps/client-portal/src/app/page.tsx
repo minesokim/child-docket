@@ -1,23 +1,12 @@
 'use client';
 
-// Pre-login brand landing. Single CTA → /login. Already-signed-in users
-// auto-skip to /welcome.
+// Pre-login brand landing. DEMO BUILD — no Clerk auth check. Single CTA → /login.
 
 import { buildTheme } from '@docket/ui';
-import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 export default function LandingPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const router = useRouter();
-  const { isSignedIn, isLoaded } = useAuth();
-
-  // If already authed, skip the marketing splash.
-  useEffect(() => {
-    if (isLoaded && isSignedIn) router.replace('/welcome');
-  }, [isLoaded, isSignedIn, router]);
 
   return (
     <main
@@ -44,7 +33,6 @@ export default function LandingPage() {
           to   { opacity: 1; transform: translateY(0);   }
         }
       `}</style>
-      {/* Content column — vertically centered-ish, text left-aligned */}
       <div
         style={{
           flex: 1,
@@ -56,18 +44,12 @@ export default function LandingPage() {
           paddingBottom: 32,
         }}
       >
-        {/* Hero logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <img
             src="/vazant-logo.png"
             alt="Vazant Consulting"
-            style={{
-              width: 132,
-              height: 132,
-              objectFit: 'contain',
-            }}
+            style={{ width: 132, height: 132, objectFit: 'contain' }}
           />
-          {/* Soft shadow under logo */}
           <div
             style={{
               width: 140,
@@ -80,7 +62,6 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* Text block — left aligned within column */}
         <div style={{ width: '100%', maxWidth: 340, textAlign: 'left' }}>
           <div
             style={{
@@ -123,7 +104,6 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* CTA — right below copy, not page-bottom */}
         <div style={{ width: '100%', maxWidth: 340 }}>
           <Link
             href="/login"
@@ -157,7 +137,7 @@ export default function LandingPage() {
               marginTop: 14,
             }}
           >
-            Secure · Encrypted · IRS-compliant
+            Demo · Walk-through · No data saved
           </div>
         </div>
       </div>
