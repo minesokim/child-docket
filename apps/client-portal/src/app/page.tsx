@@ -28,7 +28,12 @@ export default function LandingPage() {
         fontFamily: t.sans,
         display: 'flex',
         flexDirection: 'column',
-        padding: '20px 24px 28px',
+        // Inline-safe horizontal padding: respects iOS notch + adds breathing
+        // room so the dark pill CTA doesn't kiss the screen edge.
+        paddingTop: 20,
+        paddingBottom: 28,
+        paddingLeft: 'max(28px, env(safe-area-inset-left, 28px))',
+        paddingRight: 'max(28px, env(safe-area-inset-right, 28px))',
         animation: 'landing-fade-in 220ms cubic-bezier(.2,.8,.2,1) both',
         willChange: 'opacity, transform',
       }}
@@ -76,7 +81,7 @@ export default function LandingPage() {
         </div>
 
         {/* Text block — left aligned within column */}
-        <div style={{ width: '100%', maxWidth: 360, textAlign: 'left' }}>
+        <div style={{ width: '100%', maxWidth: 340, textAlign: 'left' }}>
           <div
             style={{
               fontFamily: t.mono,
@@ -118,7 +123,7 @@ export default function LandingPage() {
         </div>
 
         {/* CTA — right below copy, not page-bottom */}
-        <div style={{ width: '100%', maxWidth: 360 }}>
+        <div style={{ width: '100%', maxWidth: 340 }}>
           <Link
             href="/login"
             style={{
