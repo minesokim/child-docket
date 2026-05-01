@@ -1,51 +1,33 @@
-'use client';
+// /portal route group layout.
+//
+// Server Component: hydrates the IntakeState from Postgres (same shape +
+// same provider as the intake flow), then wraps children in
+// <IntakeProvider> so every portal page (home, docs, messages,
+// signatures, profile) can read/write via useIntakeField — fully
+// migrated off sessionStorage.
+//
+// The tab-bar logic lives in <PortalFrame> (client component) since it
+// needs usePathname + useRouter.
 
-// Returning portal route group. Mounts the persistent 5-tab bar at the bottom.
-// The header (Wordmark + label) is rendered per-page since /portal/messages
-// uses a different header (Antonio + encrypted indicator).
+import { getOrCreateIntakeAnswers } from '@/lib/intake-actions';
+import { IntakeProvider } from '@/lib/intake-context';
+import { PortalFrame } from './_portal-frame';
 
-import { usePathname, useRouter } from 'next/navigation';
-import { buildTheme, PortalTabBar, type PortalTabId } from '@docket/ui';
-
-const TAB_TO_PATH: Record<PortalTabId, string> = {
-  home: '/portal/home',
-  docs: '/portal/docs',
-  msgs: '/portal/messages',
-  sign: '/portal/signatures',
-  profile: '/portal/profile',
-};
-
-function pathToTab(pathname: string): PortalTabId {
-  if (pathname.startsWith('/portal/docs')) return 'docs';
-  if (pathname.startsWith('/portal/messages')) return 'msgs';
-  if (pathname.startsWith('/portal/signatures') || pathname.startsWith('/portal/sign-8879'))
-    return 'sign';
-  if (pathname.startsWith('/portal/profile')) return 'profile';
-  return 'home';
-}
-
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const pathname = usePathname();
-  const router = useRouter();
-  const active = pathToTab(pathname);
+export default async function PortalLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Same pattern as (intake)/layout.tsx — one DB round trip per page
+  // load, memoized per-render via React.cache. Sensitive fields come
+  // back masked; portal pages call useFieldReveal for plaintext when
+  // the user explicitly wants to see them.
+  const bundle = await getOrCreateIntakeAnswers();
+  const initialAnswers = bundle?.answers ?? {};
 
   return (
-    <div
-      style={{
-        background: t.bg,
-        color: t.ink,
-        fontFamily: t.sans,
-        height: '100dvh',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        WebkitFontSmoothing: 'antialiased',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div style={{ flex: 1 }}>{children}</div>
-      <PortalTabBar t={t} active={active} onTab={(id) => router.push(TAB_TO_PATH[id])} />
-    </div>
+    <IntakeProvider initialAnswers={initialAnswers}>
+      <PortalFrame>{children}</PortalFrame>
+    </IntakeProvider>
   );
 }

@@ -14,19 +14,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import * as React from 'react';
-import { usePortalState } from '@/lib/portal-state';
-
-type PortalState = {
-  paid: boolean;
-  signed8879: boolean;
-};
-
-type PersonalInfo = {
-  fullName: string;
-  phone: string;
-};
-
-const PORTAL_DEFAULT: PortalState = { paid: false, signed8879: false };
+import { useIntakeField } from '@/lib/intake-context';
 
 function ProfileIcon({
   kind,
@@ -144,23 +132,22 @@ function ExtLinkRow({
 
 export default function PortalProfilePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const [portal] = usePortalState<PortalState>('portal-state', PORTAL_DEFAULT);
-  const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '', phone: '' });
+  const [fullName] = useIntakeField<string>('personal.fullName', '');
+  const [phone] = useIntakeField<string>('personal.phone', '');
+  const [signed8879] = useIntakeField<boolean>('engagement.signed', false);
 
   // No persona-name fallback. If fullName is empty we render an empty
   // string rather than show a different person's name on the user's
   // own profile page.
-  const fullName = personal.fullName ?? '';
   const initial = fullName.charAt(0).toUpperCase() || '·';
-  const phone = personal.phone ?? '';
 
   const signedDocs = [
     { name: 'Engagement Letter', when: 'Apr 17, 2026 · 2:14 PM PT', pending: false },
     { name: '§7216 Consent', when: 'Apr 17, 2026 · 2:16 PM PT', pending: false },
     {
       name: 'Form 8879',
-      when: portal.signed8879 ? 'Apr 14, 2026 · 2:18 PM PT' : null,
-      pending: !portal.signed8879,
+      when: signed8879 ? 'Apr 14, 2026 · 2:18 PM PT' : null,
+      pending: !signed8879,
     },
   ];
 

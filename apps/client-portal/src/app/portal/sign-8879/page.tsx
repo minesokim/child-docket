@@ -18,22 +18,16 @@ import {
 } from '@docket/ui';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
-import { usePortalState } from '@/lib/portal-state';
-
-type PortalState = {
-  paid: boolean;
-  signed8879: boolean;
-};
-
-type PersonalInfo = { fullName: string };
-
-const PORTAL_DEFAULT: PortalState = { paid: false, signed8879: false };
+import { useIntakeField } from '@/lib/intake-context';
 
 export default function Sign8879Page() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
-  const [portal, setPortal] = usePortalState<PortalState>('portal-state', PORTAL_DEFAULT);
-  const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '' });
+  const [fullName] = useIntakeField<string>('personal.fullName', '');
+  // engagement.signed marks the 8879 as signed in v0. Day 13 swaps this
+  // for the real DocuSign + KBA flow with a separate `signatures` row;
+  // this flag stays as the cheap UI gate.
+  const [, setSigned8879] = useIntakeField<boolean>('engagement.signed', false);
   const [signed, setSigned] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -41,15 +35,17 @@ export default function Sign8879Page() {
   // their actual name (the form is legally tied to it). If fullName is
   // somehow empty we show empty — better than rendering somebody else's
   // name on a federal tax document.
-  const fullName = personal.fullName ?? '';
   const firstName = fullName.split(' ')[0] || 'there';
 
   const onSubmit = () => {
     if (!signed || submitting) return;
     setSubmitting(true);
-    // Show the success animation, then commit and route home.
+    // Show the success animation, then commit and route home. The
+    // setIntakeField persists to Postgres via the debounced save path;
+    // by the time the user lands on /home, the layout's getOrCreate
+    // call sees the updated flag.
     setTimeout(() => {
-      setPortal({ ...portal, signed8879: true });
+      void setSigned8879(true);
       router.push('/portal/home');
     }, 2100);
   };

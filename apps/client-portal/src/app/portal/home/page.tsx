@@ -18,34 +18,37 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { useRouter } from 'next/navigation';
-import { usePortalState } from '@/lib/portal-state';
-
-type PortalState = {
-  paid: boolean;
-  signed8879: boolean;
-};
-
-const PORTAL_DEFAULT: PortalState = { paid: false, signed8879: false };
-
-type PersonalInfo = { fullName: string };
+import { useIntakeField } from '@/lib/intake-context';
 
 export default function PortalHomePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
-  const [portal, setPortal] = usePortalState<PortalState>('portal-state', PORTAL_DEFAULT);
-  const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '' });
+
+  // Pull display data from the same Postgres-backed IntakeState the
+  // intake flow writes to. The portal layout's IntakeProvider hydrates
+  // it on every page load (one round trip, request-scoped cache).
+  const [fullName] = useIntakeField<string>('personal.fullName', '');
+  const [depositPaid, setDepositPaid] = useIntakeField<boolean>('deposit.paid', false);
+  const [signed8879, setSigned8879] = useIntakeField<boolean>(
+    'engagement.signed',
+    false,
+  );
 
   // Greeting fallback: 'there' instead of a hardcoded persona name. Real
   // clients with phone-only signups don't have fullName populated yet on
   // their first portal visit; we'd rather say 'Good afternoon, there'
   // than show them somebody else's name.
-  const firstName = (personal.fullName ?? '').split(' ')[0] || 'there';
-  const needsPayment = !portal.paid;
-  const needsSign = portal.paid && !portal.signed8879;
-  const allDone = portal.paid && portal.signed8879;
+  const firstName = (fullName ?? '').split(' ')[0] || 'there';
+  const needsPayment = !depositPaid;
+  const needsSign = depositPaid && !signed8879;
+  const allDone = depositPaid && signed8879;
 
-  const onPay = () => setPortal({ ...portal, paid: true });
+  // Optimistic local-only flip until Square integration ships (Day 8-9).
+  // Triggers a server save via useIntakeField; the user's deposit.paid
+  // gets persisted under their tenant DEK.
+  const onPay = () => void setDepositPaid(true);
   const onSign = () => router.push('/portal/sign-8879');
+  void setSigned8879; // intentionally unused locally — sign action lives in /portal/sign-8879
 
   return (
     <>
@@ -150,14 +153,14 @@ export default function PortalHomePage() {
             <Row justify="space-between" align="flex-start" style={{ marginBottom: 14 }}>
               <div>
                 <Eyebrow t={t} style={{ marginBottom: 4 }}>
-                  {portal.paid ? 'Balance' : 'Balance due'}
+                  {depositPaid ? 'Balance' : 'Balance due'}
                 </Eyebrow>
                 <div
                   style={{
                     fontFamily: t.serif,
                     fontSize: 32,
-                    color: portal.paid ? t.muted : t.ink,
-                    textDecoration: portal.paid ? 'line-through' : 'none',
+                    color: depositPaid ? t.muted : t.ink,
+                    textDecoration: depositPaid ? 'line-through' : 'none',
                     letterSpacing: -0.8,
                     lineHeight: 1,
                   }}
@@ -172,7 +175,7 @@ export default function PortalHomePage() {
                     fontFamily: t.mono,
                   }}
                 >
-                  {portal.paid ? 'Paid in full · $500 total' : 'of $500 total · $250 deposit paid'}
+                  {depositPaid ? 'Paid in full · $500 total' : 'of $500 total · $250 deposit paid'}
                 </div>
               </div>
               <div
@@ -180,14 +183,14 @@ export default function PortalHomePage() {
                   width: 56,
                   height: 56,
                   borderRadius: '50%',
-                  background: portal.paid ? 'rgba(74, 143, 95, 0.15)' : t.bgElev,
-                  border: `1px solid ${portal.paid ? 'rgba(74, 143, 95, 0.3)' : t.border}`,
+                  background: depositPaid ? 'rgba(74, 143, 95, 0.15)' : t.bgElev,
+                  border: `1px solid ${depositPaid ? 'rgba(74, 143, 95, 0.3)' : t.border}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                {portal.paid ? (
+                {depositPaid ? (
                   <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                     <path
                       d="M5 11l4 4 8-9"
@@ -213,12 +216,12 @@ export default function PortalHomePage() {
                 )}
               </div>
             </Row>
-            {!portal.paid && (
+            {!depositPaid && (
               <Button t={t} onClick={onPay} style={{ width: '100%' }}>
                 Pay remaining balance
               </Button>
             )}
-            {portal.paid && (
+            {depositPaid && (
               <div
                 style={{
                   fontFamily: t.mono,
@@ -237,8 +240,8 @@ export default function PortalHomePage() {
           {/* 8879 sign card */}
           <SignRow
             t={t}
-            paid={portal.paid}
-            signed8879={portal.signed8879}
+            paid={depositPaid}
+            signed8879={signed8879}
             onClick={needsSign ? onSign : undefined}
             needsPayment={needsPayment}
             needsSign={needsSign}

@@ -15,14 +15,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { useRouter } from 'next/navigation';
-import { usePortalState } from '@/lib/portal-state';
-
-type PortalState = {
-  paid: boolean;
-  signed8879: boolean;
-};
-
-const PORTAL_DEFAULT: PortalState = { paid: false, signed8879: false };
+import { useIntakeField } from '@/lib/intake-context';
 
 function SigCard({
   t,
@@ -171,8 +164,8 @@ function SigCard({
 export default function PortalSignaturesPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
-  const [portal] = usePortalState<PortalState>('portal-state', PORTAL_DEFAULT);
-  const form8879Signed = portal.signed8879;
+  const [form8879Signed] = useIntakeField<boolean>('engagement.signed', false);
+  const [depositPaid] = useIntakeField<boolean>('deposit.paid', false);
 
   return (
     <>
@@ -216,7 +209,7 @@ export default function PortalSignaturesPage() {
                 form="Form 8879"
                 subtitle="E-file authorization. Required before Antonio can transmit your return to the IRS."
                 status="pending"
-                locked={!portal.paid}
+                locked={!depositPaid}
                 reason="AVAILABLE AFTER PAYMENT"
                 onSign={() => router.push('/portal/sign-8879')}
               />
