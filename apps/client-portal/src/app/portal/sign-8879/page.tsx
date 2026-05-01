@@ -37,8 +37,12 @@ export default function Sign8879Page() {
   const [signed, setSigned] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const fullName = personal.fullName || 'Maria Rodriguez';
-  const firstName = fullName.split(' ')[0] || 'friend';
+  // No persona-name fallback. Real client signing the 8879 must have
+  // their actual name (the form is legally tied to it). If fullName is
+  // somehow empty we show empty — better than rendering somebody else's
+  // name on a federal tax document.
+  const fullName = personal.fullName ?? '';
+  const firstName = fullName.split(' ')[0] || 'there';
 
   const onSubmit = () => {
     if (!signed || submitting) return;

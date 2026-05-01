@@ -35,7 +35,11 @@ export default function PortalHomePage() {
   const [portal, setPortal] = usePortalState<PortalState>('portal-state', PORTAL_DEFAULT);
   const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '' });
 
-  const firstName = (personal.fullName || 'Maria').split(' ')[0] || 'friend';
+  // Greeting fallback: 'there' instead of a hardcoded persona name. Real
+  // clients with phone-only signups don't have fullName populated yet on
+  // their first portal visit; we'd rather say 'Good afternoon, there'
+  // than show them somebody else's name.
+  const firstName = (personal.fullName ?? '').split(' ')[0] || 'there';
   const needsPayment = !portal.paid;
   const needsSign = portal.paid && !portal.signed8879;
   const allDone = portal.paid && portal.signed8879;

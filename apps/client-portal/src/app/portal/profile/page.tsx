@@ -147,9 +147,12 @@ export default function PortalProfilePage() {
   const [portal] = usePortalState<PortalState>('portal-state', PORTAL_DEFAULT);
   const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '', phone: '' });
 
-  const fullName = personal.fullName || 'Maria Rodriguez';
-  const initial = fullName.charAt(0).toUpperCase() || 'M';
-  const phone = personal.phone || '(951) 555-0234';
+  // No persona-name fallback. If fullName is empty we render an empty
+  // string rather than show a different person's name on the user's
+  // own profile page.
+  const fullName = personal.fullName ?? '';
+  const initial = fullName.charAt(0).toUpperCase() || '·';
+  const phone = personal.phone ?? '';
 
   const signedDocs = [
     { name: 'Engagement Letter', when: 'Apr 17, 2026 · 2:14 PM PT', pending: false },
