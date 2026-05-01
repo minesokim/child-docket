@@ -29,8 +29,16 @@ export default function LandingPage() {
         display: 'flex',
         flexDirection: 'column',
         padding: '20px 24px 28px',
+        animation: 'landing-fade-in 220ms cubic-bezier(.2,.8,.2,1) both',
+        willChange: 'opacity, transform',
       }}
     >
+      <style>{`
+        @keyframes landing-fade-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0);   }
+        }
+      `}</style>
       {/* Content column — vertically centered-ish, text left-aligned */}
       <div
         style={{

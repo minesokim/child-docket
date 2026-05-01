@@ -407,8 +407,14 @@ function CountryPicker({
     const onDocClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    // Defer attachment by one tick: the click that opened this dropdown
+    // would otherwise fire mousedown immediately, see "outside" target,
+    // and close it on the very same click.
+    const id = setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener('mousedown', onDocClick);
+    };
   }, [onClose]);
 
   return (
