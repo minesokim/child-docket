@@ -87,7 +87,6 @@ function SystemCard({
   t,
   time,
   title = 'Status',
-  kind = 'info',
   children,
 }: {
   t: Theme;
@@ -96,61 +95,34 @@ function SystemCard({
   kind?: 'info' | 'answer';
   children: React.ReactNode;
 }) {
-  const isAnswer = kind === 'answer';
   return (
     <div style={{ margin: '14px 0', display: 'flex', justifyContent: 'center' }}>
       <div
         style={{
           width: '100%',
-          maxWidth: '92%',
-          background: t.card,
-          border: `1px solid ${t.border}`,
-          borderLeft: `3px solid ${isAnswer ? t.rust : t.inkSoft}`,
+          maxWidth: '94%',
+          background: t.bgElev,
+          border: `1px solid ${t.borderSoft}`,
           borderRadius: t.radius,
-          overflow: 'hidden',
+          padding: '12px 14px 14px',
         }}
       >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: 8,
-            padding: '8px 12px 6px',
-            borderBottom: `1px solid ${t.borderSoft}`,
-            background: t.bgElev,
+            marginBottom: 8,
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <rect
-              x="1"
-              y="1"
-              width="4"
-              height="4"
-              rx="0.5"
-              fill="none"
-              stroke={isAnswer ? t.rust : t.inkSoft}
-              strokeWidth="1"
-            />
-            <rect x="7" y="1" width="4" height="4" rx="0.5" fill={isAnswer ? t.rust : t.inkSoft} />
-            <rect x="1" y="7" width="4" height="4" rx="0.5" fill={isAnswer ? t.rust : t.inkSoft} />
-            <rect
-              x="7"
-              y="7"
-              width="4"
-              height="4"
-              rx="0.5"
-              fill="none"
-              stroke={isAnswer ? t.rust : t.inkSoft}
-              strokeWidth="1"
-            />
-          </svg>
           <span
             style={{
-              fontFamily: t.serif,
-              fontStyle: 'italic',
-              fontSize: 13,
-              color: isAnswer ? t.rustInk : t.inkSoft,
-              flex: 1,
+              fontFamily: t.sans,
+              fontSize: 11,
+              color: t.muted,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
             }}
           >
             {title}
@@ -171,7 +143,6 @@ function SystemCard({
 
         <div
           style={{
-            padding: '10px 14px 12px',
             fontSize: 13.5,
             color: t.inkSoft,
             lineHeight: 1.45,

@@ -337,16 +337,15 @@ export default function PortalHomePage() {
             </Row>
             <div
               style={{
-                fontFamily: t.serif,
-                fontSize: 15,
+                fontFamily: t.sans,
+                fontSize: 14.5,
                 color: t.inkSoft,
                 lineHeight: 1.55,
-                fontStyle: 'italic',
               }}
             >
-              &ldquo;Hi {firstName} — your return looks good. Refund estimate is in line with last
-              year. Once you pay the balance, I&apos;ll send the 8879 for your signature and file
-              the same day. Any questions, text me.&rdquo;
+              Hi {firstName} — your return looks good. Refund estimate is in line with last year.
+              Once you pay the balance, I&apos;ll send the 8879 for your signature and file the
+              same day. Any questions, text me.
             </div>
           </Card>
         </Stack>

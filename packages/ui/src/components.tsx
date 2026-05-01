@@ -1560,8 +1560,10 @@ export function AntonioNote({
     <div
       style={{
         marginTop: 10,
-        paddingLeft: 16,
-        borderLeft: `1px solid ${t.rustSoft}`,
+        background: t.tintAccent,
+        border: `1px solid ${t.rustSoft}`,
+        borderRadius: t.radius,
+        padding: '16px 18px 14px',
       }}
     >
       <div
@@ -1577,20 +1579,20 @@ export function AntonioNote({
       >
         {children}
       </div>
-      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: t.serif, fontSize: 13, color: t.muted, lineHeight: 1 }}>—</span>
+      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: t.serif, fontSize: 13, color: t.ink, lineHeight: 1 }}>—</span>
         <span
           style={{
             fontFamily: t.mono,
             fontSize: 10,
             letterSpacing: 1.4,
             textTransform: 'uppercase',
-            color: t.rustInk,
+            color: t.ink,
           }}
         >
           {signature}
         </span>
-        <span style={{ flex: 1, height: 1, background: t.borderSoft, maxWidth: 40 }} />
+        <span style={{ flex: 1, height: 1, background: t.rustSoft, maxWidth: 40 }} />
         <span
           style={{
             fontFamily: t.mono,

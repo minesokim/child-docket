@@ -86,10 +86,11 @@ function SectionEyebrow({ t, children }: { t: Theme; children: React.ReactNode }
   return (
     <div
       style={{
-        fontFamily: t.serif,
-        fontStyle: 'italic',
-        fontSize: 14,
+        fontFamily: t.sans,
+        fontSize: 12,
         color: t.muted,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
         margin: '0 0 10px',
       }}
     >
