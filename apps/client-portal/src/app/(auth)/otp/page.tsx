@@ -111,7 +111,7 @@ export default function OtpPage() {
             </Body>
           </Stack>
 
-          <Row gap={6} justify="center">
+          <Row gap={8} justify="space-between">
             {digits.map((d, i) => (
               <input
                 key={i}

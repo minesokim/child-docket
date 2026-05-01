@@ -37,7 +37,7 @@ export default function WelcomePage() {
         }}
       >
         <Stack gap={26} style={{ flex: 1 }}>
-          <VideoPlaceholder t={t} />
+          <VideoPlaceholder t={t} youtubeId="P8nQkkkWJl4" startSeconds={15} />
 
           <Stack gap={14} style={{ textAlign: 'center' }}>
             <div>

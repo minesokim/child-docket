@@ -434,7 +434,40 @@ export function AvatarSlot({
 // video tile shown on Welcome screen.
 // ────────────────────────────────────────────────────────────────
 
-export function VideoPlaceholder({ t }: { t: Theme }) {
+export function VideoPlaceholder({
+  t,
+  youtubeId,
+  startSeconds,
+}: {
+  t: Theme;
+  youtubeId?: string;
+  startSeconds?: number;
+}) {
+  // Real YouTube embed when an ID is supplied — used for the welcome screen
+  // intro video. Without an ID, falls back to the styled dark mock below.
+  if (youtubeId) {
+    const start = startSeconds ? `&start=${startSeconds}` : '';
+    return (
+      <div
+        style={{
+          width: '100%',
+          aspectRatio: '16 / 9',
+          borderRadius: t.radius,
+          overflow: 'hidden',
+          background: '#000',
+          boxShadow: '0 8px 24px rgba(12, 31, 21, 0.18)',
+        }}
+      >
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?playsinline=1&modestbranding=1&rel=0${start}`}
+          title="Welcome from Antonio"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       style={{
