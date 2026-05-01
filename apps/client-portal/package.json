@@ -15,6 +15,7 @@
     "@docket/db": "workspace:*",
     "@docket/shared": "workspace:*",
     "@docket/ui": "workspace:*",
+    "@sentry/nextjs": "^10.51.0",
     "drizzle-orm": "^0.36.4",
     "next": "15.5.15",
     "react": "^19.2.5",
