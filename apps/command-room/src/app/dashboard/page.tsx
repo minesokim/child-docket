@@ -1,23 +1,22 @@
-// Antonio's MVP dashboard. Server Component: reads Clerk session via auth(),
-// renders a thin shell. Client list, message threads, and per-client view
-// land in subsequent commits — this just confirms the auth path works
-// end-to-end (sign-in → middleware protect → real session → tenant lookup).
+// Antonio's MVP dashboard. Server Component: resolves Clerk session to a
+// Postgres user via getCurrentDocketUser() (which auto-claims a pre-seeded
+// row on first matching email sign-in). Renders the shell + auth proof.
+//
+// Real Command Room UI (client list, message threads, per-client view) lands
+// in subsequent commits.
 
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { SignOutButton } from '@clerk/nextjs';
 import { buildTheme } from '@docket/ui';
 import { redirect } from 'next/navigation';
+import { getCurrentDocketUser } from '@/lib/current-user';
 
 export default async function DashboardPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const { userId } = await auth();
+  const user = await getCurrentDocketUser();
 
-  // Defense-in-depth: middleware should have redirected, but if it didn't,
-  // bounce to sign-in.
-  if (!userId) redirect('/sign-in');
-
-  const user = await currentUser();
-  const firstName = user?.firstName || user?.emailAddresses[0]?.emailAddress.split('@')[0] || 'friend';
+  if (!user) {
+    return <NotProvisioned />;
+  }
 
   return (
     <main
@@ -124,10 +123,10 @@ export default async function DashboardPage() {
             marginBottom: 8,
           }}
         >
-          Welcome, {firstName}.
+          Welcome, {user.name?.split(' ')[0] ?? 'friend'}.
         </h1>
         <p style={{ fontSize: 16, color: t.inkSoft, lineHeight: 1.5, margin: 0, marginBottom: 32 }}>
-          Auth pipeline live. Next: client list + message threads + per-client view.
+          Auth + Postgres pipeline live. Next: client list + per-client view + message threads.
         </p>
 
         <div
@@ -135,7 +134,7 @@ export default async function DashboardPage() {
             padding: '20px 24px',
             background: t.card,
             border: `1px solid ${t.border}`,
-            borderRadius: t.radius,
+            borderRadius: 14,
           }}
         >
           <div
@@ -148,13 +147,80 @@ export default async function DashboardPage() {
               marginBottom: 8,
             }}
           >
-            Session
+            Bound user
           </div>
-          <div style={{ fontFamily: t.mono, fontSize: 13, color: t.ink, lineHeight: 1.6 }}>
-            <div>userId: {userId}</div>
-            <div>email: {user?.emailAddresses[0]?.emailAddress}</div>
+          <div style={{ fontFamily: t.mono, fontSize: 13, color: t.ink, lineHeight: 1.7 }}>
+            <div>name: {user.name ?? '—'}</div>
+            <div>role: {user.role}</div>
+            <div>email: {user.email}</div>
+            <div>tenantId: {user.tenantId}</div>
+            <div>userId: {user.id}</div>
+            <div>clerkUserId: {user.clerkUserId}</div>
           </div>
         </div>
+      </div>
+    </main>
+  );
+}
+
+function NotProvisioned() {
+  const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
+  return (
+    <main
+      style={{
+        minHeight: '100dvh',
+        background: t.bg,
+        color: t.ink,
+        fontFamily: t.sans,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 520,
+          background: t.card,
+          border: `1px solid ${t.border}`,
+          borderRadius: 14,
+          padding: '32px 28px',
+          textAlign: 'center',
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: t.serif,
+            fontSize: 28,
+            color: t.ink,
+            margin: 0,
+            marginBottom: 12,
+            letterSpacing: -0.5,
+          }}
+        >
+          No account provisioned for this email
+        </h1>
+        <p style={{ fontSize: 15, color: t.inkSoft, lineHeight: 1.5, margin: '0 0 20px' }}>
+          Your Clerk identity signed in successfully but there&apos;s no matching Postgres user
+          record. Antonio&apos;s account is provisioned through the seed script — make sure the
+          email you&apos;re signing in with matches <code style={{ fontFamily: t.mono, color: t.rustInk }}>SEED_ADMIN_EMAIL</code>.
+        </p>
+        <SignOutButton>
+          <button
+            style={{
+              background: t.rust,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 999,
+              padding: '10px 20px',
+              fontSize: 14,
+              cursor: 'pointer',
+              fontFamily: t.sans,
+            }}
+          >
+            Sign out
+          </button>
+        </SignOutButton>
       </div>
     </main>
   );

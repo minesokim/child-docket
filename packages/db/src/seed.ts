@@ -68,19 +68,24 @@ async function seed() {
   if (!vazant) throw new Error('failed to insert tenant');
   console.log(`  ✓ tenant: ${vazant.name} (${vazant.id})`);
 
-  // Antonio Vazquez — Owner
+  // Antonio Vazquez — Owner.
+  // Email is configurable via SEED_ADMIN_EMAIL so David can sign in with his
+  // own Google account during development without manually patching this row.
+  // First Clerk sign-in matching this email will claim the row (auth helper
+  // updates clerkUserId from the placeholder to the real Clerk user ID).
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'antonio@vazantconsulting.com';
   const [antonio] = await db
     .insert(users)
     .values({
       tenantId: vazant.id,
-      clerkUserId: 'user_seed_antonio',
-      email: 'antonio@vazantconsulting.com',
+      clerkUserId: 'user_seed_antonio_pending', // claimed by auth helper on first matching sign-in
+      email: adminEmail,
       name: 'Antonio Vazquez',
       role: 'owner',
     })
     .returning();
   if (!antonio) throw new Error('failed to insert user');
-  console.log(`  ✓ user: ${antonio.name}`);
+  console.log(`  ✓ user: ${antonio.name} (email: ${adminEmail})`);
 
   // ──────────────────────────────────────────────────────────────
   // 10 CLIENTS — matching v4 dashboard screenshots
