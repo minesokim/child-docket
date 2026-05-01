@@ -10,8 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@docket/ui": "workspace:*",
+    "@clerk/nextjs": "^7.2.9",
+    "@docket/db": "workspace:*",
     "@docket/shared": "workspace:*",
+    "@docket/ui": "workspace:*",
+    "drizzle-orm": "^0.36.4",
     "next": "15.5.15",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

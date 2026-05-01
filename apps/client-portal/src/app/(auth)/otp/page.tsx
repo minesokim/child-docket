@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+// Real Clerk phone-OTP verification.
+// Continues the flow started on /login. Supports both new sign-up and
+// returning sign-in modes via ?mode=signup or ?mode=signin URL param.
+//
+// On 6-digit code entry → calls signIn.attemptFirstFactor or
+// signUp.attemptPhoneNumberVerification, activates session via setActive,
+// redirects to /welcome.
+
+import { Suspense, useEffect, useRef, useState } from 'react';
 import {
   BackButton,
   Body,
@@ -11,16 +19,38 @@ import {
   Screen,
   Stack,
 } from '@docket/ui';
+import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePortalState } from '@/lib/portal-state';
-import { usePortalNav } from '@/lib/portal-nav';
 
+type ClerkError = {
+  errors?: Array<{ code?: string; message?: string }>;
+};
+
+// useSearchParams forces this page to dynamic rendering. Wrap in Suspense
+// so Next 15 doesn't bail prerender (would error at build time otherwise).
 export default function OtpPage() {
+  return (
+    <Suspense fallback={null}>
+      <OtpFlow />
+    </Suspense>
+  );
+}
+
+function OtpFlow() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const nav = usePortalNav();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = (searchParams.get('mode') ?? 'signin') as 'signin' | 'signup';
+
+  const { signIn, setActive: setActiveSignIn, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, setActive: setActiveSignUp, isLoaded: signUpLoaded } = useSignUp();
+
   const [phone] = usePortalState<string>('phone', '');
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(47);
   const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -38,6 +68,40 @@ export default function OtpPage() {
   const lastFour = phoneDigits.slice(-4);
   const areaCode = phoneDigits.slice(0, 3);
   const maskedPhone = phone ? `(${areaCode}) •••-${lastFour}` : '(•••) •••-••••';
+
+  const verify = async (fullCode: string) => {
+    if (!signInLoaded || !signUpLoaded || !signIn || !signUp) return;
+    setVerifying(true);
+    setError(null);
+    try {
+      if (mode === 'signin') {
+        const result = await signIn.attemptFirstFactor({
+          strategy: 'phone_code',
+          code: fullCode,
+        });
+        if (result.status === 'complete' && result.createdSessionId) {
+          await setActiveSignIn({ session: result.createdSessionId });
+          router.push('/welcome');
+          return;
+        }
+        throw new Error(`Unexpected sign-in status: ${result.status}`);
+      } else {
+        const result = await signUp.attemptPhoneNumberVerification({ code: fullCode });
+        if (result.status === 'complete' && result.createdSessionId) {
+          await setActiveSignUp({ session: result.createdSessionId });
+          router.push('/welcome');
+          return;
+        }
+        throw new Error(`Unexpected sign-up status: ${result.status}`);
+      }
+    } catch (e) {
+      const err = e as ClerkError;
+      setError(err.errors?.[0]?.message ?? 'Code did not verify');
+      setDigits(['', '', '', '', '', '']);
+      setVerifying(false);
+      inputRefs.current[0]?.focus();
+    }
+  };
 
   const set = (i: number, v: string) => {
     const clean = v.replace(/\D/g, '');
@@ -59,12 +123,8 @@ export default function OtpPage() {
     if (nextIdx < 5) inputRefs.current[nextIdx]?.select?.();
 
     if (next.every((x) => x)) {
-      setVerifying(true);
       inputRefs.current[5]?.blur();
-      setTimeout(() => {
-        // TODO(week-2): POST to /api/auth/verify-otp via Clerk before advancing.
-        nav.next('/welcome');
-      }, 1200);
+      verify(next.join(''));
     }
   };
 
@@ -100,7 +160,7 @@ export default function OtpPage() {
           minHeight: '100%',
         }}
       >
-        <BackButton t={t} onClick={() => nav.back('/login')} />
+        <BackButton t={t} onClick={() => router.back()} />
 
         <Stack gap={32} style={{ flex: 1, marginTop: 24 }}>
           <Stack gap={10}>
@@ -125,6 +185,7 @@ export default function OtpPage() {
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
+                disabled={verifying}
                 style={{
                   width: 48,
                   height: 62,
@@ -133,7 +194,7 @@ export default function OtpPage() {
                   fontFamily: t.mono,
                   fontWeight: 500,
                   background: d ? t.tintAccent : t.card,
-                  border: `1.5px solid ${d ? t.rust : t.border}`,
+                  border: `1.5px solid ${error ? t.rust : d ? t.rust : t.border}`,
                   borderRadius: t.radius,
                   color: t.ink,
                   outline: 'none',
@@ -143,6 +204,14 @@ export default function OtpPage() {
               />
             ))}
           </Row>
+
+          {error && (
+            <Row justify="center">
+              <Body t={t} size={13} style={{ color: t.rust }}>
+                {error}
+              </Body>
+            </Row>
+          )}
 
           {verifying ? (
             <Row gap={10} justify="center">
