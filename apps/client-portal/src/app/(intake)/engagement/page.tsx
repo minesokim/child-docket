@@ -18,14 +18,8 @@ import {
 } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type EngagementState = {
-  checked: boolean;
-  signed: boolean;
-};
-
-const DEFAULT: EngagementState = { checked: false, signed: false };
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 const PARAS = [
   'This letter confirms the terms of the engagement between Antonio Vazquez, Enrolled Agent ("Preparer") and the undersigned client ("Client") for the preparation of the Client\'s 2025 federal and state income tax returns.',
@@ -35,14 +29,23 @@ const PARAS = [
   'Confidentiality: All information provided by Client will be held in strict confidence and used solely for the purpose of preparing the returns, except as otherwise authorized in writing.',
 ];
 
-type PersonalInfo = { fullName: string };
-
 export default function EngagementPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [state, setState] = usePortalState<EngagementState>('engagement', DEFAULT);
-  const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '' });
-  const ready = state.checked && state.signed;
+  const [checked, setChecked] = useIntakeField<boolean>('engagement.checked', false);
+  const [signed, setSigned] = useIntakeField<boolean>('engagement.signed', false);
+  const [fullName] = useIntakeField<string>('personal.fullName', '');
+
+  const ready = checked && signed;
+
+  const handleNext = () => {
+    const target = getNextStep('/engagement', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/engagement', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -69,14 +72,14 @@ export default function EngagementPage() {
 
           <Row gap={10} align="flex-start">
             <div
-              onClick={() => setState({ ...state, checked: !state.checked })}
+              onClick={() => setChecked(!checked)}
               style={{
                 width: 22,
                 height: 22,
                 flexShrink: 0,
                 borderRadius: 5,
-                border: `1.5px solid ${state.checked ? t.rust : t.border}`,
-                background: state.checked ? t.rust : t.card,
+                border: `1.5px solid ${checked ? t.rust : t.border}`,
+                background: checked ? t.rust : t.card,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -84,7 +87,7 @@ export default function EngagementPage() {
                 marginTop: 1,
               }}
             >
-              {state.checked && (
+              {checked && (
                 <svg width="12" height="10" viewBox="0 0 12 10">
                   <path
                     d="M1 5l3.5 3.5L11 1"
@@ -98,7 +101,7 @@ export default function EngagementPage() {
               )}
             </div>
             <div
-              onClick={() => setState({ ...state, checked: !state.checked })}
+              onClick={() => setChecked(!checked)}
               style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
             >
               I&apos;ve read and agree to the engagement letter
@@ -119,9 +122,9 @@ export default function EngagementPage() {
             </div>
             <SignaturePad
               t={t}
-              signed={state.signed}
-              onSign={() => setState({ ...state, signed: true })}
-              name={personal.fullName || 'Your signature'}
+              signed={signed}
+              onSign={() => setSigned(true)}
+              name={fullName || 'Your signature'}
             />
           </div>
         </Stack>
@@ -130,14 +133,14 @@ export default function EngagementPage() {
           <Button
             t={t}
             variant="ghost"
-            onClick={() => nav.back('/docs')}
+            onClick={handleBack}
             style={{ flex: '0 0 auto' }}
           >
             Back
           </Button>
           <Button
             t={t}
-            onClick={() => nav.next('/consent')}
+            onClick={handleNext}
             disabled={!ready}
             style={{ flex: 1, opacity: ready ? 1 : 0.45 }}
           >

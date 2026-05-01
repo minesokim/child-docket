@@ -268,8 +268,10 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   // Documents (intake-side flag only — actual files live in `documents` table)
   'documents.uploadComplete': z.boolean(),
 
-  // Sign
+  // Sign — both engagement and consent split into "checked" + "signed"
+  'engagement.checked': z.boolean(),
   'engagement.signed': z.boolean(),
+  'consent.checked': z.boolean(),
   'consent.signed': z.boolean(),
 
   // Contact preferences

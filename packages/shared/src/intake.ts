@@ -245,9 +245,18 @@ export type IntakeState = {
     uploadComplete?: boolean;
   };
 
-  engagement?: { signed?: boolean };
+  engagement?: {
+    checked?: boolean;
+    signed?: boolean;
+  };
 
-  consent?: { signed?: boolean };  // §7216 disclosure consent
+  // §7216 disclosure consent. `checked` = user acknowledged the
+  // disclosure paragraphs; `signed` = user typed their name as
+  // signature. Both required to advance.
+  consent?: {
+    checked?: boolean;
+    signed?: boolean;
+  };
 
   contactInfo?: {
     preferredMethod?: ContactMethod;

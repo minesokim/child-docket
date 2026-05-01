@@ -19,15 +19,8 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type ContactInfo = {
-  fullName: string;
-  email: string;
-  phone: string;
-};
-
-const DEFAULT: ContactInfo = { fullName: '', email: '', phone: '' };
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 function formatPhone(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 10);
@@ -39,9 +32,21 @@ function formatPhone(raw: string): string {
 export default function ContactInfoPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<ContactInfo>('contact-info', DEFAULT);
-  const update = <K extends keyof ContactInfo>(k: K, v: ContactInfo[K]) =>
-    setInfo({ ...info, [k]: v });
+
+  // All three already collected earlier (quick-start + Clerk OTP). This
+  // page is the final confirmation/edit step before scheduling.
+  const [fullName, setFullName] = useIntakeField<string>('personal.fullName', '');
+  const [email, setEmail] = useIntakeField<string>('personal.email', '');
+  const [phone, setPhone] = useIntakeField<string>('personal.phone', '');
+
+  const handleNext = () => {
+    const target = getNextStep('/contact-info', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/contact-info', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -56,7 +61,7 @@ export default function ContactInfoPage() {
         <IntakeHeader t={t} step={3} label="Contact" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/services-addons')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '20px 24px 8px' }}>
@@ -73,8 +78,8 @@ export default function ContactInfoPage() {
             <FieldLabel t={t}>Full name</FieldLabel>
             <TextField
               t={t}
-              value={info.fullName}
-              onChange={(v) => update('fullName', v)}
+              value={fullName}
+              onChange={(v) => setFullName(v)}
               placeholder="First Middle Last"
               autoComplete="name"
             />
@@ -84,8 +89,8 @@ export default function ContactInfoPage() {
             <FieldLabel t={t}>Email</FieldLabel>
             <TextField
               t={t}
-              value={info.email}
-              onChange={(v) => update('email', v)}
+              value={email}
+              onChange={(v) => setEmail(v)}
               placeholder="you@example.com"
               type="email"
               inputMode="email"
@@ -97,8 +102,8 @@ export default function ContactInfoPage() {
             <FieldLabel t={t}>Phone</FieldLabel>
             <TextField
               t={t}
-              value={info.phone}
-              onChange={(v) => update('phone', formatPhone(v))}
+              value={phone}
+              onChange={(v) => setPhone(formatPhone(v))}
               mono
               placeholder="(415) 555-0134"
               type="tel"
@@ -124,12 +129,12 @@ export default function ContactInfoPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/services-addons')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/appt')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

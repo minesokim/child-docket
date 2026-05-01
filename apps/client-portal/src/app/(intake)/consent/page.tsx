@@ -17,14 +17,8 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type ConsentState = {
-  checked: boolean;
-  signed: boolean;
-};
-
-const DEFAULT: ConsentState = { checked: false, signed: false };
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 const PARAS = [
   'Federal law requires this consent form be provided to you. Unless authorized by law, we cannot use your tax return information for any purpose other than preparing your return without your consent.',
@@ -33,14 +27,23 @@ const PARAS = [
   'If you believe your tax return information has been disclosed or used improperly in a manner unauthorized by law or without your permission, you may contact the Treasury Inspector General for Tax Administration (TIGTA).',
 ];
 
-type PersonalInfo = { fullName: string };
-
 export default function ConsentPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [state, setState] = usePortalState<ConsentState>('consent-7216', DEFAULT);
-  const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '' });
-  const ready = state.checked && state.signed;
+  const [checked, setChecked] = useIntakeField<boolean>('consent.checked', false);
+  const [signed, setSigned] = useIntakeField<boolean>('consent.signed', false);
+  const [fullName] = useIntakeField<string>('personal.fullName', '');
+
+  const ready = checked && signed;
+
+  const handleNext = () => {
+    const target = getNextStep('/consent', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/consent', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -83,14 +86,14 @@ export default function ConsentPage() {
 
           <Row gap={10} align="flex-start">
             <div
-              onClick={() => setState({ ...state, checked: !state.checked })}
+              onClick={() => setChecked(!checked)}
               style={{
                 width: 22,
                 height: 22,
                 flexShrink: 0,
                 borderRadius: 5,
-                border: `1.5px solid ${state.checked ? t.rust : t.border}`,
-                background: state.checked ? t.rust : t.card,
+                border: `1.5px solid ${checked ? t.rust : t.border}`,
+                background: checked ? t.rust : t.card,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -98,7 +101,7 @@ export default function ConsentPage() {
                 marginTop: 1,
               }}
             >
-              {state.checked && (
+              {checked && (
                 <svg width="12" height="10" viewBox="0 0 12 10">
                   <path
                     d="M1 5l3.5 3.5L11 1"
@@ -112,7 +115,7 @@ export default function ConsentPage() {
               )}
             </div>
             <div
-              onClick={() => setState({ ...state, checked: !state.checked })}
+              onClick={() => setChecked(!checked)}
               style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
             >
               I give Antonio permission to use my tax information to prepare my return
@@ -133,9 +136,9 @@ export default function ConsentPage() {
             </div>
             <SignaturePad
               t={t}
-              signed={state.signed}
-              onSign={() => setState({ ...state, signed: true })}
-              name={personal.fullName || 'Your signature'}
+              signed={signed}
+              onSign={() => setSigned(true)}
+              name={fullName || 'Your signature'}
             />
           </div>
         </Stack>
@@ -144,14 +147,14 @@ export default function ConsentPage() {
           <Button
             t={t}
             variant="ghost"
-            onClick={() => nav.back('/engagement')}
+            onClick={handleBack}
             style={{ flex: '0 0 auto' }}
           >
             Back
           </Button>
           <Button
             t={t}
-            onClick={() => nav.next('/appt')}
+            onClick={handleNext}
             disabled={!ready}
             style={{ flex: 1, opacity: ready ? 1 : 0.45 }}
           >
