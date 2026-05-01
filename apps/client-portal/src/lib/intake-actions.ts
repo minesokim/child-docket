@@ -38,6 +38,7 @@ import {
   isSensitivePath,
   maskSensitiveFields,
   setAtPath,
+  taxYearForDate,
   validateIntakeField,
   asTenantId,
 } from '@docket/shared';
@@ -49,13 +50,13 @@ import {
 const VAZANT_TENANT_SLUG = 'vazant';
 
 /**
- * Tax year for the active intake. May–October: prior year (most filings).
- * November–April: current year (early filers + amendments). Antonio handles
- * out-of-band cases (extensions, late amendments) directly.
+ * Tax year for the active intake — wraps the timezone-aware helper from
+ * @docket/shared with `now` and the Vazant default tenant timezone.
+ * When multi-tenant lands, this becomes a function of the resolved
+ * tenant's timezone column.
  */
 function getCurrentTaxYear(): number {
-  const now = new Date();
-  return now.getMonth() < 10 ? now.getFullYear() - 1 : now.getFullYear();
+  return taxYearForDate(new Date(), 'America/Los_Angeles');
 }
 
 /**

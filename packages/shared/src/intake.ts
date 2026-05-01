@@ -379,6 +379,39 @@ export function isSensitivePath(path: string): boolean {
 /** UTF-8 middle dot. Non-digit, non-letter. */
 export const MASK_CHAR = '·';
 
+// ────────────────────────────────────────────────────────────────
+// Tax-year computation. The "active" tax year for an intake depends on
+// the TENANT's wall-clock month, not the server's UTC clock.
+//
+// Logic: January–October -> prior year (most filings, extensions, late
+// amendments are for the prior tax year). November–December -> current
+// year (early filers starting their next return).
+//
+// The default America/Los_Angeles matches Vazant Consulting (the only
+// v0 tenant). When multi-tenant lands, callers pass tenants.timezone
+// explicitly.
+// ────────────────────────────────────────────────────────────────
+
+export function taxYearForDate(date: Date, timezone = 'America/Los_Angeles'): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: 'numeric',
+  }).formatToParts(date);
+
+  const monthPart = parts.find((p) => p.type === 'month');
+  const yearPart = parts.find((p) => p.type === 'year');
+  if (!monthPart || !yearPart) {
+    throw new Error(
+      `taxYearForDate: Intl.DateTimeFormat returned no month/year for tz=${timezone}`,
+    );
+  }
+
+  const month = parseInt(monthPart.value, 10); // 1–12
+  const year = parseInt(yearPart.value, 10);
+  return month <= 10 ? year - 1 : year;
+}
+
 /**
  * Mask a sensitive plaintext value for the wire. Preserves length;
  * replaces all but last 4 characters with MASK_CHAR.
