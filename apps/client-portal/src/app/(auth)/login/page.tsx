@@ -17,8 +17,25 @@ import * as React from 'react';
 import { usePortalState } from '@/lib/portal-state';
 
 type ClerkError = {
-  errors?: Array<{ code?: string; message?: string }>;
+  errors?: Array<{ code?: string; message?: string; longMessage?: string }>;
+  message?: string;
+  longMessage?: string;
 };
+
+// Pull the most descriptive available message out of a Clerk error.
+// Clerk's error shape varies by error type — sometimes errors[0], sometimes
+// top-level. Try every known location in order.
+function extractError(e: unknown): { code: string | undefined; message: string | undefined } {
+  const err = e as ClerkError;
+  const code = err.errors?.[0]?.code;
+  const message =
+    err.errors?.[0]?.longMessage ??
+    err.errors?.[0]?.message ??
+    err.longMessage ??
+    err.message ??
+    (e instanceof Error ? e.message : undefined);
+  return { code, message };
+}
 
 // Most common countries in Antonio's market. Ordered by usage prior — US/CA top,
 // then Latino markets, then APAC. Full international list can land later.
@@ -60,14 +77,22 @@ function friendlyError(code: string | undefined, fallback: string | undefined): 
       return 'This number is already in use by another account.';
     case 'too_many_requests':
     case 'lockout':
-      return 'Too many attempts. Wait a few minutes and try again.';
+    case 'verification_attempts_exceeded':
+      return 'Too many attempts. Wait 10–15 minutes and try again, or use a different phone number.';
     case 'phone_number_not_supported':
       return 'SMS isn\'t supported for this number.';
     case 'verification_failed':
       return 'That code didn\'t work. Try again or request a new one.';
-    default:
-      return fallback ?? null;
   }
+  // Fall back to message-content matching for codes I haven't enumerated.
+  const m = (fallback ?? '').toLowerCase();
+  if (m.includes('too many') || m.includes('rate limit') || m.includes('verification code requests')) {
+    return 'Too many verification code requests for this number. Wait 10–15 minutes, then try again — or use a different phone.';
+  }
+  if (m.includes('captcha')) {
+    return 'Verification challenge could not load. Refresh the page and try again.';
+  }
+  return fallback ?? null;
 }
 
 // Format a US/Canada 10-digit phone for display.
@@ -152,10 +177,8 @@ export default function LoginPage() {
       navigated = true;
       router.push('/otp?mode=signin');
     } catch (e) {
-      const err = e as ClerkError;
-      const code = err.errors?.[0]?.code;
-      const message = err.errors?.[0]?.message;
-      console.error('[login] signIn error', { code, message, raw: err });
+      const { code, message } = extractError(e);
+      console.error('[login] signIn error', { code, message, raw: e });
 
       if (code === 'form_identifier_not_found') {
         try {
@@ -164,10 +187,8 @@ export default function LoginPage() {
           navigated = true;
           router.push('/otp?mode=signup');
         } catch (signUpErr) {
-          const sErr = signUpErr as ClerkError;
-          const sCode = sErr.errors?.[0]?.code;
-          const sMsg = sErr.errors?.[0]?.message;
-          console.error('[login] signUp error', { code: sCode, message: sMsg, raw: sErr });
+          const { code: sCode, message: sMsg } = extractError(signUpErr);
+          console.error('[login] signUp error', { code: sCode, message: sMsg, raw: signUpErr });
           setError(friendlyError(sCode, sMsg) ?? `Could not start sign-up${sCode ? ` (${sCode})` : ''}`);
         }
       } else if (code === 'session_exists') {
