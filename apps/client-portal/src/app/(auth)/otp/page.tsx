@@ -250,11 +250,12 @@ function OtpFlow() {
         </div>
         <h1
           style={{
-            fontFamily: t.serif,
+            fontFamily: t.sans,
             fontSize: 28,
+            fontWeight: 600,
             color: t.ink,
-            letterSpacing: -0.5,
-            lineHeight: 1.2,
+            letterSpacing: -0.6,
+            lineHeight: 1.25,
             margin: 0,
             marginBottom: 24,
           }}
@@ -302,7 +303,7 @@ function OtpFlow() {
           </button>
         </div>
 
-        {/* Code input */}
+        {/* Code input — sans-serif, modern, like Arcade */}
         <input
           ref={inputRef}
           id="otp-code"
@@ -311,16 +312,17 @@ function OtpFlow() {
           inputMode="numeric"
           autoComplete="one-time-code"
           maxLength={6}
-          placeholder="––––––"
+          placeholder="------"
           disabled={verifying}
           style={{
             width: '100%',
             boxSizing: 'border-box',
             padding: '16px 18px',
-            fontSize: 24,
-            fontFamily: t.serif,
-            fontWeight: 400,
-            letterSpacing: code ? 4 : 0,
+            fontSize: 22,
+            fontFamily: t.sans,
+            fontWeight: 500,
+            fontFeatureSettings: '"tnum" 1, "lnum" 1',
+            letterSpacing: code ? 6 : 1,
             background: t.card,
             border: `1px solid ${error ? t.rust : t.border}`,
             borderRadius: 10,
@@ -329,6 +331,9 @@ function OtpFlow() {
             textAlign: 'center',
           }}
         />
+
+        {/* Clerk CAPTCHA mount point (in case verification triggers it) */}
+        <div id="clerk-captcha" style={{ marginTop: 12 }} />
 
         {error && (
           <p

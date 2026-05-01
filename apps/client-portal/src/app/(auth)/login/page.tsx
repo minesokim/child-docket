@@ -359,6 +359,12 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* Clerk CAPTCHA widget mount point. signUp.create() looks for this
+            element to render Cloudflare Turnstile into. Without it, sign-up
+            fails with 'missing_requirements' status. Renders invisibly
+            unless Clerk needs interactive verification. */}
+        <div id="clerk-captcha" style={{ marginTop: 16 }} />
+
         {/* Next button — plain <button> for full width control on iOS Safari.
             (Button component's inline-flex default was rendering as content-width
             in some viewports.) */}
