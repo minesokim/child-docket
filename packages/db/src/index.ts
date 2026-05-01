@@ -2,7 +2,6 @@ export * from './schema.js';
 export {
   getAdminDb,
   withTenant,
-  withTenantReadOnly,
   disconnect,
   schema,
   type DocketDb,

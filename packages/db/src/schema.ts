@@ -176,7 +176,6 @@ export const clients = pgTable(
     state: text('state'),
     intakeStatus: text('intake_status').notNull().default('not-started'),
     kycStatus: text('kyc_status').notNull().default('pending'),
-    stripeIdentitySessionId: text('stripe_identity_session_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -376,7 +375,7 @@ export const signatures = pgTable(
     documentStorageKey: text('document_storage_key'),            // R2 key for archived signed copy
     kbaRequired: boolean('kba_required').notNull().default(false),
     kbaPassedAt: timestamp('kba_passed_at', { withTimezone: true }),
-    kbaProvider: text('kba_provider'),                           // 'lexisnexis' / 'stripe_identity' / etc.
+    kbaProvider: text('kba_provider'),                           // 'lexisnexis' (DocuSign-bundled) or 'lexisnexis_direct'
     sentAt: timestamp('sent_at', { withTimezone: true }),
     signedAt: timestamp('signed_at', { withTimezone: true }),
     signedByIp: text('signed_by_ip'),

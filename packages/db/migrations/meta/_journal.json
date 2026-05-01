@@ -43,6 +43,13 @@
       "when": 1777674739879,
       "tag": "0005_concerned_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777678752502,
+      "tag": "0006_stormy_skreet",
+      "breakpoints": true
     }
   ]
 }

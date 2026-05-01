@@ -82,17 +82,6 @@ export async function withTenant<T>(
 }
 
 // ────────────────────────────────────────────────────────────────
-// Read-only tenant query helper for hot paths (e.g., the Triage view).
-// Same RLS isolation as withTenant() but uses a savepoint-free read transaction.
-// ────────────────────────────────────────────────────────────────
-export async function withTenantReadOnly<T>(
-  tenantId: TenantId,
-  fn: (db: DocketDb) => Promise<T>,
-): Promise<T> {
-  return withTenant(tenantId, fn);
-}
-
-// ────────────────────────────────────────────────────────────────
 // Lifecycle helpers for tests + scripts.
 // ────────────────────────────────────────────────────────────────
 export async function disconnect(): Promise<void> {
