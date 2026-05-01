@@ -147,6 +147,9 @@ const RentalPropertySchema = z.object({
 // ────────────────────────────────────────────────────────────────
 
 export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
+  // Meta — last-visited route for resume-where-you-left-off
+  '_meta.lastVisitedRoute': z.string().regex(/^\/[a-z0-9-/?=&]*$/i, 'Invalid route'),
+
   // Tutorial / service path
   'tutorial.completed': z.boolean(),
   'service.kind': ServiceKindSchema,

@@ -10,23 +10,30 @@
 //
 //   const [firstName, setFirstName] = useIntakeField('personal.firstName', '');
 //
-// Reads come from React state (no per-component fetch). Writes go through
-// the saveIntakeField server action — local state updates optimistically
-// for instant UI feedback, then reconciles with the server's canonical
-// (validated, encrypted-at-rest) response.
+// Performance model:
+//   - Local state updates are SYNCHRONOUS on every keystroke. No await.
+//   - Server saves are DEBOUNCED (400ms after typing stops, per path).
+//     Typing "David" is one server request, not five.
+//   - We do NOT replace local state with the server response — typing
+//     never gets clobbered by a stale-response race. The server is
+//     validating + encrypting + writing; we trust it to do so reliably,
+//     and surface errors via console + Sentry rather than reverting
+//     the user's input.
 // ────────────────────────────────────────────────────────────────
 
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { getAtPath, setAtPath, type IntakeState } from '@docket/shared';
-import { saveIntakeField, type SaveIntakeFieldResult } from './intake-actions';
+import { saveIntakeField } from './intake-actions';
 
-type SetFieldFn = (path: string, value: unknown) => Promise<SaveIntakeFieldResult>;
+type SetFieldFn = (path: string, value: unknown) => void;
 
 type IntakeContextValue = {
   answers: IntakeState;
@@ -34,6 +41,10 @@ type IntakeContextValue = {
 };
 
 const IntakeContext = createContext<IntakeContextValue | null>(null);
+
+// Debounce window per path. 400ms is the sweet spot — feels instant in
+// the UI but coalesces rapid typing into one server round-trip.
+const SAVE_DEBOUNCE_MS = 400;
 
 // ────────────────────────────────────────────────────────────────
 // Provider
@@ -48,24 +59,62 @@ export function IntakeProvider({
 }) {
   const [answers, setAnswers] = useState<IntakeState>(initialAnswers);
 
-  const setField = useCallback<SetFieldFn>(async (path, value) => {
-    // Optimistic: update local state immediately. UI feels instant.
+  // Debounce timers + latest-value buffer per path. Map keys are the
+  // dotted paths; we hold one timer per field so typing in two fields
+  // doesn't cancel each other.
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingRef = useRef<Map<string, unknown>>(new Map());
+
+  // On unmount, flush any in-flight saves immediately.
+  useEffect(() => {
+    return () => {
+      const timers = timersRef.current;
+      const pending = pendingRef.current;
+      timers.forEach((t) => clearTimeout(t));
+      pending.forEach((value, path) => {
+        // Best-effort flush — fire and forget.
+        void saveIntakeField(path, value);
+      });
+      timers.clear();
+      pending.clear();
+    };
+  }, []);
+
+  const setField = useCallback<SetFieldFn>((path, value) => {
+    // 1. Synchronous local update — UI feels instant.
     setAnswers((prev) => setAtPath(prev, path, value));
 
-    // Server save happens in the background. The server's response is
-    // canonical (validated, possibly coerced) — replace local with it
-    // so any normalization (whitespace, casing, etc.) flows back.
-    const result = await saveIntakeField(path, value);
+    // 2. Debounce the server save. If the user is still typing, we
+    // reset the timer; the actual save fires SAVE_DEBOUNCE_MS after
+    // the LAST keystroke for this path.
+    pendingRef.current.set(path, value);
+    const existing = timersRef.current.get(path);
+    if (existing) clearTimeout(existing);
 
-    if (result.ok) {
-      setAnswers(result.answers);
-      return result;
-    }
+    const timer = setTimeout(() => {
+      const latestValue = pendingRef.current.get(path);
+      pendingRef.current.delete(path);
+      timersRef.current.delete(path);
 
-    // Save failed. Local state has the optimistic value, but the server
-    // has the prior. We keep optimistic on screen so the user can retry
-    // (correcting their input), and surface the error to the caller.
-    return result;
+      // Save the latest value (not the value at debounce-start).
+      void saveIntakeField(path, latestValue).then((result) => {
+        if (!result.ok) {
+          // Visible failure surface comes via console.error + Sentry
+          // (server-side capture). v1+ adds a toast.
+          console.error('[saveIntakeField] failed', {
+            path: result.path,
+            error: result.error,
+          });
+        }
+        // We DON'T replace local state with result.answers here —
+        // doing so causes typing-clobber races where a stale response
+        // overwrites whatever the user has typed since the save fired.
+        // Server is canonical for storage; React state is canonical for
+        // what the user sees while typing.
+      });
+    }, SAVE_DEBOUNCE_MS);
+
+    timersRef.current.set(path, timer);
   }, []);
 
   return (
@@ -106,19 +155,18 @@ export function useSetIntakeField(): SetFieldFn {
 
 /**
  * Drop-in replacement for usePortalState. Reads from the IntakeState in
- * context; writes go through the saveIntakeField server action.
+ * context; writes are debounced (400ms) before hitting the server.
  *
  *   const [value, setValue] = useIntakeField<string>('personal.firstName', '');
+ *   <input onChange={(e) => setValue(e.target.value)} value={value} />
  *
- *   <input onChange={(e) => void setValue(e.target.value)} value={value} />
- *
- * setValue returns a Promise so callers CAN await error info, but most
- * UI flows fire-and-forget with `void setValue(...)`.
+ * setValue is synchronous — local state updates instantly, server save
+ * fires after typing stops. No await needed; errors are logged.
  */
 export function useIntakeField<T>(
   path: string,
   defaultValue: T,
-): readonly [T, (next: T) => Promise<SaveIntakeFieldResult>] {
+): readonly [T, (next: T) => void] {
   const { answers, setField } = useIntakeContext();
 
   const raw = getAtPath(answers, path);

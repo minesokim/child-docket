@@ -91,6 +91,15 @@ export type IntakeRentalProperty = {
 };
 
 export type IntakeState = {
+  // ── Meta ─────────────────────────────────────────────────────────
+  // Internal book-keeping; not user-facing data. Tracks the last
+  // intake route the client visited so /welcome can resume to that
+  // exact page (not just the first-incomplete-step). Updated by the
+  // (intake) layout on every navigation.
+  _meta?: {
+    lastVisitedRoute?: string;
+  };
+
   // ── Welcome / tutorial / service path ────────────────────────────
   tutorial?: { completed?: boolean };
 

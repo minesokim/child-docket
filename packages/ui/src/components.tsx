@@ -701,33 +701,49 @@ export function AskAntonioBar({
     <div
       onClick={handleClick}
       style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
+        // More pop: stronger background, slightly thicker border with
+        // rust accent, deeper shadow, hairline rust glow.
+        background: '#FFF8EE',
+        border: `1.5px solid ${t.rustSoft}`,
         borderRadius: 999,
-        padding: '6px 8px 6px 10px',
+        padding: '7px 9px 7px 11px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        boxShadow: '0 4px 12px rgba(60, 40, 28, 0.04)',
+        gap: 11,
+        boxShadow:
+          '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)',
         cursor: 'pointer',
+        transition:
+          'transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow =
+          '0 10px 24px rgba(150, 60, 28, 0.14), 0 2px 4px rgba(60, 40, 28, 0.08)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow =
+          '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)';
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        <AvatarSlot t={t} size={30} />
+        <AvatarSlot t={t} size={32} />
         <div
           style={{
             position: 'absolute',
             bottom: -1,
             right: -1,
-            width: 9,
-            height: 9,
+            width: 10,
+            height: 10,
             borderRadius: '50%',
             background: '#4a8f5f',
-            border: `2px solid ${t.card}`,
+            border: `2px solid #FFF8EE`,
+            boxShadow: '0 0 0 1px rgba(74, 143, 95, 0.20)',
           }}
         />
       </div>
-      <span style={{ flex: 1, fontSize: 12.5, color: t.inkSoft }}>
+      <span style={{ flex: 1, fontSize: 13, color: t.ink, fontWeight: 500 }}>
         Not sure? Ask Antonio
       </span>
       <button
@@ -736,15 +752,17 @@ export function AskAntonioBar({
           handleClick();
         }}
         style={{
-          padding: '6px 14px',
-          fontSize: 12,
-          fontWeight: 500,
+          padding: '7px 16px',
+          fontSize: 12.5,
+          fontWeight: 600,
           background: t.rust,
           color: '#fff',
           border: 'none',
           borderRadius: 999,
           cursor: 'pointer',
           fontFamily: t.sans,
+          letterSpacing: -0.05,
+          boxShadow: '0 2px 4px rgba(150, 60, 28, 0.20)',
         }}
       >
         Message
@@ -1542,45 +1560,53 @@ export function IntakeHeader({
     borderBottom: `1px solid ${t.borderSoft}`,
   };
 
-  // Discreet sign-out, sized + colored to live inside the eyebrow row
-  // without drawing focus from step / label content.
-  const signOutEl = onSignOut ? (
-    <button
-      type="button"
-      onClick={onSignOut}
-      aria-label="Sign out"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '2px 6px',
-        marginRight: 10,
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        fontFamily: t.mono,
-        fontSize: 9,
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-        color: t.muted,
-        lineHeight: 1,
-      }}
-    >
-      <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M2 2l5 5M7 2l-5 5" strokeLinecap="round" />
-      </svg>
-      Exit
-    </button>
+  // Logout pill — sits ABOVE the step row in its own line. Pill shape,
+  // breathing room. Only renders when a SignOutProvider is upstream.
+  const logoutPill = onSignOut ? (
+    <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
+      <button
+        type="button"
+        onClick={onSignOut}
+        aria-label="Log out"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 12px',
+          background: t.bgElev,
+          border: `1px solid ${t.border}`,
+          borderRadius: 999,
+          cursor: 'pointer',
+          fontFamily: t.mono,
+          fontSize: 10,
+          letterSpacing: 1.1,
+          textTransform: 'uppercase',
+          color: t.inkSoft,
+          lineHeight: 1,
+          transition: 'background 140ms cubic-bezier(.2,.8,.2,1), border-color 140ms cubic-bezier(.2,.8,.2,1)',
+        }}
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="M2.2 2.2l5.6 5.6M7.8 2.2l-5.6 5.6" strokeLinecap="round" />
+        </svg>
+        Logout
+      </button>
+    </div>
   ) : null;
 
   if (!step) {
     return (
       <div style={wrapStyle}>
+        {logoutPill}
         <Row justify="space-between" align="center" style={{ marginBottom: 10 }}>
-          <Row gap={0} align="center">
-            {signOutEl}
-            <Eyebrow t={t}>Final step</Eyebrow>
-          </Row>
+          <Eyebrow t={t}>Final step</Eyebrow>
           <Eyebrow t={t}>{label}</Eyebrow>
         </Row>
         <ProgressBar t={t} value={total} total={total} />
@@ -1593,11 +1619,9 @@ export function IntakeHeader({
   const progressValue = subStep === 'B' ? step + 0.5 : step;
   return (
     <div style={wrapStyle}>
+      {logoutPill}
       <Row justify="space-between" align="center" style={{ marginBottom: 10 }}>
-        <Row gap={0} align="center">
-          {signOutEl}
-          <Eyebrow t={t}>{stepLabel}</Eyebrow>
-        </Row>
+        <Eyebrow t={t}>{stepLabel}</Eyebrow>
         <Eyebrow t={t}>{label}</Eyebrow>
       </Row>
       <ProgressBar t={t} value={progressValue} total={total} />
@@ -1606,20 +1630,19 @@ export function IntakeHeader({
 }
 
 // ────────────────────────────────────────────────────────────────
-// AntonioNote — italic editorial margin-note with dateline attribution.
-// Used on intake screens to inject Antonio's voice.
+// AntonioNote — sans-serif margin-note in Antonio's voice. Cream
+// background, rust border, em-dash signature line. No credentials,
+// no italics — clean and direct.
 // ────────────────────────────────────────────────────────────────
 
 export function AntonioNote({
   t,
   children,
   signature = 'Antonio',
-  credentials = 'EA · Claremont',
 }: {
   t: Theme;
   children: React.ReactNode;
   signature?: string;
-  credentials?: string;
 }) {
   return (
     <div
@@ -1633,41 +1656,27 @@ export function AntonioNote({
     >
       <div
         style={{
-          fontFamily: t.serif,
-          fontStyle: 'italic',
-          fontSize: 15.5,
+          fontFamily: t.sans,
+          fontSize: 14.5,
           lineHeight: 1.55,
           color: t.inkSoft,
           textWrap: 'pretty' as React.CSSProperties['textWrap'],
-          letterSpacing: -0.1,
+          letterSpacing: -0.05,
         }}
       >
         {children}
       </div>
-      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: t.serif, fontSize: 13, color: t.ink, lineHeight: 1 }}>—</span>
+      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span
           style={{
-            fontFamily: t.mono,
-            fontSize: 10,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
+            fontFamily: t.sans,
+            fontSize: 13,
             color: t.ink,
+            lineHeight: 1,
+            fontWeight: 500,
           }}
         >
-          {signature}
-        </span>
-        <span style={{ flex: 1, height: 1, background: t.rustSoft, maxWidth: 40 }} />
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 9.5,
-            letterSpacing: 1,
-            color: t.muted,
-            textTransform: 'uppercase',
-          }}
-        >
-          {credentials}
+          —{signature}
         </span>
       </div>
     </div>

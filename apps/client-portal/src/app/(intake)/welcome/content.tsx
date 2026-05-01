@@ -26,7 +26,13 @@ export function WelcomeContent() {
   // populated (not just whether tutorial finished). This catches users
   // who started typing personal info but never clicked through tutorial.
   const isReturning = hasIntakeProgress(answers);
-  const resumeRoute = isReturning ? getResumeStep(answers) : '/quick-start';
+  // Resume target: prefer the EXACT page they were last on. Falls back
+  // to first-incomplete-step if we don't have a saved cursor (older
+  // intake rows from before this feature shipped).
+  const lastVisited = answers._meta?.lastVisitedRoute;
+  const resumeRoute = isReturning
+    ? lastVisited ?? getResumeStep(answers)
+    : '/quick-start';
 
   const ctaLabel = isReturning ? 'Continue where you left off' : "Let's get started";
   const ctaTarget = resumeRoute;
