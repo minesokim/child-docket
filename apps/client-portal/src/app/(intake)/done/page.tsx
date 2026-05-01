@@ -18,14 +18,12 @@ import {
   Stack,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
+import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { completeIntake } from '@/lib/intake-actions';
 
-type ApptInfo = {
-  format: 'phone' | 'video' | 'inperson';
-  dateIdx: number;
-  timeIdx: number;
-};
+type ApptFormat = 'phone' | 'video' | 'inperson';
 
 const DATES = [
   { d: 'Mon', n: 3, m: 'Mar' },
@@ -46,13 +44,11 @@ const DAY_NAMES: Record<string, string> = {
   Sat: 'Saturday',
   Sun: 'Sunday',
 };
-const FORMAT_LABELS: Record<ApptInfo['format'], string> = {
+const FORMAT_LABELS: Record<ApptFormat, string> = {
   phone: 'Phone call',
   video: 'Google Meet',
   inperson: 'Claremont office',
 };
-
-type PersonalInfo = { fullName: string };
 
 function StepRow({
   t,
@@ -114,12 +110,20 @@ function StepRow({
 export default function DonePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [appt] = usePortalState<ApptInfo>('appt', { format: 'video', dateIdx: 2, timeIdx: 1 });
-  const [personal] = usePortalState<PersonalInfo>('personal', { fullName: '' });
 
-  const firstName = (personal.fullName || '').split(' ')[0] || 'friend';
-  const selDate = DATES[appt.dateIdx] ?? DATES[0]!;
-  const selTime = TIMES[appt.timeIdx] ?? TIMES[0]!;
+  const [format] = useIntakeField<ApptFormat>('appointment.format', 'video');
+  const [dateIdx] = useIntakeField<number>('appointment.dateIdx', 2);
+  const [timeIdx] = useIntakeField<number>('appointment.timeIdx', 1);
+  const [fullName] = useIntakeField<string>('personal.fullName', '');
+
+  // Mark intake complete on first arrival here.
+  useEffect(() => {
+    void completeIntake();
+  }, []);
+
+  const firstName = (fullName || '').split(' ')[0] || 'friend';
+  const selDate = DATES[dateIdx] ?? DATES[0]!;
+  const selTime = TIMES[timeIdx] ?? TIMES[0]!;
   const dayName = DAY_NAMES[selDate.d] ?? selDate.d;
 
   const steps = [
@@ -193,7 +197,7 @@ export default function DonePage() {
                       marginTop: 4,
                     }}
                   >
-                    {selTime} PT · {FORMAT_LABELS[appt.format]}
+                    {selTime} PT · {FORMAT_LABELS[format]}
                   </div>
                 </div>
                 <Row gap={8}>

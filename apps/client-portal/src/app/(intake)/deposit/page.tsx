@@ -19,15 +19,18 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
+import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
-type ApptInfo = {
-  format: 'phone' | 'video' | 'inperson';
-  dateIdx: number;
-  timeIdx: number;
-};
+type ApptFormat = 'phone' | 'video' | 'inperson';
 
+// Card details are kept LOCAL only — never persisted to our Postgres.
+// PCI compliance (SAQ-A) requires us to never touch raw card data.
+// v1 swap: replace this form with Square's hosted card iframe (or
+// Stripe Elements). For v0 we just collect into ephemeral state and
+// flip deposit.paid on "submit" to simulate the flow.
 type DepositInfo = {
   cardNumber: string;
   expiry: string;
@@ -54,7 +57,7 @@ const DATES = [
   { d: 'Mon', n: 10, m: 'Mar' },
 ];
 const TIMES = ['9:00 AM', '10:30 AM', '1:00 PM', '2:30 PM', '4:00 PM'];
-const FORMAT_LABELS: Record<ApptInfo['format'], string> = {
+const FORMAT_LABELS: Record<ApptFormat, string> = {
   phone: 'Phone call',
   video: 'Video call (Google Meet)',
   inperson: 'In person · Claremont',
@@ -99,14 +102,33 @@ function IconCard({ size = 16 }: { size?: number }) {
 export default function DepositPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<DepositInfo>('deposit', DEFAULT);
-  const [appt] = usePortalState<ApptInfo>('appt', { format: 'video', dateIdx: 2, timeIdx: 1 });
 
+  // Card details: ephemeral local state. Never persisted (PCI scope).
+  const [info, setInfo] = useState<DepositInfo>(DEFAULT);
   const update = <K extends keyof DepositInfo>(k: K, v: DepositInfo[K]) =>
     setInfo({ ...info, [k]: v });
 
-  const selDate = DATES[appt.dateIdx] ?? DATES[0]!;
-  const selTime = TIMES[appt.timeIdx] ?? TIMES[0]!;
+  // Appointment summary read from intake state.
+  const [format] = useIntakeField<ApptFormat>('appointment.format', 'video');
+  const [dateIdx] = useIntakeField<number>('appointment.dateIdx', 2);
+  const [timeIdx] = useIntakeField<number>('appointment.timeIdx', 1);
+  const [, setPaid] = useIntakeField<boolean>('deposit.paid', false);
+  const [, setAmount] = useIntakeField<number>('deposit.amountCents', 0);
+
+  const selDate = DATES[dateIdx] ?? DATES[0]!;
+  const selTime = TIMES[timeIdx] ?? TIMES[0]!;
+
+  const submitDeposit = () => {
+    // v1: Square charge via API. v0: just flip paid + advance.
+    setPaid(true);
+    setAmount(5000); // $50 in cents
+    const target = getNextStep('/deposit', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/deposit', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -121,7 +143,7 @@ export default function DepositPage() {
         <IntakeHeader t={t} label="Deposit" total={13} />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/appt')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -172,7 +194,7 @@ export default function DepositPage() {
                 marginBottom: 12,
               }}
             >
-              {FORMAT_LABELS[appt.format]} · 30 min
+              {FORMAT_LABELS[format]} · 30 min
             </div>
             <div
               style={{
@@ -402,12 +424,12 @@ export default function DepositPage() {
               <Button
                 t={t}
                 variant="ghost"
-                onClick={() => nav.back('/appt')}
+                onClick={handleBack}
                 style={{ flex: '0 0 auto' }}
               >
                 Back
               </Button>
-              <Button t={t} onClick={() => nav.next('/done')} style={{ flex: 1 }}>
+              <Button t={t} onClick={submitDeposit} style={{ flex: 1 }}>
                 Pay $50 and continue
               </Button>
             </Row>

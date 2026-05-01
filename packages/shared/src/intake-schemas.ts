@@ -278,10 +278,10 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'contactInfo.preferredMethod': ContactMethodSchema,
   'contactInfo.bestTimeToReach': z.string().max(200),
 
-  // Appointment
-  'appointment.requested': z.boolean(),
-  'appointment.timeSlot': z.string().datetime(),
-  'appointment.type': AppointmentTypeSchema,
+  // Appointment — calendar slot indices for v0; v1 stores actual ISO datetime
+  'appointment.format': z.enum(['phone', 'video', 'inperson']),
+  'appointment.dateIdx': z.number().int().min(0).max(50),
+  'appointment.timeIdx': z.number().int().min(0).max(50),
 
   // Deposit
   'deposit.paid': z.boolean(),

@@ -19,17 +19,10 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 type ApptFormat = 'phone' | 'video' | 'inperson';
-
-type ApptInfo = {
-  format: ApptFormat;
-  dateIdx: number;
-  timeIdx: number;
-};
-
-const DEFAULT: ApptInfo = { format: 'video', dateIdx: 2, timeIdx: 1 };
 
 // Demo dates / times — would come from Antonio's calendar in v1
 const DATES = [
@@ -235,10 +228,21 @@ function FormatCard({
 export default function ApptPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<ApptInfo>('appt', DEFAULT);
+  const [format, setFormat] = useIntakeField<ApptFormat>('appointment.format', 'video');
+  const [dateIdx, setDateIdx] = useIntakeField<number>('appointment.dateIdx', 2);
+  const [timeIdx, setTimeIdx] = useIntakeField<number>('appointment.timeIdx', 1);
 
-  const selDate = DATES[info.dateIdx] ?? DATES[0]!;
-  const selTime = TIMES[info.timeIdx] ?? TIMES[0]!;
+  const selDate = DATES[dateIdx] ?? DATES[0]!;
+  const selTime = TIMES[timeIdx] ?? TIMES[0]!;
+
+  const handleNext = () => {
+    const target = getNextStep('/appt', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/appt', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -253,7 +257,7 @@ export default function ApptPage() {
         <IntakeHeader t={t} label="Schedule" total={13} />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/consent')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -271,24 +275,24 @@ export default function ApptPage() {
             <Stack gap={10}>
               <FormatCard
                 t={t}
-                on={info.format === 'phone'}
-                onClick={() => setInfo({ ...info, format: 'phone' })}
+                on={format === 'phone'}
+                onClick={() => setFormat('phone')}
                 icon={<IconPhone />}
                 label="Phone call"
                 sub="We'll go through your return over the phone"
               />
               <FormatCard
                 t={t}
-                on={info.format === 'video'}
-                onClick={() => setInfo({ ...info, format: 'video' })}
+                on={format === 'video'}
+                onClick={() => setFormat('video')}
                 icon={<IconVideo />}
                 label="Video call (Google Meet)"
                 sub="Meet online, share screen"
               />
               <FormatCard
                 t={t}
-                on={info.format === 'inperson'}
-                onClick={() => setInfo({ ...info, format: 'inperson' })}
+                on={format === 'inperson'}
+                onClick={() => setFormat('inperson')}
                 icon={<IconPin />}
                 label="In person"
                 sub="My Claremont office, 35 mins from LA"
@@ -333,11 +337,11 @@ export default function ApptPage() {
               }}
             >
               {DATES.map((d, i) => {
-                const on = info.dateIdx === i;
+                const on = dateIdx === i;
                 return (
                   <button
                     key={i}
-                    onClick={() => setInfo({ ...info, dateIdx: i })}
+                    onClick={() => setDateIdx(i)}
                     style={{
                       flex: '0 0 auto',
                       width: 58,
@@ -388,11 +392,11 @@ export default function ApptPage() {
             <FieldLabel t={t}>Available times</FieldLabel>
             <Stack gap={8}>
               {TIMES.map((tm, i) => {
-                const on = info.timeIdx === i;
+                const on = timeIdx === i;
                 return (
                   <button
                     key={i}
-                    onClick={() => setInfo({ ...info, timeIdx: i })}
+                    onClick={() => setTimeIdx(i)}
                     style={{
                       padding: '14px 16px',
                       borderRadius: t.radius,
@@ -500,7 +504,7 @@ export default function ApptPage() {
                     color: 'rgba(255,255,255,0.7)',
                   }}
                 >
-                  {FORMAT_LABELS[info.format]} · 30 min
+                  {FORMAT_LABELS[format]} · 30 min
                 </div>
               </div>
               <button
@@ -531,12 +535,12 @@ export default function ApptPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/consent')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/deposit')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue to deposit
             </Button>
           </Row>

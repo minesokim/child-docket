@@ -685,10 +685,32 @@ export function TrustPill({
 export function AskAntonioBar({
   t,
   onMessage,
+  tip,
 }: {
   t: Theme;
   onMessage?: () => void;
+  /**
+   * Optional tooltip — displays as a speech bubble above the avatar,
+   * arrow pointing down at the avatar (so it reads like Antonio is
+   * saying it). Auto-dismisses after 8s. User can dismiss with the X.
+   * Setting a new `tip` re-shows the bubble (resets the dismiss state).
+   */
+  tip?: string;
 }) {
+  const [tipVisible, setTipVisible] = React.useState(true);
+
+  // Reset visibility when the tip text changes (new page = new tip).
+  React.useEffect(() => {
+    setTipVisible(true);
+  }, [tip]);
+
+  // Auto-dismiss after 8 seconds.
+  React.useEffect(() => {
+    if (!tip || !tipVisible) return;
+    const timer = window.setTimeout(() => setTipVisible(false), 8000);
+    return () => window.clearTimeout(timer);
+  }, [tip, tipVisible]);
+
   const handleClick = () => {
     if (onMessage) onMessage();
     try {
@@ -697,9 +719,134 @@ export function AskAntonioBar({
       // SSR / missing window — no-op
     }
   };
+
   return (
-    <div
-      onClick={handleClick}
+    <div style={{ position: 'relative' }}>
+      <style>{`
+        @keyframes antonio-tip-in {
+          from { opacity: 0; transform: translateY(6px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0)   scale(1);    }
+        }
+        @keyframes antonio-tip-out {
+          from { opacity: 1; transform: translateY(0)    scale(1);    }
+          to   { opacity: 0; transform: translateY(-4px) scale(0.985); }
+        }
+      `}</style>
+
+      {/* Speech bubble — floats above the bar, arrow on left aligned to avatar */}
+      {tip && tipVisible && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 12px)',
+            left: 0,
+            right: 0,
+            pointerEvents: 'none', // bubble allows touches through; X button overrides
+            animation: 'antonio-tip-in 320ms cubic-bezier(.2,.8,.2,1) both',
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: 360,
+              background: '#FFFFFF',
+              border: `1px solid ${t.borderSoft}`,
+              borderRadius: 16,
+              padding: '14px 38px 14px 18px',
+              boxShadow:
+                '0 10px 28px rgba(60, 40, 28, 0.12), 0 2px 4px rgba(60, 40, 28, 0.06)',
+              pointerEvents: 'auto',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setTipVisible(false)}
+              aria-label="Dismiss tip"
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 24,
+                height: 24,
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 999,
+                cursor: 'pointer',
+                color: t.muted,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = t.bgElev;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            <div
+              style={{
+                fontFamily: t.sans,
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: t.inkSoft,
+                letterSpacing: -0.05,
+              }}
+            >
+              {tip}
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                fontFamily: t.sans,
+                fontSize: 12.5,
+                color: t.ink,
+                fontWeight: 500,
+              }}
+            >
+              —Antonio
+            </div>
+
+            {/* Arrow pointing down at the avatar. Avatar center sits at
+                left:11 (bar padding) + 16 (half of 32px avatar) = 27px.
+                Arrow center at left:27 places its tip directly over the avatar. */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -8,
+                left: 21,
+                width: 14,
+                height: 8,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -7,
+                  left: 0,
+                  width: 14,
+                  height: 14,
+                  background: '#FFFFFF',
+                  border: `1px solid ${t.borderSoft}`,
+                  transform: 'rotate(45deg)',
+                  transformOrigin: 'center',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        onClick={handleClick}
       style={{
         // Pure white per design call. Keep the rust border + shadow so
         // it still pops off the cream-page background.
@@ -767,6 +914,7 @@ export function AskAntonioBar({
       >
         Message
       </button>
+      </div>
     </div>
   );
 }

@@ -510,7 +510,7 @@ export function hasIntakeProgress(state: IntakeState): boolean {
     state.engagement?.signed ||
     state.consent?.signed ||
     state.contactInfo?.preferredMethod ||
-    state.appointment?.requested ||
+    state.appointment?.format !== undefined ||
     state.deposit?.paid
   );
 }

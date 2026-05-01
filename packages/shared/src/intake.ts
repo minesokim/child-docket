@@ -263,10 +263,12 @@ export type IntakeState = {
     bestTimeToReach?: string;
   };
 
+  // Appointment selection — matches /appt UX. dateIdx/timeIdx point
+  // into Antonio's calendar slot list (resolved server-side later).
   appointment?: {
-    requested?: boolean;
-    timeSlot?: string;            // ISO datetime
-    type?: AppointmentType;
+    format?: 'phone' | 'video' | 'inperson';
+    dateIdx?: number;
+    timeIdx?: number;
   };
 
   deposit?: {
