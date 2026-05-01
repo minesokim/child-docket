@@ -102,7 +102,7 @@ export default function WelcomePage() {
         <Stack gap={14} style={{ marginTop: 28 }}>
           <Button
             t={t}
-            onClick={() => nav.next('/services')}
+            onClick={() => nav.next('/tutorial')}
             style={{ width: '100%', padding: '15px 22px', fontSize: 15 }}
           >
             Let&apos;s get started

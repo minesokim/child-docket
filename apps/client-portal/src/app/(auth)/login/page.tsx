@@ -84,7 +84,7 @@ export default function LoginPage() {
             <Button
               t={t}
               onClick={onSubmit}
-              disabled={phone.length < 14}
+              disabled={phone.replace(/\D/g, '').length < 10}
               style={{ width: '100%', padding: '16px 22px', fontSize: 16 }}
             >
               Send verification code
