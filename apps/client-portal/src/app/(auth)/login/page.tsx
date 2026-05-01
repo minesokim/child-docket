@@ -572,7 +572,11 @@ function AlreadySignedIn({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <img src="/vazant-logo.png" alt="Vazant" style={{ width: 48, height: 48 }} />
+        <img
+          src="/vazant-logo.png"
+          alt="Vazant"
+          style={{ width: 48, height: 48, objectFit: 'contain' }}
+        />
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 360, marginInline: 'auto', textAlign: 'center' }}>
         <div

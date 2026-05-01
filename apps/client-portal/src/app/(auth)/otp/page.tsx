@@ -311,21 +311,22 @@ function OtpFlow() {
           inputMode="numeric"
           autoComplete="one-time-code"
           maxLength={6}
-          placeholder="– – – – – –"
+          placeholder="––––––"
           disabled={verifying}
           style={{
             width: '100%',
             boxSizing: 'border-box',
             padding: '16px 18px',
-            fontSize: 22,
-            fontFamily: t.mono,
-            letterSpacing: code ? 8 : 4,
+            fontSize: 24,
+            fontFamily: t.serif,
+            fontWeight: 400,
+            letterSpacing: code ? 4 : 0,
             background: t.card,
             border: `1px solid ${error ? t.rust : t.border}`,
             borderRadius: 10,
             color: t.ink,
             outline: 'none',
-            textAlign: code ? 'left' : 'center',
+            textAlign: 'center',
           }}
         />
 
