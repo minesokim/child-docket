@@ -7,6 +7,11 @@ export * from './intake.js';
 // action to reject malformed writes before they touch JSONB.
 export * from './intake-schemas.js';
 
+// Sentry beforeSend PII scrubber. Last-line defense before events leave
+// our processes — strips SSN/EIN/email/phone substrings + redacts whole
+// values for sensitive-looking field names.
+export * from './sentry-scrubber.js';
+
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.
 // ────────────────────────────────────────────────────────────────
@@ -49,6 +54,7 @@ export type ActionClass =
   | 'send-internal'           // internal-only side effect (DB write, log entry)
   | 'send-external'           // external comm (email, SMS) — gated
   | 'mutate-tax-software'     // wrote to OLT / IRS Solutions / etc. — gated
+  | 'mutate-intake'           // taxpayer-initiated write to intake_responses
   | 'file';                   // submitted to IRS / state — most gated
 
 // ────────────────────────────────────────────────────────────────

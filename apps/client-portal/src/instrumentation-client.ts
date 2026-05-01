@@ -5,6 +5,7 @@
 // users report issues. PII off by default.
 
 import * as Sentry from '@sentry/nextjs';
+import { scrubEvent } from '@docket/shared';
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -14,6 +15,12 @@ Sentry.init({
   replaysOnErrorSampleRate: 0,
   replaysSessionSampleRate: 0,
   sendDefaultPii: false,
+  // PII scrubber — runs on every event before it leaves the browser. The
+  // intake form holds SSN/EIN values in component state; if those ever
+  // make it into a stack frame's local var (React DevTools-style frame
+  // capture), this is the last gate. See lib/sentry-scrubber.ts.
+  beforeSend: scrubEvent,
+  beforeSendTransaction: scrubEvent,
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
 });
 
