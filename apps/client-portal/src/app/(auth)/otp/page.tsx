@@ -10,6 +10,7 @@ import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePortalState } from '@/lib/portal-state';
+import { useGlideyNav } from '@/lib/use-glidey-nav';
 
 type ClerkError = {
   errors?: Array<{ code?: string; message?: string }>;
@@ -60,6 +61,7 @@ export default function OtpPage() {
 function OtpFlow() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
+  const { exiting, glide } = useGlideyNav();
   const searchParams = useSearchParams();
   const mode = (searchParams.get('mode') ?? 'signin') as 'signin' | 'signup';
 
@@ -98,7 +100,7 @@ function OtpFlow() {
     if (mode === 'signup' && signUp.status === 'complete' && signUp.createdSessionId) {
       try {
         await setActiveSignUp({ session: signUp.createdSessionId });
-        router.push('/welcome');
+        glide('/welcome');
         return;
       } catch (e) {
         console.error('[otp] setActive on complete signup failed', e);
@@ -107,7 +109,7 @@ function OtpFlow() {
     if (mode === 'signin' && signIn.status === 'complete' && signIn.createdSessionId) {
       try {
         await setActiveSignIn({ session: signIn.createdSessionId });
-        router.push('/welcome');
+        glide('/welcome');
         return;
       } catch (e) {
         console.error('[otp] setActive on complete signin failed', e);
@@ -122,7 +124,7 @@ function OtpFlow() {
         });
         if (result.status === 'complete' && result.createdSessionId) {
           await setActiveSignIn({ session: result.createdSessionId });
-          router.push('/welcome');
+          glide('/welcome');
           return;
         }
         throw new Error(`Unexpected sign-in status: ${result.status}`);
@@ -131,7 +133,7 @@ function OtpFlow() {
 
         if (result.status === 'complete' && result.createdSessionId) {
           await setActiveSignUp({ session: result.createdSessionId });
-          router.push('/welcome');
+          glide('/welcome');
           return;
         }
 
@@ -173,7 +175,7 @@ function OtpFlow() {
             } else {
               await setActiveSignIn({ session });
             }
-            router.push('/welcome');
+            glide('/welcome');
             return;
           } catch (activateErr) {
             console.error('[otp] activate after already-verified failed', activateErr);
@@ -247,6 +249,10 @@ function OtpFlow() {
         paddingBottom: 28,
         paddingLeft: 'max(28px, env(safe-area-inset-left, 28px))',
         paddingRight: 'max(28px, env(safe-area-inset-right, 28px))',
+        animation: exiting
+          ? 'glidey-fade-out 360ms cubic-bezier(.2,.8,.2,1) both'
+          : undefined,
+        willChange: 'opacity, transform',
       }}
     >
       {/* Top bar */}

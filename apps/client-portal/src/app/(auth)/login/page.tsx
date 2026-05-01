@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { usePortalState } from '@/lib/portal-state';
+import { useGlideyNav } from '@/lib/use-glidey-nav';
 
 type ClerkError = {
   errors?: Array<{ code?: string; message?: string; longMessage?: string }>;
@@ -119,6 +120,7 @@ function formatForCountry(digits: string, country: Country): string {
 export default function LoginPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
+  const { exiting, glide } = useGlideyNav();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -175,7 +177,7 @@ export default function LoginPage() {
         phoneNumberId: phoneFactor.phoneNumberId,
       });
       navigated = true;
-      router.push('/otp?mode=signin');
+      glide('/otp?mode=signin');
     } catch (e) {
       const { code, message } = extractError(e);
 
@@ -199,7 +201,7 @@ export default function LoginPage() {
           await signUp.create({ phoneNumber: e164 });
           await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
           navigated = true;
-          router.push('/otp?mode=signup');
+          glide('/otp?mode=signup');
         } catch (signUpErr) {
           const { code: sCode, message: sMsg } = extractError(signUpErr);
           console.error('[login] signUp error', { code: sCode, message: sMsg, raw: signUpErr });
@@ -207,10 +209,10 @@ export default function LoginPage() {
         }
       } else if (code === 'session_exists') {
         navigated = true;
-        router.push('/welcome');
+        glide('/welcome');
       } else if (code === 'verification_already_sent' || code === 'verification_already_verified') {
         navigated = true;
-        router.push('/otp?mode=signin');
+        glide('/otp?mode=signin');
       } else {
         setError(friendlyError(code, message) ?? `Could not send code${code ? ` (${code})` : ''}`);
       }
@@ -229,6 +231,10 @@ export default function LoginPage() {
         display: 'flex',
         flexDirection: 'column',
         padding: '20px 24px 28px',
+        animation: exiting
+          ? 'glidey-fade-out 360ms cubic-bezier(.2,.8,.2,1) both'
+          : undefined,
+        willChange: 'opacity, transform',
       }}
     >
       {/* Top bar with back button */}
@@ -594,6 +600,7 @@ function AlreadySignedIn({
   signOut: ReturnType<typeof useClerk>['signOut'];
   router: ReturnType<typeof useRouter>;
 }) {
+  const { exiting, glide } = useGlideyNav();
   const identifier =
     user?.primaryPhoneNumber?.phoneNumber ??
     user?.primaryEmailAddress?.emailAddress ??
@@ -611,6 +618,10 @@ function AlreadySignedIn({
         flexDirection: 'column',
         padding: '20px 24px 28px',
         gap: 24,
+        animation: exiting
+          ? 'glidey-fade-out 360ms cubic-bezier(.2,.8,.2,1) both'
+          : undefined,
+        willChange: 'opacity, transform',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -654,7 +665,7 @@ function AlreadySignedIn({
           <Button
             t={t}
             variant="dark"
-            onClick={() => router.push('/welcome')}
+            onClick={() => glide('/welcome')}
             style={{ width: '100%', padding: '14px 22px', fontSize: 15 }}
           >
             Continue to portal

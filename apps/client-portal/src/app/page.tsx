@@ -1,23 +1,33 @@
 'use client';
 
-// Pre-login brand landing. Single CTA → /login. Already-signed-in users
-// auto-skip to /welcome.
+// Pre-login brand landing. Single CTA → /login.
+// Already-signed-in users auto-skip to /welcome.
+//
+// Glidey transition: tap "Continue with phone number" → button presses
+// down briefly → page lifts up + fades → /login fades + drops in. The
+// (auth) layout's fade-in handles the receiving side.
 
 import { buildTheme } from '@docket/ui';
 import { useAuth } from '@clerk/nextjs';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useGlideyNav, GLIDEY_KEYFRAMES } from '@/lib/use-glidey-nav';
 
 export default function LandingPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
+  const { exiting, glide } = useGlideyNav();
+  const [pressed, setPressed] = useState(false);
 
   // If already authed, skip the marketing splash.
   useEffect(() => {
     if (isLoaded && isSignedIn) router.replace('/welcome');
   }, [isLoaded, isSignedIn, router]);
+
+  const handleStart = () => {
+    glide('/login');
+  };
 
   return (
     <main
@@ -28,22 +38,24 @@ export default function LandingPage() {
         fontFamily: t.sans,
         display: 'flex',
         flexDirection: 'column',
-        // Inline-safe horizontal padding: respects iOS notch + adds breathing
-        // room so the dark pill CTA doesn't kiss the screen edge.
         paddingTop: 20,
         paddingBottom: 28,
         paddingLeft: 'max(28px, env(safe-area-inset-left, 28px))',
         paddingRight: 'max(28px, env(safe-area-inset-right, 28px))',
-        animation: 'landing-fade-in 220ms cubic-bezier(.2,.8,.2,1) both',
+        animation: exiting
+          ? 'glidey-fade-out 360ms cubic-bezier(.2,.8,.2,1) both'
+          : 'landing-fade-in 480ms cubic-bezier(.2,.8,.2,1) both',
         willChange: 'opacity, transform',
       }}
     >
       <style>{`
         @keyframes landing-fade-in {
-          from { opacity: 0; transform: translateY(6px); }
+          from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0);   }
         }
+        ${GLIDEY_KEYFRAMES}
       `}</style>
+
       {/* Content column — vertically centered-ish, text left-aligned */}
       <div
         style={{
@@ -67,7 +79,6 @@ export default function LandingPage() {
               objectFit: 'contain',
             }}
           />
-          {/* Soft shadow under logo */}
           <div
             style={{
               width: 140,
@@ -80,7 +91,6 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* Text block — left aligned within column */}
         <div style={{ width: '100%', maxWidth: 340, textAlign: 'left' }}>
           <div
             style={{
@@ -123,10 +133,16 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* CTA — right below copy, not page-bottom */}
         <div style={{ width: '100%', maxWidth: 340 }}>
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={exiting}
+            onMouseDown={() => setPressed(true)}
+            onMouseUp={() => setPressed(false)}
+            onMouseLeave={() => setPressed(false)}
+            onTouchStart={() => setPressed(true)}
+            onTouchEnd={() => setPressed(false)}
             style={{
               display: 'flex',
               width: '100%',
@@ -140,12 +156,16 @@ export default function LandingPage() {
               color: t.bgElev,
               border: `1px solid ${t.ink}`,
               borderRadius: 999,
-              textDecoration: 'none',
+              cursor: exiting ? 'default' : 'pointer',
               letterSpacing: -0.1,
+              transform: pressed && !exiting ? 'scale(0.97)' : 'scale(1)',
+              transition: 'transform 140ms cubic-bezier(.2,.8,.2,1)',
+              boxSizing: 'border-box',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             Continue with phone number
-          </Link>
+          </button>
           <div
             style={{
               fontFamily: t.mono,
