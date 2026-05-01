@@ -1249,16 +1249,18 @@ export function IntakeBackButton({
     <button
       onClick={onClick}
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        background: 'none',
-        border: 'none',
-        padding: 0,
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 999,
+        padding: '7px 14px 7px 12px',
         cursor: 'pointer',
         fontSize: 13,
-        color: t.muted,
+        color: t.ink,
         fontFamily: t.sans,
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -1676,17 +1678,18 @@ export function BackButton({
     <button
       onClick={onClick}
       style={{
-        background: 'none',
-        border: 'none',
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 999,
         cursor: 'pointer',
-        color: t.inkSoft,
-        fontSize: 14,
-        padding: 8,
-        marginLeft: -8,
-        display: 'flex',
+        color: t.ink,
+        fontSize: 13,
+        padding: '7px 14px 7px 12px',
+        display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
         fontFamily: t.sans,
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
       <svg width="8" height="13" viewBox="0 0 8 13" fill="none">

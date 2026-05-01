@@ -212,9 +212,8 @@ export default function ServicesAddonsPage() {
               <div>
                 <div
                   style={{
-                    fontFamily: t.serif,
-                    fontStyle: 'italic',
-                    fontSize: 12.5,
+                    fontFamily: t.sans,
+                    fontSize: 12,
                     color: t.muted,
                     marginBottom: 4,
                   }}
@@ -238,9 +237,8 @@ export default function ServicesAddonsPage() {
               </div>
               <div
                 style={{
-                  fontFamily: t.serif,
-                  fontStyle: 'italic',
-                  fontSize: 11.5,
+                  fontFamily: t.sans,
+                  fontSize: 11,
                   color: t.muted,
                   textAlign: 'right',
                   lineHeight: 1.4,

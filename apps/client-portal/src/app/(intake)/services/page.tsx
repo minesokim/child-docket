@@ -259,7 +259,7 @@ export default function ServicesPathPage() {
             }}
           >
             <Row justify="space-between" align="center">
-              <div style={{ fontFamily: t.serif, fontStyle: 'italic', fontSize: 13, color: t.muted }}>
+              <div style={{ fontFamily: t.sans, fontSize: 12.5, color: t.muted }}>
                 Starting estimate
               </div>
               <div
