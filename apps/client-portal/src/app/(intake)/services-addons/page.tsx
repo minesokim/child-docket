@@ -4,7 +4,6 @@
 // 1-to-1 port of ScreenServiceAddons from the JSX prototype.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -180,11 +179,6 @@ export default function ServicesAddonsPage() {
             );
           })}
 
-          <div style={{ marginTop: 6 }}>
-            <AntonioNote t={t}>
-              If none of these apply, skip ahead — we&apos;ll catch anything I missed during review.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -295,7 +289,10 @@ export default function ServicesAddonsPage() {
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="If none of these apply, skip ahead — we'll catch anything I missed during review."
+            />
           </div>
           <Row gap={10}>
             <Button

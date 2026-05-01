@@ -4,7 +4,6 @@
 // + time slots + summary card. 1-to-1 port of ScreenScheduleAppt.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -449,10 +448,6 @@ export default function ApptPage() {
             </Stack>
           </div>
 
-          <AntonioNote t={t}>
-            Pick whatever works. If none of these times work, message me and I&apos;ll open
-            additional slots.
-          </AntonioNote>
         </Stack>
 
         <div
@@ -529,7 +524,10 @@ export default function ApptPage() {
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Pick whatever works. If none of these times work, message me and I'll open additional slots."
+            />
           </div>
           <Row gap={10}>
             <Button

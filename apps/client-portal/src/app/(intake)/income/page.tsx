@@ -5,7 +5,6 @@
 // 1-to-1 port of ScreenIncomeSources.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -152,12 +151,6 @@ export default function IncomePage() {
             );
           })}
 
-          <div style={{ marginTop: 8 }}>
-            <AntonioNote t={t}>
-              Don&apos;t overthink this. If you got paid for it, select it. I&apos;ll sort out the
-              forms.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -169,7 +162,10 @@ export default function IncomePage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Don't overthink this. If you got paid for it, select it. I'll sort out the forms."
+            />
           </div>
           <Row gap={10}>
             <Button

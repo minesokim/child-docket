@@ -3,7 +3,6 @@
 // Intake step 3/13 — State & prior year. 1-to-1 port of ScreenStateAndPriorYear.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -148,12 +147,6 @@ export default function StatePage() {
             )}
           </div>
 
-          {filedLast === 'yes' && (
-            <AntonioNote t={t}>
-              If you have a copy of last year&apos;s return, upload it in the documents step — it
-              helps me catch things you might have missed. Unless I see it, you lose the expense.
-            </AntonioNote>
-          )}
         </Stack>
 
         <div
@@ -166,7 +159,10 @@ export default function StatePage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="If you have a copy of last year's return, upload it in the documents step — it helps me catch things you might have missed."
+            />
           </div>
           <Row gap={10}>
             <Button

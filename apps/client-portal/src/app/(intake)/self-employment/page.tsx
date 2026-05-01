@@ -4,7 +4,6 @@
 // when 'self' was selected. 1-to-1 port of ScreenSelfEmployment.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -201,13 +200,6 @@ export default function SelfEmploymentPage() {
             />
           </div>
 
-          <div style={{ marginTop: 6 }}>
-            <AntonioNote t={t}>
-              Self-employment has dozens of deductions most people miss. Home office, mileage,
-              equipment, health insurance, retirement contributions. We&apos;ll go through all of
-              them.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -220,7 +212,10 @@ export default function SelfEmploymentPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Self-employment has dozens of deductions most people miss. Home office, mileage, equipment, health insurance, retirement contributions. We'll go through all of them."
+            />
           </div>
           <Row gap={10}>
             <Button

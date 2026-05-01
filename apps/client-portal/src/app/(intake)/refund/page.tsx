@@ -7,7 +7,6 @@
 // we never pre-fill financial fields.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -268,10 +267,6 @@ export default function RefundPage() {
             </div>
           </div>
 
-          <AntonioNote t={t}>
-            Direct deposit is always faster. If you owe instead of getting a refund, we&apos;ll
-            figure out the best payment plan during our call.
-          </AntonioNote>
         </Stack>
 
         <div
@@ -284,7 +279,10 @@ export default function RefundPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Direct deposit is always faster. If you owe instead of getting a refund, we'll figure out the best payment plan during our call."
+            />
           </div>
           <Row gap={10}>
             <Button

@@ -4,7 +4,6 @@
 // 1-to-1 port of ScreenLifeEvents.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -122,12 +121,6 @@ export default function LifeEventsPage() {
             />
           </div>
 
-          <div style={{ marginTop: 10 }}>
-            <AntonioNote t={t}>
-              Life changes often mean tax changes. Even if you&apos;re not sure it matters, mention
-              it and I&apos;ll check.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -140,7 +133,10 @@ export default function LifeEventsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Life changes often mean tax changes. Even if you're not sure it matters, mention it and I'll check."
+            />
           </div>
           <Row gap={10}>
             <Button

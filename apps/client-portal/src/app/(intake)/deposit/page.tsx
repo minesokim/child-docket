@@ -5,7 +5,6 @@
 // pre-fill financial fields).
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -401,10 +400,6 @@ export default function DepositPage() {
             </div>
           </div>
 
-          <AntonioNote t={t}>
-            This $50 goes toward your final bill. Cancel 48 hours ahead and you get it back. This is
-            just to protect my time — I used to have people book and never show up.
-          </AntonioNote>
         </Stack>
 
         <div
@@ -417,7 +412,10 @@ export default function DepositPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="This $50 goes toward your final bill. Cancel 48 hours ahead and you get it back. This is just to protect my time — I used to have people book and never show up."
+            />
           </div>
           <Stack gap={8}>
             <Row gap={10}>

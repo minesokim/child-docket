@@ -4,7 +4,6 @@
 // 1-to-1 port of ScreenTaxQuestions.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -152,13 +151,6 @@ export default function TaxQuestionsPage() {
             />
           ))}
 
-          <div style={{ marginTop: 10 }}>
-            <AntonioNote t={t}>
-              The digital assets question is on the front page of the 1040 now. The IRS is watching
-              this closely. Foreign accounts and crypto are audit magnets — better to disclose than
-              hide.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -171,7 +163,10 @@ export default function TaxQuestionsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="The digital assets question is on the front page of the 1040 now. The IRS is watching this closely. Foreign accounts and crypto are audit magnets — better to disclose than hide."
+            />
           </div>
           <Row gap={10}>
             <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>

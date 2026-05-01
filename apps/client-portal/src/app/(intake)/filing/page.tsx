@@ -3,7 +3,6 @@
 // Intake step 4/13 — Filing status. 1-to-1 port of ScreenFilingStatus.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -105,11 +104,6 @@ export default function FilingPage() {
               </Row>
             </Card>
           ))}
-          <div style={{ marginTop: 8 }}>
-            <AntonioNote t={t}>
-              If you&apos;re not sure which applies, pick your best guess — I&apos;ll verify during our call.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -121,7 +115,10 @@ export default function FilingPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="If you're not sure which applies, pick your best guess — I'll verify during our call."
+            />
           </div>
           <Row gap={10}>
             <Button

@@ -4,7 +4,6 @@
 // 1-to-1 port of ScreenServicePath from the JSX prototype.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -232,11 +231,6 @@ export default function ServicesPathPage() {
             </Card>
           ))}
 
-          <div style={{ marginTop: 4 }}>
-            <AntonioNote t={t}>
-              Not sure? Pick the closest match — we can adjust once I see your documents.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -274,7 +268,10 @@ export default function ServicesPathPage() {
             </Row>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Not sure? Pick the closest match — we can adjust once I see your documents."
+            />
           </div>
           <Row gap={10}>
             <Button
