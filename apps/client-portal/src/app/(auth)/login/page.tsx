@@ -313,23 +313,36 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* Next button */}
-        <div style={{ marginTop: 28 }}>
-          <Button
-            t={t}
-            variant="dark"
+        {/* Next button — plain <button> for full width control on iOS Safari.
+            (Button component's inline-flex default was rendering as content-width
+            in some viewports.) */}
+        <div style={{ marginTop: 28, width: '100%' }}>
+          <button
+            type="button"
             onClick={onSubmit}
             disabled={submitting}
             style={{
+              display: 'block',
               width: '100%',
+              boxSizing: 'border-box',
               padding: '14px 22px',
               fontSize: 15,
+              fontFamily: t.sans,
+              fontWeight: 500,
+              letterSpacing: -0.1,
+              background: t.ink,
+              color: t.bgElev,
+              border: `1px solid ${t.ink}`,
+              borderRadius: 999,
+              textAlign: 'center',
+              cursor: submitting ? 'not-allowed' : 'pointer',
               opacity: submitting ? 0.6 : phoneLooksValid ? 1 : 0.5,
               transition: 'opacity 0.15s',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             {submitting ? 'Sending…' : 'Next'}
-          </Button>
+          </button>
         </div>
       </div>
     </main>
