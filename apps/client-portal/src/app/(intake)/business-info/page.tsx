@@ -1,11 +1,13 @@
 'use client';
 
-// Intake step 2 alt — Business Info. Conditional path for users who
-// selected "Business Tax Return" on Services. Replaces /personal.
-// 1-to-1 port of ScreenBusinessInfo.
+// Intake step 2 alt — Business Info. MIGRATED to Postgres-backed state.
+// Conditional path for users who selected "Business Tax Return" on Services.
+// Replaces /personal for that branch.
+//
+// Sensitive fields (business.ein, business.ownerSsn) match SENSITIVE_INTAKE_PATHS
+// in @docket/shared and get encrypted at rest before JSONB write.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -21,56 +23,62 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type BusinessInfo = {
-  legalName: string;
-  ein: string;
-  entityType: string;
-  activity: string;
-  employees: string;
-  accountingMethod: string;
-  fiscalYearEnd: string;
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-  accountingSoftware: string;
-  payrollProvider: string;
-  ownerName: string;
-  ownerSsn: string;
-  ownerPercent: string;
-  ownerTitle: string;
-  preparingPersonal: 'yes' | 'no' | null;
-};
-
-const DEFAULT: BusinessInfo = {
-  legalName: '',
-  ein: '',
-  entityType: '',
-  activity: '',
-  employees: '',
-  accountingMethod: '',
-  fiscalYearEnd: '12/31',
-  street: '',
-  city: '',
-  state: '',
-  zip: '',
-  accountingSoftware: '',
-  payrollProvider: '',
-  ownerName: '',
-  ownerSsn: '',
-  ownerPercent: '',
-  ownerTitle: '',
-  preparingPersonal: null,
-};
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function BusinessInfoPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<BusinessInfo>('business-info', DEFAULT);
-  const update = <K extends keyof BusinessInfo>(k: K, v: BusinessInfo[K]) =>
-    setInfo({ ...info, [k]: v });
+
+  // Identity
+  const [legalName, setLegalName] = useIntakeField<string>('business.legalName', '');
+  const [ein, setEin] = useIntakeField<string>('business.ein', '');
+  const [entityType, setEntityType] = useIntakeField<string>('business.entityType', '');
+  const [activity, setActivity] = useIntakeField<string>('business.activity', '');
+  const [employees, setEmployees] = useIntakeField<string>('business.employees', '');
+  const [accountingMethod, setAccountingMethod] = useIntakeField<string>(
+    'business.accountingMethod',
+    '',
+  );
+  const [fiscalYearEnd, setFiscalYearEnd] = useIntakeField<string>(
+    'business.fiscalYearEnd',
+    '12/31',
+  );
+
+  // Address
+  const [street, setStreet] = useIntakeField<string>('business.street', '');
+  const [city, setCity] = useIntakeField<string>('business.city', '');
+  const [addressState, setAddressState] = useIntakeField<string>('business.addressState', '');
+  const [zip, setZip] = useIntakeField<string>('business.zip', '');
+
+  // Software
+  const [accountingSoftware, setAccountingSoftware] = useIntakeField<string>(
+    'business.accountingSoftware',
+    '',
+  );
+  const [payrollProvider, setPayrollProvider] = useIntakeField<string>(
+    'business.payrollProvider',
+    '',
+  );
+
+  // Owner (v0 single-owner; v1+ → owners[])
+  const [ownerName, setOwnerName] = useIntakeField<string>('business.ownerName', '');
+  const [ownerSsn, setOwnerSsn] = useIntakeField<string>('business.ownerSsn', '');
+  const [ownerPercent, setOwnerPercent] = useIntakeField<string>('business.ownerPercent', '');
+  const [ownerTitle, setOwnerTitle] = useIntakeField<string>('business.ownerTitle', '');
+  const [preparingPersonal, setPreparingPersonal] = useIntakeField<'yes' | 'no' | ''>(
+    'business.preparingPersonal',
+    '',
+  );
+
+  const handleNext = () => {
+    const target = getNextStep('/business-info', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/business-info', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -85,7 +93,7 @@ export default function BusinessInfoPage() {
         <IntakeHeader t={t} step={2} label="Business" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/services-addons')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 0' }}>
@@ -126,8 +134,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Legal business name</FieldLabel>
             <TextField
               t={t}
-              value={info.legalName}
-              onChange={(v) => update('legalName', v)}
+              value={legalName}
+              onChange={(v) => void setLegalName(v)}
               placeholder="Full legal entity name"
             />
           </div>
@@ -136,8 +144,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>EIN</FieldLabel>
             <TextField
               t={t}
-              value={info.ein}
-              onChange={(v) => update('ein', v)}
+              value={ein}
+              onChange={(v) => void setEin(v)}
               mono
               inputMode="numeric"
               placeholder="XX-XXXXXXX"
@@ -148,8 +156,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Entity type</FieldLabel>
             <TextField
               t={t}
-              value={info.entityType}
-              onChange={(v) => update('entityType', v)}
+              value={entityType}
+              onChange={(v) => void setEntityType(v)}
               placeholder="S-Corp, LLC, C-Corp, Partnership"
             />
           </div>
@@ -158,8 +166,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Business activity</FieldLabel>
             <TextField
               t={t}
-              value={info.activity}
-              onChange={(v) => update('activity', v)}
+              value={activity}
+              onChange={(v) => void setActivity(v)}
               placeholder="Plumbing, Restaurant, Consulting"
             />
           </div>
@@ -168,8 +176,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Number of employees</FieldLabel>
             <TextField
               t={t}
-              value={info.employees}
-              onChange={(v) => update('employees', v.replace(/\D/g, ''))}
+              value={employees}
+              onChange={(v) => void setEmployees(v.replace(/\D/g, ''))}
               mono
               inputMode="numeric"
               placeholder="0"
@@ -180,8 +188,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Accounting method</FieldLabel>
             <TextField
               t={t}
-              value={info.accountingMethod}
-              onChange={(v) => update('accountingMethod', v)}
+              value={accountingMethod}
+              onChange={(v) => void setAccountingMethod(v)}
               placeholder="Cash or Accrual"
             />
           </div>
@@ -190,8 +198,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Fiscal year end</FieldLabel>
             <TextField
               t={t}
-              value={info.fiscalYearEnd}
-              onChange={(v) => update('fiscalYearEnd', v)}
+              value={fiscalYearEnd}
+              onChange={(v) => void setFiscalYearEnd(v)}
               mono
               inputMode="numeric"
               placeholder="12/31"
@@ -226,8 +234,8 @@ export default function BusinessInfoPage() {
               <FieldLabel t={t}>Street address</FieldLabel>
               <TextField
                 t={t}
-                value={info.street}
-                onChange={(v) => update('street', v)}
+                value={street}
+                onChange={(v) => void setStreet(v)}
                 placeholder="Street"
                 autoComplete="address-line1"
               />
@@ -238,8 +246,8 @@ export default function BusinessInfoPage() {
                 <FieldLabel t={t}>City</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.city}
-                  onChange={(v) => update('city', v)}
+                  value={city}
+                  onChange={(v) => void setCity(v)}
                   autoComplete="address-level2"
                 />
               </div>
@@ -247,8 +255,8 @@ export default function BusinessInfoPage() {
                 <FieldLabel t={t}>State</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.state}
-                  onChange={(v) => update('state', v.toUpperCase().slice(0, 2))}
+                  value={addressState}
+                  onChange={(v) => void setAddressState(v.toUpperCase().slice(0, 2))}
                   mono
                   style={{ textTransform: 'uppercase', letterSpacing: 1 }}
                   autoComplete="address-level1"
@@ -258,8 +266,8 @@ export default function BusinessInfoPage() {
                 <FieldLabel t={t}>ZIP</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.zip}
-                  onChange={(v) => update('zip', v.replace(/\D/g, '').slice(0, 5))}
+                  value={zip}
+                  onChange={(v) => void setZip(v.replace(/\D/g, '').slice(0, 5))}
                   mono
                   inputMode="numeric"
                   autoComplete="postal-code"
@@ -272,8 +280,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Accounting software</FieldLabel>
             <TextField
               t={t}
-              value={info.accountingSoftware}
-              onChange={(v) => update('accountingSoftware', v)}
+              value={accountingSoftware}
+              onChange={(v) => void setAccountingSoftware(v)}
               placeholder="QuickBooks, Xero, Wave, None"
             />
           </div>
@@ -282,8 +290,8 @@ export default function BusinessInfoPage() {
             <FieldLabel t={t}>Payroll provider</FieldLabel>
             <TextField
               t={t}
-              value={info.payrollProvider}
-              onChange={(v) => update('payrollProvider', v)}
+              value={payrollProvider}
+              onChange={(v) => void setPayrollProvider(v)}
               placeholder="ADP, Gusto, In-house, None"
             />
           </div>
@@ -315,8 +323,8 @@ export default function BusinessInfoPage() {
                 <FieldLabel t={t}>Owner 1 name</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.ownerName}
-                  onChange={(v) => update('ownerName', v)}
+                  value={ownerName}
+                  onChange={(v) => void setOwnerName(v)}
                   placeholder="Full legal name"
                 />
               </div>
@@ -324,15 +332,15 @@ export default function BusinessInfoPage() {
                 <FieldLabel t={t} hint="LAST 4 SHOWN">
                   SSN
                 </FieldLabel>
-                <SSNField t={t} value={info.ownerSsn} onChange={(v) => update('ownerSsn', v)} />
+                <SSNField t={t} value={ownerSsn} onChange={(v) => void setOwnerSsn(v)} />
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <FieldLabel t={t}>Ownership %</FieldLabel>
                   <TextField
                     t={t}
-                    value={info.ownerPercent}
-                    onChange={(v) => update('ownerPercent', v.replace(/\D/g, '').slice(0, 3))}
+                    value={ownerPercent}
+                    onChange={(v) => void setOwnerPercent(v.replace(/\D/g, '').slice(0, 3))}
                     mono
                     inputMode="decimal"
                     placeholder="100"
@@ -342,8 +350,8 @@ export default function BusinessInfoPage() {
                   <FieldLabel t={t}>Title</FieldLabel>
                   <TextField
                     t={t}
-                    value={info.ownerTitle}
-                    onChange={(v) => update('ownerTitle', v)}
+                    value={ownerTitle}
+                    onChange={(v) => void setOwnerTitle(v)}
                     placeholder="Managing Member, President"
                   />
                 </div>
@@ -358,11 +366,11 @@ export default function BusinessInfoPage() {
                 { id: 'yes' as const, l: 'Yes' },
                 { id: 'no' as const, l: 'No' },
               ].map((o) => {
-                const on = info.preparingPersonal === o.id;
+                const on = preparingPersonal === o.id;
                 return (
                   <button
                     key={o.id}
-                    onClick={() => update('preparingPersonal', o.id)}
+                    onClick={() => void setPreparingPersonal(o.id)}
                     style={{
                       flex: 1,
                       padding: '14px 16px',
@@ -414,11 +422,6 @@ export default function BusinessInfoPage() {
               })}
             </div>
           </div>
-
-          <AntonioNote t={t}>
-            If you&apos;re not sure about entity type or accounting method, don&apos;t worry. I&apos;ll
-            verify everything.
-          </AntonioNote>
         </Stack>
 
         <div
@@ -431,18 +434,21 @@ export default function BusinessInfoPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="If you're not sure about entity type or accounting method, don't worry. I'll verify everything."
+            />
           </div>
           <Row gap={10}>
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/services-addons')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/income')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

@@ -72,10 +72,13 @@ export const AppointmentTypeSchema = z.enum(['phone', 'video', 'in_person']);
 export const ContactMethodSchema = z.enum(['sms', 'email', 'phone']);
 
 export const StrategicTopicSchema = z.enum([
-  'retirement_planning',
-  'home_purchase_strategy',
-  'business_entity_choice',
-  'estate_planning',
+  'planning',
+  'entity',
+  'estimated',
+  'retirement',
+  'realestate',
+  'irs',
+  'other',
 ]);
 
 // ────────────────────────────────────────────────────────────────
@@ -114,28 +117,30 @@ const StateCodeSchema = z
 // Phone: loose international format. Strict E.164 happens at write boundary.
 const PhoneSchema = z.string().regex(/^\+?[\d\s()-]{7,20}$/);
 
-// Money in dollars, allow up to 2 decimals.
-const MoneySchema = z.number().nonnegative().multipleOf(0.01);
+// (MoneySchema removed — every money field is currently a free-form display
+// string per the UX. v1+ may reintroduce when forms collect numeric values.)
 
 // ────────────────────────────────────────────────────────────────
 // Object shapes — for paths that write whole subtrees
 // ────────────────────────────────────────────────────────────────
 
 const DependentSchema = z.object({
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
+  fullName: z.string().min(1).max(200).optional(),
   dateOfBirth: IsoDateSchema.optional(),
   ssn: SsnSchema.optional(),
-  relationship: DependentRelationshipSchema.optional(),
-  monthsLivedWithYou: z.number().int().min(0).max(12).optional(),
+  relationship: z.string().max(60).optional(),
+  monthsLivedWithYou: z.string().max(2).optional(),
 });
 
+const RentalTypeSchema = z.enum(['long', 'short', 'commercial', 'mixed']);
+
 const RentalPropertySchema = z.object({
+  rentalType: RentalTypeSchema.optional(),
   address: z.string().max(300).optional(),
-  grossRent: MoneySchema.optional(),
-  expenses: MoneySchema.optional(),
-  daysRented: z.number().int().min(0).max(366).optional(),
-  personalUseDays: z.number().int().min(0).max(366).optional(),
+  monthlyRent: z.string().max(50).optional(),
+  monthlyMortgage: z.string().max(50).optional(),
+  yearAcquired: z.string().regex(/^\d{4}$/, 'Use YYYY').optional().or(z.literal('')),
+  rentalCount: z.string().max(3).optional(),
 });
 
 // ────────────────────────────────────────────────────────────────
@@ -183,16 +188,14 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'spouse.ssn': SsnSchema,
   'spouse.occupation': z.string().max(200),
 
-  // Dependents
+  // Dependents — free-form per /deps-detail UX (Antonio normalizes during prep)
   'dependents.count': z.number().int().min(0).max(15),
   'dependents.list': z.array(DependentSchema).max(15),
-  // Per-dependent field paths
-  'dependents.list.*.firstName': z.string().min(1).max(100),
-  'dependents.list.*.lastName': z.string().min(1).max(100),
+  'dependents.list.*.fullName': z.string().min(1).max(200),
   'dependents.list.*.dateOfBirth': IsoDateSchema,
   'dependents.list.*.ssn': SsnSchema,
-  'dependents.list.*.relationship': DependentRelationshipSchema,
-  'dependents.list.*.monthsLivedWithYou': z.number().int().min(0).max(12),
+  'dependents.list.*.relationship': z.string().max(60),
+  'dependents.list.*.monthsLivedWithYou': z.string().max(2),
 
   // Income
   'income.types': z.array(IncomeTypeSchema).max(5),
@@ -207,22 +210,39 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'selfEmployment.vehicle': z.boolean(),
   'selfEmployment.cash': z.boolean(),
 
-  // Rental properties
+  // Rental properties — free-form per /rental-detail UX
   'rental.properties': z.array(RentalPropertySchema).max(20),
+  'rental.properties.*.rentalType': RentalTypeSchema,
   'rental.properties.*.address': z.string().max(300),
-  'rental.properties.*.grossRent': MoneySchema,
-  'rental.properties.*.expenses': MoneySchema,
-  'rental.properties.*.daysRented': z.number().int().min(0).max(366),
-  'rental.properties.*.personalUseDays': z.number().int().min(0).max(366),
+  'rental.properties.*.monthlyRent': z.string().max(50),
+  'rental.properties.*.monthlyMortgage': z.string().max(50),
+  'rental.properties.*.yearAcquired': z.string().max(4),
+  'rental.properties.*.rentalCount': z.string().max(3),
 
-  // Business sub-flow
+  // Business sub-flow — free-form per /business-info + /business-formation UX
   'business.legalName': z.string().min(1).max(200),
   'business.dba': z.string().max(200),
   'business.ein': EinSchema,
-  'business.entityType': BusinessEntityTypeSchema,
-  'business.formationState': StateCodeSchema,
-  'business.formationDate': IsoDateSchema,
+  'business.entityType': z.string().max(60),
   'business.industry': z.string().max(200),
+  'business.formationState': z.string().max(100),
+  'business.formationDate': z.string().max(50),
+  'business.activity': z.string().max(200),
+  'business.employees': z.string().max(10),
+  'business.accountingMethod': z.string().max(60),
+  'business.fiscalYearEnd': z.string().max(20),
+  'business.street': z.string().max(300),
+  'business.city': z.string().max(100),
+  'business.addressState': z.string().max(2),
+  'business.zip': z.string().regex(/^\d{5}(-\d{4})?$/, 'ZIP must be 5 or 9 digits').or(z.literal('')),
+  'business.accountingSoftware': z.string().max(100),
+  'business.payrollProvider': z.string().max(100),
+  'business.ownerName': z.string().max(200),
+  'business.ownerSsn': SsnSchema,
+  'business.ownerPercent': z.string().max(5),
+  'business.ownerTitle': z.string().max(100),
+  'business.ownerCount': z.string().max(3),
+  'business.preparingPersonal': z.enum(['yes', 'no']),
 
   // Tax questions — names match the UI checkboxes
   'taxQuestions.crypto': z.boolean(),

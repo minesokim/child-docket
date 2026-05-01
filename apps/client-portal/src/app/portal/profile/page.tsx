@@ -4,7 +4,6 @@
 // firm info, actions. 1-to-1 port of ScreenProfile.
 
 import {
-  AntonioNote,
   Body,
   buildTheme,
   Card,
@@ -273,12 +272,6 @@ export default function PortalProfilePage() {
                 host="ftb.ca.gov — California FTB Refund Tracker"
               />
             </Card>
-            <div style={{ marginTop: 12 }}>
-              <AntonioNote t={t}>
-                Refunds take 10–21 days after acceptance if direct deposit. I&apos;ll check in with
-                you once the IRS accepts your return.
-              </AntonioNote>
-            </div>
           </div>
 
           <div>

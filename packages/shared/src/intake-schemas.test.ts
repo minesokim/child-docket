@@ -101,7 +101,7 @@ describe('getSchemaForPath — direct + glob lookup', () => {
   });
   test('Glob lookup for array index', () => {
     expect(getSchemaForPath('dependents.list.0.ssn')).not.toBeNull();
-    expect(getSchemaForPath('dependents.list.99.firstName')).not.toBeNull();
+    expect(getSchemaForPath('dependents.list.99.fullName')).not.toBeNull();
     expect(getSchemaForPath('rental.properties.1.address')).not.toBeNull();
   });
   test('Returns null for unregistered path', () => {

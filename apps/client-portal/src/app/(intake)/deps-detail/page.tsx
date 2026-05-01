@@ -1,10 +1,18 @@
 'use client';
 
-// Intake step 6 (continued) — Dependent details. 1-to-1 port of ScreenDependentDetails.
-// Repeating cards, count derived from previous step.
+// Intake step 6 (continued) — Dependent details. MIGRATED to Postgres-backed
+// state via useIntakeAnswers + useSetIntakeField. Each card writes to
+// `dependents.list[i].{fullName,dateOfBirth,ssn,relationship,monthsLivedWithYou}`.
+//
+// SSN encrypted at rest (matched by SENSITIVE_INTAKE_PATHS glob
+// `dependents.list.*.ssn` → AES-GCM before JSONB write).
+//
+// DOB display vs storage:
+//   - UI: "MM / DD / YYYY"
+//   - Storage: ISO YYYY-MM-DD (only persisted when complete; partial entries
+//     stay in display state until the user finishes typing).
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -20,45 +28,71 @@ import {
   TextField,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
+import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { IntakeDependent } from '@docket/shared';
 
-type Dependent = {
-  fullName: string;
-  dob: string;
-  ssn: string;
-  relationship: string;
-  monthsLivingWith: string;
-};
+// ────────────────────────────────────────────────────────────────
+// DOB format helpers — display ↔ ISO storage (mirror /personal)
+// ────────────────────────────────────────────────────────────────
 
-const EMPTY_DEP: Dependent = {
-  fullName: '',
-  dob: '',
-  ssn: '',
-  relationship: '',
-  monthsLivingWith: '12',
-};
+/** "MM / DD / YYYY" → "YYYY-MM-DD". Returns empty when incomplete. */
+function dobDisplayToIso(display: string): string {
+  const d = display.replace(/\D/g, '');
+  if (d.length !== 8) return '';
+  return `${d.slice(4, 8)}-${d.slice(0, 2)}-${d.slice(2, 4)}`;
+}
 
-function formatDob(raw: string): string {
+/** "YYYY-MM-DD" → "MM / DD / YYYY". Empty input → empty string. */
+function dobIsoToDisplay(iso: string | undefined): string {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  return `${m[2]} / ${m[3]} / ${m[1]}`;
+}
+
+/** Display formatter while typing — adds slashes/spaces as digits arrive. */
+function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
   if (d.length <= 4) return `${d.slice(0, 2)} / ${d.slice(2)}`;
   return `${d.slice(0, 2)} / ${d.slice(2, 4)} / ${d.slice(4)}`;
 }
 
+// ────────────────────────────────────────────────────────────────
+// Single dependent card — drives writes through callbacks
+// ────────────────────────────────────────────────────────────────
+
 function DependentCardDetails({
   t,
   index,
   dep,
-  onChange,
+  onField,
 }: {
   t: Theme;
   index: number;
-  dep: Dependent;
-  onChange: (next: Dependent) => void;
+  dep: IntakeDependent;
+  onField: (field: keyof IntakeDependent, value: string) => void;
 }) {
-  const update = <K extends keyof Dependent>(k: K, v: Dependent[K]) =>
-    onChange({ ...dep, [k]: v });
+  // DOB has its own display state (MM / DD / YYYY) since storage is ISO.
+  // Hydrate on mount + whenever the stored ISO changes externally.
+  const [dobDisplay, setDobDisplay] = React.useState(() => dobIsoToDisplay(dep.dateOfBirth));
+  React.useEffect(() => {
+    setDobDisplay(dobIsoToDisplay(dep.dateOfBirth));
+  }, [dep.dateOfBirth]);
+
+  const handleDobChange = (raw: string) => {
+    const shaped = dobShape(raw);
+    setDobDisplay(shaped);
+    const iso = dobDisplayToIso(shaped);
+    if (iso) {
+      // Only persist when complete — server's Zod will reject partial.
+      onField('dateOfBirth', iso);
+    }
+  };
+
   return (
     <div
       style={{
@@ -86,8 +120,8 @@ function DependentCardDetails({
           <FieldLabel t={t}>Full name</FieldLabel>
           <TextField
             t={t}
-            value={dep.fullName}
-            onChange={(v) => update('fullName', v)}
+            value={dep.fullName ?? ''}
+            onChange={(v) => onField('fullName', v)}
             placeholder="First and last name"
           />
         </div>
@@ -96,8 +130,8 @@ function DependentCardDetails({
           <FieldLabel t={t}>Date of birth</FieldLabel>
           <TextField
             t={t}
-            value={dep.dob}
-            onChange={(v) => update('dob', formatDob(v))}
+            value={dobDisplay}
+            onChange={handleDobChange}
             placeholder="MM / DD / YYYY"
             mono
             inputMode="numeric"
@@ -108,15 +142,15 @@ function DependentCardDetails({
           <FieldLabel t={t} hint="LAST 4 SHOWN">
             Social Security Number
           </FieldLabel>
-          <SSNField t={t} value={dep.ssn} onChange={(v) => update('ssn', v)} />
+          <SSNField t={t} value={dep.ssn ?? ''} onChange={(v) => onField('ssn', v)} />
         </div>
 
         <div>
           <FieldLabel t={t}>Relationship</FieldLabel>
           <TextField
             t={t}
-            value={dep.relationship}
-            onChange={(v) => update('relationship', v)}
+            value={dep.relationship ?? ''}
+            onChange={(v) => onField('relationship', v)}
             placeholder="Son, Daughter, Parent"
           />
         </div>
@@ -125,8 +159,8 @@ function DependentCardDetails({
           <FieldLabel t={t}>Months living with you in 2025</FieldLabel>
           <TextField
             t={t}
-            value={dep.monthsLivingWith}
-            onChange={(v) => update('monthsLivingWith', v.replace(/\D/g, '').slice(0, 2))}
+            value={dep.monthsLivedWithYou ?? ''}
+            onChange={(v) => onField('monthsLivedWithYou', v.replace(/\D/g, '').slice(0, 2))}
             placeholder="12"
             mono
             inputMode="numeric"
@@ -137,21 +171,40 @@ function DependentCardDetails({
   );
 }
 
+// ────────────────────────────────────────────────────────────────
+// Page
+// ────────────────────────────────────────────────────────────────
+
 export default function DepsDetailPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [count] = usePortalState<number>('deps-count', 0);
-  const target = Math.max(1, count); // at least 1 card if user landed here
-  const [deps, setDeps] = usePortalState<Dependent[]>(
-    'deps-detail',
-    Array.from({ length: target }, () => ({ ...EMPTY_DEP })),
-  );
+  const answers = useIntakeAnswers();
+  const setField = useSetIntakeField();
 
-  // Re-size the array if the user changed count on the previous screen
-  if (deps.length !== target) {
-    const next = Array.from({ length: target }, (_, i) => deps[i] ?? { ...EMPTY_DEP });
-    setDeps(next);
-  }
+  const count = answers.dependents?.count ?? 0;
+  const target = Math.max(1, count); // at least 1 card if user landed here
+  const list: IntakeDependent[] = answers.dependents?.list ?? [];
+
+  // Pad/truncate the displayed cards to match `count` without writing on
+  // every render. Writes only when the user actually edits a field.
+  const cards: IntakeDependent[] = React.useMemo(() => {
+    const out: IntakeDependent[] = [];
+    for (let i = 0; i < target; i++) out.push(list[i] ?? {});
+    return out;
+  }, [list, target]);
+
+  const updateField = (i: number, field: keyof IntakeDependent, value: string) => {
+    void setField(`dependents.list.${i}.${field}`, value);
+  };
+
+  const handleNext = () => {
+    const target = getNextStep('/deps-detail', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/deps-detail', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -166,7 +219,7 @@ export default function DepsDetailPage() {
         <IntakeHeader t={t} step={6} label="Dependents" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/deps')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -179,26 +232,16 @@ export default function DepsDetailPage() {
         </div>
 
         <Stack gap={12} style={{ padding: '22px 24px 16px', flex: 1 }}>
-          {deps.map((d, i) => (
+          {cards.map((d, i) => (
             <DependentCardDetails
               key={i}
               t={t}
               index={i + 1}
               dep={d}
-              onChange={(next) => {
-                const arr = [...deps];
-                arr[i] = next;
-                setDeps(arr);
-              }}
+              onField={(field, value) => updateField(i, field, value)}
             />
           ))}
 
-          <div style={{ marginTop: 10 }}>
-            <AntonioNote t={t}>
-              If you have a child under 13 and pay for daycare, that&apos;s a big credit we don&apos;t want
-              to miss — I&apos;ll ask about that next.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -211,18 +254,21 @@ export default function DepsDetailPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="If you have a child under 13 and pay for daycare, that's a big credit we don't want to miss — I'll ask about that next."
+            />
           </div>
           <Row gap={10}>
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/deps')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/income')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

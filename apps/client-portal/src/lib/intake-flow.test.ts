@@ -175,17 +175,17 @@ describe('getNextStep — back half of flow', () => {
   test('refund → docs', () => {
     expect(getNextStep('/refund', empty)).toBe('/docs');
   });
-  test('docs → engagement', () => {
-    expect(getNextStep('/docs', empty)).toBe('/engagement');
+  test('docs → contact-info', () => {
+    expect(getNextStep('/docs', empty)).toBe('/contact-info');
+  });
+  test('contact-info → engagement', () => {
+    expect(getNextStep('/contact-info', empty)).toBe('/engagement');
   });
   test('engagement → consent', () => {
     expect(getNextStep('/engagement', empty)).toBe('/consent');
   });
-  test('consent → contact-info', () => {
-    expect(getNextStep('/consent', empty)).toBe('/contact-info');
-  });
-  test('contact-info → appt', () => {
-    expect(getNextStep('/contact-info', empty)).toBe('/appt');
+  test('consent → appt', () => {
+    expect(getNextStep('/consent', empty)).toBe('/appt');
   });
   test('appt → deposit', () => {
     expect(getNextStep('/appt', empty)).toBe('/deposit');

@@ -1,10 +1,10 @@
 'use client';
 
-// Intake step 7 (continued) — Rental property detail. Conditional after /income
-// when 'rental' was selected. 1-to-1 port of ScreenRentalDetail.
+// Intake step 7 (continued) — Rental property detail. MIGRATED to
+// Postgres-backed state via useIntakeAnswers + useSetIntakeField.
+// First property only at v0; v1+ supports multiple.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -20,27 +20,11 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { IntakeRentalProperty } from '@docket/shared';
 
-type RentalType = 'long' | 'short' | 'commercial' | 'mixed';
-
-type RentalDetail = {
-  rentalType: RentalType;
-  address: string;
-  monthlyRent: string;
-  monthlyMortgage: string;
-  yearAcquired: string;
-  rentalCount: string;
-};
-
-const DEFAULT: RentalDetail = {
-  rentalType: 'long',
-  address: '',
-  monthlyRent: '',
-  monthlyMortgage: '',
-  yearAcquired: '',
-  rentalCount: '',
-};
+type RentalType = NonNullable<IntakeRentalProperty['rentalType']>;
 
 const TYPES: Array<{ id: RentalType; label: string; sub: string }> = [
   { id: 'long', label: 'Long-term rental', sub: 'Lease over 1 month · Standard tenant, Schedule E' },
@@ -60,13 +44,31 @@ const TYPES: Array<{ id: RentalType; label: string; sub: string }> = [
 export default function RentalDetailPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<RentalDetail>('rental-detail', DEFAULT);
-  const update = <K extends keyof RentalDetail>(k: K, v: RentalDetail[K]) =>
-    setInfo({ ...info, [k]: v });
+  const answers = useIntakeAnswers();
+  const setField = useSetIntakeField();
 
-  // Back goes to /self-employment if SE was also selected, else /income
-  const [income] = usePortalState<string[]>('income-sources', []);
-  const backTarget = income.includes('self') ? '/self-employment' : '/income';
+  // First property only at v0. The properties array can hold many; the UI
+  // collects one. Default to a long-term rental so the radio is pre-picked
+  // (the user almost always picks long-term for residential).
+  const property = answers.rental?.properties?.[0] ?? {};
+  const rentalType: RentalType = property.rentalType ?? 'long';
+
+  const update = <K extends keyof IntakeRentalProperty>(
+    field: K,
+    value: IntakeRentalProperty[K],
+  ) => {
+    void setField(`rental.properties.0.${field}`, value);
+  };
+
+  const stateSnapshot = { income: { types: answers.income?.types ?? [] } };
+  const handleNext = () => {
+    const target = getNextStep('/rental-detail', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/rental-detail', stateSnapshot);
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -81,7 +83,7 @@ export default function RentalDetailPage() {
         <IntakeHeader t={t} step={7} label="Rental" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back(backTarget)} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 0' }}>
@@ -125,7 +127,7 @@ export default function RentalDetailPage() {
                 <RadioRowCard
                   key={tp.id}
                   t={t}
-                  selected={info.rentalType === tp.id}
+                  selected={rentalType === tp.id}
                   onClick={() => update('rentalType', tp.id)}
                   label={tp.label}
                   sub={tp.sub}
@@ -159,7 +161,7 @@ export default function RentalDetailPage() {
                 <FieldLabel t={t}>Property address</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.address}
+                  value={property.address ?? ''}
                   onChange={(v) => update('address', v)}
                   placeholder="Street, city, state"
                 />
@@ -169,7 +171,7 @@ export default function RentalDetailPage() {
                   <FieldLabel t={t}>Monthly rent</FieldLabel>
                   <TextField
                     t={t}
-                    value={info.monthlyRent}
+                    value={property.monthlyRent ?? ''}
                     onChange={(v) => update('monthlyRent', v)}
                     placeholder="$0"
                     mono
@@ -180,7 +182,7 @@ export default function RentalDetailPage() {
                   <FieldLabel t={t}>Monthly mortgage</FieldLabel>
                   <TextField
                     t={t}
-                    value={info.monthlyMortgage}
+                    value={property.monthlyMortgage ?? ''}
                     onChange={(v) => update('monthlyMortgage', v)}
                     placeholder="$0"
                     mono
@@ -193,7 +195,7 @@ export default function RentalDetailPage() {
                   <FieldLabel t={t}>Year acquired</FieldLabel>
                   <TextField
                     t={t}
-                    value={info.yearAcquired}
+                    value={property.yearAcquired ?? ''}
                     onChange={(v) => update('yearAcquired', v.replace(/\D/g, '').slice(0, 4))}
                     placeholder="2020"
                     mono
@@ -204,7 +206,7 @@ export default function RentalDetailPage() {
                   <FieldLabel t={t}>How many rentals?</FieldLabel>
                   <TextField
                     t={t}
-                    value={info.rentalCount}
+                    value={property.rentalCount ?? ''}
                     onChange={(v) => update('rentalCount', v.replace(/\D/g, '').slice(0, 3))}
                     placeholder="1"
                     mono
@@ -214,12 +216,6 @@ export default function RentalDetailPage() {
               </Row>
             </Stack>
           </div>
-
-          <AntonioNote t={t}>
-            Rental properties are one of the best tax advantages. Depreciation, repairs, insurance,
-            mortgage interest — we&apos;ll capture everything. I&apos;ll also verify your
-            depreciation schedule, since IRS Section 167 requires it.
-          </AntonioNote>
         </Stack>
 
         <div
@@ -232,18 +228,21 @@ export default function RentalDetailPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Rental properties are one of the best tax advantages. Depreciation, repairs, insurance, mortgage interest — we'll capture everything. I'll also verify your depreciation schedule, since IRS Section 167 requires it."
+            />
           </div>
           <Row gap={10}>
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back(backTarget)}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/tax-questions')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

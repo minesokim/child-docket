@@ -60,8 +60,13 @@ export type IntakeStep = {
 // The "happy path" for an individual W-2 filer skips all six side paths
 // and walks: welcome → tutorial → services → services-addons → personal
 // → state → filing → deps → income → tax-questions → deductions →
-// life-events → refund → docs → engagement → consent → contact-info →
+// life-events → refund → docs → contact-info → engagement → consent →
 // appt → deposit → done.
+//
+// Why /contact-info sits before /engagement: the engagement letter and
+// §7216 consent are legal sign-offs. Asking the client how to reach them
+// AFTER they've already signed feels backwards. Capture preferences first,
+// then sign, then schedule.
 // ────────────────────────────────────────────────────────────────
 
 export const INTAKE_FLOW: readonly IntakeStep[] = [
@@ -182,7 +187,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
       return (
         count > 0 &&
         list.length === count &&
-        list.every((d) => !!d.firstName && !!d.lastName && !!d.ssn)
+        list.every((d) => !!d.fullName && !!d.ssn)
       );
     },
     next: () => '/income',
@@ -321,6 +326,15 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'wrap-up',
     isApplicable: () => true,
     isComplete: (s) => !!s.documents?.uploadComplete,
+    next: () => '/contact-info',
+  },
+  {
+    id: 'contact-info',
+    route: '/contact-info',
+    label: 'How to reach you',
+    section: 'wrap-up',
+    isApplicable: () => true,
+    isComplete: (s) => !!s.contactInfo?.preferredMethod,
     next: () => '/engagement',
   },
 
@@ -341,19 +355,10 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'sign',
     isApplicable: () => true,
     isComplete: (s) => !!s.consent?.signed,
-    next: () => '/contact-info',
-  },
-
-  // ─── Contact + appt + deposit ─────────────────────────────────
-  {
-    id: 'contact-info',
-    route: '/contact-info',
-    label: 'How to reach you',
-    section: 'wrap-up',
-    isApplicable: () => true,
-    isComplete: (s) => !!s.contactInfo?.preferredMethod,
     next: () => '/appt',
   },
+
+  // ─── Appt + deposit ───────────────────────────────────────────
   {
     id: 'appt',
     route: '/appt',

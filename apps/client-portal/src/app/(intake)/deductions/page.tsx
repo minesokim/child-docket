@@ -5,7 +5,6 @@
 // 1-to-1 port of ScreenDeductions.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -30,78 +29,67 @@ import {
 } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
-type DeductionsState = {
-  mortgage: boolean;
-  student: boolean;
-  charity: boolean;
-  childcare: boolean;
-  medical: boolean;
-  education: boolean;
-  educator: boolean;
-  none: boolean;
-};
+type ItemKey =
+  | 'mortgage'
+  | 'student'
+  | 'charity'
+  | 'childcare'
+  | 'medical'
+  | 'education'
+  | 'educator';
 
-type ChildcareInfo = {
-  providerName: string;
-  providerAddress: string;
-  providerEin: string;
-  amountPaid: string;
-};
-
-const DEFAULT: DeductionsState = {
-  mortgage: false,
-  student: false,
-  charity: false,
-  childcare: false,
-  medical: false,
-  education: false,
-  educator: false,
-  none: false,
-};
-
-const CHILDCARE_DEFAULT: ChildcareInfo = {
-  providerName: '',
-  providerAddress: '',
-  providerEin: '',
-  amountPaid: '',
-};
-
-type ItemKey = Exclude<keyof DeductionsState, 'none'>;
+const ALL_ITEMS: readonly ItemKey[] = [
+  'mortgage',
+  'student',
+  'charity',
+  'childcare',
+  'medical',
+  'education',
+  'educator',
+];
 
 export default function DeductionsPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [state, setState] = usePortalState<DeductionsState>('deductions', DEFAULT);
-  const [childcare, setChildcare] = usePortalState<ChildcareInfo>(
-    'deductions-childcare',
-    CHILDCARE_DEFAULT,
-  );
+  const answers = useIntakeAnswers();
+  const setField = useSetIntakeField();
 
-  const toggle = (k: keyof DeductionsState) => {
+  const state = answers.deductions ?? {};
+  const childcare = state.childcareDetails ?? {};
+
+  const toggle = (k: ItemKey | 'none') => {
     if (k === 'none') {
-      setState(
-        state.none
-          ? { ...state, none: false }
-          : {
-              mortgage: false,
-              student: false,
-              charity: false,
-              childcare: false,
-              medical: false,
-              education: false,
-              educator: false,
-              none: true,
-            },
-      );
+      if (state.none) {
+        setField('deductions.none', false);
+      } else {
+        // Clear all + set none
+        ALL_ITEMS.forEach((item) => setField(`deductions.${item}`, false));
+        setField('deductions.none', true);
+      }
     } else {
-      setState({ ...state, [k]: !state[k], none: false });
+      setField(`deductions.${k}`, !state[k]);
+      if (state.none) setField('deductions.none', false);
     }
   };
 
-  const updateChildcare = <K extends keyof ChildcareInfo>(k: K, v: ChildcareInfo[K]) =>
-    setChildcare({ ...childcare, [k]: v });
+  const updateChildcare = (
+    k: 'providerName' | 'providerAddress' | 'providerEin' | 'amountPaid',
+    v: string,
+  ) => {
+    setField(`deductions.childcareDetails.${k}`, v);
+  };
+
+  const handleNext = () => {
+    const target = getNextStep('/deductions', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/deductions', {});
+    if (target) nav.back(target);
+  };
 
   const items: Array<{ k: ItemKey; icon: React.ReactNode; label: string; sub?: string }> = [
     { k: 'mortgage', icon: <IconHome />, label: 'Home mortgage' },
@@ -131,7 +119,7 @@ export default function DeductionsPage() {
         <IntakeHeader t={t} step={9} label="Deductions" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/tax-questions')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -148,14 +136,14 @@ export default function DeductionsPage() {
             <React.Fragment key={item.k}>
               <ToggleCard
                 t={t}
-                on={state[item.k]}
+                on={!!state[item.k]}
                 onClick={() => toggle(item.k)}
                 icon={item.icon}
                 label={item.label}
                 sub={item.sub}
               />
 
-              {item.k === 'childcare' && state.childcare && (
+              {item.k === 'childcare' && !!state.childcare && (
                 <div
                   style={{
                     marginTop: -2,
@@ -193,7 +181,7 @@ export default function DeductionsPage() {
                       <FieldLabel t={t}>Provider name</FieldLabel>
                       <TextField
                         t={t}
-                        value={childcare.providerName}
+                        value={childcare.providerName ?? ''}
                         onChange={(v) => updateChildcare('providerName', v)}
                         placeholder="Daycare or individual's name"
                       />
@@ -202,7 +190,7 @@ export default function DeductionsPage() {
                       <FieldLabel t={t}>Provider address</FieldLabel>
                       <TextField
                         t={t}
-                        value={childcare.providerAddress}
+                        value={childcare.providerAddress ?? ''}
                         onChange={(v) => updateChildcare('providerAddress', v)}
                         placeholder="Street, city, state, ZIP"
                       />
@@ -211,7 +199,7 @@ export default function DeductionsPage() {
                       <FieldLabel t={t}>Provider EIN</FieldLabel>
                       <TextField
                         t={t}
-                        value={childcare.providerEin}
+                        value={childcare.providerEin ?? ''}
                         onChange={(v) => updateChildcare('providerEin', v)}
                         placeholder="XX-XXXXXXX"
                         mono
@@ -222,7 +210,7 @@ export default function DeductionsPage() {
                       <FieldLabel t={t}>Amount paid in 2025</FieldLabel>
                       <TextField
                         t={t}
-                        value={childcare.amountPaid}
+                        value={childcare.amountPaid ?? ''}
                         onChange={(v) => updateChildcare('amountPaid', v)}
                         placeholder="$0"
                         mono
@@ -238,7 +226,7 @@ export default function DeductionsPage() {
           <div style={{ marginTop: 2 }}>
             <ToggleCard
               t={t}
-              on={state.none}
+              on={!!state.none}
               onClick={() => toggle('none')}
               icon={<IconMinus />}
               label="None of these"
@@ -246,12 +234,6 @@ export default function DeductionsPage() {
             />
           </div>
 
-          <div style={{ marginTop: 10 }}>
-            <AntonioNote t={t}>
-              Even if you&apos;re not sure something counts, select it. I&apos;d rather check than
-              miss a deduction worth hundreds.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -264,18 +246,21 @@ export default function DeductionsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Pick everything that maybe applies — childcare under 13 alone is worth $3k–$6k. I verify what actually qualifies during prep."
+            />
           </div>
           <Row gap={10}>
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/tax-questions')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/life-events')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

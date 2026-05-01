@@ -6,7 +6,6 @@
 // Real Haiku 4.5 vision call swaps in via docs/DOCS-CAPTURE-PIPELINE.md.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -730,12 +729,6 @@ export default function DocsPage() {
             {uploadedCount} OF {TOTAL} UPLOADED
           </div>
 
-          <div style={{ marginTop: 20 }}>
-            <AntonioNote t={t}>
-              AI reads each document the moment you take a photo. If it can&apos;t read clearly,
-              you&apos;ll know right away.
-            </AntonioNote>
-          </div>
         </div>
 
         <div
@@ -748,7 +741,10 @@ export default function DocsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Snap each doc in good light. If a photo's blurry, you'll see it immediately and reshoot — beats finding out next week."
+            />
           </div>
           <Row gap={10}>
             <Button

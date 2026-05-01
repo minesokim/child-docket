@@ -1,11 +1,12 @@
 'use client';
 
-// Intake step 2 alt — Strategic Topics. Multi-select consultation topics.
-// Conditional path for "Strategic tax & business consultation" service.
-// 1-to-1 port of ScreenStrategicTopics.
+// Intake step 2 alt — Strategic Topics. MIGRATED to Postgres-backed state.
+// Multi-select consultation topics. Conditional path for "Strategic tax &
+// business consultation" service.
+//
+// Storage path: strategicTopics.selected (string[] of StrategicTopic enum).
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -19,11 +20,11 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { StrategicTopic } from '@docket/shared';
 
-type TopicId = 'planning' | 'entity' | 'estimated' | 'retirement' | 'realestate' | 'irs' | 'other';
-
-const TOPICS: Array<{ id: TopicId; label: string; sub?: string }> = [
+const TOPICS: Array<{ id: StrategicTopic; label: string; sub?: string }> = [
   { id: 'planning', label: 'Tax planning & projections' },
   { id: 'entity', label: 'Entity restructuring', sub: 'LLC to S-Corp, etc.' },
   { id: 'estimated', label: 'Estimated tax payments' },
@@ -99,10 +100,19 @@ function TopicCard({
 export default function StrategicTopicsPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [picked, setPicked] = usePortalState<TopicId[]>('strategic-topics', []);
+  const [picked, setPicked] = useIntakeField<StrategicTopic[]>('strategicTopics.selected', []);
 
-  const toggle = (id: TopicId) => {
-    setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+  const toggle = (id: StrategicTopic) => {
+    void setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+  };
+
+  const handleNext = () => {
+    const target = getNextStep('/strategic-topics', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/strategic-topics', {});
+    if (target) nav.back(target);
   };
 
   return (
@@ -118,7 +128,7 @@ export default function StrategicTopicsPage() {
         <IntakeHeader t={t} step={2} label="Consultation" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/services-addons')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 0' }}>
@@ -165,13 +175,6 @@ export default function StrategicTopicsPage() {
               sub={tp.sub}
             />
           ))}
-
-          <div style={{ marginTop: 10 }}>
-            <AntonioNote t={t}>
-              Come with specific questions. The more prepared you are, the more value we get out of
-              the hour.
-            </AntonioNote>
-          </div>
         </Stack>
 
         <div
@@ -184,18 +187,21 @@ export default function StrategicTopicsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="Come with specific questions. The more prepared you are, the more value we get out of the hour."
+            />
           </div>
           <Row gap={10}>
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/services-addons')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/contact-info')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

@@ -63,31 +63,43 @@ export type AppointmentType = 'phone' | 'video' | 'in_person';
 
 export type ContactMethod = 'sms' | 'email' | 'phone';
 
+// Mirrors the /strategic-topics UX. Each id maps to a multi-select card the
+// client picks before booking a strategic consultation. Antonio reads the
+// list pre-meeting to prep.
 export type StrategicTopic =
-  | 'retirement_planning'
-  | 'home_purchase_strategy'
-  | 'business_entity_choice'
-  | 'estate_planning';
+  | 'planning'      // "Tax planning & projections"
+  | 'entity'        // "Entity restructuring (LLC to S-Corp, etc.)"
+  | 'estimated'     // "Estimated tax payments"
+  | 'retirement'    // "Retirement planning"
+  | 'realestate'    // "Real estate strategy"
+  | 'irs'           // "IRS notice or audit"
+  | 'other';
 
 // ────────────────────────────────────────────────────────────────
 // IntakeState — the shape of intakeResponses.answers
 // ────────────────────────────────────────────────────────────────
 
+// Free-form fields match the /deps-detail UX (single fullName, free-text
+// relationship, numeric-string months). Antonio normalizes (split name,
+// canonical relationship, integer months) during prep when the form needs it.
 export type IntakeDependent = {
-  firstName?: string;
-  lastName?: string;
+  fullName?: string;
   dateOfBirth?: string;          // ISO date (YYYY-MM-DD)
   ssn?: string;                  // encrypted at rest
-  relationship?: DependentRelationship;
-  monthsLivedWithYou?: number;
+  relationship?: string;         // e.g. "Son", "Daughter", "Parent"
+  monthsLivedWithYou?: string;   // e.g. "12"
 };
 
+// Free-form fields match the /rental-detail UX. Antonio normalizes during
+// prep (annual gross rent, depreciation schedule, days rented, personal-use
+// allocation) — those v1+ fields can be added when the form gets richer.
 export type IntakeRentalProperty = {
+  rentalType?: 'long' | 'short' | 'commercial' | 'mixed';
   address?: string;
-  grossRent?: number;
-  expenses?: number;
-  daysRented?: number;
-  personalUseDays?: number;
+  monthlyRent?: string;          // free-form $ string
+  monthlyMortgage?: string;      // free-form $ string
+  yearAcquired?: string;         // 4-digit year as string
+  rentalCount?: string;          // numeric string ("1", "12", etc.)
 };
 
 export type IntakeState = {
@@ -176,14 +188,44 @@ export type IntakeState = {
   };
 
   // ── Business sub-flow (when service.kind includes business) ─────
+  // Free-form fields match the /business-info + /business-formation UX.
+  // Antonio normalizes (canonical entity types, parsed dates, structured
+  // owner records) during prep when the return form needs them.
   business?: {
+    // Identity
     legalName?: string;
     dba?: string;
     ein?: string;                // encrypted at rest
-    entityType?: BusinessEntityType;
+    entityType?: string;         // "S-Corp", "LLC", "C-Corp", "Partnership" — free-form
+    industry?: string;
+
+    // Formation (covered by /business-formation)
     formationState?: string;
     formationDate?: string;
-    industry?: string;
+
+    // Operations (covered by /business-info)
+    activity?: string;           // "Plumbing", "Restaurant", "Consulting"
+    employees?: string;          // numeric string
+    accountingMethod?: string;   // "Cash" or "Accrual" — free-form
+    fiscalYearEnd?: string;      // "12/31"
+
+    // Principal place of business
+    street?: string;
+    city?: string;
+    addressState?: string;       // 2-letter; free-form to mirror /personal
+    zip?: string;
+
+    // Software
+    accountingSoftware?: string; // "QuickBooks", "Xero", "Wave", "None"
+    payrollProvider?: string;    // "ADP", "Gusto", "In-house", "None"
+
+    // Owner (v0 — single owner; v1+ moves to owners[])
+    ownerName?: string;
+    ownerSsn?: string;           // encrypted at rest
+    ownerPercent?: string;       // numeric string
+    ownerTitle?: string;
+    ownerCount?: string;         // numeric string — "1", "2", … (formation only)
+    preparingPersonal?: 'yes' | 'no';
   };
 
   // ── Tax questions / deductions / events ─────────────────────────
@@ -297,6 +339,7 @@ export const SENSITIVE_INTAKE_PATHS: readonly string[] = [
   'dependents.list.*.ssn',
   'selfEmployment.ein',
   'business.ein',
+  'business.ownerSsn',
   'refund.bankRouting',
   'refund.bankAccount',
 ] as const;

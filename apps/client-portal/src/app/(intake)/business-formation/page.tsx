@@ -1,11 +1,18 @@
 'use client';
 
-// Intake step 2 alt — Business Formation. Conditional path for users who
-// selected "Business formation" sub-option on Services. Short intake.
-// 1-to-1 port of ScreenBusinessFormation.
+// Intake step 2 alt — Business Formation. MIGRATED to Postgres-backed state.
+// Conditional path for users who selected "Business formation" sub-option
+// on Services. Shorter intake than /business-info — covers desired entity,
+// state of incorporation, owner count.
+//
+// Storage paths:
+//   business.legalName      ← desired business name
+//   business.activity       ← description
+//   business.entityType     ← entity radio (llc/scorp/ccorp/unsure)
+//   business.formationState ← state of incorporation (free-form)
+//   business.ownerCount     ← number of owners
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -21,25 +28,10 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 type EntityId = 'llc' | 'scorp' | 'ccorp' | 'unsure';
-
-type FormationInfo = {
-  businessName: string;
-  description: string;
-  entity: EntityId;
-  state: string;
-  ownerCount: string;
-};
-
-const DEFAULT: FormationInfo = {
-  businessName: '',
-  description: '',
-  entity: 'llc',
-  state: '',
-  ownerCount: '',
-};
 
 const ENTITIES: Array<{ id: EntityId; acronym: string; sub: string }> = [
   { id: 'llc', acronym: 'LLC', sub: 'Pass-through, flexible' },
@@ -127,9 +119,26 @@ function EntityCard({
 export default function BusinessFormationPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<FormationInfo>('business-formation', DEFAULT);
-  const update = <K extends keyof FormationInfo>(k: K, v: FormationInfo[K]) =>
-    setInfo({ ...info, [k]: v });
+
+  const [businessName, setBusinessName] = useIntakeField<string>('business.legalName', '');
+  const [description, setDescription] = useIntakeField<string>('business.activity', '');
+  // Stored as free-form string ('llc'|'scorp'|...) — Antonio normalizes to
+  // a canonical entity type during prep when filing forms (1065/1120/1120-S).
+  const [entity, setEntity] = useIntakeField<string>('business.entityType', 'llc');
+  const [formationState, setFormationState] = useIntakeField<string>(
+    'business.formationState',
+    '',
+  );
+  const [ownerCount, setOwnerCount] = useIntakeField<string>('business.ownerCount', '');
+
+  const handleNext = () => {
+    const target = getNextStep('/business-formation', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/business-formation', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -144,7 +153,7 @@ export default function BusinessFormationPage() {
         <IntakeHeader t={t} step={2} label="Formation" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/services-addons')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 0' }}>
@@ -185,8 +194,8 @@ export default function BusinessFormationPage() {
             <FieldLabel t={t}>Desired business name</FieldLabel>
             <TextField
               t={t}
-              value={info.businessName}
-              onChange={(v) => update('businessName', v)}
+              value={businessName}
+              onChange={(v) => void setBusinessName(v)}
               placeholder="Park Cleaners LLC"
             />
           </div>
@@ -195,8 +204,8 @@ export default function BusinessFormationPage() {
             <FieldLabel t={t}>What will the business do?</FieldLabel>
             <TextField
               t={t}
-              value={info.description}
-              onChange={(v) => update('description', v)}
+              value={description}
+              onChange={(v) => void setDescription(v)}
               placeholder="A short description"
             />
           </div>
@@ -208,8 +217,8 @@ export default function BusinessFormationPage() {
                 <EntityCard
                   key={e.id}
                   t={t}
-                  selected={info.entity === e.id}
-                  onClick={() => update('entity', e.id)}
+                  selected={entity === e.id}
+                  onClick={() => void setEntity(e.id)}
                   acronym={e.acronym}
                   sub={e.sub}
                 />
@@ -221,8 +230,8 @@ export default function BusinessFormationPage() {
             <FieldLabel t={t}>State of incorporation</FieldLabel>
             <TextField
               t={t}
-              value={info.state}
-              onChange={(v) => update('state', v)}
+              value={formationState}
+              onChange={(v) => void setFormationState(v)}
               placeholder="California"
             />
           </div>
@@ -231,20 +240,12 @@ export default function BusinessFormationPage() {
             <FieldLabel t={t}>Number of owners</FieldLabel>
             <TextField
               t={t}
-              value={info.ownerCount}
-              onChange={(v) => update('ownerCount', v.replace(/\D/g, '').slice(0, 3))}
+              value={ownerCount}
+              onChange={(v) => void setOwnerCount(v.replace(/\D/g, '').slice(0, 3))}
               mono
               inputMode="numeric"
               placeholder="1"
             />
-          </div>
-
-          <div style={{ marginTop: 6 }}>
-            <AntonioNote t={t}>
-              If you&apos;re not sure which entity type, that&apos;s exactly what we&apos;ll figure
-              out in our consultation. Most of my clients end up with an LLC, then elect S-Corp
-              status once their income justifies it.
-            </AntonioNote>
           </div>
         </Stack>
 
@@ -258,18 +259,21 @@ export default function BusinessFormationPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar t={t} />
+            <AskAntonioBar
+              t={t}
+              tip="If you're not sure which entity type, that's exactly what we'll figure out in our consultation. Most of my clients end up with an LLC, then elect S-Corp status once their income justifies it."
+            />
           </div>
           <Row gap={10}>
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/services-addons')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/contact-info')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>
