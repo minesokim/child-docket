@@ -39,7 +39,7 @@ export function WelcomeContent() {
           minHeight: '100%',
         }}
       >
-        <Stack gap={26} style={{ flex: 1 }}>
+        <Stack gap={40} style={{ flex: 1 }}>
           <VideoPlaceholder t={t} youtubeId="P8nQkkkWJl4" startSeconds={15} />
 
           <Stack gap={14} style={{ textAlign: 'center' }}>
@@ -64,7 +64,9 @@ export function WelcomeContent() {
               Answer a few questions — takes about 10 minutes.
             </Body>
           </Stack>
+        </Stack>
 
+        <Stack gap={16} style={{ marginTop: 28 }}>
           <Row gap={6} justify="center" style={{ flexWrap: 'wrap' }}>
             <TrustPill
               t={t}
@@ -100,9 +102,7 @@ export function WelcomeContent() {
               ~10 minutes
             </TrustPill>
           </Row>
-        </Stack>
 
-        <Stack gap={14} style={{ marginTop: 28 }}>
           <Button
             t={t}
             onClick={() => nav.next('/tutorial')}
