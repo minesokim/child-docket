@@ -96,18 +96,19 @@ export default function LandingPage() {
           </div>
           <h1
             style={{
-              fontFamily: t.serif,
-              fontSize: 32,
+              fontFamily: t.sans,
+              fontSize: 30,
+              fontWeight: 600,
               color: t.ink,
               letterSpacing: -0.6,
-              lineHeight: 1.15,
+              lineHeight: 1.2,
               margin: 0,
               marginBottom: 14,
             }}
           >
             Vazant Consulting
             <br />
-            <span style={{ fontStyle: 'italic' }}>tax filing</span>
+            tax filing
           </h1>
           <p
             style={{

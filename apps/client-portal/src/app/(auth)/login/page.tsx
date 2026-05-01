@@ -238,10 +238,12 @@ export default function LoginPage() {
         </div>
         <h1
           style={{
-            fontFamily: t.serif,
-            fontSize: 30,
+            fontFamily: t.sans,
+            fontSize: 28,
+            fontWeight: 600,
             color: t.ink,
-            letterSpacing: -0.5,
+            letterSpacing: -0.6,
+            lineHeight: 1.25,
             margin: 0,
             marginBottom: 24,
           }}
