@@ -3,8 +3,9 @@
 // Pre-login brand landing. Single CTA → /login. Already-signed-in users
 // auto-skip to /welcome.
 
-import { Button, buildTheme } from '@docket/ui';
+import { buildTheme } from '@docket/ui';
 import { useAuth } from '@clerk/nextjs';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -27,23 +28,10 @@ export default function LandingPage() {
         fontFamily: t.sans,
         display: 'flex',
         flexDirection: 'column',
-        padding: '20px 24px 36px',
+        padding: '20px 24px 28px',
       }}
     >
-      {/* Top corner mark */}
-      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
-        <img
-          src="/vazant-logo.png"
-          alt="Vazant"
-          style={{
-            width: 32,
-            height: 32,
-            objectFit: 'contain',
-          }}
-        />
-      </div>
-
-      {/* Hero */}
+      {/* Content column — vertically centered-ish, text left-aligned */}
       <div
         style={{
           flex: 1,
@@ -51,32 +39,36 @@ export default function LandingPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 28,
+          gap: 30,
+          paddingBottom: 32,
         }}
       >
-        <img
-          src="/vazant-logo.png"
-          alt="Vazant Consulting"
-          style={{
-            width: 132,
-            height: 132,
-            objectFit: 'contain',
-          }}
-        />
+        {/* Hero logo */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img
+            src="/vazant-logo.png"
+            alt="Vazant Consulting"
+            style={{
+              width: 132,
+              height: 132,
+              objectFit: 'contain',
+            }}
+          />
+          {/* Soft shadow under logo */}
+          <div
+            style={{
+              width: 140,
+              height: 12,
+              marginTop: -10,
+              borderRadius: '50%',
+              background: 'rgba(40, 30, 20, 0.10)',
+              filter: 'blur(8px)',
+            }}
+          />
+        </div>
 
-        {/* Soft shadow under logo */}
-        <div
-          style={{
-            width: 140,
-            height: 12,
-            marginTop: -36,
-            borderRadius: '50%',
-            background: 'rgba(40, 30, 20, 0.10)',
-            filter: 'blur(8px)',
-          }}
-        />
-
-        <div style={{ textAlign: 'center', maxWidth: 360, padding: '0 8px' }}>
+        {/* Text block — left aligned within column */}
+        <div style={{ width: '100%', maxWidth: 360, textAlign: 'left' }}>
           <div
             style={{
               fontFamily: t.mono,
@@ -84,7 +76,7 @@ export default function LandingPage() {
               color: t.muted,
               letterSpacing: 1.4,
               textTransform: 'uppercase',
-              marginBottom: 14,
+              marginBottom: 12,
             }}
           >
             Welcome
@@ -110,36 +102,49 @@ export default function LandingPage() {
               color: t.inkSoft,
               lineHeight: 1.55,
               margin: 0,
-              maxWidth: 320,
-              marginInline: 'auto',
             }}
           >
             Personal service from Antonio Vazquez, Enrolled Agent. Walk through your intake in
             about 10 minutes and we&apos;ll handle the rest.
           </p>
         </div>
-      </div>
 
-      {/* CTA */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <Button
-          t={t}
-          variant="dark"
-          onClick={() => router.push('/login')}
-          style={{ width: '100%', maxWidth: 360, padding: '15px 22px', fontSize: 15 }}
-        >
-          Continue with phone number
-        </Button>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10,
-            color: t.muted,
-            letterSpacing: 1,
-            textTransform: 'uppercase',
-          }}
-        >
-          Secure · Encrypted · IRS-compliant
+        {/* CTA — right below copy, not page-bottom */}
+        <div style={{ width: '100%', maxWidth: 360 }}>
+          <Link
+            href="/login"
+            style={{
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '15px 22px',
+              fontSize: 15,
+              fontFamily: t.sans,
+              fontWeight: 500,
+              background: t.ink,
+              color: t.bgElev,
+              border: `1px solid ${t.ink}`,
+              borderRadius: 999,
+              textDecoration: 'none',
+              letterSpacing: -0.1,
+            }}
+          >
+            Continue with phone number
+          </Link>
+          <div
+            style={{
+              fontFamily: t.mono,
+              fontSize: 10,
+              color: t.muted,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              marginTop: 14,
+            }}
+          >
+            Secure · Encrypted · IRS-compliant
+          </div>
         </div>
       </div>
     </main>
