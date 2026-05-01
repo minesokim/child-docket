@@ -17,8 +17,10 @@
 //   wire here under TLS — same as a regular saveIntakeField call.
 //   Server-side encryption + audit log handle the rest.
 
+import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { consumeRateToken } from '@docket/shared';
 import { saveIntakeField } from '@/lib/intake-actions';
 
 type FlushWrite = { path: string; value: unknown };
@@ -27,6 +29,26 @@ type FlushBody = { writes: FlushWrite[] };
 const MAX_WRITES_PER_FLUSH = 50;
 
 export async function POST(req: Request): Promise<Response> {
+  // Rate limit BEFORE parsing the body — keeps the cheap-to-block path
+  // cheap. Key on Clerk user id (sendBeacon includes cookies, so auth()
+  // resolves the session). 6 flushes per minute is generous: a typical
+  // intake does maybe 1-2 page navigations per minute, each MAYBE
+  // firing one flush.
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
+  }
+  const limit = consumeRateToken(`flush:${userId}`, 6, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many flush requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(limit.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   let body: FlushBody;
   try {
     body = (await req.json()) as FlushBody;

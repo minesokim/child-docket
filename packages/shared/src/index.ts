@@ -12,6 +12,11 @@ export * from './intake-schemas.js';
 // values for sensitive-looking field names.
 export * from './sentry-scrubber.js';
 
+// In-process token-bucket rate limiter for abusable server actions
+// + API routes (revealIntakeField, /api/intake/flush, etc.). v0 is
+// per-instance; swap to Upstash Redis when traffic justifies.
+export * from './rate-limit.js';
+
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.
 // ────────────────────────────────────────────────────────────────

@@ -35,6 +35,7 @@ import {
 } from '@docket/db';
 import {
   type IntakeState,
+  consumeRateToken,
   getAtPath,
   isSensitivePath,
   maskSensitiveFields,
@@ -442,6 +443,19 @@ export async function revealIntakeField(path: string): Promise<RevealIntakeField
   // 2. Auth.
   const authed = await getOrCreateClient();
   if (!authed) return { ok: false, error: 'Not signed in' };
+
+  // 3. Rate limit. Each authed client gets 30 reveals per minute. A real
+  // user clicking 'Edit' on SSN + EIN + bank routing + bank account in
+  // the course of finishing intake might use ~5; 30/min is generous yet
+  // still cuts off enumeration attacks. Key on Clerk user id so an
+  // attacker forging a session can't spread across tenants.
+  const limit = consumeRateToken(`reveal:${authed.clerkUserId}`, 30, 60_000);
+  if (!limit.allowed) {
+    return {
+      ok: false,
+      error: `Too many reveal requests. Try again in ${Math.ceil(limit.retryAfterMs / 1000)}s.`,
+    };
+  }
 
   const taxYear = getCurrentTaxYear();
   const startedAt = Date.now();

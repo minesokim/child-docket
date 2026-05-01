@@ -1,12 +1,19 @@
 // Cron: every 10 minutes per tenant, poll Gmail for new messages, persist to
 // gmail_threads, classify each via triage-classifier, surface as issues.
 //
-// v0 placeholder: Gmail OAuth not yet wired (Antonio onboards day 14). For now,
-// this function is a STRUCTURAL skeleton — it iterates tenants, would fetch
-// messages, would classify, would persist. Real Gmail fetch lands when OAuth
-// flow is built in apps/command-room.
+// v0 placeholder: Gmail OAuth not yet wired (Antonio onboards day 14). The
+// cron is FEATURE-FLAGGED OFF by default — running it every 10 minutes
+// would burn Inngest invocations on a no-op since list-tenants-with-gmail
+// always returns []. Set ENABLE_GMAIL_POLL=true in env to re-arm the
+// cron once OAuth lands.
+//
+// When enabled, this function iterates tenants, fetches Gmail history
+// since lastSeenHistoryId, fires gmail/message.received events for each
+// new message (which the classifier picks up), and updates the cursor.
 
 import { inngest } from '../inngest-client.js';
+
+const GMAIL_POLL_ENABLED = process.env.ENABLE_GMAIL_POLL === 'true';
 
 export const gmailPoll = inngest.createFunction(
   {
@@ -14,10 +21,16 @@ export const gmailPoll = inngest.createFunction(
     name: 'Gmail poll (every 10 min per tenant)',
     concurrency: { limit: 10 },
   },
-  // Cron expression: every 10 minutes. Switch to per-tenant schedules once
-  // tenant scheduling is in place (week 4+).
+  // Cron expression: every 10 minutes. When ENABLE_GMAIL_POLL is unset
+  // or false, the function bails on entry — keeping the trigger
+  // registered so we can flip the flag without redeploying.
   { cron: '*/10 * * * *' },
   async ({ step, logger }) => {
+    if (!GMAIL_POLL_ENABLED) {
+      logger.info('gmail-poll feature-flagged off (set ENABLE_GMAIL_POLL=true to enable)');
+      return { polled: 0, classified: 0, skipped: 'flag_disabled' };
+    }
+
     // Step 1 — list active tenants with Gmail integration
     const tenants = await step.run('list-tenants-with-gmail', async () => {
       // TODO(week-1): replace with real query against tenants + integrations table
