@@ -11,6 +11,7 @@ import {
 import type { Theme } from '@docket/ui';
 import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
 import { useAuth, useClerk, useUser } from '@clerk/nextjs';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { usePortalState } from '@/lib/portal-state';
@@ -172,24 +173,22 @@ export default function LoginPage() {
     >
       {/* Top bar with back button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button
-          onClick={() => router.push('/')}
+        <Link
+          href="/"
           aria-label="Back"
           style={{
-            background: 'none',
-            border: 'none',
             padding: 8,
             marginLeft: -8,
-            cursor: 'pointer',
             color: t.inkSoft,
             display: 'flex',
             alignItems: 'center',
+            textDecoration: 'none',
           }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
             <path d="M12 4l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-        </button>
+        </Link>
         <img
           src="/vazant-logo.png"
           alt="Vazant"
