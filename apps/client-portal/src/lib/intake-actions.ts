@@ -27,9 +27,10 @@ import {
   getAdminDb,
   withTenant,
   schema,
-  encryptField,
+  encryptFieldForTenant,
+  decryptIfMarkedForTenant,
+  getTenantDek,
   isEncrypted,
-  decryptIfMarked,
 } from '@docket/db';
 import {
   type IntakeState,
@@ -56,16 +57,20 @@ function getCurrentTaxYear(): number {
 }
 
 /**
- * Walk a JSONB tree and decrypt every encrypted leaf marker. Used on the
- * read path so the client receives plain values it can render directly.
+ * Walk a JSONB tree and decrypt every encrypted leaf marker using the
+ * tenant's DEK. Used on the read path so the client receives plain values
+ * it can render directly.
+ *
+ * The DEK is passed in (rather than looked up per-leaf) so a single tree
+ * walk amortizes one cache lookup across all encrypted fields.
  */
-function decryptTree(node: unknown): unknown {
+function decryptTree(node: unknown, dek: Buffer): unknown {
   if (node == null || typeof node !== 'object') return node;
-  if (isEncrypted(node)) return decryptIfMarked(node);
-  if (Array.isArray(node)) return node.map(decryptTree);
+  if (isEncrypted(node)) return decryptIfMarkedForTenant(node, dek);
+  if (Array.isArray(node)) return node.map((item) => decryptTree(item, dek));
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(node)) {
-    out[k] = decryptTree(v);
+    out[k] = decryptTree(v, dek);
   }
   return out;
 }
@@ -178,6 +183,11 @@ export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
   const taxYear = getCurrentTaxYear();
 
   return withTenant(asTenantId(authed.tenantId), async (db) => {
+    // Resolve the tenant's DEK once per request. First-access provisioning
+    // happens transparently inside getTenantDek if dek_encrypted is NULL on
+    // the tenant row.
+    const dek = await getTenantDek(db, asTenantId(authed.tenantId));
+
     // Try to insert. If the row already exists (per the unique index), this
     // returns nothing — we then SELECT to load the canonical row.
     await db
@@ -217,7 +227,7 @@ export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
       return null;
     }
 
-    const decrypted = decryptTree(row.answers ?? {}) as IntakeState;
+    const decrypted = decryptTree(row.answers ?? {}, dek) as IntakeState;
     return {
       clientId: authed.clientId,
       intakeId: row.id,
@@ -255,7 +265,15 @@ export async function saveIntakeField(
 
   try {
     return await withTenant(asTenantId(authed.tenantId), async (db) => {
-      // 3. Load current row WITH FOR UPDATE — locks it for the duration of
+      // 3. Resolve the tenant's DEK before the row read — even though we
+      // only need it on the sensitive branch, doing it here keeps the
+      // critical-section serial logic clean and avoids holding the row
+      // lock across a (potentially) DEK-cache-miss DB read.
+      const dek = sensitive
+        ? await getTenantDek(db, asTenantId(authed.tenantId))
+        : null;
+
+      // 4. Load current row WITH FOR UPDATE — locks it for the duration of
       // this transaction. Concurrent saveIntakeField calls to the same
       // intake row serialize through this lock, so the read-modify-write
       // pattern below is safe. Without FOR UPDATE, two concurrent saves to
@@ -277,17 +295,17 @@ export async function saveIntakeField(
         return { ok: false, error: 'Intake row not found — call getOrCreateIntakeAnswers first', path };
       }
 
-      // 4. Compute the storage value. Sensitive paths get encrypted leaves;
-      // everything else stores plain. Mixed encrypted/plain in the same
-      // JSONB tree is fine — decryptTree() handles both on read.
-      const valueToStore = sensitive
-        ? encryptField(String(validatedValue))
+      // 5. Compute the storage value. Sensitive paths get encrypted with
+      // the tenant DEK; everything else stores plain. Mixed encrypted/plain
+      // in the same JSONB tree is fine — decryptTree() handles both on read.
+      const valueToStore = sensitive && dek
+        ? encryptFieldForTenant(String(validatedValue), dek)
         : validatedValue;
 
       const currentStorage = (existing.answers as unknown) ?? {};
       const updatedStorage = setAtPath(currentStorage, path, valueToStore);
 
-      // 5. Persist. updated_at bumps on every write so we can debug
+      // 6. Persist. updated_at bumps on every write so we can debug
       // ("when did this field last flip?") and use it as an
       // optimistic-concurrency token if needed later.
       await db
@@ -298,7 +316,7 @@ export async function saveIntakeField(
         })
         .where(eq(schema.intakeResponses.id, existing.id));
 
-      // 6. Audit log. NOT best-effort — if the audit insert fails, the
+      // 7. Audit log. NOT best-effort — if the audit insert fails, the
       // whole transaction rolls back (we're inside withTenant's tx). For
       // SOC 2 / IRS Pub 1345 compliance, every state-changing write must
       // leave a tamper-evident audit trail. Allowing writes without audit
@@ -322,8 +340,12 @@ export async function saveIntakeField(
         success: true,
       });
 
-      // 7. Return decrypted view for the client's local state.
-      const decrypted = decryptTree(updatedStorage) as IntakeState;
+      // 8. Return decrypted view for the client's local state. We need the
+      // tenant DEK either way now (sensitive write OR not), so resolve it
+      // if we didn't already on the encrypt branch. Cache hit on the second
+      // call when sensitive=true.
+      const dekForRead = dek ?? (await getTenantDek(db, asTenantId(authed.tenantId)));
+      const decrypted = decryptTree(updatedStorage, dekForRead) as IntakeState;
       return { ok: true, answers: decrypted };
     });
   } catch (error) {

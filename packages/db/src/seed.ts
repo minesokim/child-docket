@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { sql } from 'drizzle-orm';
+import * as schema from './schema.js';
 import {
   tenants,
   users,
@@ -25,6 +26,8 @@ import {
   signatures,
   actions,
 } from './schema.js';
+import { provisionTenantDek } from './dek-cache.js';
+import type { TenantId } from '@docket/shared';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: path.resolve(__dirname, '../../../.env.local'), override: true });
@@ -36,7 +39,7 @@ if (!DATABASE_URL) {
 }
 
 const client = postgres(DATABASE_URL, { max: 1 });
-const db = drizzle(client);
+const db = drizzle(client, { schema });
 
 const NOW = new Date();
 const days = (n: number) => new Date(NOW.getTime() + n * 24 * 60 * 60 * 1000);
@@ -67,6 +70,13 @@ async function seed() {
     .returning();
   if (!vazant) throw new Error('failed to insert tenant');
   console.log(`  ✓ tenant: ${vazant.name} (${vazant.id})`);
+
+  // Provision per-tenant DEK. PII fields (SSN, EIN, bank routing) on this
+  // tenant's intake_responses get encrypted with this DEK; the DEK itself
+  // is encrypted with the master KEK from PII_ENCRYPTION_KEY. See
+  // packages/db/src/encryption.ts header for the threat model.
+  await provisionTenantDek(db, vazant.id as TenantId);
+  console.log(`  ✓ DEK provisioned for ${vazant.slug}`);
 
   // Antonio Vazquez — Owner.
   // Email is configurable via SEED_ADMIN_EMAIL so David can sign in with his

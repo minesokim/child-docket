@@ -127,6 +127,20 @@ export const tenants = pgTable('tenants', {
   defaultTrustLevel: trustLevelEnum('default_trust_level').notNull().default('1'),
   bedrockEnabled: boolean('bedrock_enabled').notNull().default(false),
   awsRegion: text('aws_region'),
+  // Per-tenant Data Encryption Key (DEK), encrypted with the master KEK
+  // from PII_ENCRYPTION_KEY. Stored as base64 of [12-byte IV][16-byte tag]
+  // [N-byte ciphertext]. Generated at tenant provisioning, never rotated
+  // in v0 (rotation lands when KMS replaces env-var KEK).
+  //
+  // Defense-in-depth model: a database compromise alone yields encrypted
+  // DEKs that can't be decrypted without the master KEK held in env. A
+  // master-key compromise alone yields ciphertext that can't be decrypted
+  // without DB access to the per-tenant DEK rows. Both required to
+  // exfiltrate plaintext SSNs/EINs/bank routing for any one tenant.
+  //
+  // Nullable for migration backfill; the application throws if a tenant
+  // hits a sensitive write/read with no DEK provisioned.
+  dekEncrypted: text('dek_encrypted'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

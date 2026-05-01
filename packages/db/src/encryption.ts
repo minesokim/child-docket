@@ -1,21 +1,28 @@
 // ────────────────────────────────────────────────────────────────
-// Field-level encryption for PII at rest.
+// Field-level encryption for PII at rest — two-level key hierarchy.
 //
-// Sensitive intake fields (SSN, EIN, bank routing, bank account) are
-// encrypted with AES-256-GCM before being stored in
-// `intake_responses.answers` JSONB. On read they're decrypted by the
-// authenticated server action, then sent over the (Clerk-authed) HTTPS
-// channel to the legitimate session owner.
+// LEVEL 1 — Master KEK (Key Encryption Key)
+//   Source:  process.env.PII_ENCRYPTION_KEY (32 random bytes hex)
+//   Role:    Encrypts the per-tenant DEKs. Never touches user PII directly.
+//   Storage: env var (Vercel + .env.local). Future: AWS KMS / GCP KMS / Vault.
 //
-// This is "at-rest" encryption only — defense-in-depth on top of RLS.
-// A DB compromise that bypasses RLS still doesn't surface plaintext SSNs.
+// LEVEL 2 — Per-tenant DEK (Data Encryption Key)
+//   Source:  randomly generated when a tenant is provisioned
+//   Role:    Encrypts every PII field inside a tenant's JSONB
+//   Storage: tenants.dek_encrypted column (encrypted with master KEK)
+//   Cache:   in-memory LRU during process lifetime
 //
-// v0: symmetric key from PII_ENCRYPTION_KEY env var. Single key for all
-// tenants.
+// THREAT MODEL
+//   - DB compromise (alone)        : sees encrypted DEKs, no plaintext
+//   - Master KEK compromise (alone): sees ciphertext, can't decrypt without DB
+//   - Both compromised             : full plaintext exposure (as in any system)
+//   - Cross-tenant data leak       : impossible at the crypto layer — Tenant A
+//                                    DEK can't decrypt Tenant B ciphertext
 //
-// Migration to KMS later (AWS KMS / GCP KMS / HashiCorp Vault) is a
-// single-file change: replace getKey() with a KMS lookup that returns a
-// decrypted DEK. Per-tenant DEKs become the obvious extension after that.
+// MIGRATION TO KMS
+//   getMasterKey() is the only function that reads PII_ENCRYPTION_KEY directly.
+//   Replacing it with a KMS lookup is a single-file change. The DEKs themselves
+//   stay structurally identical — they're already encrypted blobs in the DB.
 // ────────────────────────────────────────────────────────────────
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
@@ -25,10 +32,15 @@ const IV_LEN = 12;   // GCM-recommended 96-bit IV
 const TAG_LEN = 16;  // 128-bit auth tag
 const KEY_LEN = 32;  // AES-256
 
-let keyCache: Buffer | null = null;
+// ────────────────────────────────────────────────────────────────
+// Master KEK access. Cached at module-scope (per-process) since the value
+// is immutable for a deployment's lifetime.
+// ────────────────────────────────────────────────────────────────
 
-function getKey(): Buffer {
-  if (keyCache) return keyCache;
+let masterKeyCache: Buffer | null = null;
+
+function getMasterKey(): Buffer {
+  if (masterKeyCache) return masterKeyCache;
   const hex = process.env.PII_ENCRYPTION_KEY;
   if (!hex) {
     throw new Error(
@@ -40,8 +52,8 @@ function getKey(): Buffer {
       `PII_ENCRYPTION_KEY must be ${KEY_LEN} bytes (${KEY_LEN * 2} hex chars), got ${hex.length} chars.`,
     );
   }
-  keyCache = Buffer.from(hex, 'hex');
-  return keyCache;
+  masterKeyCache = Buffer.from(hex, 'hex');
+  return masterKeyCache;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -64,22 +76,23 @@ export function isEncrypted(value: unknown): value is EncryptedMarker {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Core API — encrypt/decrypt a single string field.
+// Core primitives — encrypt/decrypt with an arbitrary 32-byte key.
+//
+// These are the building blocks. Higher-level functions choose WHICH key
+// to pass:
+//   - The master KEK for encrypting DEKs (encryptDek/decryptDek below)
+//   - A tenant DEK for encrypting fields (encryptFieldForTenant)
 // ────────────────────────────────────────────────────────────────
 
-/**
- * Encrypt a plaintext string into an EncryptedMarker. Suitable for storage
- * in JSONB or a text column.
- *
- * Format on the wire (base64 of):
- *   [12-byte IV][16-byte auth tag][N-byte ciphertext]
- */
-export function encryptField(plaintext: string): EncryptedMarker {
+function encryptWithKey(plaintext: string, key: Buffer): EncryptedMarker {
   if (typeof plaintext !== 'string') {
-    throw new TypeError(`encryptField expects string, got ${typeof plaintext}`);
+    throw new TypeError(`encryptWithKey expects string, got ${typeof plaintext}`);
+  }
+  if (key.length !== KEY_LEN) {
+    throw new Error(`encryptWithKey expects a ${KEY_LEN}-byte key, got ${key.length}`);
   }
   const iv = randomBytes(IV_LEN);
-  const cipher = createCipheriv(ALGO, getKey(), iv);
+  const cipher = createCipheriv(ALGO, key, iv);
   const ciphertext = Buffer.concat([
     cipher.update(plaintext, 'utf8'),
     cipher.final(),
@@ -90,11 +103,10 @@ export function encryptField(plaintext: string): EncryptedMarker {
   };
 }
 
-/**
- * Decrypt an EncryptedMarker back to the original plaintext. Throws if the
- * blob is malformed or the auth tag fails (wrong key / tampered).
- */
-export function decryptField(value: EncryptedMarker): string {
+function decryptWithKey(value: EncryptedMarker, key: Buffer): string {
+  if (key.length !== KEY_LEN) {
+    throw new Error(`decryptWithKey expects a ${KEY_LEN}-byte key, got ${key.length}`);
+  }
   const buf = Buffer.from(value.__enc, 'base64');
   if (buf.length < IV_LEN + TAG_LEN) {
     throw new Error('Encrypted blob too short — corrupt or wrong format');
@@ -102,7 +114,7 @@ export function decryptField(value: EncryptedMarker): string {
   const iv = buf.subarray(0, IV_LEN);
   const tag = buf.subarray(IV_LEN, IV_LEN + TAG_LEN);
   const ciphertext = buf.subarray(IV_LEN + TAG_LEN);
-  const decipher = createDecipheriv(ALGO, getKey(), iv);
+  const decipher = createDecipheriv(ALGO, key, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
     'utf8',
@@ -110,15 +122,101 @@ export function decryptField(value: EncryptedMarker): string {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Convenience — encrypt/decrypt-if-marked. Useful for the server action
-// pattern "I don't know if this value is sensitive, just round-trip it."
+// MASTER-KEK-only API. ONLY used to encrypt/decrypt DEKs.
+//
+// Application code should NOT call these directly for user PII. Use
+// encryptFieldForTenant/decryptFieldForTenant instead. These exist as a
+// package-internal API for the DEK provisioner + cache.
 // ────────────────────────────────────────────────────────────────
 
 /**
- * If the input looks like an EncryptedMarker, decrypt and return the
- * plaintext. Otherwise return the input unchanged. Used on the read path
- * to flatten a JSONB blob's encrypted leaves back to scalars.
+ * Encrypt a 32-byte DEK with the master KEK. Returns an EncryptedMarker
+ * suitable for storage in tenants.dek_encrypted.
+ *
+ * Internal: callers go through dek-cache.ts, not this directly.
  */
+export function encryptDek(dek: Buffer): EncryptedMarker {
+  if (dek.length !== KEY_LEN) {
+    throw new Error(`encryptDek expects a ${KEY_LEN}-byte DEK`);
+  }
+  // Stored format: encrypt the DEK's base64 representation as a string so
+  // the same encryptWithKey primitive works unchanged. Decrypt reverses the
+  // base64 step to recover the raw 32-byte DEK.
+  return encryptWithKey(dek.toString('base64'), getMasterKey());
+}
+
+/**
+ * Decrypt a stored DEK marker back to the raw 32-byte Buffer.
+ *
+ * Internal: callers go through dek-cache.ts, not this directly.
+ */
+export function decryptDek(marker: EncryptedMarker): Buffer {
+  const base64 = decryptWithKey(marker, getMasterKey());
+  const dek = Buffer.from(base64, 'base64');
+  if (dek.length !== KEY_LEN) {
+    throw new Error(`Decrypted DEK has wrong length: ${dek.length} (expected ${KEY_LEN})`);
+  }
+  return dek;
+}
+
+// ────────────────────────────────────────────────────────────────
+// PER-TENANT API — what application code uses for PII.
+//
+// Caller must obtain the tenant's DEK first via getTenantDek (dek-cache.ts).
+// Passing the DEK explicitly (rather than a tenantId) keeps this module
+// pure (no DB dependency) and makes the call site explicit about which
+// tenant's key it's using.
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Encrypt a plaintext PII field with a tenant-specific DEK. Returns an
+ * EncryptedMarker that lives inside the tenant's JSONB (intake_responses,
+ * notice_responses, etc.).
+ */
+export function encryptFieldForTenant(plaintext: string, dek: Buffer): EncryptedMarker {
+  return encryptWithKey(plaintext, dek);
+}
+
+/**
+ * Decrypt a tenant-encrypted field marker. Throws if the marker was
+ * encrypted with a different DEK (wrong tenant) or has been tampered with
+ * (auth-tag mismatch).
+ */
+export function decryptFieldForTenant(marker: EncryptedMarker, dek: Buffer): string {
+  return decryptWithKey(marker, dek);
+}
+
+/**
+ * Decrypt-if-marked variant for tree-walking on the read path. If the value
+ * isn't an EncryptedMarker, pass-through; otherwise decrypt with the tenant
+ * DEK.
+ */
+export function decryptIfMarkedForTenant(value: unknown, dek: Buffer): unknown {
+  if (isEncrypted(value)) return decryptFieldForTenant(value, dek);
+  return value;
+}
+
+// ────────────────────────────────────────────────────────────────
+// DEPRECATED — single-key API. Retained briefly for the orchestrator's
+// non-tenant-scoped fixtures + tests. Application code that touches user
+// PII MUST migrate to encryptFieldForTenant. Will be removed in v1+.
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * @deprecated Use encryptFieldForTenant(plaintext, dek). This function
+ * encrypts with the master KEK, which would force a single-tenant model
+ * if used at scale. Kept only for tests + fixtures during the migration.
+ */
+export function encryptField(plaintext: string): EncryptedMarker {
+  return encryptWithKey(plaintext, getMasterKey());
+}
+
+/** @deprecated Use decryptFieldForTenant(marker, dek). */
+export function decryptField(value: EncryptedMarker): string {
+  return decryptWithKey(value, getMasterKey());
+}
+
+/** @deprecated Use decryptIfMarkedForTenant(value, dek). */
 export function decryptIfMarked(value: unknown): unknown {
   if (isEncrypted(value)) return decryptField(value);
   return value;
@@ -129,9 +227,9 @@ export function decryptIfMarked(value: unknown): unknown {
 // ────────────────────────────────────────────────────────────────
 
 /**
- * Generate a fresh 32-byte AES-256 key. Run once during initial setup,
- * write the result to `.env.local` (PII_ENCRYPTION_KEY=...) and to Vercel
- * encrypted env vars. Never commit.
+ * Generate a fresh 32-byte AES-256 key (master KEK or DEK). Run once
+ * during initial setup for the master KEK, write to PII_ENCRYPTION_KEY
+ * env var.
  *
  *   node -e "console.log(require('@docket/db').generateEncryptionKey())"
  */
