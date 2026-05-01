@@ -697,19 +697,47 @@ export function AskAntonioBar({
    */
   tip?: string;
 }) {
-  const [tipVisible, setTipVisible] = React.useState(true);
+  // Three-phase lifecycle: hidden → entering (animated in) → entered →
+  // exiting (animated out) → hidden. The exit phase plays a fade-out
+  // animation before unmounting so dismissals feel intentional, not
+  // abrupt.
+  const [phase, setPhase] = React.useState<'hidden' | 'entering' | 'exiting'>('hidden');
 
-  // Reset visibility when the tip text changes (new page = new tip).
+  const ENTER_DELAY_MS = 700;   // brief settle before the tip appears
+  const HOLD_MS = 12_000;       // visible duration before auto-dismiss
+  const EXIT_MS = 420;          // fade-out animation duration
+
+  // When tip text changes, restart the lifecycle.
   React.useEffect(() => {
-    setTipVisible(true);
+    if (!tip) {
+      setPhase('hidden');
+      return;
+    }
+    setPhase('hidden');
+    const enterTimer = window.setTimeout(() => setPhase('entering'), ENTER_DELAY_MS);
+    return () => window.clearTimeout(enterTimer);
   }, [tip]);
 
-  // Auto-dismiss after 8 seconds.
+  // Schedule the auto-exit + actual unmount once the tip is visible.
   React.useEffect(() => {
-    if (!tip || !tipVisible) return;
-    const timer = window.setTimeout(() => setTipVisible(false), 8000);
-    return () => window.clearTimeout(timer);
-  }, [tip, tipVisible]);
+    if (phase !== 'entering') return;
+    const holdTimer = window.setTimeout(() => setPhase('exiting'), HOLD_MS);
+    return () => window.clearTimeout(holdTimer);
+  }, [phase]);
+
+  // Once we're exiting, schedule the unmount after the fade-out completes.
+  React.useEffect(() => {
+    if (phase !== 'exiting') return;
+    const unmountTimer = window.setTimeout(() => setPhase('hidden'), EXIT_MS);
+    return () => window.clearTimeout(unmountTimer);
+  }, [phase]);
+
+  const dismissTip = () => {
+    if (phase === 'entering') setPhase('exiting');
+  };
+
+  const tipMounted = phase !== 'hidden';
+  const tipExiting = phase === 'exiting';
 
   const handleClick = () => {
     if (onMessage) onMessage();
@@ -724,17 +752,17 @@ export function AskAntonioBar({
     <div style={{ position: 'relative' }}>
       <style>{`
         @keyframes antonio-tip-in {
-          from { opacity: 0; transform: translateY(6px) scale(0.98); }
-          to   { opacity: 1; transform: translateY(0)   scale(1);    }
+          from { opacity: 0; transform: translateY(14px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)    scale(1);    }
         }
         @keyframes antonio-tip-out {
           from { opacity: 1; transform: translateY(0)    scale(1);    }
-          to   { opacity: 0; transform: translateY(-4px) scale(0.985); }
+          to   { opacity: 0; transform: translateY(8px)  scale(0.98); }
         }
       `}</style>
 
       {/* Speech bubble — floats above the bar, arrow on left aligned to avatar */}
-      {tip && tipVisible && (
+      {tip && tipMounted && (
         <div
           style={{
             position: 'absolute',
@@ -742,7 +770,9 @@ export function AskAntonioBar({
             left: 0,
             right: 0,
             pointerEvents: 'none', // bubble allows touches through; X button overrides
-            animation: 'antonio-tip-in 320ms cubic-bezier(.2,.8,.2,1) both',
+            animation: tipExiting
+              ? `antonio-tip-out ${EXIT_MS}ms cubic-bezier(.4,0,.2,1) both`
+              : 'antonio-tip-in 540ms cubic-bezier(.2,.8,.2,1) both',
           }}
         >
           <div
@@ -760,7 +790,7 @@ export function AskAntonioBar({
           >
             <button
               type="button"
-              onClick={() => setTipVisible(false)}
+              onClick={dismissTip}
               aria-label="Dismiss tip"
               style={{
                 position: 'absolute',
@@ -791,18 +821,6 @@ export function AskAntonioBar({
               </svg>
             </button>
 
-            <div
-              style={{
-                fontFamily: t.sans,
-                fontSize: 14,
-                fontWeight: 600,
-                color: t.ink,
-                letterSpacing: -0.1,
-                marginBottom: 6,
-              }}
-            >
-              Antonio&apos;s Note
-            </div>
             <div
               style={{
                 fontFamily: t.sans,
