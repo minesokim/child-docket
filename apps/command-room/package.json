@@ -10,11 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@docket/ui": "workspace:*",
+    "@clerk/nextjs": "^7.2.9",
+    "@docket/db": "workspace:*",
     "@docket/shared": "workspace:*",
+    "@docket/ui": "workspace:*",
     "next": "15.5.15",
-    "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
