@@ -34,7 +34,9 @@ import {
 } from '@docket/db';
 import {
   type IntakeState,
+  getAtPath,
   isSensitivePath,
+  maskSensitiveFields,
   setAtPath,
   validateIntakeField,
   asTenantId,
@@ -227,13 +229,19 @@ export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
       return null;
     }
 
+    // Decrypt every encrypted leaf with the tenant DEK, then immediately
+    // mask sensitive paths before returning to the client. Plaintext SSN/
+    // EIN/bank never crosses the server-client boundary by default — the
+    // client must explicitly call revealIntakeField() for each path it
+    // wants to see in plaintext, which is audit-logged.
     const decrypted = decryptTree(row.answers ?? {}, dek) as IntakeState;
+    const masked = maskSensitiveFields(decrypted);
     return {
       clientId: authed.clientId,
       intakeId: row.id,
       taxYear,
       status: row.status as IntakeBundle['status'],
-      answers: decrypted,
+      answers: masked,
     };
   });
 }
@@ -340,19 +348,116 @@ export async function saveIntakeField(
         success: true,
       });
 
-      // 8. Return decrypted view for the client's local state. We need the
-      // tenant DEK either way now (sensitive write OR not), so resolve it
-      // if we didn't already on the encrypt branch. Cache hit on the second
-      // call when sensitive=true.
+      // 8. Return decrypted-then-masked view for the client's local state.
+      // We need the tenant DEK either way now (sensitive write OR not), so
+      // resolve it if we didn't already on the encrypt branch. Cache hit on
+      // the second call when sensitive=true.
+      //
+      // Masking applies to ALL sensitive paths regardless of whether THIS
+      // write was sensitive — the client's IntakeProvider will hold masked
+      // sentinels for every sensitive field after every save, so plaintext
+      // never lingers in client state past the active edit.
       const dekForRead = dek ?? (await getTenantDek(db, asTenantId(authed.tenantId)));
       const decrypted = decryptTree(updatedStorage, dekForRead) as IntakeState;
-      return { ok: true, answers: decrypted };
+      const masked = maskSensitiveFields(decrypted);
+      return { ok: true, answers: masked };
     });
   } catch (error) {
     Sentry.captureException(error, {
       tags: { component: 'intake-actions', path, sensitive: String(sensitive) },
     });
     return { ok: false, error: 'Save failed — please try again', path };
+  }
+}
+
+/**
+ * Reveal the plaintext value of a single sensitive field. The client
+ * calls this when the user clicks "Edit" on a masked SSN field — we
+ * decrypt that ONE leaf with the tenant DEK and return it for inline
+ * editing. The reveal is audit-logged with the path, so SOC 2 evidence
+ * shows every plaintext access.
+ *
+ * Path validation: only accepts paths that match SENSITIVE_INTAKE_PATHS.
+ * Non-sensitive paths return an error — non-sensitive values are already
+ * in the masked answers blob as plaintext, so revealing them would be
+ * pointless and we don't want this becoming a generic value-getter.
+ *
+ * Returns plaintext or empty string if the field has never been set.
+ */
+export type RevealIntakeFieldResult =
+  | { ok: true; value: string }
+  | { ok: false; error: string };
+
+export async function revealIntakeField(path: string): Promise<RevealIntakeFieldResult> {
+  // 1. Path must be sensitive — refuse any other reveal request.
+  if (!isSensitivePath(path)) {
+    return { ok: false, error: 'Path is not a sensitive field' };
+  }
+
+  // 2. Auth.
+  const authed = await getOrCreateClient();
+  if (!authed) return { ok: false, error: 'Not signed in' };
+
+  const taxYear = getCurrentTaxYear();
+  const startedAt = Date.now();
+
+  try {
+    return await withTenant(asTenantId(authed.tenantId), async (db) => {
+      const dek = await getTenantDek(db, asTenantId(authed.tenantId));
+
+      const [row] = await db
+        .select()
+        .from(schema.intakeResponses)
+        .where(
+          and(
+            eq(schema.intakeResponses.clientId, authed.clientId),
+            eq(schema.intakeResponses.taxYear, taxYear),
+          ),
+        )
+        .limit(1);
+
+      if (!row) return { ok: false, error: 'Intake not found' };
+
+      const stored = getAtPath(row.answers as unknown, path);
+
+      // Resolve to plaintext. Sensitive paths are normally encrypted
+      // markers, but if the value was somehow stored plain (e.g., legacy
+      // data from before encryption shipped), we accept that too.
+      let plaintext = '';
+      if (stored == null) {
+        plaintext = '';
+      } else if (isEncrypted(stored)) {
+        plaintext = decryptIfMarkedForTenant(stored, dek) as string;
+      } else if (typeof stored === 'string') {
+        plaintext = stored;
+      } else {
+        return { ok: false, error: 'Stored value has unexpected shape' };
+      }
+
+      // Audit log: reveal is a 'read' action. Path goes in toolInput;
+      // value does NOT — the audit trail records that a reveal happened
+      // without itself becoming a PII surface.
+      const latencyMs = Date.now() - startedAt;
+      await db.insert(schema.actions).values({
+        tenantId: authed.tenantId,
+        clientId: authed.clientId,
+        userId: null,
+        agentId: null,
+        actionClass: 'read',
+        toolName: 'revealIntakeField',
+        toolInput: { path },
+        toolOutput: { ok: true, hadValue: plaintext.length > 0 },
+        latencyMs,
+        success: true,
+      });
+
+      return { ok: true, value: plaintext };
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: 'intake-actions', stage: 'revealIntakeField', path },
+    });
+    return { ok: false, error: 'Reveal failed — please try again' };
   }
 }
 

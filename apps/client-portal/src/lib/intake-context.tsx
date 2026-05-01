@@ -31,7 +31,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getAtPath, setAtPath, type IntakeState } from '@docket/shared';
-import { saveIntakeField } from './intake-actions';
+import { revealIntakeField, saveIntakeField } from './intake-actions';
 
 type SetFieldFn = (path: string, value: unknown) => void;
 
@@ -178,4 +178,29 @@ export function useIntakeField<T>(
   );
 
   return [value, setValue] as const;
+}
+
+/**
+ * Returns a stable async function that reveals the plaintext for ONE
+ * sensitive field at the given path. Wraps the revealIntakeField server
+ * action with sane error-fallback (returns '' on failure rather than
+ * throwing, since the caller is usually a UI event handler).
+ *
+ * Pair with the `onReveal` prop on SSNField / EncryptedTextField:
+ *
+ *   const revealSsn = useFieldReveal('personal.ssn');
+ *   <SSNField ... onReveal={revealSsn} />
+ *
+ * Every reveal is audit-logged server-side as a 'read' action with
+ * the path. SOC 2 evidence: who saw what plaintext, when.
+ */
+export function useFieldReveal(path: string): () => Promise<string> {
+  return useCallback(async () => {
+    const result = await revealIntakeField(path);
+    if (!result.ok) {
+      console.error('[revealIntakeField] failed', { path, error: result.error });
+      return '';
+    }
+    return result.value;
+  }, [path]);
 }

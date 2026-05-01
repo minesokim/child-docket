@@ -30,7 +30,11 @@ import {
 import type { Theme } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import {
+  useFieldReveal,
+  useIntakeAnswers,
+  useSetIntakeField,
+} from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IntakeDependent } from '@docket/shared';
 
@@ -76,6 +80,11 @@ function DependentCardDetails({
   dep: IntakeDependent;
   onField: (field: keyof IntakeDependent, value: string) => void;
 }) {
+  // Per-card SSN reveal — each dependent's path includes its array index,
+  // so each card calls useFieldReveal with its own path. Hooks rules hold:
+  // each card invokes it exactly once per render.
+  const revealSsn = useFieldReveal(`dependents.list.${index - 1}.ssn`);
+
   // DOB has its own display state (MM / DD / YYYY) since storage is ISO.
   // Hydrate on mount + whenever the stored ISO changes externally.
   const [dobDisplay, setDobDisplay] = React.useState(() => dobIsoToDisplay(dep.dateOfBirth));
@@ -142,7 +151,12 @@ function DependentCardDetails({
           <FieldLabel t={t} hint="LAST 4 SHOWN">
             Social Security Number
           </FieldLabel>
-          <SSNField t={t} value={dep.ssn ?? ''} onChange={(v) => onField('ssn', v)} />
+          <SSNField
+            t={t}
+            value={dep.ssn ?? ''}
+            onChange={(v) => onField('ssn', v)}
+            onReveal={revealSsn}
+          />
         </div>
 
         <div>

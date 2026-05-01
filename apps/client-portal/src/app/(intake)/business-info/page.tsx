@@ -12,6 +12,7 @@ import {
   Body,
   Button,
   buildTheme,
+  EncryptedTextField,
   FieldLabel,
   H1,
   IntakeBackButton,
@@ -23,7 +24,7 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function BusinessInfoPage() {
@@ -33,6 +34,7 @@ export default function BusinessInfoPage() {
   // Identity
   const [legalName, setLegalName] = useIntakeField<string>('business.legalName', '');
   const [ein, setEin] = useIntakeField<string>('business.ein', '');
+  const revealEin = useFieldReveal('business.ein');
   const [entityType, setEntityType] = useIntakeField<string>('business.entityType', '');
   const [activity, setActivity] = useIntakeField<string>('business.activity', '');
   const [employees, setEmployees] = useIntakeField<string>('business.employees', '');
@@ -64,6 +66,7 @@ export default function BusinessInfoPage() {
   // Owner (v0 single-owner; v1+ → owners[])
   const [ownerName, setOwnerName] = useIntakeField<string>('business.ownerName', '');
   const [ownerSsn, setOwnerSsn] = useIntakeField<string>('business.ownerSsn', '');
+  const revealOwnerSsn = useFieldReveal('business.ownerSsn');
   const [ownerPercent, setOwnerPercent] = useIntakeField<string>('business.ownerPercent', '');
   const [ownerTitle, setOwnerTitle] = useIntakeField<string>('business.ownerTitle', '');
   const [preparingPersonal, setPreparingPersonal] = useIntakeField<'yes' | 'no' | ''>(
@@ -142,13 +145,14 @@ export default function BusinessInfoPage() {
 
           <div>
             <FieldLabel t={t}>EIN</FieldLabel>
-            <TextField
+            <EncryptedTextField
               t={t}
               value={ein}
               onChange={(v) => void setEin(v)}
+              onReveal={revealEin}
+              placeholder="XX-XXXXXXX"
               mono
               inputMode="numeric"
-              placeholder="XX-XXXXXXX"
             />
           </div>
 
@@ -332,7 +336,12 @@ export default function BusinessInfoPage() {
                 <FieldLabel t={t} hint="LAST 4 SHOWN">
                   SSN
                 </FieldLabel>
-                <SSNField t={t} value={ownerSsn} onChange={(v) => void setOwnerSsn(v)} />
+                <SSNField
+                  t={t}
+                  value={ownerSsn}
+                  onChange={(v) => void setOwnerSsn(v)}
+                  onReveal={revealOwnerSsn}
+                />
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>

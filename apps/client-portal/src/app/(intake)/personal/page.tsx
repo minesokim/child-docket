@@ -28,7 +28,7 @@ import {
 } from '@docket/ui';
 import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 // ────────────────────────────────────────────────────────────────
@@ -73,6 +73,7 @@ export default function PersonalPage() {
   const [fullName, setFullName] = useIntakeField<string>('personal.fullName', '');
   const [dobIso, setDobIso] = useIntakeField<string>('personal.dateOfBirth', '');
   const [ssn, setSsn] = useIntakeField<string>('personal.ssn', '');
+  const revealSsn = useFieldReveal('personal.ssn');
   const [occupation, setOccupation] = useIntakeField<string>('personal.occupation', '');
   const [street, setStreet] = useIntakeField<string>('personal.street', '');
   const [city, setCity] = useIntakeField<string>('personal.city', '');
@@ -157,7 +158,12 @@ export default function PersonalPage() {
             <FieldLabel t={t} hint="LAST 4 SHOWN">
               Social Security Number
             </FieldLabel>
-            <SSNField t={t} value={ssn} onChange={(v) => void setSsn(v)} />
+            <SSNField
+              t={t}
+              value={ssn}
+              onChange={(v) => void setSsn(v)}
+              onReveal={revealSsn}
+            />
           </div>
 
           <div>

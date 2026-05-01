@@ -21,7 +21,7 @@ import {
 } from '@docket/ui';
 import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { FilingStatus } from '@docket/shared';
 
@@ -52,6 +52,7 @@ export default function SpousePage() {
   const [fullName, setFullName] = useIntakeField<string>('spouse.fullName', '');
   const [dobIso, setDobIso] = useIntakeField<string>('spouse.dateOfBirth', '');
   const [ssn, setSsn] = useIntakeField<string>('spouse.ssn', '');
+  const revealSsn = useFieldReveal('spouse.ssn');
   const [occupation, setOccupation] = useIntakeField<string>('spouse.occupation', '');
   const [filingStatus] = useIntakeField<FilingStatus>('filing.status', 'single');
 
@@ -151,7 +152,12 @@ export default function SpousePage() {
             <FieldLabel t={t} hint="LAST 4 SHOWN">
               Social Security Number
             </FieldLabel>
-            <SSNField t={t} value={ssn} onChange={(v) => void setSsn(v)} />
+            <SSNField
+              t={t}
+              value={ssn}
+              onChange={(v) => void setSsn(v)}
+              onReveal={revealSsn}
+            />
           </div>
 
           <div>

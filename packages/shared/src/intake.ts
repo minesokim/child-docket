@@ -349,6 +349,110 @@ export function isSensitivePath(path: string): boolean {
   return SENSITIVE_INTAKE_PATHS.some((pattern) => matchPathGlob(pattern, path));
 }
 
+// ────────────────────────────────────────────────────────────────
+// Masking — what the SERVER sends to the CLIENT for sensitive fields
+// when they're not actively being edited. The server NEVER sends the
+// plaintext SSN/EIN/bank by default. The client receives a masked
+// sentinel string; to see plaintext, the client makes an explicit
+// revealIntakeField() server-action call which is audit-logged as
+// a 'read' action.
+//
+// Wire format: original-length string with all but the last 4
+// characters replaced by MASK_CHAR (UTF-8 middle dot, U+00B7). Length
+// preserved so React component layouts don't shift when masked vs
+// plaintext. The dot character is non-digit + non-letter, so Zod
+// schemas (^\d{3}-?\d{2}-?\d{4}$ etc.) reject masked values as write
+// payloads — a masked value can never round-trip back to storage.
+//
+// THREAT MODEL
+//   - Without masking: every (intake) page nav decrypts and ships full
+//     plaintext SSN to the client. Plaintext sits in React component
+//     state, JS heap, browser DevTools network tab, React DevTools
+//     component tree. XSS exfiltration is one bug away.
+//   - With masking: plaintext exists in the client only during active
+//     edit (after a deliberate revealIntakeField call, until save or
+//     navigation). Reveal is audit-logged with the path. Mass-exfil
+//     of stored SSNs requires not just stealing client state but
+//     calling reveal on every sensitive path with a leaked session.
+// ────────────────────────────────────────────────────────────────
+
+/** UTF-8 middle dot. Non-digit, non-letter. */
+export const MASK_CHAR = '·';
+
+/**
+ * Mask a sensitive plaintext value for the wire. Preserves length;
+ * replaces all but last 4 characters with MASK_CHAR.
+ *
+ *   maskSensitive('123456789')   → '·····6789'
+ *   maskSensitive('12-3456789')  → '······6789'  (dash treated like any char)
+ *   maskSensitive('12345')       → '·2345'        (single char masked)
+ *   maskSensitive('123')         → '···'          (too short, all masked)
+ *   maskSensitive('')            → ''             (empty stays empty)
+ */
+export function maskSensitive(plaintext: string, keepLast = 4): string {
+  if (typeof plaintext !== 'string' || plaintext.length === 0) return plaintext;
+  if (plaintext.length <= keepLast) return MASK_CHAR.repeat(plaintext.length);
+  // Note: slice(-0) returns the WHOLE string in JS (treated as slice(0)).
+  // Special-case keepLast=0 so we return all-mask, not all-mask-plus-original.
+  const tail = keepLast > 0 ? plaintext.slice(-keepLast) : '';
+  return MASK_CHAR.repeat(plaintext.length - keepLast) + tail;
+}
+
+/**
+ * True if a value looks like a mask sentinel from the server. Used by
+ * client components to decide whether to render the masked view + reveal
+ * affordance, vs the editable input.
+ *
+ * Heuristic: contains MASK_CHAR. Not 100% airtight (a user could in
+ * theory paste a middle-dot into a free-text field) but good enough —
+ * sensitive fields have schema-enforced character classes that exclude
+ * MASK_CHAR.
+ */
+export function isMaskedSentinel(value: unknown): boolean {
+  return typeof value === 'string' && value.includes(MASK_CHAR);
+}
+
+/**
+ * Walk an IntakeState and replace every value at a SENSITIVE_INTAKE_PATHS
+ * leaf with a masked sentinel. Called by the server before sending answers
+ * to the client — plaintext SSN/EIN/bank never leaves the server unless
+ * the client explicitly calls revealIntakeField() for one path at a time.
+ *
+ * Handles glob paths like `dependents.list.*.ssn` by enumerating the
+ * array at the wildcard position.
+ */
+export function maskSensitiveFields(state: IntakeState): IntakeState {
+  let result = state;
+  for (const pattern of SENSITIVE_INTAKE_PATHS) {
+    if (!pattern.includes('*')) {
+      // Direct path — no array enumeration needed.
+      const value = getAtPath(result, pattern);
+      if (typeof value === 'string' && value.length > 0) {
+        result = setAtPath(result, pattern, maskSensitive(value));
+      }
+      continue;
+    }
+
+    // Glob path — find the array at the wildcard position, iterate.
+    const segments = pattern.split('.');
+    const starIndex = segments.indexOf('*');
+    const beforeStar = segments.slice(0, starIndex).join('.');
+    const afterStar = segments.slice(starIndex + 1).join('.');
+    const arrayValue = getAtPath(result, beforeStar);
+    if (!Array.isArray(arrayValue)) continue;
+    for (let i = 0; i < arrayValue.length; i++) {
+      const itemPath = afterStar
+        ? `${beforeStar}.${i}.${afterStar}`
+        : `${beforeStar}.${i}`;
+      const value = getAtPath(result, itemPath);
+      if (typeof value === 'string' && value.length > 0) {
+        result = setAtPath(result, itemPath, maskSensitive(value));
+      }
+    }
+  }
+  return result;
+}
+
 /**
  * Matches a single-`*`-segment glob against a dotted path.
  *

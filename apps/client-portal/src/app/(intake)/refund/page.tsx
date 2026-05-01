@@ -11,6 +11,7 @@ import {
   Body,
   Button,
   buildTheme,
+  EncryptedTextField,
   FieldLabel,
   H1,
   IntakeBackButton,
@@ -22,7 +23,7 @@ import {
 } from '@docket/ui';
 import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function RefundPage() {
@@ -33,6 +34,8 @@ export default function RefundPage() {
   const [bankName, setBankName] = useIntakeField<string>('refund.bankName', '');
   const [routingNumber, setRoutingNumber] = useIntakeField<string>('refund.bankRouting', '');
   const [accountNumber, setAccountNumber] = useIntakeField<string>('refund.bankAccount', '');
+  const revealRouting = useFieldReveal('refund.bankRouting');
+  const revealAccount = useFieldReveal('refund.bankAccount');
   const [preference, setPreference] = useIntakeField<
     'direct_deposit' | 'check' | 'apply_to_next_year'
   >('refund.preference', 'direct_deposit');
@@ -244,10 +247,11 @@ export default function RefundPage() {
               <FieldLabel t={t} hint="9 DIGITS">
                 Routing number
               </FieldLabel>
-              <TextField
+              <EncryptedTextField
                 t={t}
                 value={routingNumber}
                 onChange={(v) => setRoutingNumber(v.replace(/\D/g, '').slice(0, 9))}
+                onReveal={revealRouting}
                 placeholder="XXXXXXXXX"
                 mono
                 inputMode="numeric"
@@ -256,10 +260,11 @@ export default function RefundPage() {
 
             <div style={{ marginTop: 16 }}>
               <FieldLabel t={t}>Account number</FieldLabel>
-              <TextField
+              <EncryptedTextField
                 t={t}
                 value={accountNumber}
                 onChange={(v) => setAccountNumber(v.replace(/\D/g, '').slice(0, 17))}
+                onReveal={revealAccount}
                 placeholder="Your account number"
                 mono
                 inputMode="numeric"

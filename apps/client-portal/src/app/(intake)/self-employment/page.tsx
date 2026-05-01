@@ -8,6 +8,7 @@ import {
   Body,
   Button,
   buildTheme,
+  EncryptedTextField,
   FieldLabel,
   H1,
   IconCar,
@@ -22,7 +23,7 @@ import {
   ToggleCard,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IncomeType } from '@docket/shared';
 
@@ -37,6 +38,7 @@ export default function SelfEmploymentPage() {
   const [whatYouDo, setWhatYouDo] = useIntakeField<string>('selfEmployment.whatYouDo', '');
   const [entityType, setEntityType] = useIntakeField<string>('selfEmployment.entityType', '');
   const [ein, setEin] = useIntakeField<string>('selfEmployment.ein', '');
+  const revealEin = useFieldReveal('selfEmployment.ein');
   const [revenue, setRevenue] = useIntakeField<string>('selfEmployment.revenue', '');
   const [homeOffice, setHomeOffice] = useIntakeField<boolean>(
     'selfEmployment.homeOffice',
@@ -141,10 +143,11 @@ export default function SelfEmploymentPage() {
 
           <div>
             <FieldLabel t={t}>EIN (if any)</FieldLabel>
-            <TextField
+            <EncryptedTextField
               t={t}
               value={ein}
               onChange={(v) => void setEin(v)}
+              onReveal={revealEin}
               placeholder="XX-XXXXXXX or N/A"
               mono
               inputMode="numeric"
