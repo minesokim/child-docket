@@ -21,7 +21,7 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IncomeType } from '@docket/shared';
 
@@ -40,13 +40,13 @@ const OPTIONS: Array<{ id: IncomeId; name: string; sub: string; icon: IncomeIcon
 export default function IncomePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [sel, setSel] = usePortalState<IncomeId[]>('income-sources', []);
+  const [sel, setSel] = useIntakeField<IncomeId[]>('income.types', []);
   // For back-nav, we need to know if dependents.count > 0 (deps-detail
   // applies) so getPrevStep can decide where to bounce back to.
-  const [depsCount] = usePortalState<number>('deps-count', 0);
+  const [depsCount] = useIntakeField<number>('dependents.count', 0);
 
   const toggle = (id: IncomeId) => {
-    setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]);
+    void setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]);
   };
 
   const canContinue = sel.length > 0;

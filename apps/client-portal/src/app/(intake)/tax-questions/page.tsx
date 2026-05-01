@@ -25,44 +25,44 @@ import {
   ToggleCard,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import type { IncomeType } from '@docket/shared';
 
-type TaxQuestions = {
-  crypto: boolean;
-  estimated: boolean;
-  healthAll: boolean;
-  retirement: boolean;
-  foreign: boolean;
-  overtime: boolean;
-  tips: boolean;
-};
-
-const DEFAULT: TaxQuestions = {
-  crypto: false,
-  estimated: false,
-  healthAll: false,
-  retirement: false,
-  foreign: false,
-  overtime: false,
-  tips: false,
-};
+type TaxQuestionKey =
+  | 'crypto'
+  | 'estimated'
+  | 'healthAll'
+  | 'retirement'
+  | 'foreign'
+  | 'overtime'
+  | 'tips';
 
 export default function TaxQuestionsPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [state, setState] = usePortalState<TaxQuestions>('tax-questions', DEFAULT);
-  const [income] = usePortalState<string[]>('income-sources', []);
-  const toggle = (k: keyof TaxQuestions) => setState({ ...state, [k]: !state[k] });
+  const answers = useIntakeAnswers();
+  const setField = useSetIntakeField();
 
-  // Back: rental → SE → income (whichever exists)
-  const backTarget = income.includes('rental')
-    ? '/rental-detail'
-    : income.includes('self')
-      ? '/self-employment'
-      : '/income';
+  const tq = answers.taxQuestions ?? {};
+  const incomeTypes = (answers.income?.types ?? []) as IncomeType[];
+
+  const toggle = (k: TaxQuestionKey) => {
+    void setField(`taxQuestions.${k}`, !tq[k]);
+  };
+
+  const stateSnapshot = { income: { types: incomeTypes }, taxQuestions: tq };
+  const handleNext = () => {
+    const target = getNextStep('/tax-questions', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/tax-questions', stateSnapshot);
+    if (target) nav.back(target);
+  };
 
   const questions: Array<{
-    k: keyof TaxQuestions;
+    k: TaxQuestionKey;
     icon: React.ReactNode;
     label: string;
     sub: string;
@@ -126,7 +126,7 @@ export default function TaxQuestionsPage() {
         <IntakeHeader t={t} step={8} label="Tax questions" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back(backTarget)} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -143,7 +143,7 @@ export default function TaxQuestionsPage() {
             <ToggleCard
               key={q.k}
               t={t}
-              on={state[q.k]}
+              on={!!tq[q.k]}
               onClick={() => toggle(q.k)}
               icon={q.icon}
               label={q.label}
@@ -174,15 +174,10 @@ export default function TaxQuestionsPage() {
             <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
-            <Button
-              t={t}
-              variant="ghost"
-              onClick={() => nav.back(backTarget)}
-              style={{ flex: '0 0 auto' }}
-            >
+            <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/deductions')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

@@ -198,7 +198,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'income',
     isApplicable: (s) => s.income?.types?.includes('self') ?? false,
     isComplete: (s) =>
-      !!s.selfEmployment?.businessName && !!s.selfEmployment?.industry,
+      !!s.selfEmployment?.businessName && !!s.selfEmployment?.whatYouDo,
     next: (s) => {
       const types = s.income?.types ?? [];
       if (types.includes('rental')) return '/rental-detail';

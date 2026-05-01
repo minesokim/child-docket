@@ -148,15 +148,18 @@ export type IntakeState = {
     types?: IncomeType[];
   };
 
+  // Free-form strings for entityType/revenue match the /self-employment UX
+  // (the form asks "Sole Prop, LLC, S-Corp, or N/A" not a strict enum).
+  // Antonio normalizes during prep.
   selfEmployment?: {
     businessName?: string;
-    businessType?: BusinessEntityType;
+    whatYouDo?: string;
+    entityType?: string;
     ein?: string;                // encrypted at rest
-    industry?: string;
-    grossIncome?: number;
-    expenses?: number;
+    revenue?: string;
     homeOffice?: boolean;
-    vehicleUse?: boolean;
+    vehicle?: boolean;
+    cash?: boolean;              // "is most of revenue in cash" toggle
   };
 
   rental?: {
@@ -175,12 +178,15 @@ export type IntakeState = {
   };
 
   // ── Tax questions / deductions / events ─────────────────────────
+  // Field names match the /tax-questions UX exactly.
   taxQuestions?: {
-    cryptoTransactions?: boolean;
-    foreignAccounts?: boolean;
-    healthInsurance1095A?: boolean;
-    studentLoanPayments?: boolean;
-    estimatedTaxPayments?: boolean;
+    crypto?: boolean;
+    estimated?: boolean;
+    healthAll?: boolean;
+    retirement?: boolean;
+    foreign?: boolean;
+    overtime?: boolean;
+    tips?: boolean;
   };
 
   deductions?: {

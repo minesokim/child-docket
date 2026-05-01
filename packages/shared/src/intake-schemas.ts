@@ -194,15 +194,15 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   // Income
   'income.types': z.array(IncomeTypeSchema).max(5),
 
-  // Self-employment
+  // Self-employment (free-form strings to match UX — Antonio normalizes)
   'selfEmployment.businessName': z.string().min(1).max(200),
-  'selfEmployment.businessType': BusinessEntityTypeSchema,
+  'selfEmployment.whatYouDo': z.string().max(300),
+  'selfEmployment.entityType': z.string().max(100),
   'selfEmployment.ein': EinSchema,
-  'selfEmployment.industry': z.string().max(200),
-  'selfEmployment.grossIncome': MoneySchema,
-  'selfEmployment.expenses': MoneySchema,
+  'selfEmployment.revenue': z.string().max(50),
   'selfEmployment.homeOffice': z.boolean(),
-  'selfEmployment.vehicleUse': z.boolean(),
+  'selfEmployment.vehicle': z.boolean(),
+  'selfEmployment.cash': z.boolean(),
 
   // Rental properties
   'rental.properties': z.array(RentalPropertySchema).max(20),
@@ -221,12 +221,14 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'business.formationDate': IsoDateSchema,
   'business.industry': z.string().max(200),
 
-  // Tax questions
-  'taxQuestions.cryptoTransactions': z.boolean(),
-  'taxQuestions.foreignAccounts': z.boolean(),
-  'taxQuestions.healthInsurance1095A': z.boolean(),
-  'taxQuestions.studentLoanPayments': z.boolean(),
-  'taxQuestions.estimatedTaxPayments': z.boolean(),
+  // Tax questions — names match the UI checkboxes
+  'taxQuestions.crypto': z.boolean(),
+  'taxQuestions.estimated': z.boolean(),
+  'taxQuestions.healthAll': z.boolean(),
+  'taxQuestions.retirement': z.boolean(),
+  'taxQuestions.foreign': z.boolean(),
+  'taxQuestions.overtime': z.boolean(),
+  'taxQuestions.tips': z.boolean(),
 
   // Deductions
   'deductions.kind': DeductionKindSchema,

@@ -96,6 +96,15 @@ export function useIntakeAnswers(): IntakeState {
 }
 
 /**
+ * Get the generic setField function. Useful for pages with dynamic
+ * field iteration (tax-questions, life-events, etc.) where binding
+ * each field to its own useIntakeField call would be excessive.
+ */
+export function useSetIntakeField(): SetFieldFn {
+  return useIntakeContext().setField;
+}
+
+/**
  * Drop-in replacement for usePortalState. Reads from the IntakeState in
  * context; writes go through the saveIntakeField server action.
  *

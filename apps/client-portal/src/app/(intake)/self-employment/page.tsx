@@ -23,40 +23,29 @@ import {
   ToggleCard,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IncomeType } from '@docket/shared';
-
-type SelfEmployment = {
-  businessName: string;
-  whatYouDo: string;
-  entityType: string;
-  ein: string;
-  revenue: string;
-  homeOffice: boolean;
-  vehicle: boolean;
-  cash: boolean;
-};
-
-const DEFAULT: SelfEmployment = {
-  businessName: '',
-  whatYouDo: '',
-  entityType: '',
-  ein: '',
-  revenue: '',
-  homeOffice: false,
-  vehicle: false,
-  cash: false,
-};
 
 export default function SelfEmploymentPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<SelfEmployment>('self-employment', DEFAULT);
-  const [income] = usePortalState<IncomeType[]>('income-sources', []);
 
-  const update = <K extends keyof SelfEmployment>(k: K, v: SelfEmployment[K]) =>
-    setInfo({ ...info, [k]: v });
+  const [businessName, setBusinessName] = useIntakeField<string>(
+    'selfEmployment.businessName',
+    '',
+  );
+  const [whatYouDo, setWhatYouDo] = useIntakeField<string>('selfEmployment.whatYouDo', '');
+  const [entityType, setEntityType] = useIntakeField<string>('selfEmployment.entityType', '');
+  const [ein, setEin] = useIntakeField<string>('selfEmployment.ein', '');
+  const [revenue, setRevenue] = useIntakeField<string>('selfEmployment.revenue', '');
+  const [homeOffice, setHomeOffice] = useIntakeField<boolean>(
+    'selfEmployment.homeOffice',
+    false,
+  );
+  const [vehicle, setVehicle] = useIntakeField<boolean>('selfEmployment.vehicle', false);
+  const [cash, setCash] = useIntakeField<boolean>('selfEmployment.cash', false);
+  const [income] = useIntakeField<IncomeType[]>('income.types', []);
 
   // Branch: rental in selection → /rental-detail next, else → /tax-questions.
   // Logic in intake-flow.ts. Adding a third detail page (e.g. crypto) means
@@ -125,8 +114,8 @@ export default function SelfEmploymentPage() {
             <FieldLabel t={t}>Business name</FieldLabel>
             <TextField
               t={t}
-              value={info.businessName}
-              onChange={(v) => update('businessName', v)}
+              value={businessName}
+              onChange={(v) => void setBusinessName(v)}
               placeholder="e.g., Freelance Design LLC"
             />
           </div>
@@ -135,8 +124,8 @@ export default function SelfEmploymentPage() {
             <FieldLabel t={t}>What do you do?</FieldLabel>
             <TextField
               t={t}
-              value={info.whatYouDo}
-              onChange={(v) => update('whatYouDo', v)}
+              value={whatYouDo}
+              onChange={(v) => void setWhatYouDo(v)}
               placeholder="e.g., Graphic design, consulting"
             />
           </div>
@@ -145,8 +134,8 @@ export default function SelfEmploymentPage() {
             <FieldLabel t={t}>Entity type</FieldLabel>
             <TextField
               t={t}
-              value={info.entityType}
-              onChange={(v) => update('entityType', v)}
+              value={entityType}
+              onChange={(v) => void setEntityType(v)}
               placeholder="Sole Prop, LLC, S-Corp, or N/A"
             />
           </div>
@@ -155,8 +144,8 @@ export default function SelfEmploymentPage() {
             <FieldLabel t={t}>EIN (if any)</FieldLabel>
             <TextField
               t={t}
-              value={info.ein}
-              onChange={(v) => update('ein', v)}
+              value={ein}
+              onChange={(v) => void setEin(v)}
               placeholder="XX-XXXXXXX or N/A"
               mono
               inputMode="numeric"
@@ -167,8 +156,8 @@ export default function SelfEmploymentPage() {
             <FieldLabel t={t}>Approximate 2025 revenue</FieldLabel>
             <TextField
               t={t}
-              value={info.revenue}
-              onChange={(v) => update('revenue', v)}
+              value={revenue}
+              onChange={(v) => void setRevenue(v)}
               placeholder="e.g., $50,000"
               mono
               inputMode="decimal"
@@ -180,16 +169,16 @@ export default function SelfEmploymentPage() {
             <Stack gap={10}>
               <ToggleCard
                 t={t}
-                on={info.homeOffice}
-                onClick={() => update('homeOffice', !info.homeOffice)}
+                on={homeOffice}
+                onClick={() => void setHomeOffice(!homeOffice)}
                 icon={<IconHome />}
                 label="I use a home office"
                 sub="Dedicated space used regularly for work"
               />
               <ToggleCard
                 t={t}
-                on={info.vehicle}
-                onClick={() => update('vehicle', !info.vehicle)}
+                on={vehicle}
+                onClick={() => void setVehicle(!vehicle)}
                 icon={<IconCar />}
                 label="I use a vehicle for business"
                 sub="Mileage, parking, tolls for client work"
@@ -198,13 +187,13 @@ export default function SelfEmploymentPage() {
           </div>
 
           <div>
-            <FieldLabel t={t} hint={info.cash ? '+$150 DOCS FEE' : undefined}>
+            <FieldLabel t={t} hint={cash ? '+$150 DOCS FEE' : undefined}>
               Documentation
             </FieldLabel>
             <ToggleCard
               t={t}
-              on={info.cash}
-              onClick={() => update('cash', !info.cash)}
+              on={cash}
+              onClick={() => void setCash(!cash)}
               icon={<IconCash />}
               label="Is most of my revenue in cash?"
               sub="Cash businesses require more documentation"
