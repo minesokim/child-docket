@@ -91,6 +91,29 @@ function OtpFlow() {
     if (!signInLoaded || !signUpLoaded || !signIn || !signUp) return;
     setVerifying(true);
     setError(null);
+
+    // If we landed here with the signUp already complete (e.g. user verified
+    // earlier but the page errored before activating the session), just
+    // activate now and route forward — don't re-attempt verification.
+    if (mode === 'signup' && signUp.status === 'complete' && signUp.createdSessionId) {
+      try {
+        await setActiveSignUp({ session: signUp.createdSessionId });
+        router.push('/welcome');
+        return;
+      } catch (e) {
+        console.error('[otp] setActive on complete signup failed', e);
+      }
+    }
+    if (mode === 'signin' && signIn.status === 'complete' && signIn.createdSessionId) {
+      try {
+        await setActiveSignIn({ session: signIn.createdSessionId });
+        router.push('/welcome');
+        return;
+      } catch (e) {
+        console.error('[otp] setActive on complete signin failed', e);
+      }
+    }
+
     try {
       if (mode === 'signin') {
         const result = await signIn.attemptFirstFactor({
@@ -105,17 +128,65 @@ function OtpFlow() {
         throw new Error(`Unexpected sign-in status: ${result.status}`);
       } else {
         const result = await signUp.attemptPhoneNumberVerification({ code: fullCode });
+
         if (result.status === 'complete' && result.createdSessionId) {
           await setActiveSignUp({ session: result.createdSessionId });
           router.push('/welcome');
           return;
         }
+
+        // Phone verified but signUp still has open requirements (extra
+        // required fields, CAPTCHA, etc.). Surface them so we can debug.
+        if (result.status === 'missing_requirements') {
+          const missing = [
+            ...(result.missingFields ?? []),
+            ...(result.unverifiedFields ?? []),
+          ];
+          console.error('[otp] signup missing_requirements', {
+            missingFields: result.missingFields,
+            unverifiedFields: result.unverifiedFields,
+          });
+          setError(
+            `Sign-up needs more info: ${missing.length ? missing.join(', ') : 'unknown requirement'}. ` +
+              `Check Clerk dashboard → User & authentication — make sure phone is the only required field.`,
+          );
+          setVerifying(false);
+          return;
+        }
+
         throw new Error(`Unexpected sign-up status: ${result.status}`);
       }
     } catch (e) {
       const err = e as ClerkError;
-      console.error('[otp] verify error', err);
-      setError(err.errors?.[0]?.message ?? 'Code did not verify');
+      const code = err.errors?.[0]?.code;
+      const message = err.errors?.[0]?.message;
+      console.error('[otp] verify error', { code, message, raw: err });
+
+      // Verification already happened in a prior attempt. Try to activate
+      // whatever session is on the signUp/signIn object.
+      if (code === 'verification_already_verified') {
+        const session = mode === 'signup' ? signUp.createdSessionId : signIn.createdSessionId;
+        if (session) {
+          try {
+            if (mode === 'signup') {
+              await setActiveSignUp({ session });
+            } else {
+              await setActiveSignIn({ session });
+            }
+            router.push('/welcome');
+            return;
+          } catch (activateErr) {
+            console.error('[otp] activate after already-verified failed', activateErr);
+          }
+        }
+        setError(
+          'You\'re already verified but sign-up didn\'t finish. Open Clerk dashboard → Users → delete this user, then sign up again.',
+        );
+        setVerifying(false);
+        return;
+      }
+
+      setError(message ?? 'Code did not verify');
       setCode('');
       setVerifying(false);
       inputRef.current?.focus();
