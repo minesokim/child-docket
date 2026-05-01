@@ -21,6 +21,7 @@ import {
   Stack,
 } from '@docket/ui';
 import { useSignIn, useSignUp } from '@clerk/nextjs/legacy';
+import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { usePortalState } from '@/lib/portal-state';
@@ -41,11 +42,21 @@ function toE164(formatted: string): string {
 export default function LoginPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const { signIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp, isLoaded: signUpLoaded } = useSignUp();
   const [phone, setPhone] = usePortalState<string>('phone', '');
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+
+  // If user already has an active session (e.g. signed into command-room
+  // earlier — both apps share the same Clerk app/cookie), surface a
+  // "continue or switch account" prompt instead of failing on session_exists.
+  if (authLoaded && isSignedIn) {
+    return <AlreadySignedIn t={t} user={user} signOut={signOut} router={router} />;
+  }
 
   const format = (v: string) => {
     const d = v.replace(/\D/g, '').slice(0, 10);
@@ -96,6 +107,9 @@ export default function LoginPage() {
           setError(sErr.errors?.[0]?.message ?? 'Could not start sign-up');
           setSubmitting(false);
         }
+      } else if (code === 'session_exists') {
+        // Edge case: race between auth-loaded check and submit.
+        router.push('/welcome');
       } else {
         setError(err.errors?.[0]?.message ?? 'Could not send code');
         setSubmitting(false);
@@ -103,7 +117,7 @@ export default function LoginPage() {
     }
   };
 
-  const ready = signInLoaded && signUpLoaded;
+  const ready = authLoaded && signInLoaded && signUpLoaded;
 
   return (
     <Screen t={t}>
@@ -211,6 +225,69 @@ export default function LoginPage() {
           </div>
           <Footer t={t} />
         </div>
+      </div>
+    </Screen>
+  );
+}
+
+function AlreadySignedIn({
+  t,
+  user,
+  signOut,
+  router,
+}: {
+  t: ReturnType<typeof buildTheme>;
+  user: ReturnType<typeof useUser>['user'];
+  signOut: ReturnType<typeof useClerk>['signOut'];
+  router: ReturnType<typeof useRouter>;
+}) {
+  const identifier =
+    user?.primaryPhoneNumber?.phoneNumber ??
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.id ??
+    'your existing account';
+
+  return (
+    <Screen t={t}>
+      <div
+        style={{
+          padding: '60px 24px 40px',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+          gap: 24,
+        }}
+      >
+        <Stack gap={28} style={{ flex: 1 }}>
+          <AvatarSlot t={t} size={72} />
+          <Stack gap={10}>
+            <H1 t={t}>You&apos;re already signed in</H1>
+            <Body t={t} size={15}>
+              Active session for{' '}
+              <span style={{ fontFamily: t.mono, color: t.ink }}>{identifier}</span>. Continue to
+              your portal, or sign out to use a different number.
+            </Body>
+          </Stack>
+
+          <Stack gap={10}>
+            <Button
+              t={t}
+              onClick={() => router.push('/welcome')}
+              style={{ width: '100%', padding: '16px 22px', fontSize: 16 }}
+            >
+              Continue to portal
+            </Button>
+            <Button
+              t={t}
+              variant="ghost"
+              onClick={() => signOut().then(() => router.refresh())}
+              style={{ width: '100%', padding: '14px 22px', fontSize: 14 }}
+            >
+              Sign out and use a different number
+            </Button>
+          </Stack>
+        </Stack>
+        <Footer t={t} />
       </div>
     </Screen>
   );
