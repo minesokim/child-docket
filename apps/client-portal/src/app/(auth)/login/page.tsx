@@ -51,6 +51,25 @@ const COUNTRIES: Array<{ code: string; name: string; dial: string; flag: string 
 
 type Country = (typeof COUNTRIES)[number];
 
+// Map raw Clerk error codes to user-readable messages where possible.
+function friendlyError(code: string | undefined, fallback: string | undefined): string | null {
+  switch (code) {
+    case 'form_param_format_invalid':
+      return 'That phone number doesn\'t look right. Check the country code and digits.';
+    case 'form_identifier_exists':
+      return 'This number is already in use by another account.';
+    case 'too_many_requests':
+    case 'lockout':
+      return 'Too many attempts. Wait a few minutes and try again.';
+    case 'phone_number_not_supported':
+      return 'SMS isn\'t supported for this number.';
+    case 'verification_failed':
+      return 'That code didn\'t work. Try again or request a new one.';
+    default:
+      return fallback ?? null;
+  }
+}
+
 // Format a US/Canada 10-digit phone for display.
 function formatUS(digits: string): string {
   const d = digits.slice(0, 10);
@@ -135,7 +154,8 @@ export default function LoginPage() {
     } catch (e) {
       const err = e as ClerkError;
       const code = err.errors?.[0]?.code;
-      console.error('[login] signIn error', { code, raw: err });
+      const message = err.errors?.[0]?.message;
+      console.error('[login] signIn error', { code, message, raw: err });
 
       if (code === 'form_identifier_not_found') {
         try {
@@ -145,14 +165,20 @@ export default function LoginPage() {
           router.push('/otp?mode=signup');
         } catch (signUpErr) {
           const sErr = signUpErr as ClerkError;
-          console.error('[login] signUp error', sErr);
-          setError(sErr.errors?.[0]?.message ?? 'Could not start sign-up');
+          const sCode = sErr.errors?.[0]?.code;
+          const sMsg = sErr.errors?.[0]?.message;
+          console.error('[login] signUp error', { code: sCode, message: sMsg, raw: sErr });
+          setError(friendlyError(sCode, sMsg) ?? `Could not start sign-up${sCode ? ` (${sCode})` : ''}`);
         }
       } else if (code === 'session_exists') {
         navigated = true;
         router.push('/welcome');
+      } else if (code === 'verification_already_sent' || code === 'verification_already_verified') {
+        // A code was already sent in a previous attempt — let the user verify it.
+        navigated = true;
+        router.push('/otp?mode=signin');
       } else {
-        setError(err.errors?.[0]?.message ?? `Could not send code${code ? ` (${code})` : ''}`);
+        setError(friendlyError(code, message) ?? `Could not send code${code ? ` (${code})` : ''}`);
       }
     } finally {
       if (!navigated) setSubmitting(false);
@@ -302,15 +328,35 @@ export default function LoginPage() {
         </p>
 
         {error && (
-          <p
+          <div
+            role="alert"
             style={{
-              fontSize: 13,
-              color: t.rust,
-              margin: '10px 0 0',
+              marginTop: 16,
+              padding: '12px 14px',
+              background: '#FDF1EA',
+              border: '1px solid #E8B59A',
+              borderRadius: 10,
+              display: 'flex',
+              gap: 10,
+              alignItems: 'flex-start',
             }}
           >
-            {error}
-          </p>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              style={{ flexShrink: 0, marginTop: 1 }}
+              fill="none"
+              stroke="#9A4E22"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="9" cy="9" r="7.5" />
+              <path d="M9 5.5v4M9 12v.5" />
+            </svg>
+            <div style={{ fontSize: 13.5, color: '#6E2B0C', lineHeight: 1.45 }}>{error}</div>
+          </div>
         )}
 
         {/* Next button — plain <button> for full width control on iOS Safari.
