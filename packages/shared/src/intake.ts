@@ -236,6 +236,7 @@ export type IntakeState = {
   // ── Wrap-up ─────────────────────────────────────────────────────
   refund?: {
     preference?: RefundPreference;
+    bankName?: string;           // not sensitive; e.g. "Chase"
     bankRouting?: string;        // encrypted at rest
     bankAccount?: string;        // encrypted at rest
     bankAccountType?: BankAccountType;

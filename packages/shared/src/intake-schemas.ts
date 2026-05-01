@@ -261,6 +261,7 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
 
   // Refund + bank
   'refund.preference': RefundPreferenceSchema,
+  'refund.bankName': z.string().max(100),
   'refund.bankRouting': BankRoutingSchema,
   'refund.bankAccount': BankAccountNumberSchema,
   'refund.bankAccountType': BankAccountTypeSchema,

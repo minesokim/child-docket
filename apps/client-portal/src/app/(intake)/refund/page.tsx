@@ -21,27 +21,38 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
+import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
-
-type RefundInfo = {
-  bankName: string;
-  routingNumber: string;
-  accountNumber: string;
-};
-
-const DEFAULT: RefundInfo = {
-  bankName: '',
-  routingNumber: '',
-  accountNumber: '',
-};
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function RefundPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<RefundInfo>('refund', DEFAULT);
-  const update = <K extends keyof RefundInfo>(k: K, v: RefundInfo[K]) =>
-    setInfo({ ...info, [k]: v });
+
+  // Bank routing + account are sensitive — encrypted at rest server-side.
+  const [bankName, setBankName] = useIntakeField<string>('refund.bankName', '');
+  const [routingNumber, setRoutingNumber] = useIntakeField<string>('refund.bankRouting', '');
+  const [accountNumber, setAccountNumber] = useIntakeField<string>('refund.bankAccount', '');
+  const [preference, setPreference] = useIntakeField<
+    'direct_deposit' | 'check' | 'apply_to_next_year'
+  >('refund.preference', 'direct_deposit');
+
+  // Default to direct deposit on mount if not yet set (page UI assumes
+  // this — IRS discontinued paper checks Sept 2025).
+  useEffect(() => {
+    if (!preference) setPreference('direct_deposit');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleNext = () => {
+    const target = getNextStep('/refund', {});
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/refund', {});
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -56,7 +67,7 @@ export default function RefundPage() {
         <IntakeHeader t={t} step={11} label="Refund" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/life-events')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -224,8 +235,8 @@ export default function RefundPage() {
               <FieldLabel t={t}>Bank name</FieldLabel>
               <TextField
                 t={t}
-                value={info.bankName}
-                onChange={(v) => update('bankName', v)}
+                value={bankName}
+                onChange={(v) => setBankName(v)}
                 placeholder="e.g., Chase, Wells Fargo"
               />
             </div>
@@ -236,8 +247,8 @@ export default function RefundPage() {
               </FieldLabel>
               <TextField
                 t={t}
-                value={info.routingNumber}
-                onChange={(v) => update('routingNumber', v.replace(/\D/g, '').slice(0, 9))}
+                value={routingNumber}
+                onChange={(v) => setRoutingNumber(v.replace(/\D/g, '').slice(0, 9))}
                 placeholder="XXXXXXXXX"
                 mono
                 inputMode="numeric"
@@ -248,8 +259,8 @@ export default function RefundPage() {
               <FieldLabel t={t}>Account number</FieldLabel>
               <TextField
                 t={t}
-                value={info.accountNumber}
-                onChange={(v) => update('accountNumber', v.replace(/\D/g, '').slice(0, 17))}
+                value={accountNumber}
+                onChange={(v) => setAccountNumber(v.replace(/\D/g, '').slice(0, 17))}
                 placeholder="Your account number"
                 mono
                 inputMode="numeric"
@@ -279,12 +290,12 @@ export default function RefundPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.back('/life-events')}
+              onClick={handleBack}
               style={{ flex: '0 0 auto' }}
             >
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/docs')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>
