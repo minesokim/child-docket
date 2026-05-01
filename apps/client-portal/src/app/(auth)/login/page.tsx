@@ -178,7 +178,21 @@ export default function LoginPage() {
       router.push('/otp?mode=signin');
     } catch (e) {
       const { code, message } = extractError(e);
-      console.error('[login] signIn error', { code, message, raw: e });
+
+      // Expected recoverable cases — quiet path, no scary console.error.
+      // 'form_identifier_not_found' = new user, fall through to signUp
+      // 'session_exists'           = already signed in, route to /welcome
+      // 'verification_already_*'   = re-using a pending verification
+      const isRecoverable =
+        code === 'form_identifier_not_found' ||
+        code === 'session_exists' ||
+        code === 'verification_already_sent' ||
+        code === 'verification_already_verified';
+
+      if (!isRecoverable) {
+        // Real failure — log + surface to user
+        console.error('[login] signIn error', { code, message, raw: e });
+      }
 
       if (code === 'form_identifier_not_found') {
         try {
@@ -195,7 +209,6 @@ export default function LoginPage() {
         navigated = true;
         router.push('/welcome');
       } else if (code === 'verification_already_sent' || code === 'verification_already_verified') {
-        // A code was already sent in a previous attempt — let the user verify it.
         navigated = true;
         router.push('/otp?mode=signin');
       } else {
