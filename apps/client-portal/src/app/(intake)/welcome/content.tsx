@@ -39,12 +39,21 @@ export function WelcomeContent() {
           minHeight: '100%',
         }}
       >
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <VideoPlaceholder t={t} youtubeId="P8nQkkkWJl4" startSeconds={15} />
+        <VideoPlaceholder t={t} youtubeId="P8nQkkkWJl4" startSeconds={15} />
 
-          {/* Heading group floats to the bottom of the available space —
-              hugs the pills + CTA below rather than sitting right under the video. */}
-          <Stack gap={14} style={{ textAlign: 'center', marginTop: 'auto', paddingTop: 32 }}>
+        {/* Heading + body + trust pills, vertically centered between the
+            video at the top and the CTA group at the bottom. */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            paddingTop: 24,
+            paddingBottom: 24,
+          }}
+        >
+          <Stack gap={18} style={{ textAlign: 'center' }}>
             <div>
               <div
                 style={{
@@ -62,49 +71,48 @@ export function WelcomeContent() {
               </div>
             </div>
             <Body t={t} size={14.5} style={{ maxWidth: 310, margin: '0 auto' }}>
-              I&apos;m Antonio Vazquez, Enrolled Agent. Let&apos;s get your taxes handled.
-              Answer a few questions — takes about 10 minutes.
+              I&apos;m Antonio Vazquez, Enrolled Agent. Watch this short intro —
+              it shows how we&apos;ll work together.
             </Body>
+            <Row gap={6} justify="center" style={{ flexWrap: 'wrap' }}>
+              <TrustPill
+                t={t}
+                icon={
+                  <svg {...ic} viewBox="0 0 11 11">
+                    <rect x="2" y="4.5" width="7" height="5" rx="0.8" />
+                    <path d="M3.5 4.5V3a2 2 0 014 0v1.5" />
+                  </svg>
+                }
+              >
+                AES-256 encrypted
+              </TrustPill>
+              <TrustPill
+                t={t}
+                icon={
+                  <svg {...ic} viewBox="0 0 11 11">
+                    <path d="M5.5 1l3 1.5v2.5c0 2-1.3 3.8-3 4.5-1.7-.7-3-2.5-3-4.5V2.5z" />
+                    <path d="M4 5.5l1.2 1.2L7.5 4.2" />
+                  </svg>
+                }
+              >
+                Enrolled Agent
+              </TrustPill>
+              <TrustPill
+                t={t}
+                icon={
+                  <svg {...ic} viewBox="0 0 11 11">
+                    <circle cx="5.5" cy="5.5" r="4" />
+                    <path d="M5.5 3.5v2l1.5 1" />
+                  </svg>
+                }
+              >
+                ~10 minutes
+              </TrustPill>
+            </Row>
           </Stack>
         </div>
 
-        <Stack gap={16} style={{ marginTop: 28 }}>
-          <Row gap={6} justify="center" style={{ flexWrap: 'wrap' }}>
-            <TrustPill
-              t={t}
-              icon={
-                <svg {...ic} viewBox="0 0 11 11">
-                  <rect x="2" y="4.5" width="7" height="5" rx="0.8" />
-                  <path d="M3.5 4.5V3a2 2 0 014 0v1.5" />
-                </svg>
-              }
-            >
-              AES-256 encrypted
-            </TrustPill>
-            <TrustPill
-              t={t}
-              icon={
-                <svg {...ic} viewBox="0 0 11 11">
-                  <path d="M5.5 1l3 1.5v2.5c0 2-1.3 3.8-3 4.5-1.7-.7-3-2.5-3-4.5V2.5z" />
-                  <path d="M4 5.5l1.2 1.2L7.5 4.2" />
-                </svg>
-              }
-            >
-              Enrolled Agent
-            </TrustPill>
-            <TrustPill
-              t={t}
-              icon={
-                <svg {...ic} viewBox="0 0 11 11">
-                  <circle cx="5.5" cy="5.5" r="4" />
-                  <path d="M5.5 3.5v2l1.5 1" />
-                </svg>
-              }
-            >
-              ~10 minutes
-            </TrustPill>
-          </Row>
-
+        <Stack gap={16}>
           <Button
             t={t}
             onClick={() => nav.next('/tutorial')}
