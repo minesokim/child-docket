@@ -145,11 +145,14 @@ export const users = pgTable(
 );
 
 // Clients (taxpayers). One row per taxpayer per tenant.
+// Real signups (phone OTP via Clerk) get clerk_user_id set on creation.
+// Seed clients have clerk_user_id = NULL (placeholder rows for demo data).
 export const clients = pgTable(
   'clients',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+    clerkUserId: text('clerk_user_id').unique(),
     fullName: text('full_name').notNull(),
     email: text('email'),
     phone: text('phone'),
@@ -164,6 +167,7 @@ export const clients = pgTable(
   (t) => ({
     tenantIdx: index('clients_tenant_idx').on(t.tenantId),
     phoneIdx: index('clients_phone_idx').on(t.tenantId, t.phone),
+    clerkIdx: index('clients_clerk_user_idx').on(t.clerkUserId),
   }),
 );
 
