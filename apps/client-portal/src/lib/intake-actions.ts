@@ -161,6 +161,12 @@ export type SaveIntakeFieldResult =
  * client. Sensitive fields are decrypted before return, so the result can
  * be passed straight to a client component for rendering.
  *
+ * Race-safe: uses INSERT ... ON CONFLICT DO NOTHING with the unique index
+ * on (tenant_id, client_id, tax_year). Two concurrent first-visit calls
+ * (e.g., double-clicked CTA) will both attempt insert; only the first
+ * succeeds. Both end up calling the SELECT fallback to load the canonical
+ * row. No duplicates possible.
+ *
  * Returns null when:
  *   - No Clerk session
  *   - Vazant tenant not seeded (deployment misconfig)
@@ -172,7 +178,27 @@ export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
   const taxYear = getCurrentTaxYear();
 
   return withTenant(asTenantId(authed.tenantId), async (db) => {
-    const [existing] = await db
+    // Try to insert. If the row already exists (per the unique index), this
+    // returns nothing — we then SELECT to load the canonical row.
+    await db
+      .insert(schema.intakeResponses)
+      .values({
+        tenantId: authed.tenantId,
+        clientId: authed.clientId,
+        taxYear,
+        status: 'in_progress',
+        answers: {},
+        completedSteps: [],
+      })
+      .onConflictDoNothing({
+        target: [
+          schema.intakeResponses.tenantId,
+          schema.intakeResponses.clientId,
+          schema.intakeResponses.taxYear,
+        ],
+      });
+
+    const [row] = await db
       .select()
       .from(schema.intakeResponses)
       .where(
@@ -183,41 +209,21 @@ export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
       )
       .limit(1);
 
-    if (existing) {
-      const decrypted = decryptTree(existing.answers ?? {}) as IntakeState;
-      return {
-        clientId: authed.clientId,
-        intakeId: existing.id,
-        taxYear,
-        status: existing.status as IntakeBundle['status'],
-        answers: decrypted,
-      };
-    }
-
-    // First visit — create the row.
-    const [created] = await db
-      .insert(schema.intakeResponses)
-      .values({
-        tenantId: authed.tenantId,
-        clientId: authed.clientId,
-        taxYear,
-        status: 'in_progress',
-        answers: {},
-        completedSteps: [],
-      })
-      .returning();
-
-    if (!created) {
-      Sentry.captureMessage('[intake] Failed to create intake_responses row', 'error');
+    if (!row) {
+      Sentry.captureMessage(
+        '[intake] intake_responses missing after upsert (RLS misconfig?)',
+        'error',
+      );
       return null;
     }
 
+    const decrypted = decryptTree(row.answers ?? {}) as IntakeState;
     return {
       clientId: authed.clientId,
-      intakeId: created.id,
+      intakeId: row.id,
       taxYear,
-      status: 'in_progress',
-      answers: {},
+      status: row.status as IntakeBundle['status'],
+      answers: decrypted,
     };
   });
 }
@@ -249,8 +255,12 @@ export async function saveIntakeField(
 
   try {
     return await withTenant(asTenantId(authed.tenantId), async (db) => {
-      // 3. Load current row to mutate. Drizzle .update() with JSONB merge
-      // is awkward; safer to read-modify-write inside the transaction.
+      // 3. Load current row WITH FOR UPDATE — locks it for the duration of
+      // this transaction. Concurrent saveIntakeField calls to the same
+      // intake row serialize through this lock, so the read-modify-write
+      // pattern below is safe. Without FOR UPDATE, two concurrent saves to
+      // different paths could race and clobber each other (T1 and T2 both
+      // read {}, T1 writes {a:1}, T2 writes {b:2} — T1's update is lost).
       const [existing] = await db
         .select()
         .from(schema.intakeResponses)
@@ -260,6 +270,7 @@ export async function saveIntakeField(
             eq(schema.intakeResponses.taxYear, taxYear),
           ),
         )
+        .for('update')
         .limit(1);
 
       if (!existing) {
@@ -276,10 +287,15 @@ export async function saveIntakeField(
       const currentStorage = (existing.answers as unknown) ?? {};
       const updatedStorage = setAtPath(currentStorage, path, valueToStore);
 
-      // 5. Persist.
+      // 5. Persist. updated_at bumps on every write so we can debug
+      // ("when did this field last flip?") and use it as an
+      // optimistic-concurrency token if needed later.
       await db
         .update(schema.intakeResponses)
-        .set({ answers: updatedStorage as Record<string, unknown> })
+        .set({
+          answers: updatedStorage as Record<string, unknown>,
+          updatedAt: new Date(),
+        })
         .where(eq(schema.intakeResponses.id, existing.id));
 
       // 6. Audit log. Best-effort — never fail the save if logging dies.

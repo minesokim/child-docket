@@ -8,6 +8,7 @@ import {
   boolean,
   pgEnum,
   index,
+  uniqueIndex,
   real,
 } from 'drizzle-orm/pg-core';
 
@@ -425,12 +426,26 @@ export const intakeResponses = pgTable(
     completedSteps: jsonb('completed_steps').$type<string[]>().default([]).notNull(),
     answers: jsonb('answers').$type<Record<string, unknown>>().notNull(),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    // updatedAt is set on every saveIntakeField. Used for audit-trail debugging
+    // ("when did this field last flip?") and as an optimistic-concurrency token
+    // if we ever need it. notice_responses has the same column for parity.
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     abandonedAt: timestamp('abandoned_at', { withTimezone: true }),
   },
   (t) => ({
     tenantIdx: index('intake_responses_tenant_idx').on(t.tenantId),
-    clientYearIdx: index('intake_responses_client_year_idx').on(t.tenantId, t.clientId, t.taxYear),
+    // UNIQUE on (tenant_id, client_id, tax_year). Prevents the first-visit
+    // race in getOrCreateIntakeAnswers from creating duplicate rows when two
+    // concurrent requests fire (e.g., user double-clicks the "Continue" CTA
+    // on the welcome screen). With the unique constraint in place, the second
+    // INSERT errors and the caller falls back to SELECT — single source of
+    // truth per (tenant, client, year).
+    clientYearUnique: uniqueIndex('intake_responses_client_year_uidx').on(
+      t.tenantId,
+      t.clientId,
+      t.taxYear,
+    ),
   }),
 );
 
