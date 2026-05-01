@@ -58,16 +58,34 @@ export default function LoginPage() {
     return <AlreadySignedIn t={t} user={user} signOut={signOut} router={router} />;
   }
 
+  // Format US-style phone numbers as the user types.
+  // 5 → 5
+  // 562 → 562
+  // 5622 → (562)-2
+  // 5622736 → (562)-273-6
+  // 5622736682 → (562)-273-6682
   const format = (v: string) => {
     const d = v.replace(/\D/g, '').slice(0, 10);
     if (d.length < 4) return d;
-    if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+    if (d.length < 7) return `(${d.slice(0, 3)})-${d.slice(3)}`;
+    return `(${d.slice(0, 3)})-${d.slice(3, 6)}-${d.slice(6)}`;
   };
 
+  const phoneDigits = phone.replace(/\D/g, '').length;
+  const phoneLooksValid = phoneDigits >= 7;
+
   const onSubmit = async () => {
-    if (!signInLoaded || !signUpLoaded || !signIn || !signUp) return;
     if (submitting) return;
+
+    // Surface SDK loading state so users aren't silently blocked
+    if (!signInLoaded || !signUpLoaded) {
+      setError('Auth still loading — try again in a sec');
+      return;
+    }
+    if (!signIn || !signUp) {
+      setError('Sign-in service unavailable. Check NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.');
+      return;
+    }
 
     const e164 = toE164(phone);
     if (e164.replace(/\D/g, '').length < 7) {
@@ -77,6 +95,7 @@ export default function LoginPage() {
 
     setError(null);
     setSubmitting(true);
+    let navigated = false;
 
     try {
       // Try sign-in first.
@@ -92,32 +111,37 @@ export default function LoginPage() {
         strategy: 'phone_code',
         phoneNumberId: phoneFactor.phoneNumberId,
       });
+      navigated = true;
       router.push('/otp?mode=signin');
     } catch (e) {
       const err = e as ClerkError;
       const code = err.errors?.[0]?.code;
+      console.error('[login] signIn error', { code, raw: err });
+
       if (code === 'form_identifier_not_found') {
         // No existing user — create account via sign-up.
         try {
           await signUp.create({ phoneNumber: e164 });
           await signUp.preparePhoneNumberVerification({ strategy: 'phone_code' });
+          navigated = true;
           router.push('/otp?mode=signup');
         } catch (signUpErr) {
           const sErr = signUpErr as ClerkError;
+          console.error('[login] signUp error', sErr);
           setError(sErr.errors?.[0]?.message ?? 'Could not start sign-up');
-          setSubmitting(false);
         }
       } else if (code === 'session_exists') {
         // Edge case: race between auth-loaded check and submit.
+        navigated = true;
         router.push('/welcome');
       } else {
-        setError(err.errors?.[0]?.message ?? 'Could not send code');
-        setSubmitting(false);
+        setError(err.errors?.[0]?.message ?? `Could not send code${code ? ` (${code})` : ''}`);
       }
+    } finally {
+      // Always reset submitting unless we already navigated away.
+      if (!navigated) setSubmitting(false);
     }
   };
-
-  const ready = authLoaded && signInLoaded && signUpLoaded;
 
   return (
     <Screen t={t}>
@@ -186,8 +210,14 @@ export default function LoginPage() {
             <Button
               t={t}
               onClick={onSubmit}
-              disabled={!ready || submitting}
-              style={{ width: '100%', padding: '16px 22px', fontSize: 16 }}
+              disabled={submitting}
+              style={{
+                width: '100%',
+                padding: '16px 22px',
+                fontSize: 16,
+                opacity: submitting ? 0.6 : phoneLooksValid ? 1 : 0.55,
+                transition: 'opacity 0.15s ease',
+              }}
             >
               {submitting ? 'Sending…' : 'Send verification code'}
             </Button>
