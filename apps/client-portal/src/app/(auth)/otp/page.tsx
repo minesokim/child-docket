@@ -216,7 +216,7 @@ function OtpFlow() {
               fontSize: 13,
               color: t.ink,
               fontFamily: t.sans,
-              animation: 'toast-in 220ms cubic-bezier(.2,.8,.2,1)',
+              animation: 'toast-cycle 2400ms cubic-bezier(.2,.8,.2,1) forwards',
             }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14">
@@ -373,9 +373,14 @@ function OtpFlow() {
       </div>
 
       <style>{`
-        @keyframes toast-in {
-          from { opacity: 0; transform: translate(-50%, -8px); }
-          to { opacity: 1; transform: translate(-50%, 0); }
+        @keyframes toast-cycle {
+          /* Slide down from above with fade in */
+          0%   { opacity: 0; transform: translate(-50%, -32px); }
+          12%  { opacity: 1; transform: translate(-50%, 0);     }
+          /* Hold */
+          80%  { opacity: 1; transform: translate(-50%, 0);     }
+          /* Slide down further with fade out */
+          100% { opacity: 0; transform: translate(-50%, 14px);  }
         }
       `}</style>
     </main>
