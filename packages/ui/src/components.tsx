@@ -150,7 +150,7 @@ export function Button({
   const variants = {
     primary: { bg: t.rust, fg: '#fff', border: t.rust },
     success: { bg: t.green, fg: '#fff', border: t.green },
-    ghost: { bg: 'transparent', fg: t.ink, border: t.border },
+    ghost: { bg: t.card, fg: t.ink, border: t.border },
     dark: { bg: t.ink, fg: t.bgElev, border: t.ink },
   };
   const base = variants[variant];
@@ -1249,16 +1249,15 @@ export function IntakeBackButton({
     <button
       onClick={onClick}
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
         gap: 6,
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 999,
-        padding: '7px 14px 7px 12px',
+        background: 'none',
+        border: 'none',
+        padding: 0,
         cursor: 'pointer',
         fontSize: 13,
-        color: t.ink,
+        color: t.muted,
         fontFamily: t.sans,
         WebkitTapHighlightColor: 'transparent',
       }}
@@ -1678,14 +1677,14 @@ export function BackButton({
     <button
       onClick={onClick}
       style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 999,
+        background: 'none',
+        border: 'none',
         cursor: 'pointer',
-        color: t.ink,
-        fontSize: 13,
-        padding: '7px 14px 7px 12px',
-        display: 'inline-flex',
+        color: t.inkSoft,
+        fontSize: 14,
+        padding: 8,
+        marginLeft: -8,
+        display: 'flex',
         alignItems: 'center',
         gap: 6,
         fontFamily: t.sans,
