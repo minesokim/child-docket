@@ -7,3 +7,11 @@ export {
   schema,
   type DocketDb,
 } from './client.js';
+export {
+  encryptField,
+  decryptField,
+  decryptIfMarked,
+  isEncrypted,
+  generateEncryptionKey,
+  type EncryptedMarker,
+} from './encryption.js';

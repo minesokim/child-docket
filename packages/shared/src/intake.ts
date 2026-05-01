@@ -1,0 +1,319 @@
+// ────────────────────────────────────────────────────────────────
+// IntakeState — canonical shape of intake_responses.answers JSONB.
+//
+// Single source of truth for what the intake flow asks and what gets
+// stored. Both the client portal (for branching) and the server actions
+// (for validation + encryption) consume this same type.
+//
+// All fields are optional because intake fills in over time. Resume-on-
+// load logic looks at which fields are populated to decide where to send
+// the client back to.
+// ────────────────────────────────────────────────────────────────
+
+export type FilingStatus = 'single' | 'mfj' | 'mfs' | 'hoh' | 'qw';
+
+export type IncomeType = 'w2' | 'self' | 'rental' | 'invest' | 'retire';
+
+// Mirrors `ServicePathId` from @docket/ui — same values so the migration
+// from sessionStorage to Postgres is a 1:1 path change.
+export type ServiceKind = 'personal' | 'self' | 'biz' | 'other';
+
+// Mirrors `ServiceOtherSubId` from @docket/ui.
+export type ServiceOtherSubKind = 'intro' | 'formation' | 'books' | 'strategy';
+
+// Catalog addon ids vary per ServiceKind (rental, crypto, states, fbar,
+// amend, books). We type them as `string` here because the registry
+// (SERVICE_CATALOG.addons) is the source of truth — we don't want a
+// duplicated literal union to drift.
+export type ServiceAddonId = string;
+
+export type LifeEvent =
+  | 'married'
+  | 'divorced'
+  | 'baby'
+  | 'home_purchase'
+  | 'home_sale'
+  | 'move'
+  | 'death_in_family'
+  | 'job_change';
+
+export type DeductionKind = 'standard' | 'itemized';
+
+export type RefundPreference = 'direct_deposit' | 'check' | 'apply_to_next_year';
+
+export type BankAccountType = 'checking' | 'savings';
+
+export type BusinessEntityType =
+  | 'sole_prop'
+  | 'llc'
+  | 'sole_member_llc'
+  | 's_corp'
+  | 'c_corp'
+  | 'partnership';
+
+export type DependentRelationship =
+  | 'child'
+  | 'stepchild'
+  | 'foster_child'
+  | 'parent'
+  | 'sibling'
+  | 'other';
+
+export type AppointmentType = 'phone' | 'video' | 'in_person';
+
+export type ContactMethod = 'sms' | 'email' | 'phone';
+
+export type StrategicTopic =
+  | 'retirement_planning'
+  | 'home_purchase_strategy'
+  | 'business_entity_choice'
+  | 'estate_planning';
+
+// ────────────────────────────────────────────────────────────────
+// IntakeState — the shape of intakeResponses.answers
+// ────────────────────────────────────────────────────────────────
+
+export type IntakeDependent = {
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;          // ISO date (YYYY-MM-DD)
+  ssn?: string;                  // encrypted at rest
+  relationship?: DependentRelationship;
+  monthsLivedWithYou?: number;
+};
+
+export type IntakeRentalProperty = {
+  address?: string;
+  grossRent?: number;
+  expenses?: number;
+  daysRented?: number;
+  personalUseDays?: number;
+};
+
+export type IntakeState = {
+  // ── Welcome / tutorial / service path ────────────────────────────
+  tutorial?: { completed?: boolean };
+
+  service?: {
+    kind?: ServiceKind;
+    otherSub?: ServiceOtherSubKind;
+    addons?: ServiceAddonId[];
+  };
+
+  // ── About-you ───────────────────────────────────────────────────
+  personal?: {
+    firstName?: string;
+    middleInitial?: string;
+    lastName?: string;
+    dateOfBirth?: string;        // ISO date
+    ssn?: string;                // encrypted at rest
+    occupation?: string;
+    email?: string;
+    phone?: string;
+  };
+
+  state?: {
+    residentState?: string;      // 2-letter code: 'CA', 'NY', etc.
+    movedDuringYear?: boolean;
+    otherStates?: string[];
+    filedLastYear?: boolean;
+    priorYearAGI?: number;
+  };
+
+  filing?: {
+    status?: FilingStatus;
+  };
+
+  spouse?: {
+    firstName?: string;
+    middleInitial?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    ssn?: string;                // encrypted at rest
+    occupation?: string;
+  };
+
+  dependents?: {
+    count?: number;
+    list?: IntakeDependent[];
+  };
+
+  // ── Income ───────────────────────────────────────────────────────
+  income?: {
+    types?: IncomeType[];
+  };
+
+  selfEmployment?: {
+    businessName?: string;
+    businessType?: BusinessEntityType;
+    ein?: string;                // encrypted at rest
+    industry?: string;
+    grossIncome?: number;
+    expenses?: number;
+    homeOffice?: boolean;
+    vehicleUse?: boolean;
+  };
+
+  rental?: {
+    properties?: IntakeRentalProperty[];
+  };
+
+  // ── Business sub-flow (when service.kind includes business) ─────
+  business?: {
+    legalName?: string;
+    dba?: string;
+    ein?: string;                // encrypted at rest
+    entityType?: BusinessEntityType;
+    formationState?: string;
+    formationDate?: string;
+    industry?: string;
+  };
+
+  // ── Tax questions / deductions / events ─────────────────────────
+  taxQuestions?: {
+    cryptoTransactions?: boolean;
+    foreignAccounts?: boolean;
+    healthInsurance1095A?: boolean;
+    studentLoanPayments?: boolean;
+    estimatedTaxPayments?: boolean;
+  };
+
+  deductions?: {
+    kind?: DeductionKind;
+    itemized?: {
+      mortgageInterest?: number;
+      stateLocalTax?: number;
+      charitable?: number;
+      medical?: number;
+    };
+  };
+
+  lifeEvents?: {
+    events?: LifeEvent[];
+    notes?: string;
+  };
+
+  strategicTopics?: {
+    selected?: StrategicTopic[];
+  };
+
+  // ── Wrap-up ─────────────────────────────────────────────────────
+  refund?: {
+    preference?: RefundPreference;
+    bankRouting?: string;        // encrypted at rest
+    bankAccount?: string;        // encrypted at rest
+    bankAccountType?: BankAccountType;
+  };
+
+  documents?: {
+    uploadComplete?: boolean;
+  };
+
+  engagement?: { signed?: boolean };
+
+  consent?: { signed?: boolean };  // §7216 disclosure consent
+
+  contactInfo?: {
+    preferredMethod?: ContactMethod;
+    bestTimeToReach?: string;
+  };
+
+  appointment?: {
+    requested?: boolean;
+    timeSlot?: string;            // ISO datetime
+    type?: AppointmentType;
+  };
+
+  deposit?: {
+    paid?: boolean;
+    amountCents?: number;
+    stripePaymentIntentId?: string;
+  };
+};
+
+// ────────────────────────────────────────────────────────────────
+// Sensitive paths — fields encrypted at rest via app-layer AES-GCM.
+//
+// Glob syntax:
+//   `*` matches exactly one path segment (e.g. an array index or key)
+//
+// All sensitive writes flow through encryptField() before going into the
+// JSONB. Reads decrypt on access. Migration to a KMS-backed key (AWS KMS
+// / GCP KMS / HashiCorp Vault) is a single-file change — see
+// packages/db/src/encryption.ts.
+// ────────────────────────────────────────────────────────────────
+
+export const SENSITIVE_INTAKE_PATHS: readonly string[] = [
+  'personal.ssn',
+  'spouse.ssn',
+  'dependents.list.*.ssn',
+  'selfEmployment.ein',
+  'business.ein',
+  'refund.bankRouting',
+  'refund.bankAccount',
+] as const;
+
+/** True if the dotted path matches one of the SENSITIVE_INTAKE_PATHS globs. */
+export function isSensitivePath(path: string): boolean {
+  return SENSITIVE_INTAKE_PATHS.some((pattern) => matchPathGlob(pattern, path));
+}
+
+/**
+ * Matches a single-`*`-segment glob against a dotted path.
+ *
+ *   matchPathGlob('dependents.list.*.ssn', 'dependents.list.0.ssn') → true
+ *   matchPathGlob('dependents.list.*.ssn', 'dependents.list.0.name') → false
+ */
+export function matchPathGlob(pattern: string, path: string): boolean {
+  const p = pattern.split('.');
+  const a = path.split('.');
+  if (p.length !== a.length) return false;
+  for (let i = 0; i < p.length; i++) {
+    if (p[i] === '*') continue;
+    if (p[i] !== a[i]) return false;
+  }
+  return true;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Path helpers — read/write a dotted path inside an IntakeState.
+// Used by useIntakeField() on the client and saveIntakeField() server action.
+// ────────────────────────────────────────────────────────────────
+
+/** Read a value at a dotted path. Returns undefined for any missing segment. */
+export function getAtPath(state: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>((acc, seg) => {
+    if (acc == null || typeof acc !== 'object') return undefined;
+    return (acc as Record<string, unknown>)[seg];
+  }, state);
+}
+
+/**
+ * Set a value at a dotted path. Returns a new object (immutable update).
+ * Creates intermediate objects/arrays as needed. If a segment looks like an
+ * integer index (`'0'`, `'1'`, ...), the parent is treated as an array.
+ */
+export function setAtPath<T>(state: T, path: string, value: unknown): T {
+  const segs = path.split('.');
+  if (segs.length === 0) return state;
+  const next = clone(state);
+  let cursor = next as Record<string, unknown>;
+  for (let i = 0; i < segs.length - 1; i++) {
+    const seg = segs[i]!;
+    const nextSeg = segs[i + 1]!;
+    const expectArray = /^\d+$/.test(nextSeg);
+    const existing = cursor[seg];
+    if (existing == null || typeof existing !== 'object') {
+      cursor[seg] = expectArray ? [] : {};
+    }
+    cursor = cursor[seg] as Record<string, unknown>;
+  }
+  cursor[segs[segs.length - 1]!] = value;
+  return next;
+}
+
+function clone<T>(value: T): T {
+  // Intake state is plain JSON-serializable data — structuredClone or JSON
+  // round-trip both work. JSON is portable across older Node runtimes.
+  return JSON.parse(JSON.stringify(value)) as T;
+}

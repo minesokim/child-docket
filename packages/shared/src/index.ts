@@ -1,3 +1,8 @@
+// Re-export the intake state type + helpers so they're importable as
+// `import { IntakeState, getNextStep } from '@docket/shared'` from both
+// the client portal and command room.
+export * from './intake.js';
+
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.
 // ────────────────────────────────────────────────────────────────
