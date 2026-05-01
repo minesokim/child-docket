@@ -48,14 +48,22 @@ RLS policies (in `0001_rls_policies.sql`) filter all SELECT/INSERT/UPDATE/DELETE
 - Migrations + admin scripts run as `docket_admin` role with RLS bypassed. **No application code should ever connect as `docket_admin`.**
 - The `tenants` table is NOT tenant-scoped (it IS the tenant list). It's gated at the application layer — only platform-admin code paths can read it.
 
-This is the SOC 2 audit evidence trail. A tenant-isolation regression test runs in CI:
+This is the SOC 2 audit evidence trail. The tenant-isolation regression suite lives at [`test/rls.test.ts`](./test/rls.test.ts) and proves:
 
-```ts
-// packages/db/test/rls.test.ts (TODO when first paying customer signs)
-// Verify: setting tenant A, querying clients, returns only A's rows.
-// Verify: switching to tenant B, queries return only B's rows.
-// Verify: no setting → zero rows everywhere (fail-closed).
+- Setting tenant A returns only A's rows from every tenant-scoped table
+- Switching to tenant B returns only B's rows
+- No tenant context → zero rows (fail-closed)
+- Cross-tenant INSERT (lying about `tenant_id`) is rejected by `WITH CHECK`
+- Cross-tenant UPDATE silently no-ops (RLS hides the target row)
+- `intake_responses` (the SSN-bearing table) is isolated end-to-end
+
+Run with a real DB pointed via `DATABASE_URL_RLS_TEST` (separate name from `DATABASE_URL` so dev/prod can't be hit accidentally):
+
+```bash
+DATABASE_URL_RLS_TEST=postgres://... pnpm --filter @docket/db test:rls
 ```
+
+Skipped automatically when the env var is unset, so unit-test loops stay fast.
 
 ## Schema overview (v0)
 
