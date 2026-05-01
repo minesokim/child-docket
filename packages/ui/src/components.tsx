@@ -1905,7 +1905,7 @@ export function SignaturePad({
     <div
       onClick={() => !signed && onSign()}
       style={{
-        background: t.bgElev,
+        background: t.card,
         border: `1.5px dashed ${signed ? t.rust : t.border}`,
         borderRadius: t.radius,
         padding: signed ? '14px 18px' : '28px 18px',

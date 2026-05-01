@@ -301,8 +301,7 @@ export default function ApptPage() {
             <Row justify="space-between" align="baseline" style={{ marginBottom: 10 }}>
               <span
                 style={{
-                  fontFamily: t.serif,
-                  fontStyle: 'italic',
+                  fontFamily: t.sans,
                   fontSize: 14,
                   color: t.muted,
                 }}
@@ -449,24 +448,36 @@ export default function ApptPage() {
             Pick whatever works. If none of these times work, message me and I&apos;ll open
             additional slots.
           </AntonioNote>
+        </Stack>
 
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            background: `linear-gradient(to top, ${t.bg} 75%, transparent)`,
+            padding: '16px 24px 28px',
+            marginTop: 12,
+          }}
+        >
           <div
             style={{
-              padding: '16px 18px',
+              padding: '14px 16px',
               background: t.ink,
               borderRadius: t.radius,
               color: '#fff',
+              marginBottom: 12,
             }}
           >
             <Row justify="space-between" align="flex-start">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontFamily: t.serif,
-                    fontStyle: 'italic',
-                    fontSize: 13,
-                    color: 'rgba(255,255,255,0.6)',
-                    marginBottom: 8,
+                    fontFamily: t.sans,
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,0.55)',
+                    letterSpacing: 0.6,
+                    textTransform: 'uppercase',
+                    marginBottom: 6,
                   }}
                 >
                   Your appointment
@@ -474,17 +485,17 @@ export default function ApptPage() {
                 <div
                   style={{
                     fontFamily: t.serif,
-                    fontSize: 20,
+                    fontSize: 18,
                     letterSpacing: -0.3,
                     lineHeight: 1.15,
-                    marginBottom: 6,
+                    marginBottom: 4,
                   }}
                 >
                   {selDate.d}, {selDate.m} {selDate.n} · {selTime}
                 </div>
                 <div
                   style={{
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: 'rgba(255,255,255,0.7)',
                   }}
                 >
@@ -494,8 +505,8 @@ export default function ApptPage() {
               <button
                 style={{
                   flexShrink: 0,
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   borderRadius: 8,
                   background: 'rgba(255,255,255,0.1)',
                   border: '1px solid rgba(255,255,255,0.15)',
@@ -507,21 +518,11 @@ export default function ApptPage() {
                 }}
                 aria-label="Add to calendar"
               >
-                <IconCalPlus size={15} />
+                <IconCalPlus size={14} />
               </button>
             </Row>
           </div>
-        </Stack>
 
-        <div
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            background: `linear-gradient(to top, ${t.bg} 75%, transparent)`,
-            padding: '20px 24px 28px',
-            marginTop: 12,
-          }}
-        >
           <div style={{ marginBottom: 12 }}>
             <AskAntonioBar t={t} />
           </div>
