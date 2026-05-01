@@ -111,8 +111,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'about-you',
     isApplicable: () => true,
     isComplete: (s) =>
-      !!s.personal?.firstName &&
-      !!s.personal?.lastName &&
+      !!s.personal?.fullName &&
       !!s.personal?.dateOfBirth &&
       !!s.personal?.ssn,
     next: () => '/state',
@@ -145,8 +144,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'about-you',
     isApplicable: (s) => s.filing?.status === 'mfj' || s.filing?.status === 'mfs',
     isComplete: (s) =>
-      !!s.spouse?.firstName &&
-      !!s.spouse?.lastName &&
+      !!s.spouse?.fullName &&
       !!s.spouse?.dateOfBirth &&
       !!s.spouse?.ssn,
     next: () => '/deps',

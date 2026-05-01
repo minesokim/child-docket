@@ -306,7 +306,7 @@ describe('getResumeStep', () => {
     const state: IntakeState = {
       tutorial: { completed: true },
       service: { kind: 'personal' },
-      personal: { firstName: 'A', lastName: 'B', dateOfBirth: '1990-01-01', ssn: '123' },
+      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', ssn: '123' },
       state: { residentState: 'CA' },
       filing: { status: 'single' },
     };
@@ -317,7 +317,7 @@ describe('getResumeStep', () => {
     const state: IntakeState = {
       tutorial: { completed: true },
       service: { kind: 'personal' },
-      personal: { firstName: 'A', lastName: 'B', dateOfBirth: '1990-01-01', ssn: '123' },
+      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', ssn: '123' },
       state: { residentState: 'CA' },
       filing: { status: 'single' },
       dependents: { count: 0 },
@@ -398,8 +398,7 @@ describe('isIntakeComplete', () => {
       tutorial: { completed: true },
       service: { kind: 'personal' },
       personal: {
-        firstName: 'A',
-        lastName: 'B',
+        fullName: 'Alex Bee',
         dateOfBirth: '1990-01-01',
         ssn: '123-45-6789',
       },

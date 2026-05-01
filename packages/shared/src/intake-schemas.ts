@@ -154,14 +154,16 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'service.addons': z.array(z.string().max(60)).max(20),
 
   // Personal — primary taxpayer
-  'personal.firstName': z.string().min(1).max(100),
-  'personal.middleInitial': z.string().max(2),
-  'personal.lastName': z.string().min(1).max(100),
+  'personal.fullName': z.string().min(1).max(200),
   'personal.dateOfBirth': IsoDateSchema,
   'personal.ssn': SsnSchema,
   'personal.occupation': z.string().max(200),
   'personal.email': z.string().email().max(254),
   'personal.phone': PhoneSchema,
+  'personal.street': z.string().max(300),
+  'personal.city': z.string().max(100),
+  'personal.addressState': StateCodeSchema,
+  'personal.zip': z.string().regex(/^\d{5}(-\d{4})?$/, 'ZIP must be 5 or 9 digits'),
 
   // State + prior year
   'state.residentState': StateCodeSchema,
@@ -174,9 +176,7 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'filing.status': FilingStatusSchema,
 
   // Spouse (only collected when MFJ/MFS — server should also gate)
-  'spouse.firstName': z.string().min(1).max(100),
-  'spouse.middleInitial': z.string().max(2),
-  'spouse.lastName': z.string().min(1).max(100),
+  'spouse.fullName': z.string().min(1).max(200),
   'spouse.dateOfBirth': IsoDateSchema,
   'spouse.ssn': SsnSchema,
   'spouse.occupation': z.string().max(200),

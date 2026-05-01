@@ -101,15 +101,21 @@ export type IntakeState = {
   };
 
   // ── About-you ───────────────────────────────────────────────────
+  // Note: full legal name collected as one string per the /personal UX.
+  // Antonio splits into First/Middle/Last during prep when the return form
+  // requires it. v1+ may collect split fields here directly.
   personal?: {
-    firstName?: string;
-    middleInitial?: string;
-    lastName?: string;
-    dateOfBirth?: string;        // ISO date
+    fullName?: string;
+    dateOfBirth?: string;        // ISO YYYY-MM-DD
     ssn?: string;                // encrypted at rest
     occupation?: string;
     email?: string;
     phone?: string;
+    // Home / mailing address that goes on the return
+    street?: string;
+    city?: string;
+    addressState?: string;       // 2-letter; named to avoid colliding with state.residentState
+    zip?: string;
   };
 
   state?: {
@@ -125,9 +131,7 @@ export type IntakeState = {
   };
 
   spouse?: {
-    firstName?: string;
-    middleInitial?: string;
-    lastName?: string;
+    fullName?: string;
     dateOfBirth?: string;
     ssn?: string;                // encrypted at rest
     occupation?: string;

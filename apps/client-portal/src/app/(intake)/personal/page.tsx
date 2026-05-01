@@ -1,6 +1,15 @@
 'use client';
 
-// Intake step 2/13 — Personal info. 1-to-1 port of ScreenPersonalInfo.
+// Intake step 2 — Personal info. MIGRATED to Postgres-backed state via
+// useIntakeField. Each field maps to a path on IntakeState.personal.
+//
+// Storage notes:
+//   - Sensitive: SSN. Encrypted at rest (AES-GCM) before JSONB write.
+//   - Date of birth stored as ISO YYYY-MM-DD; UI format is "MM / DD / YYYY".
+//   - Phone stored loose (E.164 + display formatting handled here).
+//
+// Pattern: this page is the template the remaining 25 routes follow.
+// Drop-in swap: usePortalState('personal', DEFAULT) → useIntakeField per field.
 
 import {
   AntonioNote,
@@ -18,36 +27,32 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
+import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { usePortalState } from '@/lib/portal-state';
+import { useIntakeField } from '@/lib/intake-context';
+import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
-type PersonalInfo = {
-  fullName: string;
-  dob: string;
-  ssn: string;
-  phone: string;
-  email: string;
-  occupation: string;
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-};
+// ────────────────────────────────────────────────────────────────
+// Format helpers — display vs storage
+// ────────────────────────────────────────────────────────────────
 
-const DEFAULT: PersonalInfo = {
-  fullName: '',
-  dob: '',
-  ssn: '',
-  phone: '',
-  email: '',
-  occupation: '',
-  street: '',
-  city: '',
-  state: '',
-  zip: '',
-};
+/** "MM / DD / YYYY" → "YYYY-MM-DD". Returns empty when incomplete. */
+function dobDisplayToIso(display: string): string {
+  const d = display.replace(/\D/g, '');
+  if (d.length !== 8) return '';
+  return `${d.slice(4, 8)}-${d.slice(0, 2)}-${d.slice(2, 4)}`;
+}
 
-function formatDob(raw: string): string {
+/** "YYYY-MM-DD" → "MM / DD / YYYY". Empty input → empty string. */
+function dobIsoToDisplay(iso: string): string {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso; // already in display form or partial
+  return `${m[2]} / ${m[3]} / ${m[1]}`;
+}
+
+/** Display formatter while typing — adds slashes/spaces as digits arrive. */
+function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
   if (d.length <= 4) return `${d.slice(0, 2)} / ${d.slice(2)}`;
@@ -61,12 +66,51 @@ function formatPhone(raw: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
+// ────────────────────────────────────────────────────────────────
+// Page
+// ────────────────────────────────────────────────────────────────
+
 export default function PersonalPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [info, setInfo] = usePortalState<PersonalInfo>('personal', DEFAULT);
-  const update = <K extends keyof PersonalInfo>(k: K, v: PersonalInfo[K]) =>
-    setInfo({ ...info, [k]: v });
+
+  // Each field is its own server-backed atom. Optimistic locally; sensitive
+  // fields (ssn) get encrypted server-side before hitting JSONB.
+  const [fullName, setFullName] = useIntakeField<string>('personal.fullName', '');
+  const [dobIso, setDobIso] = useIntakeField<string>('personal.dateOfBirth', '');
+  const [ssn, setSsn] = useIntakeField<string>('personal.ssn', '');
+  const [phone, setPhone] = useIntakeField<string>('personal.phone', '');
+  const [email, setEmail] = useIntakeField<string>('personal.email', '');
+  const [occupation, setOccupation] = useIntakeField<string>('personal.occupation', '');
+  const [street, setStreet] = useIntakeField<string>('personal.street', '');
+  const [city, setCity] = useIntakeField<string>('personal.city', '');
+  const [addressState, setAddressState] = useIntakeField<string>('personal.addressState', '');
+  const [zip, setZip] = useIntakeField<string>('personal.zip', '');
+
+  // DOB has separate display state because the user types in MM/DD/YYYY
+  // but storage is ISO YYYY-MM-DD. Hydrate display from stored ISO.
+  const [dobDisplay, setDobDisplay] = useState(() => dobIsoToDisplay(dobIso));
+
+  const handleDobChange = (raw: string) => {
+    const shaped = dobShape(raw);
+    setDobDisplay(shaped);
+    const iso = dobDisplayToIso(shaped);
+    if (iso) {
+      // Only persist when complete — server's Zod will reject partial.
+      void setDobIso(iso);
+    }
+  };
+
+  // Branching/back-nav goes through the central flow file.
+  const stateSnapshot = { personal: { fullName, dateOfBirth: dobIso, ssn } };
+  const handleNext = () => {
+    const target = getNextStep('/personal', stateSnapshot);
+    if (target) nav.next(target);
+  };
+  const handleBack = () => {
+    const target = getPrevStep('/personal', stateSnapshot);
+    if (target) nav.back(target);
+  };
 
   return (
     <Screen t={t}>
@@ -81,7 +125,7 @@ export default function PersonalPage() {
         <IntakeHeader t={t} step={2} label="Personal" />
 
         <div style={{ padding: '22px 24px 0' }}>
-          <IntakeBackButton t={t} onClick={() => nav.back('/services-addons')} />
+          <IntakeBackButton t={t} onClick={handleBack} />
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
@@ -98,8 +142,8 @@ export default function PersonalPage() {
             <FieldLabel t={t}>Full legal name</FieldLabel>
             <TextField
               t={t}
-              value={info.fullName}
-              onChange={(v) => update('fullName', v)}
+              value={fullName}
+              onChange={(v) => void setFullName(v)}
               placeholder="First Middle Last"
               autoComplete="name"
             />
@@ -109,8 +153,8 @@ export default function PersonalPage() {
             <FieldLabel t={t}>Date of birth</FieldLabel>
             <TextField
               t={t}
-              value={info.dob}
-              onChange={(v) => update('dob', formatDob(v))}
+              value={dobDisplay}
+              onChange={handleDobChange}
               placeholder="MM / DD / YYYY"
               mono
               inputMode="numeric"
@@ -121,15 +165,15 @@ export default function PersonalPage() {
             <FieldLabel t={t} hint="LAST 4 SHOWN">
               Social Security Number
             </FieldLabel>
-            <SSNField t={t} value={info.ssn} onChange={(v) => update('ssn', v)} />
+            <SSNField t={t} value={ssn} onChange={(v) => void setSsn(v)} />
           </div>
 
           <div>
             <FieldLabel t={t}>Phone number</FieldLabel>
             <TextField
               t={t}
-              value={info.phone}
-              onChange={(v) => update('phone', formatPhone(v))}
+              value={phone}
+              onChange={(v) => void setPhone(formatPhone(v))}
               placeholder="(555) 555-5555"
               mono
               inputMode="tel"
@@ -142,8 +186,8 @@ export default function PersonalPage() {
             <FieldLabel t={t}>Email</FieldLabel>
             <TextField
               t={t}
-              value={info.email}
-              onChange={(v) => update('email', v)}
+              value={email}
+              onChange={(v) => void setEmail(v)}
               placeholder="you@example.com"
               type="email"
               inputMode="email"
@@ -155,8 +199,8 @@ export default function PersonalPage() {
             <FieldLabel t={t}>Occupation</FieldLabel>
             <TextField
               t={t}
-              value={info.occupation}
-              onChange={(v) => update('occupation', v)}
+              value={occupation}
+              onChange={(v) => void setOccupation(v)}
               placeholder="What do you do?"
             />
           </div>
@@ -189,8 +233,8 @@ export default function PersonalPage() {
               <FieldLabel t={t}>Street address</FieldLabel>
               <TextField
                 t={t}
-                value={info.street}
-                onChange={(v) => update('street', v)}
+                value={street}
+                onChange={(v) => void setStreet(v)}
                 placeholder="Street address"
                 autoComplete="address-line1"
               />
@@ -201,8 +245,8 @@ export default function PersonalPage() {
                 <FieldLabel t={t}>City</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.city}
-                  onChange={(v) => update('city', v)}
+                  value={city}
+                  onChange={(v) => void setCity(v)}
                   placeholder="City"
                   autoComplete="address-level2"
                 />
@@ -211,8 +255,8 @@ export default function PersonalPage() {
                 <FieldLabel t={t}>State</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.state}
-                  onChange={(v) => update('state', v.toUpperCase().slice(0, 2))}
+                  value={addressState}
+                  onChange={(v) => void setAddressState(v.toUpperCase().slice(0, 2))}
                   placeholder="CA"
                   mono
                   style={{ textTransform: 'uppercase', letterSpacing: 1 }}
@@ -223,8 +267,8 @@ export default function PersonalPage() {
                 <FieldLabel t={t}>ZIP</FieldLabel>
                 <TextField
                   t={t}
-                  value={info.zip}
-                  onChange={(v) => update('zip', v.replace(/\D/g, '').slice(0, 5))}
+                  value={zip}
+                  onChange={(v) => void setZip(v.replace(/\D/g, '').slice(0, 5))}
                   placeholder="00000"
                   mono
                   inputMode="numeric"
@@ -255,15 +299,10 @@ export default function PersonalPage() {
             <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
-            <Button
-              t={t}
-              variant="ghost"
-              onClick={() => nav.back('/services-addons')}
-              style={{ flex: '0 0 auto' }}
-            >
+            <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>
               Back
             </Button>
-            <Button t={t} onClick={() => nav.next('/state')} style={{ flex: 1 }}>
+            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>
