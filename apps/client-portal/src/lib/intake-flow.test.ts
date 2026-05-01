@@ -53,8 +53,11 @@ const selfPlusRental: IntakeState = { income: { types: ['self', 'rental'] } };
 // ────────────────────────────────────────────────────────────────
 
 describe('getNextStep — happy linear path', () => {
-  test('welcome → tutorial', () => {
-    expect(getNextStep('/welcome', empty)).toBe('/tutorial');
+  test('welcome → quick-start', () => {
+    expect(getNextStep('/welcome', empty)).toBe('/quick-start');
+  });
+  test('quick-start → tutorial', () => {
+    expect(getNextStep('/quick-start', empty)).toBe('/tutorial');
   });
   test('tutorial → services', () => {
     expect(getNextStep('/tutorial', empty)).toBe('/services');
@@ -209,8 +212,11 @@ describe('getPrevStep — back-nav skips inapplicable steps', () => {
   test('welcome has no prev (start of flow)', () => {
     expect(getPrevStep('/welcome', empty)).toBeNull();
   });
-  test('tutorial → welcome', () => {
-    expect(getPrevStep('/tutorial', empty)).toBe('/welcome');
+  test('quick-start → welcome', () => {
+    expect(getPrevStep('/quick-start', empty)).toBe('/welcome');
+  });
+  test('tutorial → quick-start', () => {
+    expect(getPrevStep('/tutorial', empty)).toBe('/quick-start');
   });
   test('personal → services-addons', () => {
     expect(getPrevStep('/personal', empty)).toBe('/services-addons');
@@ -293,20 +299,23 @@ describe('isApplicable — side paths gated correctly', () => {
 // ────────────────────────────────────────────────────────────────
 
 describe('getResumeStep', () => {
-  test('empty state → tutorial (welcome is always pass-through)', () => {
-    // welcome.isComplete() === true always (pure intro), so resume skips to tutorial.
-    expect(getResumeStep(empty)).toBe('/tutorial');
+  test('empty state → quick-start (welcome is always pass-through)', () => {
+    // welcome.isComplete() === true always; quick-start needs name+DOB+email.
+    expect(getResumeStep(empty)).toBe('/quick-start');
   });
 
-  test('tutorial completed → services', () => {
-    expect(getResumeStep({ tutorial: { completed: true } })).toBe('/services');
+  test('quick-start filled, tutorial not complete → tutorial', () => {
+    const state: IntakeState = {
+      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', email: 'a@b.com' },
+    };
+    expect(getResumeStep(state)).toBe('/tutorial');
   });
 
   test('through filing complete, single → deps', () => {
     const state: IntakeState = {
       tutorial: { completed: true },
       service: { kind: 'personal' },
-      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', ssn: '123' },
+      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', email: 'a@b.com', ssn: '123' },
       state: { primaryState: 'California' },
       filing: { status: 'single' },
     };
@@ -317,7 +326,7 @@ describe('getResumeStep', () => {
     const state: IntakeState = {
       tutorial: { completed: true },
       service: { kind: 'personal' },
-      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', ssn: '123' },
+      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', email: 'a@b.com', ssn: '123' },
       state: { primaryState: 'California' },
       filing: { status: 'single' },
       dependents: { count: 0 },
@@ -400,6 +409,7 @@ describe('isIntakeComplete', () => {
       personal: {
         fullName: 'Alex Bee',
         dateOfBirth: '1990-01-01',
+        email: 'alex@bee.com',
         ssn: '123-45-6789',
       },
       state: { primaryState: 'California' },
@@ -407,7 +417,7 @@ describe('isIntakeComplete', () => {
       dependents: { count: 0 },
       income: { types: ['w2'] },
       taxQuestions: {},
-      deductions: { kind: 'standard' },
+      deductions: { none: true },  // user said "no deductions to claim"
       lifeEvents: {},
       refund: { preference: 'direct_deposit' },
       documents: { uploadComplete: true },

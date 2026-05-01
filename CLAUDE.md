@@ -481,10 +481,14 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 - Audit log review — every Server Action writes to actions table
 - ✅ Day 13: Real 8879 signed with KBA in sandbox; per-tenant DEKs in place
 
-**Days 14–15 — Onboard Antonio's first cohort**
-- Antonio's first 5–10 real clients invited (friends + family for testing)
+**Days 14–15 — Onboard Antonio's full client base**
+- **NOT** a friends-and-family pilot. Production-grade from day 1.
+- Target: scale to Antonio's 200+ existing client roster on this platform
+  for the next tax season.
 - Pitch deck (5–10 slides), Loom demo
-- ✅ Day 15: production app onboarded with real clients
+- Quality bar: every UX decision should hold up at 300+ clients across
+  multiple firms, not "good enough for friends to test"
+- ✅ Day 15: production app shipped, ready to handle Antonio's full book
 
 ### Status of the original 5/15 DEFERS list (revised for production)
 

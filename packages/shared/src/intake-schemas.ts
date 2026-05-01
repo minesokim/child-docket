@@ -230,12 +230,19 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'taxQuestions.overtime': z.boolean(),
   'taxQuestions.tips': z.boolean(),
 
-  // Deductions
-  'deductions.kind': DeductionKindSchema,
-  'deductions.itemized.mortgageInterest': MoneySchema,
-  'deductions.itemized.stateLocalTax': MoneySchema,
-  'deductions.itemized.charitable': MoneySchema,
-  'deductions.itemized.medical': MoneySchema,
+  // Deductions — booleans matching /deductions UI toggles
+  'deductions.mortgage': z.boolean(),
+  'deductions.student': z.boolean(),
+  'deductions.charity': z.boolean(),
+  'deductions.childcare': z.boolean(),
+  'deductions.medical': z.boolean(),
+  'deductions.education': z.boolean(),
+  'deductions.educator': z.boolean(),
+  'deductions.none': z.boolean(),
+  'deductions.childcareDetails.providerName': z.string().max(200),
+  'deductions.childcareDetails.providerAddress': z.string().max(300),
+  'deductions.childcareDetails.providerEin': EinSchema,
+  'deductions.childcareDetails.amountPaid': z.string().max(50),
 
   // Life events
   'lifeEvents.events': z.array(LifeEventSchema).max(10),

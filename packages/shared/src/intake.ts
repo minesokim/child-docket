@@ -189,13 +189,22 @@ export type IntakeState = {
     tips?: boolean;
   };
 
+  // Field names match the /deductions UI toggles. "none" is mutually
+  // exclusive with everything else; the page handles that gating.
   deductions?: {
-    kind?: DeductionKind;
-    itemized?: {
-      mortgageInterest?: number;
-      stateLocalTax?: number;
-      charitable?: number;
-      medical?: number;
+    mortgage?: boolean;
+    student?: boolean;
+    charity?: boolean;
+    childcare?: boolean;
+    medical?: boolean;
+    education?: boolean;
+    educator?: boolean;
+    none?: boolean;
+    childcareDetails?: {
+      providerName?: string;
+      providerAddress?: string;
+      providerEin?: string;       // EIN encrypted at rest (see SENSITIVE_INTAKE_PATHS)
+      amountPaid?: string;
     };
   };
 

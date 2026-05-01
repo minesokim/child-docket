@@ -9,6 +9,32 @@ import type { Theme } from './tokens.js';
 type StyleProp = React.CSSProperties | undefined;
 
 // ────────────────────────────────────────────────────────────────
+// SignOutContext — lets IntakeHeader render a small Sign-out icon
+// on the left when the host app provides a handler. Keeps the @docket/ui
+// package framework-agnostic (no Clerk import here).
+//
+// Usage:
+//   <SignOutProvider value={signOutHandler}>...</SignOutProvider>
+// IntakeHeader reads via useContext and renders only when a handler is set.
+// ────────────────────────────────────────────────────────────────
+
+const SignOutContext = React.createContext<(() => void) | null>(null);
+
+export function SignOutProvider({
+  value,
+  children,
+}: {
+  value: () => void;
+  children: React.ReactNode;
+}) {
+  return <SignOutContext.Provider value={value}>{children}</SignOutContext.Provider>;
+}
+
+function useSignOutHandler(): (() => void) | null {
+  return React.useContext(SignOutContext);
+}
+
+// ────────────────────────────────────────────────────────────────
 // Layout primitives
 // ────────────────────────────────────────────────────────────────
 
@@ -1506,6 +1532,7 @@ export function IntakeHeader({
   label: string;
   total?: number;
 }) {
+  const onSignOut = useSignOutHandler();
   const wrapStyle: React.CSSProperties = {
     position: 'sticky',
     top: 0,
@@ -1514,11 +1541,46 @@ export function IntakeHeader({
     padding: '14px 24px 12px',
     borderBottom: `1px solid ${t.borderSoft}`,
   };
+
+  // Discreet sign-out, sized + colored to live inside the eyebrow row
+  // without drawing focus from step / label content.
+  const signOutEl = onSignOut ? (
+    <button
+      type="button"
+      onClick={onSignOut}
+      aria-label="Sign out"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '2px 6px',
+        marginRight: 10,
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: t.mono,
+        fontSize: 9,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        color: t.muted,
+        lineHeight: 1,
+      }}
+    >
+      <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M2 2l5 5M7 2l-5 5" strokeLinecap="round" />
+      </svg>
+      Exit
+    </button>
+  ) : null;
+
   if (!step) {
     return (
       <div style={wrapStyle}>
-        <Row justify="space-between" style={{ marginBottom: 10 }}>
-          <Eyebrow t={t}>Final step</Eyebrow>
+        <Row justify="space-between" align="center" style={{ marginBottom: 10 }}>
+          <Row gap={0} align="center">
+            {signOutEl}
+            <Eyebrow t={t}>Final step</Eyebrow>
+          </Row>
           <Eyebrow t={t}>{label}</Eyebrow>
         </Row>
         <ProgressBar t={t} value={total} total={total} />
@@ -1531,8 +1593,11 @@ export function IntakeHeader({
   const progressValue = subStep === 'B' ? step + 0.5 : step;
   return (
     <div style={wrapStyle}>
-      <Row justify="space-between" style={{ marginBottom: 10 }}>
-        <Eyebrow t={t}>{stepLabel}</Eyebrow>
+      <Row justify="space-between" align="center" style={{ marginBottom: 10 }}>
+        <Row gap={0} align="center">
+          {signOutEl}
+          <Eyebrow t={t}>{stepLabel}</Eyebrow>
+        </Row>
         <Eyebrow t={t}>{label}</Eyebrow>
       </Row>
       <ProgressBar t={t} value={progressValue} total={total} />

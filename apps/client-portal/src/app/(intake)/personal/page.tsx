@@ -59,13 +59,6 @@ function dobShape(raw: string): string {
   return `${d.slice(0, 2)} / ${d.slice(2, 4)} / ${d.slice(4)}`;
 }
 
-function formatPhone(raw: string): string {
-  const d = raw.replace(/\D/g, '').slice(0, 10);
-  if (d.length < 4) return d;
-  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
-
 // ────────────────────────────────────────────────────────────────
 // Page
 // ────────────────────────────────────────────────────────────────
@@ -76,11 +69,11 @@ export default function PersonalPage() {
 
   // Each field is its own server-backed atom. Optimistic locally; sensitive
   // fields (ssn) get encrypted server-side before hitting JSONB.
+  // fullName + dateOfBirth + email come pre-filled from /quick-start.
+  // Phone is intentionally NOT collected here — Clerk has it from OTP login.
   const [fullName, setFullName] = useIntakeField<string>('personal.fullName', '');
   const [dobIso, setDobIso] = useIntakeField<string>('personal.dateOfBirth', '');
   const [ssn, setSsn] = useIntakeField<string>('personal.ssn', '');
-  const [phone, setPhone] = useIntakeField<string>('personal.phone', '');
-  const [email, setEmail] = useIntakeField<string>('personal.email', '');
   const [occupation, setOccupation] = useIntakeField<string>('personal.occupation', '');
   const [street, setStreet] = useIntakeField<string>('personal.street', '');
   const [city, setCity] = useIntakeField<string>('personal.city', '');
@@ -166,33 +159,6 @@ export default function PersonalPage() {
               Social Security Number
             </FieldLabel>
             <SSNField t={t} value={ssn} onChange={(v) => void setSsn(v)} />
-          </div>
-
-          <div>
-            <FieldLabel t={t}>Phone number</FieldLabel>
-            <TextField
-              t={t}
-              value={phone}
-              onChange={(v) => void setPhone(formatPhone(v))}
-              placeholder="(555) 555-5555"
-              mono
-              inputMode="tel"
-              type="tel"
-              autoComplete="tel"
-            />
-          </div>
-
-          <div>
-            <FieldLabel t={t}>Email</FieldLabel>
-            <TextField
-              t={t}
-              value={email}
-              onChange={(v) => void setEmail(v)}
-              placeholder="you@example.com"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-            />
           </div>
 
           <div>

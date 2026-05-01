@@ -73,6 +73,18 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'welcome',
     isApplicable: () => true,
     isComplete: () => true, // pure intro — always passable
+    next: () => '/quick-start',
+  },
+  {
+    id: 'quick-start',
+    route: '/quick-start',
+    label: 'Quick start',
+    section: 'welcome',
+    isApplicable: () => true,
+    // Three sequential questions: name + DOB + email. Phone comes from
+    // the OTP login. /personal later auto-populates from these fields.
+    isComplete: (s) =>
+      !!s.personal?.fullName && !!s.personal?.dateOfBirth && !!s.personal?.email,
     next: () => '/tutorial',
   },
   {
@@ -257,7 +269,20 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     label: 'Deductions',
     section: 'deductions',
     isApplicable: () => true,
-    isComplete: (s) => !!s.deductions?.kind,
+    // Any toggle (or "none") counts as the user having answered.
+    isComplete: (s) => {
+      const d = s.deductions ?? {};
+      return !!(
+        d.none ||
+        d.mortgage ||
+        d.student ||
+        d.charity ||
+        d.childcare ||
+        d.medical ||
+        d.education ||
+        d.educator
+      );
+    },
     next: () => '/life-events',
   },
   {
@@ -445,4 +470,47 @@ export function getStepProgress(
  */
 export function isIntakeComplete(state: IntakeState): boolean {
   return getApplicableSteps(state).every((s) => s.isComplete(state));
+}
+
+/**
+ * Has the client touched ANYTHING in the intake?
+ *
+ * Different from isIntakeComplete (full completion) and from getResumeStep
+ * (next incomplete step). This answers "have they made any progress at
+ * all" — used by the welcome page to flip between first-time and returning
+ * UX without depending on which specific step gates "completion."
+ *
+ * Returns true if any meaningful field is populated. Empty arrays / false
+ * booleans / undefined are treated as no progress.
+ */
+export function hasIntakeProgress(state: IntakeState): boolean {
+  return !!(
+    state.tutorial?.completed ||
+    state.service?.kind ||
+    state.personal?.fullName ||
+    state.personal?.ssn ||
+    state.personal?.dateOfBirth ||
+    state.personal?.email ||
+    state.personal?.street ||
+    state.state?.primaryState ||
+    state.filing?.status ||
+    (state.dependents?.count !== undefined && state.dependents.count > 0) ||
+    (state.dependents?.list?.length ?? 0) > 0 ||
+    (state.income?.types?.length ?? 0) > 0 ||
+    state.selfEmployment?.businessName ||
+    (state.rental?.properties?.length ?? 0) > 0 ||
+    state.business?.legalName ||
+    state.deductions?.mortgage ||
+    state.deductions?.charity ||
+    state.deductions?.childcare ||
+    state.deductions?.medical ||
+    state.deductions?.none ||
+    state.refund?.preference ||
+    state.documents?.uploadComplete ||
+    state.engagement?.signed ||
+    state.consent?.signed ||
+    state.contactInfo?.preferredMethod ||
+    state.appointment?.requested ||
+    state.deposit?.paid
+  );
 }
