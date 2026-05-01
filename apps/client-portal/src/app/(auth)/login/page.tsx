@@ -27,7 +27,9 @@ export default function LoginPage() {
   };
 
   const onSubmit = () => {
-    // TODO(week-2): POST to /api/auth/send-otp via Clerk. For v0, advance optimistically.
+    // TODO(week-2): POST to /api/auth/send-otp via Clerk. Until then, advance
+    // optimistically — Clerk will run the real format/region validation
+    // server-side when the SMS path lands. No client-side gating in v0.
     nav.next('/otp');
   };
 
@@ -84,7 +86,6 @@ export default function LoginPage() {
             <Button
               t={t}
               onClick={onSubmit}
-              disabled={phone.replace(/\D/g, '').length < 7}
               style={{ width: '100%', padding: '16px 22px', fontSize: 16 }}
             >
               Send verification code
