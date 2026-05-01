@@ -417,7 +417,7 @@ async function seed() {
 
   console.log('\n──────────────────────────────────────────────');
   console.log(`  ✓ Vazant Consulting seeded`);
-  console.log(`  ✓ Antonio Ramirez (owner)`);
+  console.log(`  ✓ Antonio Vazquez (owner)`);
   console.log(`  ✓ ${insertedClients.length} clients · ${insertedEngagements.length} engagements`);
   console.log(`  ✓ 10 issues in Triage queue (mapped to v4 mockup)`);
   console.log(`  ✓ 15 historical actions (practice ledger has data)`);

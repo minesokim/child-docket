@@ -22,8 +22,8 @@ export type DrafterContext = {
   clientFirstName: string;
   preferredLanguage: 'en' | 'es' | 'zh' | 'vi' | 'tl';   // v0: en/es honored; others fallback to en
   channel: 'email' | 'sms' | 'portal_chat';
-  preparerFullName: string;                              // 'Antonio Ramirez'
-  preparerSignOff: string;                                // 'Antonio' (casual) or 'Antonio Ramirez, EA' (formal)
+  preparerFullName: string;                              // 'Antonio Vazquez'
+  preparerSignOff: string;                                // 'Antonio' (casual) or 'Antonio Vazquez, EA' (formal)
   firmName: string;                                       // 'Vazant Consulting'
   // Optional history for voice consistency (will be sparse in v0)
   recentOutboundDrafts?: Array<{ channel: string; body: string }>;
@@ -45,7 +45,7 @@ export const DraftOutputSchema = z.object({
   language: z.enum(['en', 'es']),
   subject: z.string().nullable(),                          // null for sms / portal_chat
   body: z.string().min(5),
-  signature: z.string(),                                    // signoff line: 'Antonio' / 'Antonio Ramirez, EA'
+  signature: z.string(),                                    // signoff line: 'Antonio' / 'Antonio Vazquez, EA'
   suggestedAttachments: z
     .array(
       z.object({
@@ -123,7 +123,7 @@ When the draft references a portal action, include:
   "language": "en" | "es",
   "subject": "string for email, null for sms/portal_chat",
   "body": "the message body",
-  "signature": "Antonio" | "Antonio Ramirez, EA" | other,
+  "signature": "Antonio" | "Antonio Vazquez, EA" | other,
   "suggestedAttachments": [{ "kind": "portal_link" | "document" | "calendar_invite" | "payment_link" | "form_link", "ref": "stable-id", "label": "Human-readable" }],
   "followUpDate": "ISO 8601 date if auto-follow-up should be scheduled, else null",
   "confidence": 0.0-1.0,

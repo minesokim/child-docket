@@ -116,7 +116,7 @@ export const classifyGmailMessage = inngest.createFunction(
               clientFirstName: clientMatch.clientFullName.split(' ')[0] ?? clientMatch.clientFullName,
               preferredLanguage: 'en',                    // TODO(week-1): pull from clients table
               channel: 'email',                            // gmail message → reply via email
-              preparerFullName: 'Antonio Ramirez',         // TODO(week-1): pull from users table
+              preparerFullName: 'Antonio Vazquez',         // TODO(week-1): pull from users table
               preparerSignOff: 'Antonio',
               firmName: 'Vazant Consulting',               // TODO(week-1): pull from tenants table
               originalMessage: {

@@ -65,7 +65,7 @@ async function main() {
         clientFirstName: 'Priya',
         preferredLanguage: 'en',
         channel: 'portal_chat',
-        preparerFullName: 'Antonio Ramirez',
+        preparerFullName: 'Antonio Vazquez',
         preparerSignOff: 'Antonio',
         firmName: 'Vazant Consulting',
         originalMessage: undefined,

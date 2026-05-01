@@ -351,7 +351,7 @@ The core product differentiator. Competitors show dashboards you read. Docket sh
 - Both can coexist in the same app.
 
 ### Auth styling note
-The user identity in flows is real: **Antonio Vazant** (avatar in `assets/antonio.webp`).
+The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consulting, avatar in `assets/antonio.webp`).
 
 ---
 
