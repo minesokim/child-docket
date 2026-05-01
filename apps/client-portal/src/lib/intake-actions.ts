@@ -21,6 +21,7 @@
 // ────────────────────────────────────────────────────────────────
 
 import { auth, currentUser } from '@clerk/nextjs/server';
+import { cache } from 'react';
 import { eq, and } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -209,11 +210,20 @@ export type SaveIntakeFieldResult =
  * succeeds. Both end up calling the SELECT fallback to load the canonical
  * row. No duplicates possible.
  *
+ * Wrapped in React.cache(): memoizes the result for the duration of a
+ * single server render pass. The (intake) layout calls this once; any
+ * child Server Component that ALSO needs the intake bundle (e.g., a
+ * page rendering conditional content based on completed steps) gets
+ * the same cached Promise, paying one DB round trip per request
+ * instead of N. Cache scope is per-request, not cross-request — every
+ * new navigation gets a fresh fetch, by design (intake state changes
+ * between page nav).
+ *
  * Returns null when:
  *   - No Clerk session
  *   - Vazant tenant not seeded (deployment misconfig)
  */
-export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
+export const getOrCreateIntakeAnswers = cache(async (): Promise<IntakeBundle | null> => {
   const authed = await getOrCreateClient();
   if (!authed) return null;
 
@@ -279,7 +289,7 @@ export async function getOrCreateIntakeAnswers(): Promise<IntakeBundle | null> {
       answers: masked,
     };
   });
-}
+});
 
 /**
  * Validate, encrypt-if-sensitive, and persist a single field write.
