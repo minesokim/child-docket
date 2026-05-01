@@ -1,0 +1,1 @@
+ALTER TYPE "public"."action_class" ADD VALUE 'mutate-intake' BEFORE 'file';

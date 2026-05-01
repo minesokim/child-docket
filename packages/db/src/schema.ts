@@ -25,6 +25,7 @@ export const actionClassEnum = pgEnum('action_class', [
   'send-internal',
   'send-external',
   'mutate-tax-software',
+  'mutate-intake',           // taxpayer-initiated write to intake_responses
   'file',
 ]);
 export const modelEnum = pgEnum('model_used', ['haiku-4-5', 'sonnet-4-6', 'opus-4-7']);

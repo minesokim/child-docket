@@ -298,26 +298,29 @@ export async function saveIntakeField(
         })
         .where(eq(schema.intakeResponses.id, existing.id));
 
-      // 6. Audit log. Best-effort — never fail the save if logging dies.
+      // 6. Audit log. NOT best-effort — if the audit insert fails, the
+      // whole transaction rolls back (we're inside withTenant's tx). For
+      // SOC 2 / IRS Pub 1345 compliance, every state-changing write must
+      // leave a tamper-evident audit trail. Allowing writes without audit
+      // would let an attacker who saturates the actions table to make
+      // inserts fail also cover their data-modification tracks.
+      //
+      // Note: the path is recorded but the value is not. We log the value
+      // TYPE only (string/number/boolean) so the audit trail proves a
+      // write happened without itself becoming a PII leak surface.
       const latencyMs = Date.now() - startedAt;
-      try {
-        await db.insert(schema.actions).values({
-          tenantId: authed.tenantId,
-          clientId: authed.clientId,
-          userId: null,
-          agentId: null,
-          actionClass: 'send-internal',
-          toolName: 'saveIntakeField',
-          toolInput: { path, sensitive, valueType: typeof validatedValue },
-          toolOutput: { ok: true },
-          latencyMs,
-          success: true,
-        });
-      } catch (logError) {
-        Sentry.captureException(logError, {
-          tags: { component: 'intake-actions', stage: 'audit-log' },
-        });
-      }
+      await db.insert(schema.actions).values({
+        tenantId: authed.tenantId,
+        clientId: authed.clientId,
+        userId: null,
+        agentId: null,
+        actionClass: 'mutate-intake',
+        toolName: 'saveIntakeField',
+        toolInput: { path, sensitive, valueType: typeof validatedValue },
+        toolOutput: { ok: true },
+        latencyMs,
+        success: true,
+      });
 
       // 7. Return decrypted view for the client's local state.
       const decrypted = decryptTree(updatedStorage) as IntakeState;
