@@ -1,6 +1,7 @@
 'use client';
 
-// Intake step 6/13 — Dependents count. 1-to-1 port of ScreenDependentsCount.
+// Intake step 6/13 — Dependents count.
+// Replaces the four-card discrete picker with a tasteful +/− counter.
 
 import {
   AntonioNote,
@@ -8,7 +9,6 @@ import {
   Body,
   Button,
   buildTheme,
-  DependentCountCard,
   H1,
   IntakeBackButton,
   IntakeHeader,
@@ -16,30 +16,79 @@ import {
   Screen,
   Stack,
 } from '@docket/ui';
+import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { usePortalState } from '@/lib/portal-state';
 
-type DepsCount = 'none' | 'one' | 'two' | 'more';
+const MAX_DEPS = 10;
 
-const OPTIONS: Array<{ id: DepsCount; label: string; sub: string; icon: string }> = [
-  { id: 'none', label: 'No dependents', sub: 'Just me (and spouse, if applicable)', icon: '0' },
-  { id: 'one', label: '1 dependent', sub: 'One child, parent, or other', icon: '1' },
-  { id: 'two', label: '2 dependents', sub: 'Two qualifying individuals', icon: '2' },
-  { id: 'more', label: '3 or more', sub: "We'll capture the full list next", icon: '3+' },
-];
+function StepperButton({
+  t,
+  symbol,
+  onClick,
+  disabled,
+  ariaLabel,
+}: {
+  t: Theme;
+  symbol: '−' | '+';
+  onClick: () => void;
+  disabled: boolean;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      style={{
+        width: 52,
+        height: 52,
+        borderRadius: '50%',
+        background: disabled ? 'transparent' : t.bgElev,
+        border: `1px solid ${disabled ? t.borderSoft : t.border}`,
+        color: disabled ? t.borderSoft : t.ink,
+        fontFamily: t.serif,
+        fontSize: 26,
+        fontWeight: 400,
+        lineHeight: 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.15s ease',
+        userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        padding: 0,
+      }}
+      onMouseDown={(e) => {
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.tintAccent;
+      }}
+      onMouseUp={(e) => {
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.bgElev;
+      }}
+      onTouchStart={(e) => {
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.tintAccent;
+      }}
+      onTouchEnd={(e) => {
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.bgElev;
+      }}
+    >
+      {symbol}
+    </button>
+  );
+}
 
 export default function DepsCountPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [sel, setSel] = usePortalState<DepsCount | null>('deps-count', null);
+  const [count, setCount] = usePortalState<number>('deps-count', 0);
+
+  const dec = () => setCount(Math.max(0, count - 1));
+  const inc = () => setCount(Math.min(MAX_DEPS, count + 1));
 
   const handleContinue = () => {
-    if (!sel) return;
-    if (sel === 'none') {
-      nav.next('/income');
-    } else {
-      nav.next('/deps-detail');
-    }
+    if (count === 0) nav.next('/income');
+    else nav.next('/deps-detail');
   };
 
   return (
@@ -67,20 +116,64 @@ export default function DepsCountPage() {
           </Stack>
         </div>
 
-        <Stack gap={10} style={{ padding: '22px 24px 16px', flex: 1 }}>
-          {OPTIONS.map((o) => (
-            <DependentCountCard
-              key={o.id}
-              t={t}
-              selected={sel === o.id}
-              onClick={() => setSel(o.id)}
-              label={o.label}
-              sub={o.sub}
-              icon={o.icon}
-            />
-          ))}
+        <Stack gap={20} style={{ padding: '32px 24px 16px', flex: 1 }}>
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: t.radius,
+              padding: '36px 24px 30px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 14,
+            }}
+          >
+            <Row gap={32} align="center" justify="center">
+              <StepperButton
+                t={t}
+                symbol="−"
+                onClick={dec}
+                disabled={count <= 0}
+                ariaLabel="Decrease dependent count"
+              />
+              <div
+                style={{
+                  fontFamily: t.serif,
+                  fontSize: 72,
+                  fontWeight: 400,
+                  color: t.ink,
+                  letterSpacing: -2.5,
+                  lineHeight: 1,
+                  minWidth: 60,
+                  textAlign: 'center',
+                  fontFeatureSettings: '"tnum" 1, "lnum" 1',
+                }}
+              >
+                {count}
+              </div>
+              <StepperButton
+                t={t}
+                symbol="+"
+                onClick={inc}
+                disabled={count >= MAX_DEPS}
+                ariaLabel="Increase dependent count"
+              />
+            </Row>
+            <div
+              style={{
+                fontFamily: t.serif,
+                fontStyle: 'italic',
+                fontSize: 14,
+                color: t.muted,
+                letterSpacing: 0.1,
+              }}
+            >
+              {count === 1 ? 'dependent' : 'dependents'}
+            </div>
+          </div>
 
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 4 }}>
             <AntonioNote t={t}>
               Dependents unlock credits like the Child Tax Credit ($2,000+ per child). Even if
               you&apos;re not sure someone qualifies, mention them.
@@ -109,12 +202,7 @@ export default function DepsCountPage() {
             >
               Back
             </Button>
-            <Button
-              t={t}
-              onClick={handleContinue}
-              disabled={!sel}
-              style={{ flex: 1, opacity: sel ? 1 : 0.45 }}
-            >
+            <Button t={t} onClick={handleContinue} style={{ flex: 1 }}>
               Continue
             </Button>
           </Row>

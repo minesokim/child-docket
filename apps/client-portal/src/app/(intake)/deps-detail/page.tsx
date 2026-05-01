@@ -137,26 +137,17 @@ function DependentCardDetails({
   );
 }
 
-type DepsCount = 'none' | 'one' | 'two' | 'more';
-
-function countFor(c: DepsCount | null): number {
-  if (c === 'one') return 1;
-  if (c === 'two') return 2;
-  if (c === 'more') return 3;
-  return 2;
-}
-
 export default function DepsDetailPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [count] = usePortalState<DepsCount | null>('deps-count', null);
+  const [count] = usePortalState<number>('deps-count', 0);
+  const target = Math.max(1, count); // at least 1 card if user landed here
   const [deps, setDeps] = usePortalState<Dependent[]>(
     'deps-detail',
-    Array.from({ length: countFor(count) }, () => ({ ...EMPTY_DEP })),
+    Array.from({ length: target }, () => ({ ...EMPTY_DEP })),
   );
 
   // Re-size the array if the user changed count on the previous screen
-  const target = countFor(count);
   if (deps.length !== target) {
     const next = Array.from({ length: target }, (_, i) => deps[i] ?? { ...EMPTY_DEP });
     setDeps(next);

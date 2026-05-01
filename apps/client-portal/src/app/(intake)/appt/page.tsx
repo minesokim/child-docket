@@ -367,12 +367,13 @@ export default function ApptPage() {
                     </span>
                     <span
                       style={{
-                        fontFamily: t.serif,
-                        fontSize: 22,
+                        fontFamily: t.sans,
+                        fontSize: 20,
                         fontWeight: 500,
                         color: on ? '#fff' : t.ink,
-                        letterSpacing: -0.5,
+                        letterSpacing: -0.3,
                         lineHeight: 1,
+                        fontFeatureSettings: '"tnum" 1, "lnum" 1',
                       }}
                     >
                       {d.n}
