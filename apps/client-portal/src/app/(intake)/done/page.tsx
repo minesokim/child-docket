@@ -237,7 +237,7 @@ export default function DonePage() {
 
           <Button
             t={t}
-            onClick={() => nav.jump('/portal-home')}
+            onClick={() => nav.jump('/portal/home')}
             style={{ width: '100%', padding: '16px' }}
           >
             Go to your portal →
