@@ -795,6 +795,18 @@ export function AskAntonioBar({
               style={{
                 fontFamily: t.sans,
                 fontSize: 14,
+                fontWeight: 600,
+                color: t.ink,
+                letterSpacing: -0.1,
+                marginBottom: 6,
+              }}
+            >
+              Antonio&apos;s Note
+            </div>
+            <div
+              style={{
+                fontFamily: t.sans,
+                fontSize: 14,
                 lineHeight: 1.5,
                 color: t.inkSoft,
                 letterSpacing: -0.05,
