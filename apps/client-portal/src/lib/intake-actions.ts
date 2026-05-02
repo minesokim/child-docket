@@ -30,6 +30,7 @@ import {
   schema,
   encryptFieldForTenant,
   decryptIfMarkedForTenant,
+  decryptTree,
   getTenantDek,
   isEncrypted,
 } from '@docket/db';
@@ -61,24 +62,7 @@ function getCurrentTaxYear(): number {
   return taxYearForDate(new Date(), 'America/Los_Angeles');
 }
 
-/**
- * Walk a JSONB tree and decrypt every encrypted leaf marker using the
- * tenant's DEK. Used on the read path so the client receives plain values
- * it can render directly.
- *
- * The DEK is passed in (rather than looked up per-leaf) so a single tree
- * walk amortizes one cache lookup across all encrypted fields.
- */
-function decryptTree(node: unknown, dek: Buffer): unknown {
-  if (node == null || typeof node !== 'object') return node;
-  if (isEncrypted(node)) return decryptIfMarkedForTenant(node, dek);
-  if (Array.isArray(node)) return node.map((item) => decryptTree(item, dek));
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(node)) {
-    out[k] = decryptTree(v, dek);
-  }
-  return out;
-}
+// (decryptTree moved to @docket/db — see packages/db/src/encryption.ts)
 
 // ────────────────────────────────────────────────────────────────
 // Auth + client provisioning

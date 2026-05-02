@@ -16,6 +16,7 @@ export {
   encryptFieldForTenant,
   decryptFieldForTenant,
   decryptIfMarkedForTenant,
+  decryptTree,
   // Master-KEK helpers (internal — used by dek-cache)
   encryptDek,
   decryptDek,

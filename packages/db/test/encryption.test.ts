@@ -224,6 +224,63 @@ describe('Legacy single-key API (deprecated, kept for migration)', () => {
   });
 });
 
+describe('decryptTree — JSONB tree walking', () => {
+  test('decrypts encrypted leaves, leaves plain values alone', async () => {
+    const { decryptTree, encryptFieldForTenant } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      personal: {
+        fullName: 'David Kim',
+        ssn: encryptFieldForTenant('123-45-6789', dek),
+      },
+      flags: { paid: true, count: 3 },
+      tags: ['a', 'b', 'c'],
+    };
+    const decrypted = decryptTree(tree, dek) as typeof tree;
+    expect(decrypted.personal.fullName).toBe('David Kim');
+    expect(decrypted.personal.ssn).toBe('123-45-6789');
+    expect(decrypted.flags.paid).toBe(true);
+    expect(decrypted.flags.count).toBe(3);
+    expect(decrypted.tags).toEqual(['a', 'b', 'c']);
+  });
+
+  test('walks arrays + decrypts encrypted items', async () => {
+    const { decryptTree, encryptFieldForTenant } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      dependents: {
+        list: [
+          { fullName: 'Kid A', ssn: encryptFieldForTenant('111-22-3333', dek) },
+          { fullName: 'Kid B', ssn: encryptFieldForTenant('444-55-6666', dek) },
+        ],
+      },
+    };
+    const decrypted = decryptTree(tree, dek) as typeof tree;
+    expect(decrypted.dependents.list[0]?.ssn).toBe('111-22-3333');
+    expect(decrypted.dependents.list[1]?.ssn).toBe('444-55-6666');
+  });
+
+  test('handles null + undefined + missing keys gracefully', async () => {
+    const { decryptTree } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    expect(decryptTree(null, dek)).toBe(null);
+    expect(decryptTree(undefined, dek)).toBe(undefined);
+    expect(decryptTree({}, dek)).toEqual({});
+    expect(decryptTree([], dek)).toEqual([]);
+  });
+
+  test('returns a NEW tree (input not mutated)', async () => {
+    const { decryptTree, encryptFieldForTenant } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      personal: { ssn: encryptFieldForTenant('123-45-6789', dek) },
+    };
+    const original = JSON.stringify(tree);
+    decryptTree(tree, dek);
+    expect(JSON.stringify(tree)).toBe(original);
+  });
+});
+
 describe('decryptIfMarkedForTenant — legacy master-encrypted fallback', () => {
   test('legacy master-key ciphertext decrypts via fallback when tenant DEK fails', () => {
     // Simulate v0 production data: a value encrypted with the master KEK

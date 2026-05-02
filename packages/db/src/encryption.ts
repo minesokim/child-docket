@@ -219,6 +219,31 @@ export function decryptIfMarkedForTenant(value: unknown, dek: Buffer): unknown {
   }
 }
 
+/**
+ * Walk a JSONB tree and decrypt every encrypted leaf using the tenant's
+ * DEK. Used on the intake-read path: server fetches an
+ * `intake_responses.answers` blob, calls decryptTree to flatten the
+ * encrypted markers back to plaintext scalars, then optionally masks
+ * sensitive fields before sending to the client.
+ *
+ * The DEK is passed in (rather than looked up per-leaf) so a single tree
+ * walk amortizes one DEK-cache lookup across all encrypted fields.
+ *
+ * Generic over T so the caller's IntakeState type flows through. The
+ * shape of the returned tree mirrors the input — same keys, same nesting,
+ * with EncryptedMarker leaves replaced by their plaintext.
+ */
+export function decryptTree(node: unknown, dek: Buffer): unknown {
+  if (node == null || typeof node !== 'object') return node;
+  if (isEncrypted(node)) return decryptIfMarkedForTenant(node, dek);
+  if (Array.isArray(node)) return node.map((item) => decryptTree(item, dek));
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    out[k] = decryptTree(v, dek);
+  }
+  return out;
+}
+
 // ────────────────────────────────────────────────────────────────
 // DEPRECATED — single-key API. Retained briefly for the orchestrator's
 // non-tenant-scoped fixtures + tests. Application code that touches user
