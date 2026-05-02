@@ -16,8 +16,14 @@
 //      [AND tenant_id = T]. Match → UPDATE clerk_user_id and return.
 //      This is the "claim" path: a pre-seeded row gets bound to the
 //      real Clerk userId on first sign-in matching the verified email.
-//   3. If still not found, return null. The caller decides what to do
-//      (typically: render a "no account provisioned" screen).
+//   3. NEW (Day 4 wire-up): if the user is in a Clerk Org we track AND
+//      no users row matches them, auto-provision a row with role
+//      'preparer'. This is the "first staff member" path — when
+//      Antonio invites someone via Clerk Org invite, their first
+//      sign-in lands here and gets a baseline-permissions row.
+//      Antonio elevates roles manually via UPDATE for now.
+//   4. If we can't auto-provision (no orgId, or orgId doesn't match a
+//      tenant) → return null. The caller renders "no account".
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { getAdminDb, schema } from '@docket/db/client';
@@ -143,29 +149,134 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
     .where(byEmailWhere)
     .limit(1);
 
-  if (!byEmail[0]) return null;
+  if (byEmail[0]) {
+    // Found a pre-provisioned row by email. Bind it to this Clerk identity.
+    const [updated] = await db
+      .update(schema.users)
+      .set({ clerkUserId })
+      .where(eq(schema.users.id, byEmail[0].id))
+      .returning({
+        id: schema.users.id,
+        tenantId: schema.users.tenantId,
+        clerkUserId: schema.users.clerkUserId,
+        email: schema.users.email,
+        name: schema.users.name,
+        role: schema.users.role,
+      });
 
-  // Found a pre-provisioned row by email. Bind it to this Clerk identity.
-  const [updated] = await db
-    .update(schema.users)
-    .set({ clerkUserId })
-    .where(eq(schema.users.id, byEmail[0].id))
-    .returning({
-      id: schema.users.id,
-      tenantId: schema.users.tenantId,
-      clerkUserId: schema.users.clerkUserId,
-      email: schema.users.email,
-      name: schema.users.name,
-      role: schema.users.role,
+    if (!updated) return null;
+
+    // The UPDATE...RETURNING doesn't carry the joined tenant fields;
+    // splice them in from the byEmail read which already has them.
+    return {
+      ...updated,
+      tenantName: byEmail[0].tenantName,
+      tenantSlug: byEmail[0].tenantSlug,
+    } satisfies DocketUser;
+  }
+
+  // 4. Auto-provision (Day 4 — "first staff member" path).
+  //
+  // Reached when: Clerk session is bound to an org we track, but no
+  // users row exists for this clerkUserId AND no row exists matching
+  // their email. This is the new-hire flow: Antonio invited someone
+  // via Clerk Org invite, they accepted, this is their first sign-in.
+  //
+  // We INSERT a row with the safe baseline role 'preparer'. Antonio
+  // elevates manually for now via:
+  //   UPDATE users SET role = 'firm_owner' WHERE email = '...';
+  //
+  // Why we DON'T auto-provision in legacy mode (no orgId): without
+  // the Clerk Org boundary we can't determine which tenant to assign
+  // the user to. The seed-then-claim path covers Antonio's own
+  // bootstrap; everyone else needs to come in through an invite.
+  if (!orgId || !tenantId) {
+    return null;
+  }
+
+  // Build the display name from Clerk's profile fields. Falls back to
+  // email local-part if Clerk hasn't captured a name (some providers
+  // don't surface one).
+  const name =
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ').trim() ||
+    email.split('@')[0] ||
+    null;
+
+  // Race-safe insert: if two concurrent first-sign-ins hit at once,
+  // the unique constraint on clerk_user_id makes the loser's INSERT
+  // fail. We catch and re-read.
+  try {
+    const [created] = await db
+      .insert(schema.users)
+      .values({
+        tenantId,
+        clerkUserId,
+        email,
+        name,
+        role: 'preparer',
+      })
+      .returning({
+        id: schema.users.id,
+        tenantId: schema.users.tenantId,
+        clerkUserId: schema.users.clerkUserId,
+        email: schema.users.email,
+        name: schema.users.name,
+        role: schema.users.role,
+      });
+
+    if (!created) {
+      Sentry.captureMessage(
+        '[command-room] auto-provision INSERT returned no row',
+        'error',
+      );
+      return null;
+    }
+
+    // Pull tenant display fields. Same shape as the byEmail path —
+    // INSERT...RETURNING can't carry the joined columns.
+    const [tenant] = await db
+      .select({ name: schema.tenants.name, slug: schema.tenants.slug })
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId))
+      .limit(1);
+
+    if (!tenant) {
+      Sentry.captureMessage(
+        '[command-room] auto-provision: tenant disappeared between resolution and insert',
+        'error',
+      );
+      return null;
+    }
+
+    return {
+      ...created,
+      tenantName: tenant.name,
+      tenantSlug: tenant.slug,
+    } satisfies DocketUser;
+  } catch (err) {
+    // Most likely: lost the race against a concurrent first-sign-in.
+    // Re-read by clerkUserId; the winner's row is now present.
+    const [reread] = await db
+      .select({
+        id: schema.users.id,
+        tenantId: schema.users.tenantId,
+        clerkUserId: schema.users.clerkUserId,
+        email: schema.users.email,
+        name: schema.users.name,
+        role: schema.users.role,
+        tenantName: schema.tenants.name,
+        tenantSlug: schema.tenants.slug,
+      })
+      .from(schema.users)
+      .innerJoin(schema.tenants, eq(schema.tenants.id, schema.users.tenantId))
+      .where(eq(schema.users.clerkUserId, clerkUserId))
+      .limit(1);
+
+    if (reread) return reread satisfies DocketUser;
+
+    Sentry.captureException(err, {
+      tags: { component: 'command-room-auto-provision' },
     });
-
-  if (!updated) return null;
-
-  // The UPDATE...RETURNING doesn't carry the joined tenant fields;
-  // splice them in from the byEmail read which already has them.
-  return {
-    ...updated,
-    tenantName: byEmail[0].tenantName,
-    tenantSlug: byEmail[0].tenantSlug,
-  } satisfies DocketUser;
+    return null;
+  }
 }
