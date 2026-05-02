@@ -6,6 +6,7 @@
 // Real Haiku 4.5 vision call swaps in via docs/DOCS-CAPTURE-PIPELINE.md.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -699,13 +700,18 @@ export default function DocsPage() {
         </div>
 
         <div style={{ padding: '18px 24px 14px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Upload your documents</H1>
-            <Body t={t} size={14}>
-              Document{' '}
-              <span style={{ color: t.rustInk, fontFamily: t.mono }}>{CURRENT + 1}</span> of{' '}
-              <span style={{ color: t.rustInk, fontFamily: t.mono }}>{TOTAL}</span>
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Upload your documents</H1>
+              <Body t={t} size={14}>
+                Document{' '}
+                <span style={{ color: t.rustInk, fontFamily: t.mono }}>{CURRENT + 1}</span> of{' '}
+                <span style={{ color: t.rustInk, fontFamily: t.mono }}>{TOTAL}</span>
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Snap each doc in good light. If a photo&apos;s blurry, you&apos;ll see it immediately and reshoot — beats finding out next week.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -741,10 +747,7 @@ export default function DocsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Snap each doc in good light. If a photo's blurry, you'll see it immediately and reshoot — beats finding out next week."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

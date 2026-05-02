@@ -4,6 +4,7 @@
 // Replaces the four-card discrete picker with a tasteful +/− counter.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -119,11 +120,16 @@ export default function DepsCountPage() {
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Do you have any dependents?</H1>
-            <Body t={t} size={15}>
-              Children, elderly parents, or anyone who depends on you financially.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Do you have any dependents?</H1>
+              <Body t={t} size={15}>
+                Children, elderly parents, or anyone who depends on you financially.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Dependents unlock credits like the Child Tax Credit ($2,000+ per child). If you&apos;re unsure someone qualifies, mention them — I&apos;ll check.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -196,10 +202,7 @@ export default function DepsCountPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Dependents unlock credits like the Child Tax Credit ($2,000+ per child). Even if you're not sure someone qualifies, mention them."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

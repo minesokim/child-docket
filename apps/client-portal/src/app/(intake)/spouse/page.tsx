@@ -5,6 +5,7 @@
 // (same path as personal.ssn — see SENSITIVE_INTAKE_PATHS in @docket/shared).
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -116,11 +117,16 @@ export default function SpousePage() {
         </div>
 
         <div style={{ padding: '14px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Tell me about your spouse.</H1>
-            <Body t={t} size={15}>
-              Basic info for the joint return.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Tell me about your spouse.</H1>
+              <Body t={t} size={15}>
+                Basic info for the joint return.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Your spouse&apos;s SSN is encrypted the moment you type it. I only see the last four digits until I&apos;m actively preparing your return.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -182,10 +188,7 @@ export default function SpousePage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Your SSN is encrypted the moment you type it. I only see the last 4 digits until I'm actively preparing your return."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>

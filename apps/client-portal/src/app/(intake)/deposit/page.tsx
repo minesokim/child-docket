@@ -5,6 +5,7 @@
 // pre-fill financial fields).
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -146,11 +147,16 @@ export default function DepositPage() {
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Secure your appointment with a $50 deposit</H1>
-            <Body t={t} size={15}>
-              Goes toward your final bill. Refundable up to 48 hours before your appointment.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Secure your appointment with a $50 deposit</H1>
+              <Body t={t} size={15}>
+                Goes toward your final bill. Refundable up to 48 hours before your appointment.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              This $50 goes toward your final bill. Cancel 48 hours ahead and you get it back. This is just to protect my time — I used to have people book and never show up.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -412,10 +418,7 @@ export default function DepositPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="This $50 goes toward your final bill. Cancel 48 hours ahead and you get it back. This is just to protect my time — I used to have people book and never show up."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Stack gap={8}>
             <Row gap={10}>

@@ -5,6 +5,7 @@
 // 1-to-1 port of ScreenDeductions.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -124,11 +125,16 @@ export default function DeductionsPage() {
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Quick check on deductions</H1>
-            <Body t={t} size={15}>
-              Select anything that might apply. When in doubt, select it.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Quick check on deductions</H1>
+              <Body t={t} size={15}>
+                Select anything that might apply. When in doubt, select it.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Pick everything that maybe applies — childcare under 13 alone is worth $3k–$6k. I verify what actually qualifies during prep.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -247,10 +253,7 @@ export default function DeductionsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Pick everything that maybe applies — childcare under 13 alone is worth $3k–$6k. I verify what actually qualifies during prep."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

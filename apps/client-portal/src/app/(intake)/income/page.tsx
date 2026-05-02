@@ -5,6 +5,7 @@
 // 1-to-1 port of ScreenIncomeSources.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -79,11 +80,16 @@ export default function IncomePage() {
           <Row gap={10} align="center" style={{ marginBottom: 18 }}>
             <IntakeBackButton t={t} onClick={handleBack} />
           </Row>
-          <Stack gap={10}>
-            <H1 t={t}>How do you earn income?</H1>
-            <Body t={t} size={15}>
-              Select all that apply.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>How do you earn income?</H1>
+              <Body t={t} size={15}>
+                Select all that apply.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Don&apos;t overthink this. If you got paid for it, select it. I&apos;ll sort out the forms.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -162,10 +168,7 @@ export default function IncomePage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Don't overthink this. If you got paid for it, select it. I'll sort out the forms."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

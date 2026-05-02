@@ -8,6 +8,7 @@
 // in @docket/shared and get encrypted at rest before JSONB write.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -125,11 +126,16 @@ export default function BusinessInfoPage() {
         </div>
 
         <div style={{ padding: '14px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Tell me about your business</H1>
-            <Body t={t} size={15}>
-              This helps me prepare the right return type.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Tell me about your business</H1>
+              <Body t={t} size={15}>
+                This helps me prepare the right return type.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              If you&apos;re not sure about entity type or accounting method, don&apos;t worry. I&apos;ll verify everything.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -444,10 +450,7 @@ export default function BusinessInfoPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="If you're not sure about entity type or accounting method, don't worry. I'll verify everything."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

@@ -3,6 +3,7 @@
 // Intake step 4/13 — Filing status. 1-to-1 port of ScreenFilingStatus.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -58,11 +59,16 @@ export default function FilingPage() {
         <IntakeHeader t={t} step={4} label="Filing" />
 
         <div style={{ padding: '32px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>What&apos;s your filing status?</H1>
-            <Body t={t} size={15}>
-              This affects your standard deduction and tax bracket.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>What&apos;s your filing status?</H1>
+              <Body t={t} size={15}>
+                This affects your standard deduction and tax bracket.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              If you&apos;re not sure which applies, pick your best guess — I&apos;ll verify during our call.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -115,10 +121,7 @@ export default function FilingPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="If you're not sure which applies, pick your best guess — I'll verify during our call."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

@@ -13,6 +13,7 @@
 //     stay in display state until the user finishes typing).
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -238,11 +239,16 @@ export default function DepsDetailPage() {
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Tell me about your dependents</H1>
-            <Body t={t} size={15}>
-              Just the basics. I&apos;ll sort out who qualifies.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Tell me about your dependents</H1>
+              <Body t={t} size={15}>
+                Just the basics. I&apos;ll sort out who qualifies.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              If you have a child under 13 and pay for daycare, that&apos;s a big credit we don&apos;t want to miss — I&apos;ll ask about that next.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -269,10 +275,7 @@ export default function DepsDetailPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="If you have a child under 13 and pay for daycare, that's a big credit we don't want to miss — I'll ask about that next."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

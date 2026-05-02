@@ -4,6 +4,7 @@
 // 1-to-1 port of ScreenServicePath from the JSX prototype.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -76,11 +77,16 @@ export default function ServicesPathPage() {
       >
         <IntakeHeader t={t} step={1} subStep="A" label="Services" />
         <div style={{ padding: '32px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>What brings you in this year?</H1>
-            <Body t={t} size={15}>
-              Pick the one that fits best. I&apos;ll ask about add-ons next.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>What brings you in this year?</H1>
+              <Body t={t} size={15}>
+                Pick the one that fits best. I&apos;ll ask about add-ons next.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Not sure? Pick the closest match — we can adjust once I see your documents.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -268,10 +274,7 @@ export default function ServicesPathPage() {
             </Row>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Not sure? Pick the closest match — we can adjust once I see your documents."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

@@ -4,6 +4,7 @@
 // + time slots + summary card. 1-to-1 port of ScreenScheduleAppt.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -242,11 +243,16 @@ export default function ApptPage() {
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Let&apos;s book your appointment</H1>
-            <Body t={t} size={15}>
-              Most returns take one 30-minute session.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Let&apos;s book your appointment</H1>
+              <Body t={t} size={15}>
+                Most returns take one 30-minute session.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Pick whatever works. If none of these times work, message me and I&apos;ll open additional slots.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -498,10 +504,7 @@ export default function ApptPage() {
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Pick whatever works. If none of these times work, message me and I'll open additional slots."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

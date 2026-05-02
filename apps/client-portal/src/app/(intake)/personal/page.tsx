@@ -12,6 +12,7 @@
 // Drop-in swap: usePortalState('personal', DEFAULT) → useIntakeField per field.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -123,11 +124,16 @@ export default function PersonalPage() {
         </div>
 
         <div style={{ padding: '18px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Your basic information</H1>
-            <Body t={t} size={15}>
-              This goes directly onto your return.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Your basic information</H1>
+              <Body t={t} size={15}>
+                This goes directly onto your return.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Your SSN is encrypted the moment you type it. I only see the last four digits until I&apos;m actively preparing your return.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -262,10 +268,7 @@ export default function PersonalPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Your SSN is encrypted the moment you type it. I only see the last 4 digits until I'm actively preparing your return."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>

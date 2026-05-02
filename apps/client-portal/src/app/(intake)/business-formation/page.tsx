@@ -13,6 +13,7 @@
 //   business.ownerCount     ← number of owners
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -182,11 +183,16 @@ export default function BusinessFormationPage() {
         </div>
 
         <div style={{ padding: '14px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Let&apos;s set up your business</H1>
-            <Body t={t} size={15}>
-              Tell me what you want to start.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Let&apos;s set up your business</H1>
+              <Body t={t} size={15}>
+                Tell me what you want to start.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              If you&apos;re not sure which entity type, that&apos;s exactly what we&apos;ll figure out in our consultation. Most of my clients end up with an LLC, then elect S-Corp status once their income justifies it.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -260,10 +266,7 @@ export default function BusinessFormationPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="If you're not sure which entity type, that's exactly what we'll figure out in our consultation. Most of my clients end up with an LLC, then elect S-Corp status once their income justifies it."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

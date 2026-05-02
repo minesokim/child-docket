@@ -5,6 +5,7 @@
 // First property only at v0; v1+ supports multiple.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -112,11 +113,16 @@ export default function RentalDetailPage() {
         </div>
 
         <div style={{ padding: '14px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Tell me about your rental property</H1>
-            <Body t={t} size={15}>
-              Rental income has its own deductions and depreciation rules.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Tell me about your rental property</H1>
+              <Body t={t} size={15}>
+                Rental income has its own deductions and depreciation rules.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Rental properties are one of the best tax advantages. Depreciation, repairs, insurance, mortgage interest — we&apos;ll capture everything. I&apos;ll also verify your depreciation schedule, since IRS Section 167 requires it.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -229,10 +235,7 @@ export default function RentalDetailPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Rental properties are one of the best tax advantages. Depreciation, repairs, insurance, mortgage interest — we'll capture everything. I'll also verify your depreciation schedule, since IRS Section 167 requires it."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

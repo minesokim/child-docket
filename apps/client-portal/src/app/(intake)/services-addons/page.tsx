@@ -4,6 +4,7 @@
 // 1-to-1 port of ScreenServiceAddons from the JSX prototype.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -75,44 +76,49 @@ export default function ServicesAddonsPage() {
       >
         <IntakeHeader t={t} step={1} subStep="B" label="Services" />
         <div style={{ padding: '32px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Anything else going on?</H1>
-            <Body t={t} size={15}>
-              Select what applies. Skip if none of these fit.
-            </Body>
-            <div
-              style={{
-                marginTop: 6,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 10px',
-                background: t.bgElev,
-                border: `1px solid ${t.borderSoft}`,
-                borderRadius: t.tone === 'magazine' ? 2 : 999,
-                alignSelf: 'flex-start',
-              }}
-            >
-              <ServiceIcon t={t} kind={pathDef.icon} />
-              <span style={{ fontSize: 12.5, color: t.inkSoft }}>
-                Building on{' '}
-                <span style={{ color: t.ink, fontWeight: 500 }}>{pathDef.name}</span>
-              </span>
-              <span
-                onClick={handleBack}
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Anything else going on?</H1>
+              <Body t={t} size={15}>
+                Select what applies. Skip if none of these fit.
+              </Body>
+              <div
                 style={{
-                  fontFamily: t.serif,
-                  fontStyle: 'italic',
-                  fontSize: 12,
-                  color: t.rustInk,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: 2,
+                  marginTop: 6,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 10px',
+                  background: t.bgElev,
+                  border: `1px solid ${t.borderSoft}`,
+                  borderRadius: t.tone === 'magazine' ? 2 : 999,
+                  alignSelf: 'flex-start',
                 }}
               >
-                change
-              </span>
-            </div>
+                <ServiceIcon t={t} kind={pathDef.icon} />
+                <span style={{ fontSize: 12.5, color: t.inkSoft }}>
+                  Building on{' '}
+                  <span style={{ color: t.ink, fontWeight: 500 }}>{pathDef.name}</span>
+                </span>
+                <span
+                  onClick={handleBack}
+                  style={{
+                    fontFamily: t.serif,
+                    fontStyle: 'italic',
+                    fontSize: 12,
+                    color: t.rustInk,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  change
+                </span>
+              </div>
+            </Stack>
+            <AntonioNote t={t}>
+              If none of these apply, skip ahead — I&apos;ll catch anything we miss during review.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -289,10 +295,7 @@ export default function ServicesAddonsPage() {
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="If none of these apply, skip ahead — we'll catch anything I missed during review."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

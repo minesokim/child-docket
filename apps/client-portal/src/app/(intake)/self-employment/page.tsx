@@ -4,6 +4,7 @@
 // when 'self' was selected. 1-to-1 port of ScreenSelfEmployment.
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -103,11 +104,16 @@ export default function SelfEmploymentPage() {
         </div>
 
         <div style={{ padding: '14px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>Tell me about your self-employment</H1>
-            <Body t={t} size={15}>
-              This opens up lots of deductions most people miss.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>Tell me about your self-employment</H1>
+              <Body t={t} size={15}>
+                This opens up lots of deductions most people miss.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Self-employment has dozens of deductions most people miss. Home office, mileage, equipment, health insurance, retirement contributions. We&apos;ll go through all of them.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -215,10 +221,7 @@ export default function SelfEmploymentPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Self-employment has dozens of deductions most people miss. Home office, mileage, equipment, health insurance, retirement contributions. We'll go through all of them."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

@@ -427,6 +427,11 @@ export function EncryptedTextField({
 }
 
 function EncryptedPill({ t }: { t: Theme }) {
+  // Solid black pill — high contrast against the cream page so the
+  // ENCRYPTED badge is unmistakable. White icon + label, no border.
+  // Reads as a system tag (always-on assurance) rather than a soft
+  // suggestion. The stroke-less treatment keeps it from competing
+  // visually with the field's own bottom-border underline.
   return (
     <span
       style={{
@@ -434,12 +439,12 @@ function EncryptedPill({ t }: { t: Theme }) {
         alignItems: 'center',
         gap: 5,
         padding: '4px 9px',
-        background: t.tintAccent,
-        border: `1px solid ${t.rustSoft}`,
+        background: t.ink,
+        border: 'none',
         borderRadius: 999,
         fontFamily: t.mono,
         fontSize: 9,
-        color: t.rustInk,
+        color: '#fff',
         letterSpacing: 0.8,
       }}
     >

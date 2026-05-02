@@ -7,6 +7,7 @@
 // Storage path: strategicTopics.selected (string[] of StrategicTopic enum).
 
 import {
+  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -156,11 +157,16 @@ export default function StrategicTopicsPage() {
         </div>
 
         <div style={{ padding: '14px 24px 8px' }}>
-          <Stack gap={10}>
-            <H1 t={t}>What do you want to discuss?</H1>
-            <Body t={t} size={15}>
-              Select all that apply so I can prepare.
-            </Body>
+          <Stack gap={16}>
+            <Stack gap={10}>
+              <H1 t={t}>What do you want to discuss?</H1>
+              <Body t={t} size={15}>
+                Select all that apply so I can prepare.
+              </Body>
+            </Stack>
+            <AntonioNote t={t}>
+              Come with specific questions. The more prepared you are, the more value we get out of the hour.
+            </AntonioNote>
           </Stack>
         </div>
 
@@ -187,10 +193,7 @@ export default function StrategicTopicsPage() {
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            <AskAntonioBar
-              t={t}
-              tip="Come with specific questions. The more prepared you are, the more value we get out of the hour."
-            />
+            <AskAntonioBar t={t} />
           </div>
           <Row gap={10}>
             <Button

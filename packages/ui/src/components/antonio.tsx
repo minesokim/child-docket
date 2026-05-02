@@ -1,38 +1,48 @@
-// Antonio's voice on screen — the three components that animate Antonio's
-// presence in the client portal:
-//   - AskAntonioBar: sticky pill at the bottom of intake screens, with
-//     optional inline tip. Click → fires `ask-antonio:open` event.
-//   - AskAntonioChat: global bottom-sheet modal that listens for that event.
-//     Mount once at the (intake) layout level so any screen can trigger it.
-//   - AntonioNote: sans-serif margin-note in Antonio's voice, with em-dash
-//     signature line. Used inline in a screen, not as a sticky element.
+// Antonio's voice on screen — three components that together feel like
+// ONE continuous conversation between the client and Antonio:
+//
+//   - AntonioNote: a per-page message Antonio drops at the top of the
+//     screen, framing the question before the client answers (NEW
+//     visual — see component-level header). One note per page.
+//   - AskAntonioBar: a sticky rail at the bottom of every page. Reads
+//     as the conversation continuing — tap it to open the full thread
+//     and reply. The label is "Continue with Antonio," not "ask
+//     question," because the user isn't filing a help ticket — they're
+//     keeping a thread alive.
+//   - AskAntonioChat: bottom-sheet modal that opens when the rail is
+//     tapped. Holds the full scrollback + composer. Mount once at the
+//     (intake) layout so any page can dispatch the open event.
+//
+// Conceptual shift from v0: the page-level note + the bottom rail are
+// not two separate features. They're message + read-receipt-rail of
+// the same chat. Future work (deferred): wire AskAntonioChat to render
+// the full scrollback of every AntonioNote across the intake instead
+// of just its own internal message list.
 
 import * as React from 'react';
 import type { Theme } from '../tokens.js';
 import { AvatarSlot } from './media.js';
 
 // ────────────────────────────────────────────────────────────────
-// AskAntonioBar — sticky pill at the bottom of intake screens.
-// Click → dispatches `ask-antonio:open` event → AskAntonioChat opens.
+// AskAntonioBar — sticky bottom rail, reads as "continue the thread."
+//
+// Behavior: tap anywhere on the rail (or the explicit "Open chat"
+// button) to dispatch `ask-antonio:open`. AskAntonioChat is mounted
+// once in the intake layout and listens for that event.
+//
+// Design intent: the rail is a thread-continuation affordance, not a
+// help button. Label is "Continue with Antonio" so the client reads
+// it as "rejoin the conversation," not "submit a question." Avatar
+// has the same green online-dot as in the chat-modal header so the
+// rail and the chat feel like one surface.
 // ────────────────────────────────────────────────────────────────
 
 export function AskAntonioBar({
   t,
   onMessage,
-  tip,
 }: {
   t: Theme;
   onMessage?: () => void;
-  /**
-   * Optional contextual tip from Antonio. Renders INLINE at the top of
-   * the bar (NOT a floating overlay). User-tested feedback: the floating
-   * speech bubble blocked too much form content. Inline keeps the tip
-   * always-visible without obscuring anything else on the page.
-   *
-   * Border + tint match the bar's rust-soft palette so the whole
-   * component reads as one unified element.
-   */
-  tip?: string;
 }) {
   const handleClick = () => {
     if (onMessage) onMessage();
@@ -43,31 +53,16 @@ export function AskAntonioBar({
     }
   };
 
-  // When a tip is present the whole component becomes a rounded card with
-  // two stacked rows (tip on top + ask on bottom). Without a tip it stays
-  // the original pill shape.
-  const hasTip = !!tip;
-
-  // Visual posture: when there's a tip, the bar reads as a CARD with
-  // soft elevation (Antonio is saying something useful). When there's
-  // no tip, it shrinks to a calmer pill — no shadow, thinner border —
-  // so it's there if you need it but not yelling at every screen.
-  const elevated = hasTip;
-
   return (
     <div
       onClick={handleClick}
       style={{
         background: '#FFFFFF',
         border: `1px solid ${t.rustSoft}`,
-        borderRadius: hasTip ? 18 : 999,
-        boxShadow: elevated
-          ? '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)'
-          : 'none',
+        borderRadius: 999,
         cursor: 'pointer',
         overflow: 'hidden',
-        transition:
-          'transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
+        transition: 'transform 160ms cubic-bezier(.2,.8,.2,1)',
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
@@ -76,62 +71,16 @@ export function AskAntonioBar({
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
       }}
     >
-      {/* Tip row — only renders when a tip is provided. Sits ABOVE the
-          ask row, separated by a hairline divider in the same rust-soft
-          tone as the outer border so the whole component reads as one.
-          Avatar lives ONLY in the ask row below — the tip row uses the
-          serif italic body + '— Antonio' signature line to signal whose
-          voice this is. Two Antonio avatars stacked vertically read as
-          duplication, so we keep just the one. */}
-      {hasTip && (
-        <div
-          style={{
-            padding: '12px 16px 13px',
-            borderBottom: `1px solid ${t.rustSoft}`,
-            background: t.tintAccent,
-          }}
-        >
-          <div
-            style={{
-              fontFamily: t.serif,
-              fontSize: 13.5,
-              fontStyle: 'italic',
-              lineHeight: 1.5,
-              color: t.ink,
-              letterSpacing: -0.1,
-            }}
-          >
-            {tip}
-          </div>
-          <div
-            style={{
-              marginTop: 4,
-              fontFamily: t.sans,
-              fontSize: 11,
-              color: t.muted,
-              letterSpacing: 0.2,
-            }}
-          >
-            — Antonio
-          </div>
-        </div>
-      )}
-
-      {/* Ask row — slim by default (avatar 24, smaller text, no shadow on
-          button), elevates a touch when a tip is present (avatar 28). The
-          calm sizing makes the bar a footer the user can ignore until
-          they need it, instead of a status bar that always demands
-          attention. */}
       <div
         style={{
-          padding: hasTip ? '8px 10px 8px 12px' : '6px 8px 6px 10px',
+          padding: '6px 8px 6px 10px',
           display: 'flex',
           alignItems: 'center',
-          gap: hasTip ? 11 : 9,
+          gap: 9,
         }}
       >
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <AvatarSlot t={t} size={hasTip ? 28 : 24} />
+          <AvatarSlot t={t} size={24} />
           <div
             style={{
               position: 'absolute',
@@ -148,12 +97,12 @@ export function AskAntonioBar({
         <span
           style={{
             flex: 1,
-            fontSize: hasTip ? 13 : 12.5,
+            fontSize: 12.5,
             color: t.inkSoft,
             fontWeight: 400,
           }}
         >
-          Not sure? Ask Antonio
+          Continue with Antonio
         </span>
         <button
           onClick={(e) => {
@@ -161,7 +110,7 @@ export function AskAntonioBar({
             handleClick();
           }}
           style={{
-            padding: hasTip ? '6px 14px' : '5px 12px',
+            padding: '5px 12px',
             fontSize: 12,
             fontWeight: 500,
             background: t.rust,
@@ -173,7 +122,7 @@ export function AskAntonioBar({
             letterSpacing: -0.05,
           }}
         >
-          Message
+          Open chat
         </button>
       </div>
     </div>
@@ -434,55 +383,61 @@ export function AskAntonioChat({ t }: { t: Theme }) {
 }
 
 // ────────────────────────────────────────────────────────────────
-// AntonioNote — sans-serif margin-note in Antonio's voice. Cream
-// background, rust border, em-dash signature line. No credentials,
-// no italics — clean and direct.
+// AntonioNote — Antonio's voice as a near-message at the top of an
+// intake page. Lives directly under the H1+Body subheading and above
+// the first form section, where it can frame the question before the
+// client commits to an answer.
+//
+// Visual: 26px avatar + plain Fraunces body, sitting on the cream
+// page background. NO container, NO italic, NO "— Antonio" signoff.
+// The avatar IS the signature. Italics are a quotation convention
+// and Antonio isn't quoting anyone — he's talking. Stripping the
+// chrome makes the note feel like a person saying something, not a
+// magazine pull-quote.
+//
+// Pair with `<AskAntonioBar t={t} />` at the bottom of the page —
+// together they're the same conversation: Antonio's framing message
+// up top, the rail to continue the thread below.
 // ────────────────────────────────────────────────────────────────
 
 export function AntonioNote({
   t,
   children,
-  signature = 'Antonio',
+  avatarSize = 26,
 }: {
   t: Theme;
   children: React.ReactNode;
-  signature?: string;
+  /** Override avatar diameter. Defaults to 26px — small enough to
+   *  read as a signature next to the text, large enough to recognize. */
+  avatarSize?: number;
 }) {
   return (
     <div
       style={{
-        marginTop: 10,
-        background: t.tintAccent,
-        border: `1px solid ${t.rustSoft}`,
-        borderRadius: t.radius,
-        padding: '16px 18px 14px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        // Lives directly under the H1+Body block. Vertical breathing
+        // room is set by the caller via the Stack gap, not by margin
+        // here — keeps the primitive composable.
       }}
     >
+      <AvatarSlot t={t} size={avatarSize} />
       <div
         style={{
-          fontFamily: t.sans,
-          fontSize: 14.5,
-          lineHeight: 1.55,
+          flex: 1,
+          paddingTop: Math.max(0, (avatarSize - 22) / 2),
+          fontFamily: t.serif,
+          fontSize: 15.5,
+          lineHeight: 1.5,
           color: t.inkSoft,
+          letterSpacing: -0.15,
           textWrap: 'pretty' as React.CSSProperties['textWrap'],
-          letterSpacing: -0.05,
         }}
       >
         {children}
       </div>
-      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span
-          style={{
-            fontFamily: t.sans,
-            fontSize: 13,
-            color: t.ink,
-            lineHeight: 1,
-            fontWeight: 500,
-          }}
-        >
-          —{signature}
-        </span>
-      </div>
     </div>
   );
 }
+
