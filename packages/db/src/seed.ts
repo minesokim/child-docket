@@ -101,7 +101,10 @@ async function seed() {
       clerkUserId: 'user_seed_antonio_pending', // claimed by auth helper on first matching sign-in
       email: adminEmail,
       name: 'Antonio Vazquez',
-      role: 'owner',
+      // firm_owner: full access + only role with PTIN-holder signing
+      // authority (when 8879 wires up via DocuSign + KBA). See
+      // apps/command-room/src/lib/require-role.ts for the policy matrix.
+      role: 'firm_owner',
     })
     .returning();
   if (!antonio) throw new Error('failed to insert user');

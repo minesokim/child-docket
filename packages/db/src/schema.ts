@@ -18,6 +18,18 @@ import {
 // ──────────────────────────────────────────────────────────────
 
 export const trustLevelEnum = pgEnum('trust_level', ['1', '2', '3', '4']);
+
+// User role enum — firm staff only. Clients/taxpayers don't have roles
+// (they're not in the users table). See @docket/shared exports for the
+// type-side companion + the policy matrix in
+// apps/command-room/src/lib/require-role.ts.
+export const userRoleEnum = pgEnum('user_role', [
+  'firm_owner',
+  'preparer',
+  'reviewer',
+  'admin',
+  'assistant',
+]);
 export const actionClassEnum = pgEnum('action_class', [
   'read',
   'draft',
@@ -158,6 +170,16 @@ export const tenants = pgTable('tenants', {
 });
 
 // Users (preparers + staff). Maps to Clerk user IDs.
+//
+// Role is enforced at two layers:
+//   - Schema: userRoleEnum (Postgres rejects unknown values at write).
+//   - App: requireRole() / assertRole() in apps/command-room/src/lib/
+//     require-role.ts gate sensitive Server Components + Server Actions.
+//
+// Policy matrix lives in require-role.ts header. Default 'preparer' is
+// the safe baseline — anyone newly seeded without an explicit role gets
+// preparer access (NOT firm_owner — that's the role with PTIN signing
+// authority and team-management privileges, only Antonio for now).
 export const users = pgTable(
   'users',
   {
@@ -166,7 +188,7 @@ export const users = pgTable(
     clerkUserId: text('clerk_user_id').notNull().unique(),
     email: text('email').notNull(),
     name: text('name'),
-    role: text('role').notNull().default('preparer'),
+    role: userRoleEnum('role').notNull().default('preparer'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ tenantIdx: index('users_tenant_idx').on(t.tenantId) }),

@@ -56,6 +56,33 @@ export type AgentId =
 export type TrustLevel = 1 | 2 | 3 | 4;
 
 // ────────────────────────────────────────────────────────────────
+// User role — firm staff (NOT clients/taxpayers, those are a separate
+// auth surface and not in `users` table).
+//
+// Policy matrix (Day 3 of post-audit hardening; full doc in
+// apps/command-room/src/lib/require-role.ts):
+//
+//   firm_owner  full access; only role that can sign returns (PTIN holder)
+//   preparer    prep work + client data + SSN/EIN reveal
+//   reviewer    review prep work + override + finalize
+//   admin       billing + scheduling + team mgmt; CANNOT reveal SSN/EIN
+//   assistant   limited read + message routing; CANNOT reveal SSN/EIN
+// ────────────────────────────────────────────────────────────────
+export const USER_ROLES = [
+  'firm_owner',
+  'preparer',
+  'reviewer',
+  'admin',
+  'assistant',
+] as const;
+
+export type Role = (typeof USER_ROLES)[number];
+
+export function isRole(value: unknown): value is Role {
+  return typeof value === 'string' && (USER_ROLES as readonly string[]).includes(value);
+}
+
+// ────────────────────────────────────────────────────────────────
 // Action class — taxonomy for the audit ledger.
 // ────────────────────────────────────────────────────────────────
 export type ActionClass =
