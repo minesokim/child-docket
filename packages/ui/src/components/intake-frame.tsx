@@ -116,13 +116,15 @@ export function IntakeHeader({
     zIndex: 5,
     background: t.bg,
     padding: '14px 24px 12px',
-    borderBottom: `1px solid ${t.borderSoft}`,
+    // Zero stroke. The progress bar below already separates the header
+    // from the page body — no need for a border line on top of that.
   };
 
-  // Logout pill — 20% smaller than the original. Sits above the step
-  // row in its own line. Only renders when SignOutProvider is upstream.
-  const logoutPill = onSignOut ? (
-    <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
+  // Logout — ease pattern: small icon + "Log out" text aligned RIGHT
+  // (matches "Alex / Log out" in ease's ehr_client header). No pill,
+  // no background, no border. Just text + icon in forestDark.
+  const logoutLink = onSignOut ? (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
       <button
         type="button"
         onClick={onSignOut}
@@ -130,32 +132,34 @@ export function IntakeHeader({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
-          padding: '5px 10px',
-          background: t.bgElev,
-          border: `1px solid ${t.border}`,
-          borderRadius: 999,
+          gap: 6,
+          padding: 4,
+          background: 'transparent',
+          border: 'none',
           cursor: 'pointer',
-          fontFamily: t.mono,
-          fontSize: 9,
-          letterSpacing: 1,
-          textTransform: 'uppercase',
-          color: t.inkSoft,
+          fontFamily: t.sans,
+          fontSize: 13,
+          fontWeight: 400,
+          color: t.ease.forestDark,
           lineHeight: 1,
-          transition: 'background 140ms cubic-bezier(.2,.8,.2,1), border-color 140ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
+        {/* Door / arrow-right exit icon — same shape as ease's logout. */}
         <svg
-          width="8"
-          height="8"
-          viewBox="0 0 10 10"
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <path d="M2.2 2.2l5.6 5.6M7.8 2.2l-5.6 5.6" strokeLinecap="round" />
+          <path d="M5.5 2.5h-3a1 1 0 00-1 1v7a1 1 0 001 1h3" />
+          <path d="M9 4.5l3 2.5-3 2.5" />
+          <path d="M12 7H6" />
         </svg>
-        Logout
+        Log out
       </button>
     </div>
   ) : null;
@@ -163,7 +167,7 @@ export function IntakeHeader({
   if (!step) {
     return (
       <div style={wrapStyle}>
-        {logoutPill}
+        {logoutLink}
         <Row justify="space-between" align="center" style={{ marginBottom: 10 }}>
           <Eyebrow t={t}>Final step</Eyebrow>
           <Eyebrow t={t}>{label}</Eyebrow>
@@ -178,7 +182,7 @@ export function IntakeHeader({
   const progressValue = subStep === 'B' ? step + 0.5 : step;
   return (
     <div style={wrapStyle}>
-      {logoutPill}
+      {logoutLink}
       <Row justify="space-between" align="center" style={{ marginBottom: 10 }}>
         <Eyebrow t={t}>{stepLabel}</Eyebrow>
         <Eyebrow t={t}>{label}</Eyebrow>

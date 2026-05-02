@@ -59,17 +59,25 @@ export function AskAntonioBar({
       onClick={handleClick}
       style={{
         background: '#FFFFFF',
-        border: `1px solid ${t.rustSoft}`,
+        // Zero stroke. Soft drop shadow carries elevation instead of an
+        // outline — matches ease's white-card-with-shadow pattern (e.g.,
+        // the "Call with Daniel" tile in CRM).
+        border: 'none',
         borderRadius: 999,
+        boxShadow: '0 2px 10px rgba(15, 62, 23, 0.08)',
         cursor: 'pointer',
         overflow: 'hidden',
-        transition: 'transform 160ms cubic-bezier(.2,.8,.2,1)',
+        transition: 'transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(-1px)';
+        el.style.boxShadow = '0 4px 14px rgba(15, 62, 23, 0.12)';
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(0)';
+        el.style.boxShadow = '0 2px 10px rgba(15, 62, 23, 0.08)';
       }}
     >
       <div

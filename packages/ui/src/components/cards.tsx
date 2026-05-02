@@ -1,10 +1,17 @@
-// Card patterns:
-//   - Card: the base container — bordered tile with optional click +
-//     selected states. Accepts an `accent` prop for ease-aligned tinted
-//     variants (mintGlaze / slateMist / keylimeWash / mintKiss / forestDark).
-//   - ToggleCard: multi-select with icon well + check square.
-//   - RadioRowCard: single-select with circle indicator.
-//   - DependentCountCard: count-icon variant for the dependents-count screen.
+// Card patterns — ZERO-STROKE pass.
+//
+// Per design call (May 2026): no box borders anywhere. ease.health
+// uses solid fills + soft shadows + color contrast for affordance.
+// Selected states are signaled by SOLID FILL color, not by a darker
+// stroke. Unselected items sit on a soft tinted base.
+//
+//   - Card: base container — accepts `accent` (ease palette) for tile
+//     variants. No border. Subtle shadow on click-affordance variants.
+//   - ToggleCard: multi-select. Unselected = pale keylimeWash fill.
+//     Selected = forestDark fill + white text + filled check square.
+//   - RadioRowCard: single-select. Same logic as ToggleCard.
+//   - DependentCountCard: count-icon variant for the dependents-count
+//     screen. Number rendered in SANS now (was serif) per design call.
 
 import * as React from 'react';
 import type { Theme } from '../tokens.js';
@@ -49,25 +56,25 @@ export function Card({
   accent?: CardAccent;
 }) {
   // Resolve the surface. `accent` (ease palette) > `tinted` (legacy
-  // rust-soft tint) > default card white.
+  // rust-soft tint) > selected ease.mintKiss > default white.
   const accentFill = accent ? ACCENT_FILL[accent] : null;
-  const background = accentFill?.bg ?? (tinted ? t.tintAccent : t.card);
-  // Accent variants drop the visible border — the fill carries the
-  // shape. Default + tinted variants keep the hairline.
-  const borderColor = accentFill ? 'transparent' : selected ? t.rust : t.border;
+  const background =
+    accentFill?.bg ??
+    (selected ? t.ease.mintKiss : tinted ? t.tintAccent : t.card);
+  const color = accentFill?.fg ?? (selected ? t.ease.forestDark : t.ink);
 
   return (
     <div
       onClick={onClick}
       style={{
         background,
-        color: accentFill?.fg ?? t.ink,
-        border: `1px solid ${borderColor}`,
+        color,
+        // Zero box stroke. Affordance from fill + shadow only.
+        border: 'none',
         borderRadius: t.radius,
         padding: t.pad,
         transition: 'all 0.15s ease',
         cursor: onClick ? 'pointer' : 'default',
-        ...(selected && t.tone === 'magazine' ? { borderWidth: 2 } : {}),
         ...style,
       }}
     >
@@ -77,15 +84,13 @@ export function Card({
 }
 
 // ────────────────────────────────────────────────────────────────
-// ToggleCard — multi-select card with icon well + check square.
-// Used by self-employment, tax-questions, deductions, life-events.
+// ToggleCard — multi-select with check square. Zero-stroke.
 //
-// Selected toggles are always ink-on-card (consistent black). The
-// previous `emphasis` prop tinted some toggles green for "important"
-// items (foreign accounts, cash businesses) — pulled because the
-// inconsistency read as a UI bug, not a hint. If we want to call
-// attention to specific items later we'll do it with a small
-// 'IMPORTANT' label on the row, not a different selected color.
+// Unselected: white surface, plain icon well in pale keylimeWash, ink
+//             label, empty rounded check square (filled white, no border).
+// Selected:   soft mintGlaze fill, forestDark icon well + white icon,
+//             forestDark label, filled forestDark check square with
+//             white check.
 // ────────────────────────────────────────────────────────────────
 
 export function ToggleCard({
@@ -103,10 +108,12 @@ export function ToggleCard({
   label: string;
   sub?: string;
 }) {
-  const accent = t.ink;
-  const accentSoft = t.bgElev;
-  const borderColor = on ? accent : t.border;
-  const bg = on ? accentSoft : t.card;
+  const bg = on ? t.ease.mintGlaze : '#fffefc';
+  const labelColor = on ? t.ease.forestDark : t.ink;
+  const subColor = on ? t.ease.forestDark : t.muted;
+  const iconWellBg = on ? t.ease.forestDark : t.ease.keylimeWash;
+  const iconColor = on ? '#fffefc' : t.ease.forestDark;
+  const checkBg = on ? t.ease.forestDark : '#fffefc';
 
   return (
     <button
@@ -118,12 +125,12 @@ export function ToggleCard({
         width: '100%',
         padding: '14px 16px',
         background: bg,
-        border: `1px solid ${borderColor}`,
+        border: 'none',
         borderRadius: t.radius,
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
-        transition: 'border-color 120ms, background 120ms',
+        transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
       <div
@@ -131,13 +138,13 @@ export function ToggleCard({
           width: 36,
           height: 36,
           borderRadius: 8,
-          background: on ? accent : t.bgElev,
-          border: `1px solid ${on ? 'transparent' : t.borderSoft}`,
-          color: on ? '#fff' : t.inkSoft,
+          background: iconWellBg,
+          color: iconColor,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
         {icon}
@@ -147,15 +154,19 @@ export function ToggleCard({
         <div
           style={{
             fontSize: 15,
-            color: t.ink,
-            fontWeight: 500,
+            color: labelColor,
+            fontWeight: 400,
             letterSpacing: -0.1,
             marginBottom: sub ? 2 : 0,
           }}
         >
           {label}
         </div>
-        {sub && <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.35 }}>{sub}</div>}
+        {sub && (
+          <div style={{ fontSize: 12, color: subColor, opacity: on ? 0.7 : 1, lineHeight: 1.35 }}>
+            {sub}
+          </div>
+        )}
       </div>
 
       <div
@@ -163,16 +174,16 @@ export function ToggleCard({
           width: 22,
           height: 22,
           borderRadius: 6,
-          border: `1.5px solid ${on ? accent : t.border}`,
-          background: on ? accent : '#fff',
+          background: checkBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
         {on && (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fffefc" strokeWidth="2">
             <path d="M2.5 6.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
@@ -182,8 +193,8 @@ export function ToggleCard({
 }
 
 // ────────────────────────────────────────────────────────────────
-// RadioRowCard — radio card pattern shared by state-and-prior-year,
-// filing, and other single-select screens.
+// RadioRowCard — single-select. Zero-stroke.
+// Unselected: white. Selected: mintGlaze fill, forestDark text + dot.
 // ────────────────────────────────────────────────────────────────
 
 export function RadioRowCard({
@@ -199,6 +210,11 @@ export function RadioRowCard({
   label: string;
   sub: string;
 }) {
+  const bg = selected ? t.ease.mintGlaze : '#fffefc';
+  const labelColor = selected ? t.ease.forestDark : t.ink;
+  const subColor = selected ? t.ease.forestDark : t.muted;
+  const dotWellBg = selected ? t.ease.forestDark : t.ease.keylimeWash;
+
   return (
     <button
       onClick={onClick}
@@ -208,13 +224,13 @@ export function RadioRowCard({
         alignItems: 'flex-start',
         gap: 12,
         padding: '14px 14px',
-        background: selected ? t.tintAccent : t.card,
-        border: `1px solid ${selected ? t.rust : t.border}`,
+        background: bg,
+        border: 'none',
         borderRadius: t.radius,
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
-        transition: 'border-color 120ms, background 120ms',
+        transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
       <div
@@ -222,22 +238,32 @@ export function RadioRowCard({
           width: 18,
           height: 18,
           borderRadius: '50%',
-          border: `1.5px solid ${selected ? t.rust : t.border}`,
-          background: '#fff',
+          background: dotWellBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
           marginTop: 1,
+          transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
-        {selected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.rust }} />}
+        {selected && (
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fffefc' }} />
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, letterSpacing: -0.1 }}>
+        <div style={{ fontSize: 15, fontWeight: 400, color: labelColor, letterSpacing: -0.1 }}>
           {label}
         </div>
-        <div style={{ fontSize: 12.5, color: t.muted, marginTop: 3, lineHeight: 1.4 }}>
+        <div
+          style={{
+            fontSize: 12.5,
+            color: subColor,
+            opacity: selected ? 0.7 : 1,
+            marginTop: 3,
+            lineHeight: 1.4,
+          }}
+        >
           {sub}
         </div>
       </div>
@@ -246,7 +272,10 @@ export function RadioRowCard({
 }
 
 // ────────────────────────────────────────────────────────────────
-// DependentCountCard — count-icon radio card for ScreenDependentsCount.
+// DependentCountCard — count-icon radio card. Zero-stroke.
+//
+// Number in the icon well now uses SANS (was serif) per design call —
+// matches ease's preference for sans on operational numbers.
 // ────────────────────────────────────────────────────────────────
 
 export function DependentCountCard({
@@ -264,6 +293,13 @@ export function DependentCountCard({
   sub?: string;
   icon: string;
 }) {
+  const bg = selected ? t.ease.mintGlaze : '#fffefc';
+  const labelColor = selected ? t.ease.forestDark : t.ink;
+  const subColor = selected ? t.ease.forestDark : t.muted;
+  const iconWellBg = selected ? t.ease.forestDark : t.ease.keylimeWash;
+  const iconColor = selected ? '#fffefc' : t.ease.forestDark;
+  const dotWellBg = selected ? t.ease.forestDark : t.ease.keylimeWash;
+
   return (
     <button
       onClick={onClick}
@@ -273,13 +309,13 @@ export function DependentCountCard({
         gap: 14,
         width: '100%',
         padding: '18px 18px',
-        background: selected ? t.tintAccent : t.card,
-        border: `1px solid ${selected ? t.rust : t.border}`,
+        background: bg,
+        border: 'none',
         borderRadius: t.radius,
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
-        transition: 'border-color 120ms, background 120ms',
+        transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
       <div
@@ -287,17 +323,18 @@ export function DependentCountCard({
           width: 44,
           height: 44,
           borderRadius: 10,
-          background: selected ? t.rust : t.bgElev,
-          border: `1px solid ${selected ? t.rust : t.borderSoft}`,
+          background: iconWellBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          fontFamily: t.serif,
+          fontFamily: t.sans,
           fontSize: 20,
           fontWeight: 500,
-          color: selected ? '#fff' : t.ink,
+          color: iconColor,
           letterSpacing: -0.4,
+          fontFeatureSettings: '"tnum" 1, "lnum" 1',
+          transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
         {icon}
@@ -307,15 +344,26 @@ export function DependentCountCard({
         <div
           style={{
             fontSize: 16,
-            color: t.ink,
-            fontWeight: 500,
+            color: labelColor,
+            fontWeight: 400,
             letterSpacing: -0.1,
             marginBottom: sub ? 2 : 0,
           }}
         >
           {label}
         </div>
-        {sub && <div style={{ fontSize: 12.5, color: t.muted, lineHeight: 1.35 }}>{sub}</div>}
+        {sub && (
+          <div
+            style={{
+              fontSize: 12.5,
+              color: subColor,
+              opacity: selected ? 0.7 : 1,
+              lineHeight: 1.35,
+            }}
+          >
+            {sub}
+          </div>
+        )}
       </div>
 
       <div
@@ -323,23 +371,16 @@ export function DependentCountCard({
           width: 20,
           height: 20,
           borderRadius: '50%',
-          border: `1.5px solid ${selected ? t.rust : t.border}`,
-          background: '#fff',
+          background: dotWellBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
         {selected && (
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: t.rust,
-            }}
-          />
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fffefc' }} />
         )}
       </div>
     </button>

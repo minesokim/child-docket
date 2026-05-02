@@ -230,10 +230,9 @@ export default function DonePage() {
                       flex: 1,
                       padding: '10px 14px',
                       fontSize: 13,
-                      // Override Card-accent context: keep the ghost
-                      // button readable on the keylime fill.
+                      // Inverted on the keylime card — solid white fill,
+                      // forestDark text. No stroke.
                       background: '#fffefc',
-                      border: `1px solid ${t.ease.forestDark}33`,
                       color: t.ease.forestDark,
                     }}
                   >
@@ -247,7 +246,6 @@ export default function DonePage() {
                       padding: '10px 14px',
                       fontSize: 13,
                       background: '#fffefc',
-                      border: `1px solid ${t.ease.forestDark}33`,
                       color: t.ease.forestDark,
                     }}
                   >

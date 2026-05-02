@@ -1,7 +1,9 @@
-// Button primitives.
+// Button primitives — ZERO-STROKE pass.
+//
 //   - Button: 4 variants (primary/success/ghost/dark). Pill in editorial
-//     (full-round 999) — preserved per design call; ease's softer 14px
-//     rectangle was rejected. Square in magazine tone.
+//     (full-round 999) per design call. Square in magazine tone.
+//     ALL variants are now strokeless — ghost gets a soft keylimeWash
+//     fill instead of an outline.
 //   - BackButton: chevron + label, every intake screen after step 1.
 //   - IntakeBackButton: smaller "← Back" link at the top of intake screens.
 
@@ -29,10 +31,12 @@ export function Button({
   type?: 'button' | 'submit';
 }) {
   const variants = {
-    primary: { bg: t.rust, fg: '#fff', border: t.rust },
-    success: { bg: t.green, fg: '#fff', border: t.green },
-    ghost: { bg: t.card, fg: t.ink, border: t.border },
-    dark: { bg: t.ink, fg: t.bgElev, border: t.ink },
+    primary: { bg: t.rust, fg: '#fff' },
+    success: { bg: t.green, fg: '#fff' },
+    // Ghost was outlined-on-card. Now: pale keylimeWash fill, forestDark
+    // text. Reads as a secondary action without an outline.
+    ghost:   { bg: t.ease.keylimeWash, fg: t.ease.forestDark },
+    dark:    { bg: t.ink, fg: t.bgElev },
   };
   const base = variants[variant];
   return (
@@ -43,12 +47,12 @@ export function Button({
       style={{
         background: disabled ? t.borderSoft : base.bg,
         color: disabled ? t.muted : base.fg,
-        border: `1px solid ${disabled ? t.border : base.border}`,
+        border: 'none',
         borderRadius: t.tone === 'magazine' ? 4 : 999,
         padding: '14px 22px',
         fontFamily: t.sans,
         fontSize: 16,
-        fontWeight: 500,
+        fontWeight: 400,
         letterSpacing: -0.1,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s',

@@ -19,7 +19,7 @@ export function Eyebrow({
       style={{
         fontFamily: t.mono,
         fontSize: 10.5,
-        fontWeight: 500,
+        fontWeight: 400,
         letterSpacing: 1.2,
         color: t.muted,
         textTransform: 'uppercase',

@@ -19,23 +19,24 @@ export function LegalDoc({
   return (
     <div
       style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
+        // Zero stroke. Soft keylimeWash fill carries the doc-tile shape.
+        background: t.ease.keylimeWash,
+        border: 'none',
         borderRadius: t.radius,
         padding: '20px 20px 18px',
         maxHeight: 260,
         overflowY: 'auto',
         fontSize: 13,
         lineHeight: 1.55,
-        color: t.inkSoft,
+        color: t.ease.forestDark,
         fontFamily: t.serif,
       }}
     >
       <div
         style={{
           fontSize: 14,
-          fontWeight: 600,
-          color: t.ink,
+          fontWeight: 500,
+          color: t.ease.forestDark,
           marginBottom: 10,
           textTransform: 'uppercase',
           letterSpacing: 0.5,
@@ -78,16 +79,19 @@ export function SignaturePad({
   name: string;
   timestamp?: string;
 }) {
+  // Zero-stroke pad. Unsigned: keylimeWash tile that says "Tap to sign."
+  // Signed: deeper mintGlaze fill with the script-font signature on top.
+  // The fill swap signals state; no dashed border needed.
   return (
     <div
       onClick={() => !signed && onSign()}
       style={{
-        background: t.card,
-        border: `1.5px dashed ${signed ? t.rust : t.border}`,
+        background: signed ? t.ease.mintGlaze : t.ease.keylimeWash,
+        border: 'none',
         borderRadius: t.radius,
         padding: signed ? '14px 18px' : '28px 18px',
         cursor: signed ? 'default' : 'pointer',
-        transition: 'all 0.2s',
+        transition: 'background 200ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
       {signed ? (
@@ -96,7 +100,7 @@ export function SignaturePad({
             style={{
               fontFamily: '"Caveat", "Brush Script MT", cursive',
               fontSize: 28,
-              color: t.ink,
+              color: t.ease.forestDark,
               lineHeight: 1,
             }}
           >
@@ -106,7 +110,8 @@ export function SignaturePad({
             style={{
               fontFamily: t.mono,
               fontSize: 10,
-              color: t.muted,
+              color: t.ease.forestDark,
+              opacity: 0.7,
               letterSpacing: 0.5,
               marginTop: 4,
             }}
@@ -119,12 +124,12 @@ export function SignaturePad({
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
               d="M2 12l3-1 8-8 1 1-8 8-1 3-3-3z"
-              stroke={t.muted}
+              stroke={t.ease.forestDark}
               strokeWidth="1.3"
               strokeLinejoin="round"
             />
           </svg>
-          <span style={{ fontSize: 14, color: t.muted }}>Tap to sign</span>
+          <span style={{ fontSize: 14, color: t.ease.forestDark }}>Tap to sign</span>
         </Row>
       )}
     </div>

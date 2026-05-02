@@ -28,7 +28,7 @@ export function FieldLabel({
           fontFamily: t.sans,
           fontSize: 12,
           color: t.muted,
-          fontWeight: 500,
+          fontWeight: 400,
           letterSpacing: 0,
         }}
       >
@@ -82,24 +82,28 @@ export function TextField({
       placeholder={placeholder}
       readOnly={readOnly}
       autoComplete={autoComplete}
+      // Zero stroke. Soft keylimeWash fill is the input affordance —
+      // matches ease's preference for tinted surfaces over outlines.
+      // Focus state deepens the fill slightly via mintKiss.
       style={{
         width: '100%',
-        background: 'transparent',
+        background: t.ease.keylimeWash,
         border: 'none',
-        borderBottom: `1px solid ${t.border}`,
-        padding: '10px 0 10px',
+        borderRadius: 12,
+        padding: '12px 14px',
         fontSize: 16,
-        color: t.ink,
+        color: t.ease.forestDark,
         fontFamily: mono ? t.mono : t.sans,
         letterSpacing: mono ? 0.3 : 0,
         outline: 'none',
+        transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
         ...style,
       }}
       onFocus={(e) => {
-        e.target.style.borderBottomColor = t.rust;
+        e.target.style.background = t.ease.mintKiss;
       }}
       onBlur={(e) => {
-        e.target.style.borderBottomColor = t.border;
+        e.target.style.background = t.ease.keylimeWash;
       }}
     />
   );
@@ -178,8 +182,9 @@ export function SSNField({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          padding: '10px 0 10px',
-          borderBottom: `1px solid ${t.border}`,
+          padding: '12px 14px',
+          background: t.ease.keylimeWash,
+          borderRadius: 12,
         }}
       >
         <input
@@ -220,8 +225,9 @@ export function SSNField({
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        padding: '10px 0 10px',
-        borderBottom: `1px solid ${t.border}`,
+        padding: '12px 14px',
+        background: t.ease.keylimeWash,
+        borderRadius: 12,
         cursor: revealing ? 'wait' : 'text',
         opacity: revealing ? 0.6 : 1,
         transition: 'opacity 140ms cubic-bezier(.2,.8,.2,1)',
@@ -354,8 +360,9 @@ export function EncryptedTextField({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          padding: '10px 0 10px',
-          borderBottom: `1px solid ${t.border}`,
+          padding: '12px 14px',
+          background: t.ease.keylimeWash,
+          borderRadius: 12,
           cursor: revealing ? 'wait' : 'text',
           opacity: revealing ? 0.6 : 1,
           transition: 'opacity 140ms cubic-bezier(.2,.8,.2,1)',
@@ -390,22 +397,23 @@ export function EncryptedTextField({
         autoComplete="off"
         style={{
           flex: 1,
-          background: 'transparent',
+          background: t.ease.keylimeWash,
           border: 'none',
-          borderBottom: `1px solid ${t.border}`,
-          padding: '10px 0',
+          borderRadius: 12,
+          padding: '12px 14px',
           fontFamily: mono ? t.mono : t.sans,
           fontSize: 16,
-          color: t.ink,
+          color: t.ease.forestDark,
           letterSpacing: mono ? 1.5 : -0.05,
           outline: 'none',
+          transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
           ...style,
         }}
         onFocus={(e) => {
-          e.target.style.borderBottomColor = t.rust;
+          e.target.style.background = t.ease.mintKiss;
         }}
         onBlur={(e) => {
-          e.target.style.borderBottomColor = t.border;
+          e.target.style.background = t.ease.keylimeWash;
         }}
       />
       {hint && (

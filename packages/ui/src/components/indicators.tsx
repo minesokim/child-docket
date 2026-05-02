@@ -103,12 +103,13 @@ export function TrustPill({
         alignItems: 'center',
         gap: 6,
         padding: '5px 11px',
-        background: t.bgElev,
-        border: `1px solid ${t.borderSoft}`,
+        // Zero stroke. Soft keylimeWash fill carries the pill shape.
+        background: t.ease.keylimeWash,
+        border: 'none',
         borderRadius: 999,
         fontFamily: t.sans,
         fontSize: 11,
-        color: t.inkSoft,
+        color: t.ease.forestDark,
         letterSpacing: 0.1,
       }}
     >
@@ -159,7 +160,7 @@ export function StatusPill({
         borderRadius: 999,
         fontFamily: t.sans,
         fontSize: 12,
-        fontWeight: 500,
+        fontWeight: 400,
         letterSpacing: -0.36,
         lineHeight: 1.5,
         whiteSpace: 'nowrap',
