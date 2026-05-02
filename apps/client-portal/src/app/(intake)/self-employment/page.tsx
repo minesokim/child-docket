@@ -19,9 +19,6 @@ import {
   IntakeHeader,
   Row,
   Screen,
-  SolarBusinessName,
-  SolarExpenses,
-  SolarOccupation,
   Stack,
   TextField,
   ToggleCard,
@@ -121,9 +118,7 @@ export default function SelfEmploymentPage() {
 
         <Stack gap={18} style={{ padding: '22px 24px 16px', flex: 1 }}>
           <div>
-            <FieldLabel t={t} icon={<SolarBusinessName size={20} />}>
-              Business name
-            </FieldLabel>
+            <FieldLabel t={t}>Business name</FieldLabel>
             <TextField
               t={t}
               value={businessName}
@@ -133,9 +128,7 @@ export default function SelfEmploymentPage() {
           </div>
 
           <div>
-            <FieldLabel t={t} icon={<SolarOccupation size={20} />}>
-              What do you do?
-            </FieldLabel>
+            <FieldLabel t={t}>What do you do?</FieldLabel>
             <TextField
               t={t}
               value={whatYouDo}
@@ -168,9 +161,7 @@ export default function SelfEmploymentPage() {
           </div>
 
           <div>
-            <FieldLabel t={t} icon={<SolarExpenses size={20} />}>
-              Approximate 2025 revenue
-            </FieldLabel>
+            <FieldLabel t={t}>Approximate 2025 revenue</FieldLabel>
             <TextField
               t={t}
               value={revenue}

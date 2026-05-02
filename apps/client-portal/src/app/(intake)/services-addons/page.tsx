@@ -101,8 +101,7 @@ export default function ServicesAddonsPage() {
                 <span
                   onClick={handleBack}
                   style={{
-                    fontFamily: t.serif,
-                    fontStyle: 'italic',
+                    fontFamily: t.sans,
                     fontSize: 11,
                     color: t.ease.forestDark,
                     cursor: 'pointer',

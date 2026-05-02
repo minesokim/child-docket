@@ -157,16 +157,53 @@ export function AskAntonioBar({
 
 type ChatMsg = { from: 'a' | 'u'; text: string; time: string };
 
+const WELCOME_MSG: ChatMsg = {
+  from: 'a',
+  text: "Hey - I'm here. What can I help with?",
+  time: '2:14 PM',
+};
+const FIRST_OPEN_KEY = 'docket:antonio_chat_first_open_seen';
+
 export function AskAntonioChat({ t }: { t: Theme }) {
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
-  const [messages, setMessages] = React.useState<ChatMsg[]>([
-    { from: 'a', text: "Hey — I'm here. What can I help with?", time: '2:14 PM' },
-  ]);
+  // SSR-safe default: assume returning visitor (welcome already there).
+  // First-time visitors get the empty state set in the mount effect below.
+  const [messages, setMessages] = React.useState<ChatMsg[]>([WELCOME_MSG]);
+  // Index threshold for animation. Messages at index >= this value animate
+  // in (pop-up). Messages below render statically. Captured once, so the
+  // welcome bubble on a returning visit doesn't re-animate every open.
+  const animateFromIndex = React.useRef<number>(0);
   const scrollerRef = React.useRef<HTMLDivElement | null>(null);
 
+  // Read first-open status on mount. If never opened before, clear the
+  // welcome message — it'll be queued on the first open() and animate in.
   React.useEffect(() => {
-    const onOpen = () => setOpen(true);
+    if (typeof window === 'undefined') return;
+    const seen = window.localStorage.getItem(FIRST_OPEN_KEY);
+    if (seen !== 'true') {
+      setMessages([]);
+      animateFromIndex.current = 0; // welcome will be at index 0, animates
+    } else {
+      animateFromIndex.current = 1; // welcome already at index 0, stays put
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const onOpen = () => {
+      setOpen(true);
+      // First-ever open: queue the welcome message ~600ms after the modal
+      // slides up so it visually arrives like a real incoming text.
+      if (typeof window === 'undefined') return;
+      const seen = window.localStorage.getItem(FIRST_OPEN_KEY);
+      if (seen === 'true') return;
+      setTimeout(() => {
+        setMessages([WELCOME_MSG]);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(FIRST_OPEN_KEY, 'true');
+        }
+      }, 600);
+    };
     window.addEventListener('ask-antonio:open', onOpen);
     return () => window.removeEventListener('ask-antonio:open', onOpen);
   }, []);
@@ -187,7 +224,7 @@ export function AskAntonioChat({ t }: { t: Theme }) {
     setTimeout(() => {
       setMessages((m) => [
         ...m,
-        { from: 'a', text: "Got it. Give me a few minutes — I'll come back with specifics.", time },
+        { from: 'a', text: "Got it. Give me a few minutes - I'll come back with specifics.", time },
       ]);
     }, 1400);
   };
@@ -211,6 +248,16 @@ export function AskAntonioChat({ t }: { t: Theme }) {
       <style>{`
         @keyframes docket-fade-in { from { opacity: 0 } to { opacity: 1 } }
         @keyframes docket-slide-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
+        @keyframes docket-msg-pop {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.94);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
       `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
@@ -359,6 +406,13 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           {messages.map((m, i) => {
             const isUser = m.from === 'u';
             const senderName = isUser ? 'You' : 'Antonio';
+            // Animate any message at or after the threshold captured at
+            // mount. First-time visitors: threshold is 0, so the welcome
+            // animates in. Returning visitors: threshold is 1, welcome
+            // sits static. Sent + received messages always animate
+            // (they're appended after mount, so their index is always
+            // >= threshold).
+            const shouldAnimate = i >= animateFromIndex.current;
             return (
               <div
                 key={i}
@@ -366,6 +420,9 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: isUser ? 'flex-end' : 'flex-start',
+                  animation: shouldAnimate
+                    ? 'docket-msg-pop 320ms cubic-bezier(.2,.8,.2,1) both'
+                    : 'none',
                 }}
               >
                 <div

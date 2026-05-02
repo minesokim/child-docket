@@ -155,11 +155,10 @@ export default function DeductionsPage() {
                   style={{
                     marginTop: -2,
                     marginLeft: 18,
-                    padding: '16px 16px 8px 18px',
-                    // Neutral container - the childcare row above is
-                    // already mintKiss when selected, so a second green
-                    // layer doubles up. softNeutral keeps the Form 2441
-                    // fields visually distinct without competing.
+                    // Bottom padding bumped 8 -> 22 so the last field
+                    // ('Amount paid in 2025') has breathing room before
+                    // the next section.
+                    padding: '16px 16px 22px 18px',
                     background: t.ease.softNeutral,
                     borderRadius: 8,
                   }}
