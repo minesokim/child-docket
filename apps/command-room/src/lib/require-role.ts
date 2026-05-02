@@ -51,6 +51,12 @@ import { redirect } from 'next/navigation';
 import { isRole, type Role } from '@docket/shared';
 import { getCurrentDocketUser, type DocketUser } from './current-user';
 
+// Re-export the pure helpers from @docket/shared so callers in this
+// app have one import surface. Tests for these live in
+// packages/shared/src/role.test.ts.
+export { assertRole, hasRole } from '@docket/shared';
+export type { Role } from '@docket/shared';
+
 /**
  * Server Component helper. Resolves the current Clerk session to a
  * DocketUser, then verifies the user's role is in the allowed set.
@@ -74,40 +80,4 @@ export async function requireRole(allowed: readonly Role[]): Promise<DocketUser>
   }
 
   return user;
-}
-
-/**
- * Pure throw-on-fail variant for Server Actions. Doesn't redirect
- * (Server Actions can't gracefully redirect from inside a throw); the
- * caller's try/catch should map the error to a structured result.
- *
- * Caller is responsible for null-checking the user first — `assertRole`
- * doesn't fetch, it asserts on what you already have. This separation
- * avoids the double-fetch when a Server Action already called
- * getCurrentDocketUser() for its own reasons.
- */
-export function assertRole(
-  user: { role: string },
-  allowed: readonly Role[],
-): asserts user is { role: Role } {
-  if (!isRole(user.role)) {
-    throw new Error(`Unauthorized: unknown role '${user.role}'`);
-  }
-  if (!allowed.includes(user.role)) {
-    throw new Error(
-      `Unauthorized: role '${user.role}' not in [${allowed.join(', ')}]`,
-    );
-  }
-}
-
-/**
- * Boolean predicate for inline UI gating. Useful when you want to
- * hide a button instead of redirecting away from a page the user can
- * partially see.
- */
-export function hasRole(
-  user: { role: string },
-  allowed: readonly Role[],
-): user is { role: Role } {
-  return isRole(user.role) && allowed.includes(user.role);
 }
