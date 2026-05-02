@@ -6,7 +6,6 @@
 // Real Haiku 4.5 vision call swaps in via docs/DOCS-CAPTURE-PIPELINE.md.
 
 import {
-  AntonioNote,
   AskAntonioBar,
   Body,
   Button,
@@ -693,18 +692,13 @@ export default function DocsPage() {
         </div>
 
         <div style={{ padding: '18px 24px 14px' }}>
-          <Stack gap={16}>
-            <Stack gap={10}>
-              <H1 t={t}>Upload your documents</H1>
-              <Body t={t} size={14}>
-                Document{' '}
-                <span style={{ color: t.rustInk, fontFamily: t.mono }}>{CURRENT + 1}</span> of{' '}
-                <span style={{ color: t.rustInk, fontFamily: t.mono }}>{TOTAL}</span>
-              </Body>
-            </Stack>
-            <AntonioNote t={t}>
-              Snap each doc in good light. If a photo&apos;s blurry, you&apos;ll see it immediately and reshoot — beats finding out next week.
-            </AntonioNote>
+          <Stack gap={10}>
+            <H1 t={t}>Upload your documents</H1>
+            <Body t={t} size={14}>
+              Document{' '}
+              <span style={{ color: t.rustInk, fontFamily: t.mono }}>{CURRENT + 1}</span> of{' '}
+              <span style={{ color: t.rustInk, fontFamily: t.mono }}>{TOTAL}</span>
+            </Body>
           </Stack>
         </div>
 
@@ -746,14 +740,14 @@ export default function DocsPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.next('/engagement')}
+              onClick={() => nav.next('/contact-info')}
               style={{ flex: 1 }}
             >
               Skip for now
             </Button>
             <Button
               t={t}
-              onClick={() => nav.next('/engagement')}
+              onClick={() => nav.next('/contact-info')}
               disabled={!canAdvance}
               style={{ flex: 1, opacity: canAdvance ? 1 : 0.45 }}
             >
