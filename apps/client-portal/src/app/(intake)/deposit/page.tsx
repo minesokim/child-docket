@@ -207,7 +207,6 @@ export default function DepositPage() {
                 alignItems: 'center',
                 gap: 10,
                 paddingTop: 12,
-                borderTop: '1px solid rgba(255,255,255,0.12)',
               }}
             >
               <div
@@ -343,8 +342,7 @@ export default function DepositPage() {
           <div
             style={{
               padding: '16px 18px 18px',
-              background: t.bgElev,
-              border: `1px solid ${t.borderSoft}`,
+              background: t.ease.keylimeWash,
               borderRadius: t.radius,
             }}
           >
@@ -376,7 +374,6 @@ export default function DepositPage() {
               style={{
                 marginTop: 14,
                 paddingTop: 14,
-                borderTop: `1px solid ${t.border}`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'baseline',

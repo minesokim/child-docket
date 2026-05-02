@@ -106,8 +106,8 @@ export default function ServicesPathPage() {
                     width: 44,
                     height: 44,
                     borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    background: path === p.id ? t.rustSoft : t.bgElev,
-                    border: `1px solid ${path === p.id ? t.rust : t.border}`,
+                    background: path === p.id ? t.ease.forestDark : t.ease.keylimeWash,
+                    color: path === p.id ? '#fff' : t.ease.forestDark,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -148,7 +148,6 @@ export default function ServicesPathPage() {
                       style={{
                         marginTop: 14,
                         paddingTop: 12,
-                        borderTop: `1px dashed ${t.borderSoft}`,
                       }}
                     >
                       <div
@@ -175,8 +174,7 @@ export default function ServicesPathPage() {
                               alignItems: 'flex-start',
                               gap: 12,
                               padding: '12px',
-                              background: otherSub === o.id ? t.rustSoft : t.bgElev,
-                              border: `1px solid ${otherSub === o.id ? t.rust : t.border}`,
+                              background: otherSub === o.id ? t.ease.mintGlaze : '#fffefc',
                               borderRadius: t.tone === 'magazine' ? 2 : 8,
                               cursor: 'pointer',
                             }}
@@ -186,8 +184,7 @@ export default function ServicesPathPage() {
                                 width: 16,
                                 height: 16,
                                 borderRadius: '50%',
-                                border: `1.5px solid ${otherSub === o.id ? t.rust : t.border}`,
-                                background: otherSub === o.id ? t.rust : 'transparent',
+                                background: otherSub === o.id ? t.ease.forestDark : t.ease.keylimeWash,
                                 flexShrink: 0,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -249,8 +246,7 @@ export default function ServicesPathPage() {
         >
           <div
             style={{
-              background: t.card,
-              border: `1px solid ${t.border}`,
+              background: '#fffefc',
               borderRadius: t.radius,
               padding: '14px 16px',
               marginBottom: 12,

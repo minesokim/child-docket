@@ -1,10 +1,12 @@
 'use client';
 
-// Intake step 11/13 — Refund preference. Direct deposit only (paper checks
-// discontinued Sept 2025). 1-to-1 port of ScreenRefundPreference.
+// Intake step 11/13 — Refund preference.
 //
-// Bank info is taxpayer-entered for their own refund. Fields ship empty;
-// we never pre-fill financial fields.
+// IRS discontinued paper refund checks in September 2025, so direct
+// deposit is the ONLY option for federal refunds. There's no real
+// choice to make here — the page is a bank-info form, not a picker.
+// Antonio's note acknowledges that fact + frames the "what if you
+// owe" case.
 
 import {
   AntonioNote,
@@ -42,8 +44,7 @@ export default function RefundPage() {
     'direct_deposit' | 'check' | 'apply_to_next_year'
   >('refund.preference', 'direct_deposit');
 
-  // Default to direct deposit on mount if not yet set (page UI assumes
-  // this — IRS discontinued paper checks Sept 2025).
+  // Always direct deposit (only option). Pin on mount.
   useEffect(() => {
     if (!preference) setPreference('direct_deposit');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,206 +78,56 @@ export default function RefundPage() {
         <div style={{ padding: '18px 24px 8px' }}>
           <Stack gap={16}>
             <Stack gap={10}>
-              <H1 t={t}>Refund preference</H1>
+              <H1 t={t}>Where to send your refund</H1>
               <Body t={t} size={15}>
-                If you&apos;re owed a refund, how would you like to receive it?
+                Federal refunds go by direct deposit only — the IRS retired paper checks in September 2025.
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              Direct deposit is always faster. If you owe instead of getting a refund, we&apos;ll figure out the best payment plan during our call.
+              Drop your bank info below and I&apos;ll route the refund straight there. If you end up owing instead, we&apos;ll handle the payment plan together on our call.
             </AntonioNote>
           </Stack>
         </div>
 
-        <Stack gap={16} style={{ padding: '22px 24px 16px', flex: 1 }}>
-          {/* Locked-selected direct deposit card */}
-          <div
-            style={{
-              padding: '18px 18px',
-              background: t.tintAccent,
-              border: `1px solid ${t.rust}`,
-              borderRadius: t.radius,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: t.rust,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                color: '#fff',
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 7h14l-2-3H5L3 7z" />
-                <path d="M3 7v8a2 2 0 002 2h10a2 2 0 002-2V7" />
-                <path d="M7 11h6" />
-              </svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 16,
-                  color: t.ink,
-                  fontWeight: 500,
-                  letterSpacing: -0.1,
-                  marginBottom: 2,
-                }}
-              >
-                Direct deposit
-              </div>
-              <div style={{ fontSize: 12.5, color: t.muted, lineHeight: 1.35 }}>
-                Refund arrives in 10–21 days after IRS acceptance
-              </div>
-            </div>
-            <div
-              style={{
-                flexShrink: 0,
-                color: t.rust,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 22,
-                height: 22,
-              }}
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 22 22"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 11l4 4 8-8" />
-              </svg>
-            </div>
+        {/* Bank info — the actual form. No fake "preselected" tile, no
+            redundant advisory. The heading carries the IRS context. */}
+        <Stack gap={16} style={{ padding: '22px 24px 32px', flex: 1 }}>
+          <div>
+            <FieldLabel t={t}>Bank name</FieldLabel>
+            <TextField
+              t={t}
+              value={bankName}
+              onChange={(v) => setBankName(v)}
+              placeholder="e.g., Chase, Wells Fargo"
+            />
           </div>
 
-          {/* Amber IRS advisory */}
-          <div
-            style={{
-              padding: '14px 14px',
-              background: '#FBF3DF',
-              border: '1px solid #E9D69A',
-              borderRadius: t.radius,
-              display: 'flex',
-              gap: 12,
-            }}
-          >
-            <div style={{ flexShrink: 0, color: '#8B6A14', marginTop: 1 }}>
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9 1.5L1.5 15h15L9 1.5z" />
-                <path d="M9 7v3.5M9 12.5h.01" />
-              </svg>
-            </div>
-            <div
-              style={{
-                fontSize: 13.5,
-                color: '#5C4810',
-                lineHeight: 1.5,
-              }}
-            >
-              The IRS discontinued paper refund checks in September 2025. Direct deposit is now the
-              only option for federal refunds.
-            </div>
+          <div>
+            <FieldLabel t={t} hint="9 DIGITS">
+              Routing number
+            </FieldLabel>
+            <EncryptedTextField
+              t={t}
+              value={routingNumber}
+              onChange={(v) => setRoutingNumber(formatDigits(v, 9))}
+              onReveal={revealRouting}
+              placeholder="XXXXXXXXX"
+              mono
+              inputMode="numeric"
+            />
           </div>
 
-          {/* Bank info */}
-          <div
-            style={{
-              marginTop: 6,
-              padding: '20px 18px 4px',
-              background: t.bgElev,
-              border: `1px solid ${t.borderSoft}`,
-              borderRadius: t.radius,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 15,
-                color: t.ink,
-                letterSpacing: -0.2,
-                marginBottom: 4,
-              }}
-            >
-              Deposit account
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: t.muted,
-                marginBottom: 16,
-              }}
-            >
-              Where to send your refund
-            </div>
-
-            <div>
-              <FieldLabel t={t}>Bank name</FieldLabel>
-              <TextField
-                t={t}
-                value={bankName}
-                onChange={(v) => setBankName(v)}
-                placeholder="e.g., Chase, Wells Fargo"
-              />
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <FieldLabel t={t} hint="9 DIGITS">
-                Routing number
-              </FieldLabel>
-              <EncryptedTextField
-                t={t}
-                value={routingNumber}
-                onChange={(v) => setRoutingNumber(formatDigits(v, 9))}
-                onReveal={revealRouting}
-                placeholder="XXXXXXXXX"
-                mono
-                inputMode="numeric"
-              />
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <FieldLabel t={t}>Account number</FieldLabel>
-              <EncryptedTextField
-                t={t}
-                value={accountNumber}
-                onChange={(v) => setAccountNumber(formatDigits(v, 17))}
-                onReveal={revealAccount}
-                placeholder="Your account number"
-                mono
-                inputMode="numeric"
-              />
-            </div>
+          <div style={{ paddingBottom: 16 }}>
+            <FieldLabel t={t}>Account number</FieldLabel>
+            <EncryptedTextField
+              t={t}
+              value={accountNumber}
+              onChange={(v) => setAccountNumber(formatDigits(v, 17))}
+              onReveal={revealAccount}
+              placeholder="Your account number"
+              mono
+              inputMode="numeric"
+            />
           </div>
 
         </Stack>

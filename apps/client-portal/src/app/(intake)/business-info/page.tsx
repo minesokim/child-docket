@@ -108,8 +108,7 @@ export default function BusinessInfoPage() {
               alignItems: 'center',
               gap: 6,
               padding: '5px 10px',
-              background: t.tintAccent,
-              border: `1px solid ${t.rustSoft}`,
+              background: t.ease.keylimeWash,
               borderRadius: 999,
               fontFamily: t.mono,
               fontSize: 9.5,
@@ -221,8 +220,8 @@ export default function BusinessInfoPage() {
             style={{
               marginTop: 8,
               padding: '20px 18px 4px',
-              background: t.card,
-              border: `1px solid ${t.borderSoft}`,
+              background: '#fffefc',
+              boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
               borderRadius: t.radius,
             }}
           >
@@ -311,8 +310,7 @@ export default function BusinessInfoPage() {
             style={{
               marginTop: 4,
               padding: '18px 18px 6px',
-              background: t.bgElev,
-              border: `1px solid ${t.borderSoft}`,
+              background: t.ease.keylimeWash,
               borderRadius: t.radius,
             }}
           >
@@ -320,7 +318,7 @@ export default function BusinessInfoPage() {
               style={{
                 fontFamily: t.mono,
                 fontSize: 10,
-                color: t.rustInk,
+                color: t.ease.forestDark,
                 letterSpacing: 1.4,
                 textTransform: 'uppercase',
                 marginBottom: 14,
@@ -390,8 +388,7 @@ export default function BusinessInfoPage() {
                     style={{
                       flex: 1,
                       padding: '14px 16px',
-                      background: on ? t.tintAccent : t.card,
-                      border: `1px solid ${on ? t.rust : t.border}`,
+                      background: on ? t.ease.mintGlaze : '#fffefc',
                       borderRadius: t.radius,
                       cursor: 'pointer',
                       fontFamily: t.sans,
@@ -406,8 +403,7 @@ export default function BusinessInfoPage() {
                         width: 18,
                         height: 18,
                         borderRadius: '50%',
-                        border: `1.5px solid ${on ? t.rust : t.border}`,
-                        background: '#fff',
+                        background: on ? t.ease.forestDark : t.ease.keylimeWash,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -419,7 +415,7 @@ export default function BusinessInfoPage() {
                             width: 9,
                             height: 9,
                             borderRadius: '50%',
-                            background: t.rust,
+                            background: '#fff',
                           }}
                         />
                       )}

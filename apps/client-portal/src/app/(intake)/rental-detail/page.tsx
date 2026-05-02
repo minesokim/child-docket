@@ -95,8 +95,7 @@ export default function RentalDetailPage() {
               alignItems: 'center',
               gap: 6,
               padding: '5px 10px',
-              background: t.tintAccent,
-              border: `1px solid ${t.rustSoft}`,
+              background: t.ease.keylimeWash,
               borderRadius: 999,
               fontFamily: t.mono,
               fontSize: 9.5,
@@ -145,8 +144,8 @@ export default function RentalDetailPage() {
 
           <div
             style={{
-              background: t.card,
-              border: `1px solid ${t.border}`,
+              background: '#fffefc',
+              boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
               borderRadius: t.radius,
               padding: '16px 16px 18px',
             }}
@@ -154,13 +153,13 @@ export default function RentalDetailPage() {
             <div
               style={{
                 fontFamily: t.serif,
-                fontStyle: 'italic',
-                fontSize: 14,
-                color: t.rustInk,
+                fontSize: 16,
+                color: t.ease.forestDark,
+                letterSpacing: -0.48,
                 marginBottom: 14,
               }}
             >
-              Property details
+              Property Details
             </div>
 
             <Stack gap={16}>

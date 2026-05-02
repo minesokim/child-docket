@@ -89,8 +89,7 @@ export default function ServicesAddonsPage() {
                   alignItems: 'center',
                   gap: 8,
                   padding: '6px 10px',
-                  background: t.bgElev,
-                  border: `1px solid ${t.borderSoft}`,
+                  background: t.ease.keylimeWash,
                   borderRadius: t.tone === 'magazine' ? 2 : 999,
                   alignSelf: 'flex-start',
                 }}
@@ -141,8 +140,7 @@ export default function ServicesAddonsPage() {
                       height: 22,
                       flexShrink: 0,
                       borderRadius: t.tone === 'magazine' ? 3 : 5,
-                      border: `1.5px solid ${selected ? t.rust : t.border}`,
-                      background: selected ? t.rust : t.card,
+                      background: selected ? t.ease.forestDark : t.ease.keylimeWash,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -197,8 +195,7 @@ export default function ServicesAddonsPage() {
         >
           <div
             style={{
-              background: t.card,
-              border: `1px solid ${t.border}`,
+              background: '#fffefc',
               borderRadius: t.radius,
               padding: '14px 16px 6px',
               marginBottom: 12,
@@ -251,7 +248,6 @@ export default function ServicesAddonsPage() {
               style={{
                 marginTop: 12,
                 paddingTop: 10,
-                borderTop: `1px dashed ${t.borderSoft}`,
               }}
             >
               {breakdown.map((item) => (

@@ -26,8 +26,9 @@ export const EASE = {
   // Accent surfaces (semantic backgrounds for tile cards / status pills)
   mintGlaze: '#b1dbb8',      // mid sage — primary accent fill
   slateMist: '#b6ced5',      // powder blue — secondary category encoding
-  keylimeWash: '#e1f4df',    // lightest mint — soft highlight surface
+  keylimeWash: '#e1f4df',    // lightest mint per Refero spec — surfaces
   mintKiss: '#cfe7d3',       // medium mint — middle-emphasis surface
+  mintWhisper: '#f4faf3',    // near-white with a green tinge — input field bg
   // Neutrals
   inkText: '#222222',
   darkCharcoal: '#333333',

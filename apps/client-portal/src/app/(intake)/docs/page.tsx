@@ -126,7 +126,7 @@ function DocCardShell({
   children: React.ReactNode;
 }) {
   const tintBg = required ? t.tintAccentStrong : t.tintAccent;
-  const tintBorder = required ? t.rustSoft : t.borderSoft;
+  // note: tintBorder removed in zero-stroke pass (was outline color)
   return (
     <Card t={t} style={{ padding: '22px 22px 20px' }}>
       <Row gap={16} align="flex-start" style={{ marginBottom: 4 }}>
@@ -136,7 +136,6 @@ function DocCardShell({
             height: 56,
             borderRadius: t.tone === 'magazine' ? 4 : 12,
             background: tintBg,
-            border: `1px solid ${required ? t.rust : tintBorder}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -193,7 +192,7 @@ function FakeW2({ t, blurry = false }: { t: Theme; blurry?: boolean }) {
         position: 'absolute',
         inset: 10,
         background: '#fdfcf7',
-        border: `1px solid ${t.borderSoft}`,
+        boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
         borderRadius: 4,
         padding: '12px 14px',
         transform: blurry ? 'rotate(-2.8deg) translate(4px, 2px)' : 'rotate(0)',
@@ -256,8 +255,7 @@ function DocCardScanning({ t }: { t: Theme }) {
       <div
         style={{
           aspectRatio: '4 / 3',
-          background: t.bgElev,
-          border: `1px solid ${t.border}`,
+          background: t.ease.keylimeWash,
           borderRadius: t.radius,
           overflow: 'hidden',
           position: 'relative',
@@ -356,8 +354,7 @@ function DocCardParsed({
       <div
         style={{
           aspectRatio: '4 / 3',
-          background: t.bgElev,
-          border: `1px solid ${t.border}`,
+          background: t.ease.keylimeWash,
           borderRadius: t.radius,
           overflow: 'hidden',
           position: 'relative',
@@ -397,8 +394,7 @@ function DocCardParsed({
       <div
         style={{
           marginTop: 14,
-          background: t.bgElev,
-          border: `1px solid ${t.borderSoft}`,
+          background: t.ease.keylimeWash,
           borderRadius: t.radius,
           padding: '12px 14px',
         }}
@@ -473,8 +469,7 @@ function DocCardRetake({ t, onRetry }: { t: Theme; onRetry: () => void }) {
       <div
         style={{
           aspectRatio: '4 / 3',
-          background: t.bgElev,
-          border: `1px solid ${t.border}`,
+          background: t.ease.keylimeWash,
           borderRadius: t.radius,
           overflow: 'hidden',
           position: 'relative',
@@ -528,7 +523,6 @@ function DocCardRetake({ t, onRetry }: { t: Theme; onRetry: () => void }) {
         style={{
           marginTop: 14,
           background: '#FDF1EA',
-          border: '1px solid #E8B59A',
           borderRadius: t.radius,
           padding: '12px 14px',
         }}
@@ -599,8 +593,7 @@ function DocCardUploaded({ t }: { t: Theme }) {
       <div
         style={{
           padding: '18px 16px',
-          background: t.tintAccent,
-          border: `1px solid ${t.rustSoft}`,
+          background: t.ease.keylimeWash,
           borderRadius: t.radius,
           display: 'flex',
           alignItems: 'center',

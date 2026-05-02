@@ -46,9 +46,8 @@ function StepperButton({
         width: 52,
         height: 52,
         borderRadius: '50%',
-        background: disabled ? 'transparent' : t.bgElev,
-        border: `1px solid ${disabled ? t.borderSoft : t.border}`,
-        color: disabled ? t.borderSoft : t.ink,
+        background: disabled ? 'transparent' : t.ease.keylimeWash,
+        color: disabled ? t.borderSoft : t.ease.forestDark,
         fontFamily: t.serif,
         fontSize: 26,
         fontWeight: 400,
@@ -63,16 +62,16 @@ function StepperButton({
         padding: 0,
       }}
       onMouseDown={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.tintAccent;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.mintGlaze;
       }}
       onMouseUp={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.bgElev;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.keylimeWash;
       }}
       onTouchStart={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.tintAccent;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.mintGlaze;
       }}
       onTouchEnd={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.bgElev;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.keylimeWash;
       }}
     >
       {symbol}
@@ -136,8 +135,7 @@ export default function DepsCountPage() {
         <Stack gap={20} style={{ padding: '32px 24px 16px', flex: 1 }}>
           <div
             style={{
-              background: t.card,
-              border: `1px solid ${t.border}`,
+              background: t.ease.keylimeWash,
               borderRadius: t.radius,
               padding: '36px 24px 30px',
               display: 'flex',

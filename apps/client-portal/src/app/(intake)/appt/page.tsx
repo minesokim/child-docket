@@ -126,13 +126,12 @@ function FormatCard({
         gap: 14,
         width: '100%',
         padding: '14px 16px',
-        background: on ? t.tintAccent : t.card,
-        border: `1px solid ${on ? t.rust : t.border}`,
+        background: on ? t.ease.mintGlaze : '#fffefc',
         borderRadius: t.radius,
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
-        transition: 'border-color 120ms, background 120ms',
+        transition: 'background 120ms',
       }}
     >
       <div
@@ -140,8 +139,7 @@ function FormatCard({
           width: 36,
           height: 36,
           borderRadius: 8,
-          background: on ? t.rust : t.bgElev,
-          border: `1px solid ${on ? 'transparent' : t.borderSoft}`,
+          background: on ? t.ease.forestDark : t.ease.keylimeWash,
           color: on ? '#fff' : t.inkSoft,
           display: 'flex',
           alignItems: 'center',
@@ -178,8 +176,7 @@ function FormatCard({
               letterSpacing: 0.7,
               textTransform: 'uppercase',
               padding: '3px 8px',
-              background: on ? '#fff' : t.tintAccent,
-              border: `1px solid ${t.rustSoft}`,
+              background: on ? '#fff' : t.ease.keylimeWash,
               borderRadius: 999,
             }}
           >
@@ -192,8 +189,7 @@ function FormatCard({
           width: 20,
           height: 20,
           borderRadius: '50%',
-          border: `1.5px solid ${on ? t.rust : t.border}`,
-          background: '#fff',
+          background: on ? t.ease.forestDark : t.ease.keylimeWash,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -201,7 +197,7 @@ function FormatCard({
           marginTop: 1,
         }}
       >
-        {on && <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.rust }} />}
+        {on && <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fff' }} />}
       </div>
     </button>
   );
@@ -326,15 +322,14 @@ export default function ApptPage() {
                       width: 58,
                       padding: '10px 0 12px',
                       borderRadius: 10,
-                      background: on ? t.rust : t.card,
-                      border: `1px solid ${on ? t.rust : t.border}`,
+                      background: on ? t.ease.forestDark : '#fffefc',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: 2,
                       fontFamily: t.sans,
-                      transition: 'background 120ms, border-color 120ms',
+                      transition: 'background 120ms',
                     }}
                   >
                     <span
@@ -379,8 +374,7 @@ export default function ApptPage() {
                     style={{
                       padding: '14px 16px',
                       borderRadius: t.radius,
-                      background: on ? t.tintAccent : t.card,
-                      border: `1px solid ${on ? t.rust : t.border}`,
+                      background: on ? t.ease.mintGlaze : '#fffefc',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -404,8 +398,7 @@ export default function ApptPage() {
                         width: 18,
                         height: 18,
                         borderRadius: '50%',
-                        border: `1.5px solid ${on ? t.rust : t.border}`,
-                        background: '#fff',
+                        background: on ? t.ease.forestDark : t.ease.keylimeWash,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -417,7 +410,7 @@ export default function ApptPage() {
                             width: 9,
                             height: 9,
                             borderRadius: '50%',
-                            background: t.rust,
+                            background: '#fff',
                           }}
                         />
                       )}
@@ -489,7 +482,6 @@ export default function ApptPage() {
                   height: 32,
                   borderRadius: 8,
                   background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.15)',
                   color: '#fff',
                   cursor: 'pointer',
                   display: 'flex',

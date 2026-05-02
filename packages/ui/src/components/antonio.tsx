@@ -145,6 +145,14 @@ export function AskAntonioBar({
 // AskAntonioChat — global bottom-sheet modal. Listens for
 // `ask-antonio:open` events. Renders chat thread + composer.
 // Mount once at the (intake) layout level so any screen can trigger it.
+//
+// Visual: ease.health conversation pattern. Zero strokes. Top of the
+// thread carries a sage notification banner (bell icon in a white
+// circle + a system status line), then message bubbles in soft mint:
+//   - Antonio (incoming): keylimeWash fill, left-aligned
+//   - Client (outgoing):  mintGlaze fill, right-aligned
+// Sender name + timestamp live INSIDE each bubble at the bottom — name
+// in forestDark medium, timestamp muted forestDark right-aligned.
 // ────────────────────────────────────────────────────────────────
 
 type ChatMsg = { from: 'a' | 'u'; text: string; time: string };
@@ -210,7 +218,7 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           width: '100%',
           maxWidth: 480,
           margin: '0 auto',
-          height: '78%',
+          height: '82%',
           background: t.bg,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
@@ -221,14 +229,15 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           boxShadow: '0 -12px 40px rgba(20,10,0,0.18)',
         }}
       >
+        {/* Drag handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 0' }}>
-          <div style={{ width: 40, height: 4, background: t.border, borderRadius: 2 }} />
+          <div style={{ width: 40, height: 4, background: t.ease.keylimeWash, borderRadius: 2 }} />
         </div>
 
+        {/* Header — avatar + name + close. No bottom stroke. */}
         <div
           style={{
             padding: '14px 18px 14px',
-            borderBottom: `1px solid ${t.borderSoft}`,
             display: 'flex',
             alignItems: 'center',
             gap: 12,
@@ -245,93 +254,146 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                 height: 11,
                 borderRadius: '50%',
                 background: '#4a8f5f',
-                border: `2px solid ${t.bg}`,
+                boxShadow: `0 0 0 2px ${t.bg}`,
               }}
             />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 500, color: t.ink, letterSpacing: -0.1 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: t.ease.forestDark, letterSpacing: -0.45 }}>
               Antonio Vazquez, EA
             </div>
-            <div style={{ fontSize: 11.5, color: '#4a8f5f', fontFamily: t.mono, letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 12, color: '#4a8f5f', letterSpacing: -0.36, marginTop: 1 }}>
               ● Online · typically replies within an hour
             </div>
           </div>
           <button
             onClick={() => setOpen(false)}
+            aria-label="Close"
             style={{
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
               border: 'none',
-              background: t.bgElev,
+              background: t.ease.keylimeWash,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              color: t.ease.forestDark,
             }}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={t.inkSoft} strokeWidth="1.6" strokeLinecap="round">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               <path d="M3 3l6 6M9 3l-6 6" />
             </svg>
           </button>
         </div>
 
+        {/* Thread scroller */}
         <div
           ref={scrollerRef}
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '20px 18px 12px',
+            padding: '8px 18px 16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
+            gap: 12,
           }}
         >
-          {messages.map((m, i) => (
+          {/* System notification banner — like ease's "Your clinical
+              documentation has been completed for review" tile. Pinned
+              at the top of the scrollback. */}
+          <div
+            style={{
+              background: t.ease.mintGlaze,
+              borderRadius: 14,
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 12,
+              marginBottom: 4,
+            }}
+          >
             <div
-              key={i}
               style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: '#fffefc',
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: m.from === 'u' ? 'flex-end' : 'flex-start',
-                gap: 3,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: t.ease.forestDark,
               }}
             >
-              <div
-                style={{
-                  maxWidth: '80%',
-                  padding: '10px 14px',
-                  borderRadius: m.from === 'u' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  background: m.from === 'u' ? t.rust : t.card,
-                  color: m.from === 'u' ? '#fff' : t.ink,
-                  border: m.from === 'u' ? 'none' : `1px solid ${t.border}`,
-                  fontSize: 14,
-                  lineHeight: 1.4,
-                  fontFamily: t.sans,
-                }}
-              >
-                {m.text}
-              </div>
-              <div
-                style={{
-                  fontFamily: t.mono,
-                  fontSize: 9.5,
-                  color: t.muted,
-                  letterSpacing: 0.4,
-                  padding: '0 4px',
-                }}
-              >
-                {m.time}
-              </div>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3.5 11.5h9l-1-1.5V7a3.5 3.5 0 00-7 0v3l-1 1.5z" />
+                <path d="M6.5 13.5a1.5 1.5 0 003 0" />
+              </svg>
             </div>
-          ))}
+            <div
+              style={{
+                flex: 1,
+                fontFamily: t.sans,
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: t.ease.forestDark,
+                letterSpacing: -0.42,
+              }}
+            >
+              Antonio is reviewing your intake. He&apos;ll reach out within 24 hours.
+            </div>
+          </div>
+
+          {messages.map((m, i) => {
+            const isUser = m.from === 'u';
+            const senderName = isUser ? 'You' : 'Antonio';
+            return (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: isUser ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    maxWidth: '82%',
+                    padding: '14px 16px 12px',
+                    borderRadius: 16,
+                    background: isUser ? t.ease.mintGlaze : t.ease.keylimeWash,
+                    color: t.ease.forestDark,
+                    fontFamily: t.sans,
+                  }}
+                >
+                  <div style={{ fontSize: 15, lineHeight: 1.5, letterSpacing: -0.45, marginBottom: 8 }}>
+                    {m.text}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      fontSize: 12,
+                      letterSpacing: -0.36,
+                    }}
+                  >
+                    <span style={{ fontWeight: 500, color: t.ease.forestDark }}>{senderName}</span>
+                    <span style={{ color: t.ease.forestDark, opacity: 0.5 }}>{m.time}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
+        {/* Composer — strokeless. Input is a soft keylimeWash pill. */}
         <div
           style={{
             padding: '12px 14px 18px',
-            borderTop: `1px solid ${t.borderSoft}`,
             display: 'flex',
             alignItems: 'flex-end',
             gap: 8,
@@ -341,10 +403,9 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           <div
             style={{
               flex: 1,
-              background: t.card,
-              border: `1px solid ${t.border}`,
+              background: t.ease.keylimeWash,
               borderRadius: 20,
-              padding: '8px 14px',
+              padding: '10px 16px',
               display: 'flex',
               alignItems: 'center',
             }}
@@ -364,7 +425,8 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                 // 16px+ prevents iOS Safari auto-zoom on focus
                 fontSize: 16,
                 fontFamily: t.sans,
-                color: t.ink,
+                color: t.ease.forestDark,
+                letterSpacing: -0.48,
               }}
             />
           </div>

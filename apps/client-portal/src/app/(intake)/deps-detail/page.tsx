@@ -108,8 +108,7 @@ function DependentCardDetails({
     <div
       style={{
         padding: '18px 18px 6px',
-        background: t.bgElev,
-        border: `1px solid ${t.borderSoft}`,
+        background: t.ease.keylimeWash,
         borderRadius: t.radius,
       }}
     >
@@ -117,7 +116,7 @@ function DependentCardDetails({
         style={{
           fontFamily: t.mono,
           fontSize: 10,
-          color: t.rustInk,
+          color: t.ease.forestDark,
           letterSpacing: 1.4,
           textTransform: 'uppercase',
           marginBottom: 14,
@@ -213,12 +212,16 @@ export default function DepsDetailPage() {
     void setField(`dependents.list.${i}.${field}`, value);
   };
 
+  // Pass the live answers snapshot to flow helpers — empty state would
+  // make /deps-detail itself "non-applicable" (it requires count > 0),
+  // so getPrevStep would return null and the back button would silently
+  // no-op. With the real snapshot the route resolves and back works.
   const handleNext = () => {
-    const target = getNextStep('/deps-detail', {});
+    const target = getNextStep('/deps-detail', answers);
     if (target) nav.next(target);
   };
   const handleBack = () => {
-    const target = getPrevStep('/deps-detail', {});
+    const target = getPrevStep('/deps-detail', answers);
     if (target) nav.back(target);
   };
 

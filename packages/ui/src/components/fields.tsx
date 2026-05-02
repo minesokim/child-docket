@@ -87,7 +87,7 @@ export function TextField({
       // Focus state deepens the fill slightly via mintKiss.
       style={{
         width: '100%',
-        background: t.ease.keylimeWash,
+        background: t.ease.mintWhisper,
         border: 'none',
         borderRadius: 12,
         padding: '12px 14px',
@@ -100,10 +100,10 @@ export function TextField({
         ...style,
       }}
       onFocus={(e) => {
-        e.target.style.background = t.ease.mintKiss;
+        e.target.style.background = t.ease.keylimeWash;
       }}
       onBlur={(e) => {
-        e.target.style.background = t.ease.keylimeWash;
+        e.target.style.background = t.ease.mintWhisper;
       }}
     />
   );
@@ -183,7 +183,7 @@ export function SSNField({
           alignItems: 'center',
           gap: 10,
           padding: '12px 14px',
-          background: t.ease.keylimeWash,
+          background: t.ease.mintWhisper,
           borderRadius: 12,
         }}
       >
@@ -226,7 +226,7 @@ export function SSNField({
         alignItems: 'center',
         gap: 10,
         padding: '12px 14px',
-        background: t.ease.keylimeWash,
+        background: t.ease.mintWhisper,
         borderRadius: 12,
         cursor: revealing ? 'wait' : 'text',
         opacity: revealing ? 0.6 : 1,
@@ -361,7 +361,7 @@ export function EncryptedTextField({
           alignItems: 'center',
           gap: 10,
           padding: '12px 14px',
-          background: t.ease.keylimeWash,
+          background: t.ease.mintWhisper,
           borderRadius: 12,
           cursor: revealing ? 'wait' : 'text',
           opacity: revealing ? 0.6 : 1,
@@ -397,7 +397,7 @@ export function EncryptedTextField({
         autoComplete="off"
         style={{
           flex: 1,
-          background: t.ease.keylimeWash,
+          background: t.ease.mintWhisper,
           border: 'none',
           borderRadius: 12,
           padding: '12px 14px',

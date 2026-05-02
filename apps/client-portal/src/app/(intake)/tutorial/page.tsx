@@ -30,8 +30,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
       style={{
         marginTop: 14,
         padding: '14px 14px 16px',
-        background: t.bgElev,
-        border: `1px solid ${t.borderSoft}`,
+        background: t.ease.keylimeWash,
         borderRadius: t.radius,
       }}
     >
@@ -55,8 +54,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
               onClick={() => setSel(on ? null : o.id)}
               style={{
                 padding: '10px 12px',
-                background: on ? t.tintAccent : t.card,
-                border: `1px solid ${on ? t.rust : t.border}`,
+                background: on ? t.ease.mintGlaze : '#fffefc',
                 borderRadius: t.radius - 2,
                 cursor: 'pointer',
                 display: 'flex',
@@ -70,8 +68,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
                   width: 22,
                   height: 22,
                   borderRadius: '50%',
-                  border: `1.5px solid ${on ? t.rust : t.border}`,
-                  background: on ? t.rust : 'transparent',
+                  background: on ? t.ease.forestDark : '#fffefc',
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
@@ -133,8 +130,8 @@ function TutorialAntonioDemo({ t }: { t: Theme }) {
       <div
         style={{
           padding: '10px 12px',
-          background: t.card,
-          border: `1px solid ${t.border}`,
+          background: '#fffefc',
+          boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
           borderRadius: t.radius,
           display: 'flex',
           alignItems: 'center',
@@ -152,7 +149,6 @@ function TutorialAntonioDemo({ t }: { t: Theme }) {
               height: 10,
               borderRadius: '50%',
               background: '#4a8f5f',
-              border: `2px solid ${t.card}`,
             }}
           />
         </div>
@@ -179,8 +175,7 @@ function TutorialAntonioDemo({ t }: { t: Theme }) {
         style={{
           marginTop: 10,
           padding: '10px 12px',
-          background: t.tintAccent,
-          border: `1px solid ${t.rustSoft}`,
+          background: t.ease.mintGlaze,
           borderRadius: t.radius,
           display: 'flex',
           gap: 10,
@@ -282,15 +277,14 @@ function TutorialCard({
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: t.tintAccent,
-                border: `1px solid ${t.rustSoft}`,
+                background: t.ease.mintGlaze,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontFamily: t.sans,
                 fontSize: 13,
                 fontWeight: 600,
-                color: t.rustInk,
+                color: t.ease.forestDark,
                 flexShrink: 0,
               }}
             >

@@ -66,13 +66,12 @@ function EntityCard({
         alignItems: 'flex-start',
         gap: 4,
         padding: '14px 14px',
-        background: selected ? t.tintAccent : t.card,
-        border: `1px solid ${selected ? t.rust : t.border}`,
+        background: selected ? t.ease.mintGlaze : '#fffefc',
         borderRadius: t.radius,
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
-        transition: 'border-color 120ms, background 120ms',
+        transition: 'background 120ms',
       }}
     >
       <div
@@ -100,8 +99,7 @@ function EntityCard({
             width: 16,
             height: 16,
             borderRadius: '50%',
-            border: `1.5px solid ${selected ? t.rust : t.border}`,
-            background: '#fff',
+            background: selected ? t.ease.forestDark : t.ease.keylimeWash,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -109,7 +107,7 @@ function EntityCard({
           }}
         >
           {selected && (
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: t.rust }} />
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />
           )}
         </div>
       </div>
@@ -165,8 +163,7 @@ export default function BusinessFormationPage() {
               alignItems: 'center',
               gap: 6,
               padding: '5px 10px',
-              background: t.tintAccent,
-              border: `1px solid ${t.rustSoft}`,
+              background: t.ease.keylimeWash,
               borderRadius: 999,
               fontFamily: t.mono,
               fontSize: 9.5,

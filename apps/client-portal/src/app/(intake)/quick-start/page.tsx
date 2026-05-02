@@ -138,9 +138,8 @@ export default function QuickStartPage() {
               width: 36,
               height: 36,
               borderRadius: 999,
-              border: `1px solid ${t.border}`,
-              background: t.bgElev,
-              color: t.ink,
+              background: t.ease.keylimeWash,
+              color: t.ease.forestDark,
               cursor: 'pointer',
               padding: 0,
             }}
@@ -203,13 +202,13 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.bgElev,
-                  border: `1px solid ${t.border}`,
+                  background: t.ease.keylimeWash,
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
                   color: t.ink,
                   outline: 'none',
+                  border: 'none',
                   boxSizing: 'border-box',
                 }}
               />
@@ -247,13 +246,13 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.bgElev,
-                  border: `1px solid ${t.border}`,
+                  background: t.ease.keylimeWash,
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
                   color: t.ink,
                   outline: 'none',
+                  border: 'none',
                   boxSizing: 'border-box',
                   fontVariantNumeric: 'tabular-nums lining-nums',
                   letterSpacing: 1,
@@ -293,13 +292,13 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.bgElev,
-                  border: `1px solid ${t.border}`,
+                  background: t.ease.keylimeWash,
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
                   color: t.ink,
                   outline: 'none',
+                  border: 'none',
                   boxSizing: 'border-box',
                 }}
               />

@@ -156,10 +156,8 @@ export default function DeductionsPage() {
                     marginTop: -2,
                     marginLeft: 18,
                     padding: '16px 16px 8px 18px',
-                    borderLeft: `2px solid ${t.rust}`,
-                    background: t.bgElev,
-                    borderTopRightRadius: 8,
-                    borderBottomRightRadius: 8,
+                    background: t.ease.keylimeWash,
+                    borderRadius: 8,
                   }}
                 >
                   <div

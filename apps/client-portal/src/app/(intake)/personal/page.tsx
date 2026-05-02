@@ -187,8 +187,8 @@ export default function PersonalPage() {
             style={{
               marginTop: 14,
               padding: '20px 18px 4px',
-              background: t.card,
-              border: `1px solid ${t.borderSoft}`,
+              background: '#fffefc',
+              boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
               borderRadius: t.radius,
             }}
           >
