@@ -122,7 +122,7 @@ export default function ServicesPathPage() {
                     justifyContent: 'center',
                   }}
                 >
-                  <ServiceIcon t={t} kind={p.icon} size={52} />
+                  <ServiceIcon t={t} kind={p.icon} size={44} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Row justify="space-between" align="baseline" gap={10}>

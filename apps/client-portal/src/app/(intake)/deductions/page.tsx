@@ -156,7 +156,11 @@ export default function DeductionsPage() {
                     marginTop: -2,
                     marginLeft: 18,
                     padding: '16px 16px 8px 18px',
-                    background: t.ease.keylimeWash,
+                    // Neutral container - the childcare row above is
+                    // already mintKiss when selected, so a second green
+                    // layer doubles up. softNeutral keeps the Form 2441
+                    // fields visually distinct without competing.
+                    background: t.ease.softNeutral,
                     borderRadius: 8,
                   }}
                 >
