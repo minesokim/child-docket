@@ -24,17 +24,18 @@ import type { Theme } from '../tokens.js';
 import { AvatarSlot } from './media.js';
 
 // ────────────────────────────────────────────────────────────────
-// AskAntonioBar — sticky bottom rail, reads as "continue the thread."
+// AskAntonioBar — sticky bottom rail.
 //
 // Behavior: tap anywhere on the rail (or the explicit "Open chat"
 // button) to dispatch `ask-antonio:open`. AskAntonioChat is mounted
 // once in the intake layout and listens for that event.
 //
-// Design intent: the rail is a thread-continuation affordance, not a
-// help button. Label is "Continue with Antonio" so the client reads
-// it as "rejoin the conversation," not "submit a question." Avatar
-// has the same green online-dot as in the chat-modal header so the
-// rail and the chat feel like one surface.
+// Design intent: the rail is the conversation affordance — the same
+// thread the page-level AntonioNote at the top is part of. Label is
+// "Ask Antonio" because that's the simple, direct ask the client
+// would actually say out loud. Avatar carries the same green online-
+// dot as in the chat-modal header so the rail and the chat feel like
+// one surface.
 // ────────────────────────────────────────────────────────────────
 
 export function AskAntonioBar({
@@ -73,21 +74,24 @@ export function AskAntonioBar({
     >
       <div
         style={{
-          padding: '6px 8px 6px 10px',
+          // ~15% bump from the previous 6/8/6/10 padding + 24px avatar.
+          // Bigger feels less hesitant — the rail is the conversation
+          // affordance, not a footnote.
+          padding: '7px 10px 7px 12px',
           display: 'flex',
           alignItems: 'center',
-          gap: 9,
+          gap: 11,
         }}
       >
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <AvatarSlot t={t} size={24} />
+          <AvatarSlot t={t} size={28} />
           <div
             style={{
               position: 'absolute',
               bottom: -1,
               right: -1,
-              width: 8,
-              height: 8,
+              width: 9,
+              height: 9,
               borderRadius: '50%',
               background: '#4a8f5f',
               border: `2px solid #FFFFFF`,
@@ -97,12 +101,12 @@ export function AskAntonioBar({
         <span
           style={{
             flex: 1,
-            fontSize: 12.5,
+            fontSize: 14,
             color: t.inkSoft,
             fontWeight: 400,
           }}
         >
-          Continue with Antonio
+          Ask Antonio
         </span>
         <button
           onClick={(e) => {
@@ -110,8 +114,8 @@ export function AskAntonioBar({
             handleClick();
           }}
           style={{
-            padding: '5px 12px',
-            fontSize: 12,
+            padding: '6px 14px',
+            fontSize: 13,
             fontWeight: 500,
             background: t.rust,
             color: '#fff',
