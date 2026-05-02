@@ -40,14 +40,25 @@ export function H1({
   children: React.ReactNode;
   style?: StyleProp;
 }) {
-  // Slow, deliberate, breathing-like fade-in. The headline is the first
-  // thing on every intake page; the entrance is the rhythm of the page.
+  // "Ghost in": slow, drawn-out fade with a heavy blur-to-clear pass.
+  // 1600ms duration with the ease-out-quint curve gives a long quiet
+  // tail — the headline doesn't snap into place, it materializes.
+  // AntonioNote uses this same keyframe so the avatar + title settle
+  // together as one breath.
   return (
     <>
       <style>{`
-        @keyframes docket-h1-rise {
-          from { opacity: 0; transform: translateY(8px); filter: blur(2px); }
-          to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        @keyframes docket-ghost-in {
+          from {
+            opacity: 0;
+            transform: translateY(4px);
+            filter: blur(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+          }
         }
       `}</style>
       <h1
@@ -60,7 +71,7 @@ export function H1({
           margin: 0,
           color: t.ink,
           textWrap: 'pretty' as React.CSSProperties['textWrap'],
-          animation: 'docket-h1-rise 700ms cubic-bezier(.2,.8,.2,1) both',
+          animation: 'docket-ghost-in 1600ms cubic-bezier(.16, 1, .3, 1) both',
           willChange: 'opacity, transform, filter',
           ...style,
         }}

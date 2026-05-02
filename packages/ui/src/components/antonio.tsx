@@ -498,9 +498,11 @@ export function AntonioNote({
   t,
   children,
   avatarSize = 26,
-  /** Delay (ms) before the first word appears. Tuned so the H1
-   *  fade-in (700ms) finishes first; default 850ms gives breathing room. */
-  delay = 850,
+  /** Delay (ms) before the first word appears. Tuned so the H1's
+   *  ghost-in (1600ms) is mostly settled before words stream in.
+   *  Words begin around the 1100ms mark — overlapping the tail of the
+   *  H1 fade so the page reads as one continuous breath. */
+  delay = 1100,
   /** Per-word stagger (ms). Lower = faster typing. */
   stagger = 35,
 }: {
@@ -523,8 +525,11 @@ export function AntonioNote({
           display: 'flex',
           alignItems: 'flex-start',
           gap: 12,
-          // Avatar fades in with the title; the words stream after.
-          animation: 'docket-h1-rise 700ms cubic-bezier(.2,.8,.2,1) both',
+          // Avatar + container ghost in with the same animation as the
+          // page H1 — slow, blurred, breathing. The avatar specifically
+          // is what the user sees ghost in alongside the title.
+          animation: 'docket-ghost-in 1600ms cubic-bezier(.16, 1, .3, 1) both',
+          willChange: 'opacity, transform, filter',
         }}
       >
         <AvatarSlot t={t} size={avatarSize} />
