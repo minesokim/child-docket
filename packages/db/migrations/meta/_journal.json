@@ -57,6 +57,27 @@
       "when": 1777750000000,
       "tag": "0007_actions_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777800000000,
+      "tag": "0008_actions_clientid_set_null",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777810000000,
+      "tag": "0009_tenants_clerk_org_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777820000000,
+      "tag": "0010_user_role_enum",
+      "breakpoints": true
     }
   ]
 }
