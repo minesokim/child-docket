@@ -132,7 +132,12 @@ export function ToggleCard({
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
-        transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
+        // Shadow lift matches /income card pattern — selected gets a
+        // stronger lift so the row feels picked-up off the page.
+        boxShadow: on
+          ? '0 4px 16px rgba(15, 62, 23, 0.08)'
+          : '0 1px 4px rgba(15, 62, 23, 0.04)',
+        transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
       <div
