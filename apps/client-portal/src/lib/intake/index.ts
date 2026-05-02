@@ -9,3 +9,5 @@ export { getOrCreateIntakeAnswers, type IntakeBundle } from './read';
 export { saveIntakeField, type SaveIntakeFieldResult } from './write';
 export { revealIntakeField, type RevealIntakeFieldResult } from './reveal';
 export { completeIntake } from './complete';
+export { recordIntakeSignature } from './sign';
+export { resolveClient, getOrCreateClient, type AuthedClient, type AuthResolution } from './auth';

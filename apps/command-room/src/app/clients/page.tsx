@@ -80,7 +80,7 @@ export default async function ClientsPage() {
               marginBottom: 8,
             }}
           >
-            VAZANT CONSULTING · TENANT
+            {user.tenantName.toUpperCase()} · TENANT
           </div>
           <h1
             style={{

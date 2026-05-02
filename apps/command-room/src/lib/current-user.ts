@@ -1,22 +1,28 @@
-// Server-side helper that resolves the current Clerk session to a Postgres
-// user record + tenant.
+// Server-side helper that resolves the current Clerk session to a
+// Postgres user record + tenant.
 //
-// Lookup strategy (self-healing on first sign-in):
-//   1. SELECT users WHERE clerk_user_id = <session.userId>
-//   2. If not found, SELECT users WHERE email = <session.email>
-//      → if matched, UPDATE clerk_user_id and return.
-//      → this is the "claim" path: a pre-seeded row gets bound to the
-//        real Clerk userId on first sign-in matching email.
+// Tenant resolution (Day 2 of post-audit hardening — multi-firm wiring):
+//   1. If the Clerk session has an orgId, look up tenants WHERE
+//      clerk_org_id = orgId. That's the multi-firm path: one Clerk
+//      Organization = one tenant.
+//   2. If no orgId, fall back to a tenant-unscoped lookup (transitional).
+//      Antonio creates the Clerk Org via the dashboard and runs a
+//      one-line UPDATE to link tenants.clerk_org_id; before that lands,
+//      the legacy email-claim path keeps the dev loop working.
+//
+// User resolution (within the tenant boundary):
+//   1. SELECT users WHERE clerk_user_id = <session.userId> [AND tenant_id = T]
+//   2. If not found, SELECT users WHERE email = <verified primary email>
+//      [AND tenant_id = T]. Match → UPDATE clerk_user_id and return.
+//      This is the "claim" path: a pre-seeded row gets bound to the
+//      real Clerk userId on first sign-in matching the verified email.
 //   3. If still not found, return null. The caller decides what to do
 //      (typically: render a "no account provisioned" screen).
-//
-// Webhook-based provisioning (Clerk user.created → POST our endpoint) lands
-// in Layer 0.5 when client phone-OTP signups need to auto-provision rows.
-// For Layer 0 (Antonio admin), the seed-then-claim path is sufficient.
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { getAdminDb, schema } from '@docket/db/client';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import * as Sentry from '@sentry/nextjs';
 
 export type DocketUser = {
   id: string;
@@ -25,26 +31,71 @@ export type DocketUser = {
   email: string;
   name: string | null;
   role: string;
+  /** Tenant display name, joined from tenants table for UI headers. */
+  tenantName: string;
+  /** Tenant slug — useful for URL prefixes / per-tenant redirects later. */
+  tenantSlug: string;
 };
 
 export async function getCurrentDocketUser(): Promise<DocketUser | null> {
-  const { userId: clerkUserId } = await auth();
+  const { userId: clerkUserId, orgId } = await auth();
   if (!clerkUserId) return null;
 
   const db = getAdminDb();
 
-  // Fast path: bound user
+  // 1. Resolve tenant from the Clerk Organization (multi-firm path).
+  let tenantId: string | null = null;
+  if (orgId) {
+    const [tenant] = await db
+      .select({ id: schema.tenants.id })
+      .from(schema.tenants)
+      .where(eq(schema.tenants.clerkOrgId, orgId))
+      .limit(1);
+
+    if (!tenant) {
+      // Clerk session is in some org we don't track. Refuse — we
+      // can't determine which firm's data to scope to, and a
+      // tenant-unscoped lookup would defeat the multi-firm
+      // boundary. Antonio sets clerk_org_id via the dashboard +
+      // one-line UPDATE; if that hasn't landed yet, sign out of
+      // the org or we'll keep landing here.
+      Sentry.captureMessage(
+        '[command-room] Clerk orgId has no matching tenants.clerk_org_id',
+        'warning',
+      );
+      return null;
+    }
+    tenantId = tenant.id;
+  }
+
+  // 2. Fast path: clerkUserId match, scoped to tenant if known.
+  // Join tenants for display name + slug — avoids a follow-up
+  // lookup in pages that render the tenant header.
+  const byClerkIdWhere = tenantId
+    ? and(eq(schema.users.clerkUserId, clerkUserId), eq(schema.users.tenantId, tenantId))
+    : eq(schema.users.clerkUserId, clerkUserId);
+
   const byClerkId = await db
-    .select()
+    .select({
+      id: schema.users.id,
+      tenantId: schema.users.tenantId,
+      clerkUserId: schema.users.clerkUserId,
+      email: schema.users.email,
+      name: schema.users.name,
+      role: schema.users.role,
+      tenantName: schema.tenants.name,
+      tenantSlug: schema.tenants.slug,
+    })
     .from(schema.users)
-    .where(eq(schema.users.clerkUserId, clerkUserId))
+    .innerJoin(schema.tenants, eq(schema.tenants.id, schema.users.tenantId))
+    .where(byClerkIdWhere)
     .limit(1);
 
   if (byClerkId[0]) {
-    return byClerkId[0] as DocketUser;
+    return byClerkId[0] satisfies DocketUser;
   }
 
-  // Claim path: match by VERIFIED PRIMARY email, bind clerkUserId.
+  // 3. Claim path: match by VERIFIED PRIMARY email, bind clerkUserId.
   //
   // Hardening from the May 2026 security audit:
   //   - Use the *primary* email (clerkUser.primaryEmailAddressId), not
@@ -55,11 +106,10 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
   //     check, anyone who *claims* an email matching a pre-seeded admin
   //     row could bind their Clerk identity to it before proving they
   //     own the inbox.
-  //   - TODO(multi-tenant): when the second firm onboards, scope this
-  //     lookup by Clerk Organization id (auth().orgId → tenants.clerkOrgId).
-  //     `email` is intentionally NOT unique on users — two firms can have
-  //     the same email seeded (a contractor working both books). Without a
-  //     tenant filter, the first-match-wins UPDATE is non-deterministic.
+  //   - Tenant-scope the lookup if orgId is set. `email` is intentionally
+  //     NOT unique on users — two firms can seed the same email (a
+  //     contractor working both books). Without the filter the
+  //     first-match-wins UPDATE is non-deterministic.
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
 
@@ -71,10 +121,24 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
 
   const email = primary.emailAddress.toLowerCase();
 
+  const byEmailWhere = tenantId
+    ? and(eq(schema.users.email, email), eq(schema.users.tenantId, tenantId))
+    : eq(schema.users.email, email);
+
   const byEmail = await db
-    .select()
+    .select({
+      id: schema.users.id,
+      tenantId: schema.users.tenantId,
+      clerkUserId: schema.users.clerkUserId,
+      email: schema.users.email,
+      name: schema.users.name,
+      role: schema.users.role,
+      tenantName: schema.tenants.name,
+      tenantSlug: schema.tenants.slug,
+    })
     .from(schema.users)
-    .where(eq(schema.users.email, email))
+    .innerJoin(schema.tenants, eq(schema.tenants.id, schema.users.tenantId))
+    .where(byEmailWhere)
     .limit(1);
 
   if (!byEmail[0]) return null;
@@ -84,7 +148,22 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
     .update(schema.users)
     .set({ clerkUserId })
     .where(eq(schema.users.id, byEmail[0].id))
-    .returning();
+    .returning({
+      id: schema.users.id,
+      tenantId: schema.users.tenantId,
+      clerkUserId: schema.users.clerkUserId,
+      email: schema.users.email,
+      name: schema.users.name,
+      role: schema.users.role,
+    });
 
-  return (updated ?? null) as DocketUser | null;
+  if (!updated) return null;
+
+  // The UPDATE...RETURNING doesn't carry the joined tenant fields;
+  // splice them in from the byEmail read which already has them.
+  return {
+    ...updated,
+    tenantName: byEmail[0].tenantName,
+    tenantSlug: byEmail[0].tenantSlug,
+  } satisfies DocketUser;
 }

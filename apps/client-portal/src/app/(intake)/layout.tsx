@@ -7,6 +7,8 @@
 // Inner client logic (route-transition direction, AskAntonioChat overlay)
 // lives in <IntakeFrame> so this file can stay a Server Component.
 
+import { redirect } from 'next/navigation';
+import { resolveClient } from '@/lib/intake/auth';
 import { getOrCreateIntakeAnswers } from '@/lib/intake';
 import { IntakeProvider } from '@/lib/intake-context';
 import { IntakeFrame } from './_intake-frame';
@@ -16,14 +18,24 @@ export default async function IntakeLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Phone-binding gate (Day 2 post-audit hardening). If the
+  // Clerk-authenticated phone doesn't match any pre-seeded client row,
+  // we bounce to /no-access. The middleware already covers signed-out
+  // users; this layer covers signed-in-but-unprovisioned.
+  const auth = await resolveClient();
+  if (auth.kind === 'no_invite') {
+    redirect('/no-access');
+  }
+
   // Hydrate the intake state from Postgres on every (intake) page load.
-  // This is one round-trip per navigation, but it's a single-row primary-key
-  // lookup (~5-10ms) and gives us a server-validated source of truth.
+  // Single-row primary-key lookup (~5-10ms), server-validated source
+  // of truth. Internally this re-resolves the client; we accept the
+  // duplicate auth read as the cost of the cleanest layout shape.
   const bundle = await getOrCreateIntakeAnswers();
 
-  // Defensive: if Vazant tenant isn't seeded or auth is missing, render
-  // with empty answers - pages still work via their default values, and
-  // the user gets bounced to /login by the route handlers downstream.
+  // 'no_session' (signed-out) falls through here — middleware will
+  // already have redirected to /login. The empty-answers default keeps
+  // the render from crashing if we somehow reach this point.
   const initialAnswers = bundle?.answers ?? {};
 
   return (

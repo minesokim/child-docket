@@ -41,7 +41,7 @@ export const getOrCreateIntakeAnswers = cache(async (): Promise<IntakeBundle | n
   const authed = await getOrCreateClient();
   if (!authed) return null;
 
-  const taxYear = await getCurrentTaxYear();
+  const taxYear = await getCurrentTaxYear(authed.timezone);
 
   return withTenant(asTenantId(authed.tenantId), async (db) => {
     const dek = await getTenantDek(db, asTenantId(authed.tenantId));

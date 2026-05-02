@@ -82,6 +82,15 @@ export function WelcomeContent() {
               color: t.ease.forestDark,
             }}
           >
+            {/*
+              TODO(multi-firm): tenant.name should drive this string.
+              Day 2 audit-hardening landed the data boundary (RLS,
+              phone-based binding, tenants.clerkOrgId); UI strings
+              like this stay hardcoded "Vazant Consulting" until the
+              second firm onboards. To unblock then: thread
+              tenantName through IntakeProvider and read via a
+              useTenant() hook here + in /portal/profile.
+            */}
             {isReturning ? (
               <>
                 Welcome back to

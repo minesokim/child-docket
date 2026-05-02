@@ -61,7 +61,7 @@ export async function revealIntakeField(path: string): Promise<RevealIntakeField
     };
   }
 
-  const taxYear = await getCurrentTaxYear();
+  const taxYear = await getCurrentTaxYear(authed.timezone);
   const startedAt = Date.now();
 
   try {

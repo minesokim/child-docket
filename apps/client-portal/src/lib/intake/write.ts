@@ -65,7 +65,7 @@ export async function saveIntakeField(
   const authed = await getOrCreateClient();
   if (!authed) return { ok: false, error: 'Not signed in', path };
 
-  const taxYear = await getCurrentTaxYear();
+  const taxYear = await getCurrentTaxYear(authed.timezone);
   const sensitive = isSensitivePath(path);
 
   try {
