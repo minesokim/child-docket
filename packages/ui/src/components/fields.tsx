@@ -73,13 +73,18 @@ export function TextField({
   style?: StyleProp;
   autoComplete?: string;
 }) {
-  // Two-state fill that telegraphs progress without checkmarks:
-  //   empty  -> softNeutral (warm off-white, no green tint)
-  //   filled -> keylimeWash (light mint — "I have something to save")
-  // Focus deepens whichever base we're on by one tone.
+  // Filled telegraphs progress without checkmarks. Resting state for a
+  // filled field is SUPER subtle (mintWhisper, near-white with a hint
+  // of green) — visible only when scanning, not noisy. Focus state on
+  // any field deepens to keylimeWash (the visible light mint) so it's
+  // clear which field you're typing into.
+  //   empty  + not focused -> softNeutral (warm off-white, no green)
+  //   empty  + focused     -> keylimeWash
+  //   filled + not focused -> mintWhisper (super-subtle green)
+  //   filled + focused     -> keylimeWash
   const filled = value.length > 0;
-  const restingBg = filled ? t.ease.keylimeWash : t.ease.softNeutral;
-  const focusBg = filled ? t.ease.mintKiss : t.ease.mintWhisper;
+  const restingBg = filled ? t.ease.mintWhisper : t.ease.softNeutral;
+  const focusBg = t.ease.keylimeWash;
   return (
     <input
       type={type}
@@ -180,10 +185,10 @@ export function SSNField({
   };
 
   // SSN filled = any digits typed OR a server mask sentinel present.
-  // Either way the user has provided something — light-mint fill earns
-  // its place. Empty + editing -> softNeutral.
+  // Resting filled state is the super-subtle mintWhisper, matching
+  // TextField. Empty + editing -> softNeutral.
   const ssnFilled = value.length > 0;
-  const ssnRestingBg = ssnFilled ? t.ease.keylimeWash : t.ease.softNeutral;
+  const ssnRestingBg = ssnFilled ? t.ease.mintWhisper : t.ease.softNeutral;
 
   if (editing) {
     return (
@@ -238,7 +243,7 @@ export function SSNField({
         alignItems: 'center',
         gap: 10,
         padding: '12px 14px',
-        background: t.ease.keylimeWash,
+        background: t.ease.mintWhisper,
         borderRadius: 12,
         cursor: revealing ? 'wait' : 'text',
         opacity: revealing ? 0.6 : 1,
@@ -363,11 +368,13 @@ export function EncryptedTextField({
     }
   };
 
-  // Same two-state pattern as TextField: empty -> softNeutral, filled
-  // -> keylimeWash. Server-masked values are filled by definition.
+  // Same state palette as TextField:
+  //   empty resting     -> softNeutral
+  //   filled resting    -> mintWhisper (super subtle)
+  //   any focus         -> keylimeWash
   const encFilled = value.length > 0;
-  const encRestingBg = encFilled ? t.ease.keylimeWash : t.ease.softNeutral;
-  const encFocusBg = encFilled ? t.ease.mintKiss : t.ease.mintWhisper;
+  const encRestingBg = encFilled ? t.ease.mintWhisper : t.ease.softNeutral;
+  const encFocusBg = t.ease.keylimeWash;
 
   if (!editing && masked) {
     // Masked display + Edit affordance — always filled by definition.
@@ -379,7 +386,7 @@ export function EncryptedTextField({
           alignItems: 'center',
           gap: 10,
           padding: '12px 14px',
-          background: t.ease.keylimeWash,
+          background: t.ease.mintWhisper,
           borderRadius: 12,
           cursor: revealing ? 'wait' : 'text',
           opacity: revealing ? 0.6 : 1,

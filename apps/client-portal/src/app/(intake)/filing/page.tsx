@@ -101,10 +101,10 @@ export default function FilingPage() {
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 500, color: t.ink, marginBottom: 3 }}>
+                  <div style={{ fontSize: 16, fontWeight: 400, color: t.ink, letterSpacing: -0.48, marginBottom: 3 }}>
                     {o.label}
                   </div>
-                  <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.4 }}>{o.hint}</div>
+                  <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.4, letterSpacing: -0.39 }}>{o.hint}</div>
                 </div>
               </Row>
             </Card>
