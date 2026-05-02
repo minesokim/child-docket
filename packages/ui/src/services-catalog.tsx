@@ -3,6 +3,12 @@
 
 import * as React from 'react';
 import type { Theme } from './tokens';
+import {
+  SolarPersonalReturn,
+  SolarSelfEmployed,
+  SolarBusiness,
+  SolarConsultation,
+} from './icons/solar';
 
 export type ServiceIconKind =
   | 'personal'
@@ -18,33 +24,39 @@ export type ServiceIconKind =
   | 'books'
   | 'strategy';
 
-export function ServiceIcon({ t, kind }: { t: Theme; kind: ServiceIconKind }) {
+export function ServiceIcon({
+  t,
+  kind,
+  size,
+}: {
+  t: Theme;
+  kind: ServiceIconKind;
+  /** Optional size override. Solar Line Duotone icons (the 4 path
+   *  kinds) default to 26 so they fill the 44×44 well with breathing
+   *  room. Lineart fallbacks keep their 20×20 default. */
+  size?: number;
+}) {
+  // The 4 service path kinds use the new Solar Line Duotone samples
+  // (forestDark stroke + mintGlaze accent fill). Other kinds still
+  // render the legacy lineart — those will migrate in the next batch.
+  if (kind === 'personal') return <SolarPersonalReturn size={size ?? 26} />;
+  if (kind === 'self') return <SolarSelfEmployed size={size ?? 26} />;
+  if (kind === 'biz') return <SolarBusiness size={size ?? 26} />;
+  if (kind === 'consult') return <SolarConsultation size={size ?? 26} />;
+
+  const lineartSize = size ?? 20;
   const s = {
-    width: 20,
-    height: 20,
+    width: lineartSize,
+    height: lineartSize,
     stroke: t.rustInk,
     strokeWidth: 1.4,
     fill: 'none',
   } as const;
   const map: Record<ServiceIconKind, React.ReactNode> = {
-    personal: (
-      <svg {...s} viewBox="0 0 20 20">
-        <rect x="3" y="3" width="14" height="14" rx="2" strokeLinejoin="round" />
-        <path d="M6 8h8M6 11h5" strokeLinecap="round" />
-      </svg>
-    ),
-    self: (
-      <svg {...s} viewBox="0 0 20 20">
-        <path d="M3 6h14v11H3zM3 6l3-3h8l3 3" strokeLinejoin="round" />
-        <path d="M8 10h4" strokeLinecap="round" />
-      </svg>
-    ),
-    biz: (
-      <svg {...s} viewBox="0 0 20 20">
-        <rect x="3" y="6" width="14" height="11" rx="1" strokeLinejoin="round" />
-        <path d="M7 6V4h6v2M8 10v4M12 10v4" strokeLinecap="round" />
-      </svg>
-    ),
+    personal: null, // handled above
+    self: null,
+    biz: null,
+    consult: null,
     rental: (
       <svg {...s} viewBox="0 0 20 20">
         <path d="M3 10l7-6 7 6v7H3z" strokeLinejoin="round" />
@@ -76,12 +88,6 @@ export function ServiceIcon({ t, kind }: { t: Theme; kind: ServiceIconKind }) {
       <svg {...s} viewBox="0 0 20 20">
         <circle cx="10" cy="10" r="7" />
         <path d="M3 10h14M10 3c2.5 2 2.5 12 0 14M10 3c-2.5 2-2.5 12 0 14" />
-      </svg>
-    ),
-    consult: (
-      <svg {...s} viewBox="0 0 20 20">
-        <path d="M4 4h12v9H9l-4 3v-3H4z" strokeLinejoin="round" />
-        <path d="M8 8h4M8 10h3" strokeLinecap="round" />
       </svg>
     ),
     formation: (
