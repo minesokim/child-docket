@@ -23,6 +23,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { getAdminDb, schema } from '@docket/db/client';
 import { and, eq } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
+import type { Role } from '@docket/shared';
 
 export type DocketUser = {
   id: string;
@@ -30,7 +31,8 @@ export type DocketUser = {
   clerkUserId: string;
   email: string;
   name: string | null;
-  role: string;
+  /** Schema-enforced enum — see @docket/shared USER_ROLES. */
+  role: Role;
   /** Tenant display name, joined from tenants table for UI headers. */
   tenantName: string;
   /** Tenant slug — useful for URL prefixes / per-tenant redirects later. */

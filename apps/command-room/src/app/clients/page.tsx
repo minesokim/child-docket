@@ -4,12 +4,11 @@
 // What we show per row: name, intake status, latest engagement type + status,
 // last activity timestamp. Click a row → /clients/[id].
 
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
 import { desc, eq, sql } from 'drizzle-orm';
-import { getCurrentDocketUser } from '@/lib/current-user';
+import { requireRole } from '@/lib/require-role';
 import { AppShell } from '@/components/app-shell';
 import type { TenantId } from '@docket/shared';
 
@@ -29,8 +28,11 @@ type Row = {
 };
 
 export default async function ClientsPage() {
-  const user = await getCurrentDocketUser();
-  if (!user) redirect('/sign-in');
+  // All five firm roles can see the client list — assistant + admin
+  // see the same page; future SSN-reveal endpoints will narrow to
+  // ['firm_owner', 'preparer', 'reviewer'] via assertRole().
+  // See apps/command-room/src/lib/require-role.ts for the policy matrix.
+  const user = await requireRole(['firm_owner', 'preparer', 'reviewer', 'admin', 'assistant']);
 
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
 

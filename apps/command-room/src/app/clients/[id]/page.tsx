@@ -7,12 +7,12 @@
 //
 // Layout: client header + engagement summary + issues column + messages thread.
 
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
 import { and, desc, eq } from 'drizzle-orm';
-import { getCurrentDocketUser } from '@/lib/current-user';
+import { requireRole } from '@/lib/require-role';
 import { AppShell } from '@/components/app-shell';
 import type { TenantId } from '@docket/shared';
 
@@ -20,8 +20,13 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export default async function ClientDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const user = await getCurrentDocketUser();
-  if (!user) redirect('/sign-in');
+  // The detail page surfaces engagement fees, internal notes, message
+  // history, and open issues — sensitive practice context. Narrow to
+  // roles that touch the actual prep work; admin + assistant get
+  // bounced to /clients (basic list view they can use for triage but
+  // not deep dives). When a per-client billing surface exists, it'll
+  // be a sibling route gated to ['firm_owner', 'admin'].
+  const user = await requireRole(['firm_owner', 'preparer', 'reviewer']);
 
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
 
