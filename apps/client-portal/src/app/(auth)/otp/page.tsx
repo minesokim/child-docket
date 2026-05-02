@@ -274,7 +274,7 @@ function OtpFlow() {
           </svg>
         </Link>
 
-        {/* Resend toast — appears center-top after Resend click */}
+        {/* Resend toast — center-top after Resend click. No stroke. */}
         {resentToast && (
           <div
             style={{
@@ -282,16 +282,16 @@ function OtpFlow() {
               left: '50%',
               top: 0,
               transform: 'translate(-50%, 0)',
-              background: t.card,
-              border: `1px solid ${t.borderSoft}`,
+              background: '#fffefc',
+              border: 'none',
               borderRadius: 999,
               padding: '6px 14px 6px 10px',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: '0 6px 18px rgba(40,30,20,0.10)',
+              boxShadow: '0 6px 18px rgba(15, 62, 23, 0.12)',
               fontSize: 13,
-              color: t.ink,
+              color: t.ease.forestDark,
               fontFamily: t.sans,
               animation: 'toast-cycle 2400ms cubic-bezier(.2,.8,.2,1) forwards',
             }}
@@ -313,33 +313,33 @@ function OtpFlow() {
       </div>
 
       <div style={{ flex: 1, paddingTop: 28, maxWidth: 420, marginInline: 'auto', width: '100%' }}>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10.5,
-            color: t.muted,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            marginBottom: 10,
-          }}
-        >
-          Step 2 of 2
-        </div>
         <h1
           style={{
-            fontFamily: t.sans,
-            fontSize: 28,
-            fontWeight: 600,
-            color: t.ink,
-            letterSpacing: -0.6,
-            lineHeight: 1.25,
+            fontFamily: t.serif,
+            fontSize: 38,
+            fontWeight: 300,
+            color: t.ease.forestDark,
+            letterSpacing: -1.2,
+            lineHeight: 1.1,
             margin: 0,
-            marginBottom: 24,
+            marginBottom: 14,
           }}
         >
-          Enter the 6 digit code sent to{' '}
-          <span style={{ whiteSpace: 'nowrap' }}>{display || 'your phone'}</span>
+          Enter the 6-digit code
         </h1>
+        <p
+          style={{
+            fontFamily: t.sans,
+            fontSize: 15,
+            color: t.inkSoft,
+            lineHeight: 1.55,
+            letterSpacing: -0.45,
+            margin: 0,
+            marginBottom: 28,
+          }}
+        >
+          We sent it to <span style={{ color: t.ease.forestDark, fontWeight: 500, whiteSpace: 'nowrap' }}>{display || 'your phone'}</span>.
+        </p>
 
         {/* Label row + Resend */}
         <div
@@ -353,13 +353,14 @@ function OtpFlow() {
           <label
             htmlFor="otp-code"
             style={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: t.ink,
+              fontSize: 12,
+              fontWeight: 400,
+              color: t.muted,
               fontFamily: t.sans,
+              letterSpacing: -0.36,
             }}
           >
-            6-digit verification code
+            Verification code
           </label>
           <button
             type="button"
@@ -370,17 +371,18 @@ function OtpFlow() {
               border: 'none',
               padding: 0,
               fontSize: 13,
-              color: t.muted,
+              color: t.ease.forestDark,
               cursor: resending ? 'not-allowed' : 'pointer',
               fontFamily: t.sans,
               opacity: resending ? 0.5 : 1,
+              letterSpacing: -0.39,
             }}
           >
             {resending ? 'Resending…' : 'Resend code'}
           </button>
         </div>
 
-        {/* Code input — sans-serif, modern, like Arcade */}
+        {/* Code input — sans, big, tabular nums, mintWhisper fill, no stroke. */}
         <input
           ref={inputRef}
           id="otp-code"
@@ -394,37 +396,46 @@ function OtpFlow() {
           style={{
             width: '100%',
             boxSizing: 'border-box',
-            padding: '16px 18px',
-            fontSize: 22,
+            padding: '18px 18px',
+            fontSize: 24,
             fontFamily: t.sans,
-            fontWeight: 500,
+            fontWeight: 400,
             fontFeatureSettings: '"tnum" 1, "lnum" 1',
-            letterSpacing: code ? 6 : 1,
-            background: t.card,
-            border: `1px solid ${error ? t.rust : t.border}`,
-            borderRadius: 10,
-            color: t.ink,
+            letterSpacing: code ? 8 : 1,
+            background: t.ease.mintWhisper,
+            border: 'none',
+            borderRadius: 14,
+            color: t.ease.forestDark,
             outline: 'none',
             textAlign: 'center',
+            transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
+          }}
+          onFocus={(e) => {
+            e.target.style.background = t.ease.keylimeWash;
+          }}
+          onBlur={(e) => {
+            e.target.style.background = t.ease.mintWhisper;
           }}
         />
 
-        {/* Clerk CAPTCHA mount point (in case verification triggers it) */}
+        {/* Clerk CAPTCHA mount point */}
         <div id="clerk-captcha" style={{ marginTop: 12 }} />
 
         {error && (
           <p
             style={{
+              fontFamily: t.sans,
               fontSize: 13,
-              color: t.rust,
-              margin: '10px 0 0',
+              color: '#9A4E22',
+              letterSpacing: -0.39,
+              margin: '12px 0 0',
             }}
           >
             {error}
           </p>
         )}
 
-        {/* Verify button */}
+        {/* Verify button — forestDark fill, full pill, no stroke. */}
         <div style={{ marginTop: 28, width: '100%' }}>
           <button
             type="button"
@@ -437,11 +448,11 @@ function OtpFlow() {
               padding: '14px 22px',
               fontSize: 15,
               fontFamily: t.sans,
-              fontWeight: 500,
-              letterSpacing: -0.1,
-              background: t.ink,
-              color: t.bgElev,
-              border: `1px solid ${t.ink}`,
+              fontWeight: 400,
+              letterSpacing: -0.45,
+              background: t.ease.forestDark,
+              color: '#fffefc',
+              border: 'none',
               borderRadius: 999,
               textAlign: 'center',
               cursor: canVerify ? 'pointer' : 'not-allowed',

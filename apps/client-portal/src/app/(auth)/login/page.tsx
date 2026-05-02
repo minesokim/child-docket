@@ -264,34 +264,24 @@ export default function LoginPage() {
       </div>
 
       <div style={{ flex: 1, paddingTop: 28, maxWidth: 420, marginInline: 'auto', width: '100%' }}>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10.5,
-            color: t.muted,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            marginBottom: 10,
-          }}
-        >
-          Step 1 of 2
-        </div>
         <h1
           style={{
-            fontFamily: t.sans,
-            fontSize: 28,
-            fontWeight: 600,
-            color: t.ink,
-            letterSpacing: -0.6,
-            lineHeight: 1.25,
+            fontFamily: t.serif,
+            fontSize: 38,
+            fontWeight: 300,
+            color: t.ease.forestDark,
+            letterSpacing: -1.2,
+            lineHeight: 1.1,
             margin: 0,
-            marginBottom: 24,
+            marginBottom: 28,
           }}
         >
           Your phone number
         </h1>
 
-        {/* Country picker + phone input row */}
+        {/* Country picker + phone input row. Zero strokes on either —
+            both fields are mintWhisper fills, just like every other
+            input across the app. */}
         <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
           <CountryPickerButton
             t={t}
@@ -307,7 +297,7 @@ export default function LoginPage() {
                 left: 14,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                fontFamily: t.mono,
+                fontFamily: t.sans,
                 fontSize: 16,
                 color: t.muted,
                 pointerEvents: 'none',
@@ -334,11 +324,18 @@ export default function LoginPage() {
                 paddingLeft: country.dial.length === 2 ? 38 : country.dial.length === 3 ? 46 : 52,
                 fontSize: 16,
                 fontFamily: t.sans,
-                background: t.card,
-                border: `1px solid ${error ? t.rust : t.border}`,
-                borderRadius: 10,
-                color: t.ink,
+                background: t.ease.mintWhisper,
+                border: 'none',
+                borderRadius: 12,
+                color: t.ease.forestDark,
                 outline: 'none',
+                transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
+              }}
+              onFocus={(e) => {
+                e.target.style.background = t.ease.keylimeWash;
+              }}
+              onBlur={(e) => {
+                e.target.style.background = t.ease.mintWhisper;
               }}
             />
           </div>
@@ -359,9 +356,11 @@ export default function LoginPage() {
         {/* Help text */}
         <p
           style={{
+            fontFamily: t.sans,
             fontSize: 13,
             color: t.muted,
             lineHeight: 1.5,
+            letterSpacing: -0.39,
             margin: '14px 0 0',
           }}
         >
@@ -376,8 +375,8 @@ export default function LoginPage() {
               marginTop: 16,
               padding: '12px 14px',
               background: '#FDF1EA',
-              border: '1px solid #E8B59A',
-              borderRadius: 10,
+              border: 'none',
+              borderRadius: 12,
               display: 'flex',
               gap: 10,
               alignItems: 'flex-start',
@@ -401,15 +400,10 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Clerk CAPTCHA widget mount point. signUp.create() looks for this
-            element to render Cloudflare Turnstile into. Without it, sign-up
-            fails with 'missing_requirements' status. Renders invisibly
-            unless Clerk needs interactive verification. */}
+        {/* Clerk CAPTCHA mount point. */}
         <div id="clerk-captcha" style={{ marginTop: 16 }} />
 
-        {/* Next button — plain <button> for full width control on iOS Safari.
-            (Button component's inline-flex default was rendering as content-width
-            in some viewports.) */}
+        {/* Next button — forestDark fill, full pill, no stroke. */}
         <div style={{ marginTop: 28, width: '100%' }}>
           <button
             type="button"
@@ -422,11 +416,11 @@ export default function LoginPage() {
               padding: '14px 22px',
               fontSize: 15,
               fontFamily: t.sans,
-              fontWeight: 500,
-              letterSpacing: -0.1,
-              background: t.ink,
-              color: t.bgElev,
-              border: `1px solid ${t.ink}`,
+              fontWeight: 400,
+              letterSpacing: -0.45,
+              background: t.ease.forestDark,
+              color: '#fffefc',
+              border: 'none',
               borderRadius: 999,
               textAlign: 'center',
               cursor: submitting ? 'not-allowed' : 'pointer',
@@ -463,14 +457,14 @@ function CountryPickerButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 10,
+        background: t.ease.mintWhisper,
+        border: 'none',
+        borderRadius: 12,
         padding: '0 14px',
-        height: 50,
+        height: 52,
         fontSize: 15,
         fontFamily: t.sans,
-        color: t.ink,
+        color: t.ease.forestDark,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -480,13 +474,13 @@ function CountryPickerButton({
       aria-haspopup="listbox"
       aria-expanded={open}
     >
-      <span style={{ fontWeight: 500 }}>{country.code}</span>
+      <span style={{ fontWeight: 400 }}>{country.code}</span>
       <svg
         width="10"
         height="10"
         viewBox="0 0 10 10"
         fill="none"
-        stroke={t.muted}
+        stroke={t.ease.forestDark}
         strokeWidth="1.6"
         style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 120ms' }}
       >
@@ -530,17 +524,18 @@ function CountryPicker({
       role="listbox"
       style={{
         position: 'absolute',
-        top: 58,
+        top: 60,
         left: 0,
         width: 320,
         maxWidth: '100%',
         maxHeight: 320,
         overflowY: 'auto',
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 12,
-        boxShadow: '0 12px 36px rgba(40, 30, 20, 0.18)',
+        background: '#fffefc',
+        border: 'none',
+        borderRadius: 14,
+        boxShadow: '0 12px 36px rgba(15, 62, 23, 0.14)',
         zIndex: 50,
+        padding: 4,
       }}
     >
       {COUNTRIES.map((c) => {
@@ -556,20 +551,19 @@ function CountryPicker({
               width: '100%',
               alignItems: 'center',
               gap: 12,
-              padding: '11px 14px',
-              background: on ? t.tintAccent : 'transparent',
+              padding: '11px 12px',
+              background: on ? t.ease.keylimeWash : 'transparent',
               border: 'none',
-              borderBottom: `1px solid ${t.borderSoft}`,
+              borderRadius: 8,
               cursor: 'pointer',
               fontFamily: t.sans,
               fontSize: 14,
-              color: t.ink,
+              color: on ? t.ease.forestDark : t.ink,
               textAlign: 'left',
             }}
           >
             <span
               style={{
-                fontFamily: t.mono,
                 fontSize: 11,
                 color: t.muted,
                 letterSpacing: 0.5,
@@ -579,7 +573,7 @@ function CountryPicker({
               {c.code}
             </span>
             <span style={{ flex: 1 }}>{c.name}</span>
-            <span style={{ fontFamily: t.mono, fontSize: 12, color: t.inkSoft }}>{c.dial}</span>
+            <span style={{ fontSize: 12, color: t.inkSoft }}>{c.dial}</span>
           </button>
         );
       })}
@@ -632,34 +626,24 @@ function AlreadySignedIn({
         />
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 360, marginInline: 'auto', textAlign: 'center' }}>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10.5,
-            color: t.muted,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            marginBottom: 10,
-          }}
-        >
-          Already signed in
-        </div>
         <h1
           style={{
             fontFamily: t.serif,
-            fontSize: 26,
-            color: t.ink,
-            letterSpacing: -0.5,
+            fontSize: 32,
+            fontWeight: 300,
+            color: t.ease.forestDark,
+            letterSpacing: -0.96,
+            lineHeight: 1.15,
             margin: 0,
             marginBottom: 14,
           }}
         >
           You have an active session
         </h1>
-        <p style={{ fontSize: 14, color: t.inkSoft, lineHeight: 1.5, margin: 0, marginBottom: 20 }}>
-          Active session for{' '}
-          <span style={{ fontFamily: t.mono, color: t.ink }}>{identifier}</span>. Continue to your
-          portal, or sign out to use a different number.
+        <p style={{ fontFamily: t.sans, fontSize: 14, color: t.inkSoft, lineHeight: 1.55, letterSpacing: -0.42, margin: 0, marginBottom: 20 }}>
+          Signed in as{' '}
+          <span style={{ color: t.ease.forestDark, fontWeight: 500 }}>{identifier}</span>. Continue
+          to your portal, or sign out to use a different number.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Button

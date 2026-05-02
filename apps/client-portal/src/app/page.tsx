@@ -56,7 +56,7 @@ export default function LandingPage() {
         ${GLIDEY_KEYFRAMES}
       `}</style>
 
-      {/* Content column — vertically centered-ish, text left-aligned */}
+      {/* Content column — vertically centered, ease aesthetic. */}
       <div
         style={{
           flex: 1,
@@ -64,56 +64,33 @@ export default function LandingPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 30,
+          gap: 32,
           paddingBottom: 32,
         }}
       >
-        {/* Hero logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img
-            src="/vazant-logo.png"
-            alt="Vazant Consulting"
-            style={{
-              width: 132,
-              height: 132,
-              objectFit: 'contain',
-            }}
-          />
-          <div
-            style={{
-              width: 140,
-              height: 12,
-              marginTop: -10,
-              borderRadius: '50%',
-              background: 'rgba(40, 30, 20, 0.10)',
-              filter: 'blur(8px)',
-            }}
-          />
-        </div>
+        {/* Hero logo. Soft drop shadow instead of a faux shadow div. */}
+        <img
+          src="/vazant-logo.png"
+          alt="Vazant Consulting"
+          style={{
+            width: 124,
+            height: 124,
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 8px 16px rgba(15, 62, 23, 0.10))',
+          }}
+        />
 
         <div style={{ width: '100%', maxWidth: 340, textAlign: 'left' }}>
-          <div
-            style={{
-              fontFamily: t.mono,
-              fontSize: 11,
-              color: t.muted,
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
-              marginBottom: 12,
-            }}
-          >
-            Welcome
-          </div>
           <h1
             style={{
-              fontFamily: t.sans,
-              fontSize: 30,
-              fontWeight: 600,
-              color: t.ink,
-              letterSpacing: -0.6,
-              lineHeight: 1.2,
+              fontFamily: t.serif,
+              fontSize: 38,
+              fontWeight: 300,
+              color: t.ease.forestDark,
+              letterSpacing: -1.2,
+              lineHeight: 1.1,
               margin: 0,
-              marginBottom: 14,
+              marginBottom: 16,
             }}
           >
             Vazant Consulting
@@ -122,9 +99,11 @@ export default function LandingPage() {
           </h1>
           <p
             style={{
+              fontFamily: t.sans,
               fontSize: 15,
               color: t.inkSoft,
               lineHeight: 1.55,
+              letterSpacing: -0.45,
               margin: 0,
             }}
           >
@@ -151,13 +130,13 @@ export default function LandingPage() {
               padding: '15px 22px',
               fontSize: 15,
               fontFamily: t.sans,
-              fontWeight: 500,
-              background: t.ink,
-              color: t.bgElev,
-              border: `1px solid ${t.ink}`,
+              fontWeight: 400,
+              background: t.ease.forestDark,
+              color: '#fffefc',
+              border: 'none',
               borderRadius: 999,
               cursor: exiting ? 'default' : 'pointer',
-              letterSpacing: -0.1,
+              letterSpacing: -0.45,
               transform: pressed && !exiting ? 'scale(0.97)' : 'scale(1)',
               transition: 'transform 140ms cubic-bezier(.2,.8,.2,1)',
               boxSizing: 'border-box',
@@ -168,13 +147,12 @@ export default function LandingPage() {
           </button>
           <div
             style={{
-              fontFamily: t.mono,
-              fontSize: 10,
+              fontFamily: t.sans,
+              fontSize: 12,
               color: t.muted,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
+              letterSpacing: -0.36,
               textAlign: 'center',
-              marginTop: 14,
+              marginTop: 16,
             }}
           >
             Secure · Encrypted · IRS-compliant
