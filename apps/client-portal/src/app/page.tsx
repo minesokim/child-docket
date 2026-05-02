@@ -94,8 +94,6 @@ export default function LandingPage() {
             }}
           >
             Vazant Consulting
-            <br />
-            tax filing
           </h1>
           <p
             style={{
