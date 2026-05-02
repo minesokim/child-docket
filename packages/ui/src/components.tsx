@@ -745,47 +745,40 @@ export function AskAntonioBar({
       {/* Tip row — only renders when a tip is provided. Sits ABOVE the
           ask row, separated by a hairline divider in the same rust-soft
           tone as the outer border so the whole component reads as one.
-          Avatar (not a lightbulb) + serif italic body + '—Antonio'
-          signature signal that this is HIM speaking, not a generic UI
-          tip. Bigger font (13.5) is readable on mobile. */}
+          Avatar lives ONLY in the ask row below — the tip row uses the
+          serif italic body + '— Antonio' signature line to signal whose
+          voice this is. Two Antonio avatars stacked vertically read as
+          duplication, so we keep just the one. */}
       {hasTip && (
         <div
           style={{
-            padding: '12px 14px 13px',
+            padding: '12px 16px 13px',
             borderBottom: `1px solid ${t.rustSoft}`,
             background: t.tintAccent,
-            display: 'flex',
-            gap: 11,
-            alignItems: 'flex-start',
           }}
         >
-          <div style={{ flexShrink: 0, marginTop: 1 }}>
-            <AvatarSlot t={t} size={28} />
+          <div
+            style={{
+              fontFamily: t.serif,
+              fontSize: 13.5,
+              fontStyle: 'italic',
+              lineHeight: 1.5,
+              color: t.ink,
+              letterSpacing: -0.1,
+            }}
+          >
+            {tip}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 13.5,
-                fontStyle: 'italic',
-                lineHeight: 1.5,
-                color: t.ink,
-                letterSpacing: -0.1,
-              }}
-            >
-              {tip}
-            </div>
-            <div
-              style={{
-                marginTop: 4,
-                fontFamily: t.sans,
-                fontSize: 11,
-                color: t.muted,
-                letterSpacing: 0.2,
-              }}
-            >
-              — Antonio
-            </div>
+          <div
+            style={{
+              marginTop: 4,
+              fontFamily: t.sans,
+              fontSize: 11,
+              color: t.muted,
+              letterSpacing: 0.2,
+            }}
+          >
+            — Antonio
           </div>
         </div>
       )}
