@@ -192,8 +192,12 @@ export default function LoginPage() {
         code === 'verification_already_verified';
 
       if (!isRecoverable) {
-        // Real failure - log + surface to user
-        console.error('[login] signIn error', { code, message, raw: e });
+        // Real failure - log + surface to user. Drop the raw error
+        // object: Clerk error payloads can include the phone number
+        // being authenticated, and console output survives in
+        // browser DevTools / shared screenshots / kiosk sessions.
+        // Sentry events are scrubbed elsewhere; the browser console is not.
+        console.error('[login] signIn error', { code, message });
       }
 
       if (code === 'form_identifier_not_found') {
@@ -204,7 +208,7 @@ export default function LoginPage() {
           glide('/otp?mode=signup');
         } catch (signUpErr) {
           const { code: sCode, message: sMsg } = extractError(signUpErr);
-          console.error('[login] signUp error', { code: sCode, message: sMsg, raw: signUpErr });
+          console.error('[login] signUp error', { code: sCode, message: sMsg });
           setError(friendlyError(sCode, sMsg) ?? `Could not start sign-up${sCode ? ` (${sCode})` : ''}`);
         }
       } else if (code === 'session_exists') {

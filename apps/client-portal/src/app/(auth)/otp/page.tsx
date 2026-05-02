@@ -14,7 +14,23 @@ import { useGlideyNav } from '@/lib/use-glidey-nav';
 
 type ClerkError = {
   errors?: Array<{ code?: string; message?: string }>;
+  message?: string;
 };
+
+// Normalize Clerk / Error / unknown into a console-safe shape.
+// NEVER pass the raw error object to console.error — Clerk error
+// payloads can carry the phone number being authenticated, and
+// browser console output survives in DevTools / screenshots / kiosk
+// sessions. The Sentry scrubber covers Sentry events; the browser
+// console is not piped through it.
+function safeErr(e: unknown): { code: string | undefined; message: string | undefined } {
+  const err = e as ClerkError;
+  return {
+    code: err.errors?.[0]?.code,
+    message:
+      err.errors?.[0]?.message ?? err.message ?? (e instanceof Error ? e.message : undefined),
+  };
+}
 
 const COUNTRY_DIALS: Record<string, string> = {
   US: '+1',
@@ -103,7 +119,7 @@ function OtpFlow() {
         glide('/welcome');
         return;
       } catch (e) {
-        console.error('[otp] setActive on complete signup failed', e);
+        console.error('[otp] setActive on complete signup failed', safeErr(e));
       }
     }
     if (mode === 'signin' && signIn.status === 'complete' && signIn.createdSessionId) {
@@ -112,7 +128,7 @@ function OtpFlow() {
         glide('/welcome');
         return;
       } catch (e) {
-        console.error('[otp] setActive on complete signin failed', e);
+        console.error('[otp] setActive on complete signin failed', safeErr(e));
       }
     }
 
@@ -162,7 +178,7 @@ function OtpFlow() {
       const err = e as ClerkError;
       const code = err.errors?.[0]?.code;
       const message = err.errors?.[0]?.message;
-      console.error('[otp] verify error', { code, message, raw: err });
+      console.error('[otp] verify error', { code, message });
 
       // Verification already happened in a prior attempt. Try to activate
       // whatever session is on the signUp/signIn object.
@@ -178,7 +194,7 @@ function OtpFlow() {
             glide('/welcome');
             return;
           } catch (activateErr) {
-            console.error('[otp] activate after already-verified failed', activateErr);
+            console.error('[otp] activate after already-verified failed', safeErr(activateErr));
           }
         }
         setError(
@@ -227,7 +243,7 @@ function OtpFlow() {
       setTimeout(() => setResentToast(false), 2400);
     } catch (e) {
       const err = e as ClerkError;
-      console.error('[otp] resend error', err);
+      console.error('[otp] resend error', safeErr(e));
       setError(err.errors?.[0]?.message ?? 'Could not resend code');
     } finally {
       setResending(false);
