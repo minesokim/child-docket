@@ -279,9 +279,12 @@ export default function LoginPage() {
           Your phone number
         </h1>
 
-        {/* Country picker + phone input row. Zero strokes on either —
-            both fields are mintWhisper fills, just like every other
-            input across the app. */}
+        {/* Country picker + phone input row. Both surfaces stay white
+            (#fffefc) in every state — empty, filled, focused, blurred.
+            A soft drop shadow gives the field elevation so it reads
+            against the cream page bg without needing a stroke or fill
+            tint. Matches ease.health's white-card-with-shadow input
+            pattern and the AskAntonioBar treatment. */}
         <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
           <CountryPickerButton
             t={t}
@@ -324,18 +327,12 @@ export default function LoginPage() {
                 paddingLeft: country.dial.length === 2 ? 38 : country.dial.length === 3 ? 46 : 52,
                 fontSize: 16,
                 fontFamily: t.sans,
-                background: phoneDigits ? t.ease.mintWhisper : t.ease.softNeutral,
+                background: '#fffefc',
                 border: 'none',
                 borderRadius: 12,
                 color: t.ease.forestDark,
                 outline: 'none',
-                transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
-              }}
-              onFocus={(e) => {
-                e.target.style.background = phoneDigits ? t.ease.mintWhisper : t.ease.softNeutral;
-              }}
-              onBlur={(e) => {
-                e.target.style.background = phoneDigits ? t.ease.mintWhisper : t.ease.softNeutral;
+                boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
               }}
             />
           </div>
@@ -457,7 +454,9 @@ function CountryPickerButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: t.ease.mintWhisper,
+        // White surface, soft shadow — matches the phone input next to
+        // it. Keeps the row visually unified as one white card pair.
+        background: '#fffefc',
         border: 'none',
         borderRadius: 12,
         padding: '0 14px',
@@ -470,6 +469,7 @@ function CountryPickerButton({
         alignItems: 'center',
         gap: 8,
         minWidth: 88,
+        boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
       }}
       aria-haspopup="listbox"
       aria-expanded={open}

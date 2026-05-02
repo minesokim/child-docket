@@ -58,15 +58,18 @@ export type IntakeStep = {
 //   - /strategic-topics — only when service.otherSub is 'strategy' (advisory path)
 //
 // The "happy path" for an individual W-2 filer skips all six side paths
-// and walks: welcome → tutorial → services → services-addons → personal
-// → state → filing → deps → income → tax-questions → deductions →
-// life-events → refund → docs → contact-info → engagement → consent →
+// and walks: welcome → tutorial → contact-info → services → services-addons
+// → personal → state → filing → deps → income → tax-questions →
+// deductions → life-events → refund → docs → engagement → consent →
 // appt → deposit → done.
 //
-// Why /contact-info sits before /engagement: the engagement letter and
-// §7216 consent are legal sign-offs. Asking the client how to reach them
-// AFTER they've already signed feels backwards. Capture preferences first,
-// then sign, then schedule.
+// Why /contact-info sits AT THE TOP (right after /tutorial): the client
+// just signed in via SMS OTP, so we already have their phone. Asking
+// for name + email up front (before any tax-question depth) gives
+// Antonio reachable identity from the very first step. The page only
+// collects full legal name + email — phone is already from Clerk.
+// /quick-start is no longer in the canonical flow (the same name/email
+// it collected now lives in /contact-info; DOB moves to /personal).
 // ────────────────────────────────────────────────────────────────
 
 export const INTAKE_FLOW: readonly IntakeStep[] = [
@@ -78,18 +81,6 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'welcome',
     isApplicable: () => true,
     isComplete: () => true, // pure intro — always passable
-    next: () => '/quick-start',
-  },
-  {
-    id: 'quick-start',
-    route: '/quick-start',
-    label: 'Quick start',
-    section: 'welcome',
-    isApplicable: () => true,
-    // Three sequential questions: name + DOB + email. Phone comes from
-    // the OTP login. /personal later auto-populates from these fields.
-    isComplete: (s) =>
-      !!s.personal?.fullName && !!s.personal?.dateOfBirth && !!s.personal?.email,
     next: () => '/tutorial',
   },
   {
@@ -99,6 +90,18 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'welcome',
     isApplicable: () => true,
     isComplete: (s) => !!s.tutorial?.completed,
+    next: () => '/contact-info',
+  },
+  // /contact-info MOVED to the top: collected up front so Antonio has
+  // reachable identity (name + email) from the first step. Phone is
+  // already on file from Clerk OTP login. DOB lives in /personal.
+  {
+    id: 'contact-info',
+    route: '/contact-info',
+    label: 'How to reach you',
+    section: 'welcome',
+    isApplicable: () => true,
+    isComplete: (s) => !!s.personal?.fullName && !!s.personal?.email,
     next: () => '/services',
   },
   {
@@ -255,7 +258,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'income',
     isApplicable: (s) => s.service?.otherSub === 'formation',
     isComplete: (s) => !!s.business?.entityType && !!s.business?.formationState,
-    next: () => '/contact-info',
+    next: () => '/engagement',
   },
 
   // ─── Tax questions / deductions / events ──────────────────────
@@ -306,7 +309,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'deductions',
     isApplicable: (s) => s.service?.otherSub === 'strategy',
     isComplete: (s) => (s.strategicTopics?.selected?.length ?? 0) > 0,
-    next: () => '/contact-info',
+    next: () => '/engagement',
   },
 
   // ─── Wrap-up ──────────────────────────────────────────────────
@@ -326,15 +329,8 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'wrap-up',
     isApplicable: () => true,
     isComplete: (s) => !!s.documents?.uploadComplete,
-    next: () => '/contact-info',
-  },
-  {
-    id: 'contact-info',
-    route: '/contact-info',
-    label: 'How to reach you',
-    section: 'wrap-up',
-    isApplicable: () => true,
-    isComplete: (s) => !!s.contactInfo?.preferredMethod,
+    // Contact info already captured at the top of the flow — proceed
+    // directly to the legal sign-offs.
     next: () => '/engagement',
   },
 

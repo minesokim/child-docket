@@ -216,10 +216,15 @@ export default function ServicesAddonsPage() {
                 </div>
                 <div
                   style={{
-                    fontFamily: t.serif,
+                    // Sans, matches /services starting estimate. Tabular
+                    // nums keeps the digit columns aligned as the range
+                    // updates with addon toggles.
+                    fontFamily: t.sans,
                     fontSize: 22,
                     color: t.ink,
                     letterSpacing: -0.4,
+                    fontWeight: 500,
+                    fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {lo === hi

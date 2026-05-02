@@ -30,7 +30,10 @@ function TutorialDemoCards({ t }: { t: Theme }) {
       style={{
         marginTop: 14,
         padding: '14px 14px 16px',
-        background: t.ease.keylimeWash,
+        // Neutral wash — the demo box is a sandbox, not the page
+        // surface. softNeutral keeps it visually distinct from the
+        // page bg without competing for "this is selected" energy.
+        background: t.ease.softNeutral,
         borderRadius: t.radius,
       }}
     >
@@ -54,13 +57,16 @@ function TutorialDemoCards({ t }: { t: Theme }) {
               onClick={() => setSel(on ? null : o.id)}
               style={{
                 padding: '10px 12px',
-                background: on ? t.ease.mintGlaze : '#fffefc',
+                background: '#fffefc',
                 borderRadius: t.radius - 2,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
                 transition: 'all 0.15s',
+                boxShadow: on
+                  ? '0 2px 10px rgba(15, 62, 23, 0.10)'
+                  : '0 1px 4px rgba(15, 62, 23, 0.04)',
               }}
             >
               <div
@@ -68,7 +74,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
                   width: 22,
                   height: 22,
                   borderRadius: '50%',
-                  background: on ? t.ease.forestDark : '#fffefc',
+                  background: on ? t.ease.forestDark : t.ease.softNeutral,
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
@@ -228,14 +234,19 @@ function TutorialCard({
         width: 40,
         height: 40,
         borderRadius: 10,
-        background: t.rust,
+        background: t.ease.forestDark,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: t.serif,
-        fontSize: 20,
+        // Sans for the step number — Fraunces italic "1" reads as a
+        // capital I on small caps. Sans + tabular nums removes the
+        // ambiguity and lets larger steps share visual weight.
+        fontFamily: t.sans,
+        fontWeight: 500,
+        fontSize: 18,
         color: '#fff',
-        boxShadow: `0 4px 12px ${t.tintAccentStrong}`,
+        fontVariantNumeric: 'tabular-nums',
+        boxShadow: '0 4px 12px rgba(15, 62, 23, 0.2)',
       }}
     >
       {step}
@@ -277,15 +288,19 @@ function TutorialCard({
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: t.ease.mintGlaze,
+                // Brighter saturated mid-green (online-dot tone) with
+                // white digit. Was washed-out mintGlaze before, which
+                // made all four bullets feel like background.
+                background: '#4a8f5f',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontFamily: t.sans,
                 fontSize: 13,
                 fontWeight: 600,
-                color: t.ease.forestDark,
+                color: '#fff',
                 flexShrink: 0,
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
               {i + 1}
@@ -397,7 +412,9 @@ export default function TutorialPage() {
     // Mark tutorial complete so the welcome page knows to show
     // "Continue where you left off" on next visit.
     void setTutorialCompleted(true);
-    nav.next('/services');
+    // Tutorial → contact-info per the canonical flow (was /services
+    // before contact-info moved up).
+    nav.next('/contact-info');
   };
 
   return (

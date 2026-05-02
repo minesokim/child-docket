@@ -76,11 +76,16 @@ export function TextField({
   // Two-state palette only — filled vs empty. Focus does NOT add a
   // color change; the cursor itself is the focus indicator. The green
   // appears only when the field has been answered.
-  //   empty  -> softNeutral (warm off-white)
+  //   empty  -> white (#fffefc) with soft shadow for definition
   //   filled -> mintWhisper (super-subtle green, "this is done")
   const filled = value.length > 0;
-  const restingBg = filled ? t.ease.mintWhisper : t.ease.softNeutral;
+  const restingBg = filled ? t.ease.mintWhisper : '#fffefc';
   const focusBg = restingBg;
+  // Empty inputs need elevation since they share color with white card
+  // surfaces. Filled inputs already differentiate via mintWhisper, so
+  // skip the shadow there to keep the "this is done" color the only
+  // visual cue.
+  const restingShadow = filled ? 'none' : '0 1px 4px rgba(15, 62, 23, 0.05)';
   return (
     <input
       type={type}
@@ -101,6 +106,7 @@ export function TextField({
         fontFamily: mono ? t.mono : t.sans,
         letterSpacing: mono ? 0.3 : 0,
         outline: 'none',
+        boxShadow: restingShadow,
         transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
         ...style,
       }}
@@ -182,9 +188,10 @@ export function SSNField({
 
   // SSN filled = any digits typed OR a server mask sentinel present.
   // Resting filled state is the super-subtle mintWhisper, matching
-  // TextField. Empty + editing -> softNeutral.
+  // TextField. Empty + editing -> white (#fffefc) with soft shadow.
   const ssnFilled = value.length > 0;
-  const ssnRestingBg = ssnFilled ? t.ease.mintWhisper : t.ease.softNeutral;
+  const ssnRestingBg = ssnFilled ? t.ease.mintWhisper : '#fffefc';
+  const ssnRestingShadow = ssnFilled ? 'none' : '0 1px 4px rgba(15, 62, 23, 0.05)';
 
   if (editing) {
     return (
@@ -196,6 +203,7 @@ export function SSNField({
           padding: '12px 14px',
           background: ssnRestingBg,
           borderRadius: 12,
+          boxShadow: ssnRestingShadow,
           transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
@@ -246,43 +254,27 @@ export function SSNField({
         transition: 'opacity 140ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1 }}>
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 14,
-            color: t.muted,
-            letterSpacing: 2,
-            lineHeight: 1,
-          }}
-        >
-          •••
-        </span>
-        <span style={{ fontFamily: t.mono, fontSize: 14, color: t.muted }}>–</span>
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 14,
-            color: t.muted,
-            letterSpacing: 2,
-            lineHeight: 1,
-          }}
-        >
-          ••
-        </span>
-        <span style={{ fontFamily: t.mono, fontSize: 14, color: t.muted }}>–</span>
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 19,
-            color: t.ink,
-            letterSpacing: 1.5,
-            fontWeight: 500,
-          }}
-        >
-          {lastFour}
-        </span>
-      </div>
+      {/* Single span with one continuous text node — same font, size,
+          letter-spacing, and line-height as the editing input above.
+          Color is the only thing that switches: muted on the masked
+          5 digits + dashes, ink on the lastFour. No flex, no gap, no
+          per-span overrides — the field can't re-flow because it's
+          one piece of text. Mask character is `●` (BLACK CIRCLE) — same
+          width and visual weight as a digit in DM Mono, unlike the
+          smaller `•` BULLET which made the dots look pinched next to
+          the visible digits. */}
+      <span
+        style={{
+          flex: 1,
+          fontFamily: t.mono,
+          fontSize: 16,
+          letterSpacing: 1.5,
+          color: t.muted,
+          lineHeight: 1.2,
+        }}
+      >
+        ●●●-●●-<span style={{ color: t.ink }}>{lastFour}</span>
+      </span>
       <EncryptedPill t={t} />
     </div>
   );
@@ -367,8 +359,9 @@ export function EncryptedTextField({
   // Same two-state palette as TextField. Focus doesn't add a color
   // change — the green only appears when the field is filled.
   const encFilled = value.length > 0;
-  const encRestingBg = encFilled ? t.ease.mintWhisper : t.ease.softNeutral;
+  const encRestingBg = encFilled ? t.ease.mintWhisper : '#fffefc';
   const encFocusBg = encRestingBg;
+  const encRestingShadow = encFilled ? 'none' : '0 1px 4px rgba(15, 62, 23, 0.05)';
 
   if (!editing && masked) {
     // Masked display + Edit affordance — always filled by definition.
@@ -425,6 +418,7 @@ export function EncryptedTextField({
           color: t.ease.forestDark,
           letterSpacing: mono ? 1.5 : -0.05,
           outline: 'none',
+          boxShadow: encRestingShadow,
           transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
           ...style,
         }}

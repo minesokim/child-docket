@@ -44,20 +44,27 @@ const FORMAT_LABELS: Record<ApptFormat, string> = {
 
 // ─── Inline icons ────────────────────────────────────────────────
 
-function IconVideo({ size = 16 }: { size?: number }) {
+// Real Google Meet brand logo. Native multi-color SVG — not tinted by
+// container `color`. Use at the standard meeting-app brand sizes.
+function IconGoogleMeet({ size = 22 }: { size?: number }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 16 16"
+      viewBox="0 0 87.5 72"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Google Meet"
     >
-      <rect x="1.5" y="4" width="9" height="8" rx="1" />
-      <path d="M10.5 7l4-2v6l-4-2z" />
+      <path fill="#00832d" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
+      <path fill="#0066da" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
+      <path fill="#e94235" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
+      <path fill="#2684fc" d="M0 20.5h20.5v31H0z" />
+      <path
+        fill="#00ac47"
+        d="M82.6 8.68L69.5 19.42v33.66l13.13 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.88-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z"
+      />
+      <path fill="#ffba00" d="M63.5 0h-43v20.5h29V36l20-.04V6c0-3.315-2.685-6-6-6z" />
     </svg>
   );
 }
@@ -108,6 +115,10 @@ function FormatCard({
   sub,
   note,
   onClick,
+  /** When true, the icon container stays white in both states so a
+   *  multi-color brand logo (e.g. Google Meet) renders with native
+   *  colors instead of being washed by a forest-green backdrop. */
+  brandIcon,
 }: {
   t: Theme;
   on: boolean;
@@ -116,6 +127,7 @@ function FormatCard({
   sub: string;
   note?: string;
   onClick: () => void;
+  brandIcon?: boolean;
 }) {
   return (
     <button
@@ -140,7 +152,7 @@ function FormatCard({
           width: 36,
           height: 36,
           borderRadius: 8,
-          background: on ? t.ease.forestDark : t.ease.keylimeWash,
+          background: brandIcon ? '#fff' : on ? t.ease.forestDark : t.ease.keylimeWash,
           color: on ? '#fff' : t.inkSoft,
           display: 'flex',
           alignItems: 'center',
@@ -261,7 +273,8 @@ export default function ApptPage() {
                 t={t}
                 on={format === 'video'}
                 onClick={() => setFormat('video')}
-                icon={<IconVideo />}
+                icon={<IconGoogleMeet size={22} />}
+                brandIcon
                 label="Video call (Google Meet)"
                 sub="Meet online, share screen"
               />

@@ -114,7 +114,7 @@ export function AskAntonioBar({
             fontWeight: 400,
           }}
         >
-          Ask Antonio
+          Stuck? Ask Antonio
         </span>
         <button
           onClick={(e) => {
@@ -277,12 +277,15 @@ export function AskAntonioChat({ t }: { t: Theme }) {
               height: 32,
               borderRadius: '50%',
               border: 'none',
-              background: t.ease.keylimeWash,
+              // Neutral close button — softNeutral fill, muted icon.
+              // Matches the input composer's neutral palette so the
+              // header's only colored elements are the avatar + name.
+              background: t.ease.softNeutral,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: t.ease.forestDark,
+              color: t.muted,
             }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">

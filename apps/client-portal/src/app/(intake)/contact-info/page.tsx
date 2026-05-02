@@ -1,8 +1,12 @@
 'use client';
 
-// Intake terminal — Contact Info. Shared by non-tax service paths
-// (intro consult, bookkeeping, formation, strategic). Precedes /appt.
-// 1-to-1 port of ScreenContactInfo.
+// Intake step 2 — Contact info. Sits at the TOP of the flow, right
+// after /tutorial. Captures name + email up front so Antonio has
+// reachable identity from the very first step.
+//
+// Phone is intentionally NOT collected here — Clerk already has it
+// from the OTP login. DOB is collected later in /personal alongside
+// SSN and address.
 
 import {
   AskAntonioBar,
@@ -19,33 +23,25 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
-import { getNextStep, getPrevStep } from '@/lib/intake-flow';
-
-function formatPhone(raw: string): string {
-  const d = raw.replace(/\D/g, '').slice(0, 10);
-  if (d.length < 4) return d;
-  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
+import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import { getNextStep } from '@/lib/intake-flow';
 
 export default function ContactInfoPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
+  const answers = useIntakeAnswers();
 
-  // All three already collected earlier (quick-start + Clerk OTP). This
-  // page is the final confirmation/edit step before scheduling.
   const [fullName, setFullName] = useIntakeField<string>('personal.fullName', '');
   const [email, setEmail] = useIntakeField<string>('personal.email', '');
-  const [phone, setPhone] = useIntakeField<string>('personal.phone', '');
 
   const handleNext = () => {
-    const target = getNextStep('/contact-info', {});
+    const target = getNextStep('/contact-info', answers);
     if (target) nav.next(target);
   };
+  // Back from contact-info ALWAYS returns to /tutorial since this is
+  // now the second step in the flow (welcome → tutorial → contact-info).
   const handleBack = () => {
-    const target = getPrevStep('/contact-info', {});
-    if (target) nav.back(target);
+    nav.back('/tutorial');
   };
 
   return (
@@ -58,7 +54,7 @@ export default function ContactInfoPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={3} label="Contact" />
+        <IntakeHeader t={t} step={1} label="Contact" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />
@@ -75,7 +71,7 @@ export default function ContactInfoPage() {
 
         <Stack gap={20} style={{ padding: '28px 24px 16px', flex: 1 }}>
           <div>
-            <FieldLabel t={t}>Full name</FieldLabel>
+            <FieldLabel t={t}>Full legal name</FieldLabel>
             <TextField
               t={t}
               value={fullName}
@@ -95,20 +91,6 @@ export default function ContactInfoPage() {
               type="email"
               inputMode="email"
               autoComplete="email"
-            />
-          </div>
-
-          <div>
-            <FieldLabel t={t}>Phone</FieldLabel>
-            <TextField
-              t={t}
-              value={phone}
-              onChange={(v) => setPhone(formatPhone(v))}
-              mono
-              placeholder="(415) 555-0134"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
             />
           </div>
         </Stack>

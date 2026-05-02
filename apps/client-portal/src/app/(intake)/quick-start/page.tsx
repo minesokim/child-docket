@@ -139,8 +139,11 @@ export default function QuickStartPage() {
               height: 36,
               borderRadius: 999,
               border: 'none',
-              background: t.ease.keylimeWash,
-              color: t.ease.forestDark,
+              // Neutral surface — no green even when "active". The
+              // form on this page is identity-only, so coloring it
+              // would imply a state that doesn't exist here.
+              background: t.ease.softNeutral,
+              color: t.muted,
               cursor: 'pointer',
               padding: 0,
             }}
@@ -203,7 +206,10 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.ease.keylimeWash,
+                  // Neutral fill in every state — empty, filled,
+                  // focused, blurred. The page is identity-only;
+                  // green would imply form-validation state.
+                  background: t.ease.softNeutral,
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
@@ -247,7 +253,7 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.ease.keylimeWash,
+                  background: t.ease.softNeutral,
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
@@ -293,7 +299,7 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.ease.keylimeWash,
+                  background: t.ease.softNeutral,
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,

@@ -391,11 +391,15 @@ export default function DepositPage() {
               </div>
               <div
                 style={{
-                  fontFamily: t.serif,
+                  // Sans for the total — matches the /services starting
+                  // estimate and /services-addons "Your estimate" big
+                  // numbers. Tabular nums keeps digit columns aligned.
+                  fontFamily: t.sans,
                   fontSize: 28,
                   color: t.ink,
                   letterSpacing: -0.8,
                   fontWeight: 500,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 $50.00

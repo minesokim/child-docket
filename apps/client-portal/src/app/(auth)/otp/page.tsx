@@ -392,7 +392,7 @@ function OtpFlow() {
           #otp-code::placeholder {
             color: rgba(15, 62, 23, 0.28);
             font-weight: 300;
-            letter-spacing: 6px;
+            letter-spacing: 3px;
           }
         `}</style>
         <input
@@ -403,7 +403,7 @@ function OtpFlow() {
           inputMode="numeric"
           autoComplete="one-time-code"
           maxLength={6}
-          placeholder="‐ ‐ ‐ ‐ ‐ ‐"
+          placeholder="‐‐‐‐‐‐"
           disabled={verifying}
           style={{
             width: '100%',

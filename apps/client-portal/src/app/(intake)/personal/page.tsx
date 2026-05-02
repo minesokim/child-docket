@@ -221,7 +221,7 @@ export default function PersonalPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
               <div style={{ flex: 2, minWidth: 0 }}>
                 <FieldLabel t={t}>City</FieldLabel>
                 <TextField

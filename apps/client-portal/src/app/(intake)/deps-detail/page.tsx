@@ -108,7 +108,10 @@ function DependentCardDetails({
     <div
       style={{
         padding: '18px 18px 6px',
-        background: t.ease.keylimeWash,
+        // Neutral container — same warm off-white as the resting input
+        // state. Inputs INSIDE this card flip to mintWhisper as the user
+        // fills them, so the card itself doesn't need to carry color.
+        background: t.ease.softNeutral,
         borderRadius: t.radius,
       }}
     >
@@ -116,7 +119,7 @@ function DependentCardDetails({
         style={{
           fontFamily: t.mono,
           fontSize: 10,
-          color: t.ease.forestDark,
+          color: t.muted,
           letterSpacing: 1.4,
           textTransform: 'uppercase',
           marginBottom: 14,

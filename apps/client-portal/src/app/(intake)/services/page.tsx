@@ -106,13 +106,13 @@ export default function ServicesPathPage() {
                     width: 44,
                     height: 44,
                     borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    // Selected: mintGlaze well (deeper than the card's
-                    // mintKiss bg) with forestDark icon. Unselected: same
-                    // pattern at one tone lower (keylime well + forest
-                    // icon). The icon stays in-palette in both states —
-                    // no jarring forestDark slab.
-                    background: path === p.id ? t.ease.mintGlaze : t.ease.keylimeWash,
-                    color: t.ease.forestDark,
+                    // Selected: forestDark well with white icon — high
+                    // contrast active state, the icon stays clearly
+                    // visible against the dark green. Unselected:
+                    // keylimeWash with forestDark icon — neutral pale
+                    // tile, nothing competing with the focused row.
+                    background: path === p.id ? t.ease.forestDark : t.ease.keylimeWash,
+                    color: path === p.id ? '#fff' : t.ease.forestDark,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -149,88 +149,115 @@ export default function ServicesPathPage() {
                   </div>
 
                   {p.id === 'other' && path === 'other' && (
-                    <div
-                      style={{
-                        marginTop: 14,
-                        paddingTop: 12,
-                      }}
-                    >
+                    <div style={{ marginTop: 16, paddingTop: 14 }}>
                       <div
                         style={{
-                          fontFamily: t.serif,
-                          fontStyle: 'italic',
-                          fontSize: 13,
-                          color: t.inkSoft,
-                          marginBottom: 10,
+                          fontFamily: t.sans,
+                          fontSize: 12,
+                          fontWeight: 400,
+                          color: t.muted,
+                          letterSpacing: 0,
+                          marginBottom: 12,
                         }}
                       >
                         Which one?
                       </div>
                       <Stack gap={8}>
-                        {SERVICE_CATALOG.otherSub.map((o) => (
-                          <div
-                            key={o.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOtherSub(o.id);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 12,
-                              padding: '12px',
-                              background: otherSub === o.id ? t.ease.mintGlaze : '#fffefc',
-                              borderRadius: t.tone === 'magazine' ? 2 : 8,
-                              cursor: 'pointer',
-                            }}
-                          >
+                        {SERVICE_CATALOG.otherSub.map((o) => {
+                          const on = otherSub === o.id;
+                          return (
                             <div
+                              key={o.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOtherSub(o.id);
+                              }}
                               style={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: '50%',
-                                background: otherSub === o.id ? t.ease.forestDark : t.ease.keylimeWash,
-                                flexShrink: 0,
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                marginTop: 2,
+                                gap: 14,
+                                padding: '14px 16px',
+                                background: '#fffefc',
+                                borderRadius: t.tone === 'magazine' ? 2 : 12,
+                                cursor: 'pointer',
+                                // Soft elevation in both states — selected gets
+                                // a subtle lift via stronger shadow, no jarring
+                                // bg flip. Keeps the row hierarchy calm.
+                                boxShadow: on
+                                  ? '0 2px 12px rgba(15, 62, 23, 0.10)'
+                                  : '0 1px 4px rgba(15, 62, 23, 0.04)',
+                                transition: 'box-shadow 140ms cubic-bezier(.2,.8,.2,1)',
                               }}
                             >
-                              {otherSub === o.id && (
+                              <div
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: '50%',
+                                  background: on ? t.ease.forestDark : t.ease.softNeutral,
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'background 140ms',
+                                }}
+                              >
+                                {on && (
+                                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                                    <path
+                                      d="M1 4.5l3 3L10 1"
+                                      stroke="#fff"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <Row
+                                  justify="space-between"
+                                  align="baseline"
+                                  gap={8}
+                                  style={{ marginBottom: 2 }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 14,
+                                      color: t.ink,
+                                      fontWeight: on ? 500 : 400,
+                                      letterSpacing: -0.1,
+                                    }}
+                                  >
+                                    {o.name}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontFamily: t.sans,
+                                      fontSize: 12,
+                                      fontWeight: on ? 500 : 400,
+                                      color: on ? t.ease.forestDark : t.muted,
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0,
+                                      fontVariantNumeric: 'tabular-nums',
+                                    }}
+                                  >
+                                    {o.fee}
+                                  </div>
+                                </Row>
                                 <div
                                   style={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: '50%',
-                                    background: '#fff',
-                                  }}
-                                />
-                              )}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <Row justify="space-between" align="baseline" gap={8} style={{ marginBottom: 2 }}>
-                                <div style={{ fontSize: 14, color: t.ink, fontWeight: 500 }}>
-                                  {o.name}
-                                </div>
-                                <div
-                                  style={{
-                                    fontFamily: t.mono,
-                                    fontSize: 11,
-                                    color: otherSub === o.id ? t.rustInk : t.muted,
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0,
+                                    fontSize: 12.5,
+                                    color: t.muted,
+                                    lineHeight: 1.4,
                                   }}
                                 >
-                                  {o.fee}
+                                  {o.sub}
                                 </div>
-                              </Row>
-                              <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.4 }}>
-                                {o.sub}
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </Stack>
                     </div>
                   )}

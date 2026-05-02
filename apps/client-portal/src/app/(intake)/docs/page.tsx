@@ -740,14 +740,14 @@ export default function DocsPage() {
             <Button
               t={t}
               variant="ghost"
-              onClick={() => nav.next('/contact-info')}
+              onClick={() => nav.next('/engagement')}
               style={{ flex: 1 }}
             >
               Skip for now
             </Button>
             <Button
               t={t}
-              onClick={() => nav.next('/contact-info')}
+              onClick={() => nav.next('/engagement')}
               disabled={!canAdvance}
               style={{ flex: 1, opacity: canAdvance ? 1 : 0.45 }}
             >
