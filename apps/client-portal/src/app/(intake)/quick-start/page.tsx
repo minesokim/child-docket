@@ -209,7 +209,7 @@ export default function QuickStartPage() {
                   // Neutral fill in every state — empty, filled,
                   // focused, blurred. The page is identity-only;
                   // green would imply form-validation state.
-                  background: t.ease.softNeutral,
+                  background: '#fffefc',
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
@@ -217,6 +217,7 @@ export default function QuickStartPage() {
                   outline: 'none',
                   border: 'none',
                   boxSizing: 'border-box',
+                  boxShadow: '0 1px 4px rgba(15, 62, 23, 0.05)',
                 }}
               />
             </>
@@ -253,7 +254,7 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.ease.softNeutral,
+                  background: '#fffefc',
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
@@ -261,6 +262,7 @@ export default function QuickStartPage() {
                   outline: 'none',
                   border: 'none',
                   boxSizing: 'border-box',
+                  boxShadow: '0 1px 4px rgba(15, 62, 23, 0.05)',
                   fontVariantNumeric: 'tabular-nums lining-nums',
                   letterSpacing: 1,
                 }}
@@ -299,7 +301,7 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  background: t.ease.softNeutral,
+                  background: '#fffefc',
                   borderRadius: 14,
                   fontFamily: t.sans,
                   fontSize: 18,
@@ -307,6 +309,7 @@ export default function QuickStartPage() {
                   outline: 'none',
                   border: 'none',
                   boxSizing: 'border-box',
+                  boxShadow: '0 1px 4px rgba(15, 62, 23, 0.05)',
                 }}
               />
             </>

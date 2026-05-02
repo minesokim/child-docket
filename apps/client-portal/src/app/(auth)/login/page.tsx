@@ -455,7 +455,9 @@ function CountryPickerButton({
       disabled={disabled}
       style={{
         // White surface, soft shadow — matches the phone input next to
-        // it. Keeps the row visually unified as one white card pair.
+        // it. Text color is muted so the country code reads as a quiet
+        // selector, not the focal element. The phone input on the right
+        // is what the user is here to fill.
         background: '#fffefc',
         border: 'none',
         borderRadius: 12,
@@ -463,7 +465,7 @@ function CountryPickerButton({
         height: 52,
         fontSize: 15,
         fontFamily: t.sans,
-        color: t.ease.forestDark,
+        color: t.muted,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -480,7 +482,7 @@ function CountryPickerButton({
         height="10"
         viewBox="0 0 10 10"
         fill="none"
-        stroke={t.ease.forestDark}
+        stroke={t.muted}
         strokeWidth="1.6"
         style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 120ms' }}
       >

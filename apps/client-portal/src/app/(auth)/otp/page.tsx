@@ -392,7 +392,7 @@ function OtpFlow() {
           #otp-code::placeholder {
             color: rgba(15, 62, 23, 0.28);
             font-weight: 300;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
           }
         `}</style>
         <input
@@ -413,20 +413,17 @@ function OtpFlow() {
             fontFamily: t.sans,
             fontWeight: 400,
             fontFeatureSettings: '"tnum" 1, "lnum" 1',
-            letterSpacing: code ? 8 : 1,
-            background: code ? t.ease.mintWhisper : t.ease.softNeutral,
+            letterSpacing: code ? 8 : 4,
+            // Background stays neutral white in every state — empty,
+            // filled, focused, blurred. Code digits render in true
+            // black for max contrast against the white surface.
+            background: '#fffefc',
             border: 'none',
             borderRadius: 14,
-            color: t.ease.forestDark,
+            color: '#0a0a0a',
             outline: 'none',
             textAlign: 'center',
-            transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
-          }}
-          onFocus={(e) => {
-            e.target.style.background = code ? t.ease.mintWhisper : t.ease.softNeutral;
-          }}
-          onBlur={(e) => {
-            e.target.style.background = code ? t.ease.mintWhisper : t.ease.softNeutral;
+            boxShadow: '0 1px 4px rgba(15, 62, 23, 0.05)',
           }}
         />
 

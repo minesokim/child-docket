@@ -9,7 +9,6 @@ import {
   Body,
   Button,
   buildTheme,
-  Card,
   H1,
   IntakeHeader,
   Row,
@@ -91,14 +90,25 @@ export default function ServicesPathPage() {
         </div>
 
         <Stack gap={12} style={{ padding: '24px 24px 16px', flex: 1 }}>
-          {SERVICE_CATALOG.paths.map((p) => (
-            <Card
+          {SERVICE_CATALOG.paths.map((p) => {
+            const on = path === p.id;
+            return (
+            <div
               key={p.id}
-              t={t}
               onClick={() => setPath(p.id)}
-              selected={path === p.id}
-              tinted={path === p.id}
-              style={{ padding: '16px 18px' }}
+              style={{
+                // Card stays white in both states — the green wash on
+                // selection was unwanted. Selection is communicated by
+                // shadow elevation + the icon well swap below.
+                background: '#fffefc',
+                borderRadius: t.radius,
+                padding: '16px 18px',
+                cursor: 'pointer',
+                boxShadow: on
+                  ? '0 4px 20px rgba(15, 62, 23, 0.10)'
+                  : '0 1px 4px rgba(15, 62, 23, 0.04)',
+                transition: 'box-shadow 200ms cubic-bezier(.2,.8,.2,1)',
+              }}
             >
               <Row gap={14} align="flex-start">
                 <div
@@ -106,32 +116,36 @@ export default function ServicesPathPage() {
                     width: 44,
                     height: 44,
                     borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    // Selected: forestDark well with white icon — high
-                    // contrast active state, the icon stays clearly
-                    // visible against the dark green. Unselected:
-                    // keylimeWash with forestDark icon — neutral pale
-                    // tile, nothing competing with the focused row.
-                    background: path === p.id ? t.ease.forestDark : t.ease.keylimeWash,
-                    color: path === p.id ? '#fff' : t.ease.forestDark,
+                    // Selected: white well with the same forestDark icon —
+                    // the white well "pops" out of the card via a small
+                    // inner shadow. Unselected: keylimeWash well +
+                    // forestDark icon (the unchanged pale-mint tile).
+                    // Icon color is identical in both states; only the
+                    // tile color flips.
+                    background: on ? '#fffefc' : t.ease.keylimeWash,
+                    color: t.ease.forestDark,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: 2,
+                    boxShadow: on ? '0 1px 6px rgba(15, 62, 23, 0.10)' : 'none',
+                    transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
                   }}
                 >
                   <ServiceIcon t={t} kind={p.icon} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Row justify="space-between" align="baseline" gap={10}>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: t.ink }}>{p.name}</div>
+                    <div style={{ fontSize: 16, fontWeight: on ? 500 : 500, color: t.ink, letterSpacing: -0.1 }}>{p.name}</div>
                     <div
                       style={{
-                        fontFamily: t.mono,
-                        fontSize: 12,
-                        color: path === p.id ? t.rustInk : t.muted,
-                        fontWeight: path === p.id ? 500 : 400,
+                        fontFamily: t.sans,
+                        fontSize: 13,
+                        color: on ? t.ease.forestDark : t.muted,
+                        fontWeight: on ? 500 : 400,
                         whiteSpace: 'nowrap',
+                        fontVariantNumeric: 'tabular-nums',
                       }}
                     >
                       {p.fee}
@@ -164,7 +178,7 @@ export default function ServicesPathPage() {
                       </div>
                       <Stack gap={8}>
                         {SERVICE_CATALOG.otherSub.map((o) => {
-                          const on = otherSub === o.id;
+                          const subOn = otherSub === o.id;
                           return (
                             <div
                               key={o.id}
@@ -183,7 +197,7 @@ export default function ServicesPathPage() {
                                 // Soft elevation in both states — selected gets
                                 // a subtle lift via stronger shadow, no jarring
                                 // bg flip. Keeps the row hierarchy calm.
-                                boxShadow: on
+                                boxShadow: subOn
                                   ? '0 2px 12px rgba(15, 62, 23, 0.10)'
                                   : '0 1px 4px rgba(15, 62, 23, 0.04)',
                                 transition: 'box-shadow 140ms cubic-bezier(.2,.8,.2,1)',
@@ -194,7 +208,7 @@ export default function ServicesPathPage() {
                                   width: 22,
                                   height: 22,
                                   borderRadius: '50%',
-                                  background: on ? t.ease.forestDark : t.ease.softNeutral,
+                                  background: subOn ? t.ease.forestDark : t.ease.softNeutral,
                                   flexShrink: 0,
                                   display: 'flex',
                                   alignItems: 'center',
@@ -202,7 +216,7 @@ export default function ServicesPathPage() {
                                   transition: 'background 140ms',
                                 }}
                               >
-                                {on && (
+                                {subOn && (
                                   <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
                                     <path
                                       d="M1 4.5l3 3L10 1"
@@ -225,7 +239,7 @@ export default function ServicesPathPage() {
                                     style={{
                                       fontSize: 14,
                                       color: t.ink,
-                                      fontWeight: on ? 500 : 400,
+                                      fontWeight: subOn ? 500 : 400,
                                       letterSpacing: -0.1,
                                     }}
                                   >
@@ -235,8 +249,8 @@ export default function ServicesPathPage() {
                                     style={{
                                       fontFamily: t.sans,
                                       fontSize: 12,
-                                      fontWeight: on ? 500 : 400,
-                                      color: on ? t.ease.forestDark : t.muted,
+                                      fontWeight: subOn ? 500 : 400,
+                                      color: subOn ? t.ease.forestDark : t.muted,
                                       whiteSpace: 'nowrap',
                                       flexShrink: 0,
                                       fontVariantNumeric: 'tabular-nums',
@@ -263,8 +277,9 @@ export default function ServicesPathPage() {
                   )}
                 </div>
               </Row>
-            </Card>
-          ))}
+            </div>
+            );
+          })}
 
         </Stack>
 

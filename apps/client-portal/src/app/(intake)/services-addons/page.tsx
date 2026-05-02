@@ -9,7 +9,6 @@ import {
   Body,
   Button,
   buildTheme,
-  Card,
   H1,
   IntakeHeader,
   Row,
@@ -125,13 +124,21 @@ export default function ServicesAddonsPage() {
           {list.map((item) => {
             const selected = addonsSet.has(item.id);
             return (
-              <Card
+              <div
                 key={item.id}
-                t={t}
                 onClick={() => toggleAddon(item.id)}
-                selected={selected}
-                tinted={selected}
-                style={{ padding: '14px 16px' }}
+                style={{
+                  // White card in both states — selection is shown via
+                  // the checkbox + shadow lift, not a green wash.
+                  background: '#fffefc',
+                  borderRadius: t.radius,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  boxShadow: selected
+                    ? '0 4px 16px rgba(15, 62, 23, 0.08)'
+                    : '0 1px 4px rgba(15, 62, 23, 0.04)',
+                  transition: 'box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
+                }}
               >
                 <Row gap={14} align="center">
                   <div
@@ -140,10 +147,11 @@ export default function ServicesAddonsPage() {
                       height: 22,
                       flexShrink: 0,
                       borderRadius: t.tone === 'magazine' ? 3 : 5,
-                      background: selected ? t.ease.forestDark : t.ease.keylimeWash,
+                      background: selected ? t.ease.forestDark : t.ease.softNeutral,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      transition: 'background 140ms',
                     }}
                   >
                     {selected && (
@@ -160,7 +168,7 @@ export default function ServicesAddonsPage() {
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, marginBottom: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, marginBottom: 2, letterSpacing: -0.1 }}>
                       {item.name}
                     </div>
                     <div style={{ fontSize: 12.5, color: t.muted, lineHeight: 1.4 }}>
@@ -169,17 +177,18 @@ export default function ServicesAddonsPage() {
                   </div>
                   <div
                     style={{
-                      fontFamily: t.mono,
-                      fontSize: 12,
-                      color: selected ? t.rustInk : t.muted,
+                      fontFamily: t.sans,
+                      fontSize: 13,
+                      color: selected ? t.ease.forestDark : t.muted,
                       fontWeight: selected ? 500 : 400,
                       whiteSpace: 'nowrap',
+                      fontVariantNumeric: 'tabular-nums',
                     }}
                   >
                     {item.fee}
                   </div>
                 </Row>
-              </Card>
+              </div>
             );
           })}
 
