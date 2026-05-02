@@ -16,10 +16,13 @@ import {
   SignaturePad,
   Stack,
 } from '@docket/ui';
+import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { recordIntakeSignature } from '@/lib/intake/sign';
 
+const TITLE = '§7216 Consent - Use of Tax Information';
 const PARAS = [
   'Federal law requires this consent form be provided to you. Unless authorized by law, we cannot use your tax return information for any purpose other than preparing your return without your consent.',
   'You are not required to complete this form. If we obtain your signature on this form by conditioning our services on your consent, your consent will not be valid. Your consent is valid for the amount of time that you specify.',
@@ -27,14 +30,38 @@ const PARAS = [
   'If you believe your tax return information has been disclosed or used improperly in a manner unauthorized by law or without your permission, you may contact the Treasury Inspector General for Tax Administration (TIGTA).',
 ];
 
+// The exact §7216 text the user is consenting to. Frozen + hashed
+// server-side at signing time so a later copy edit can't retroactively
+// alter "what they consented to" — IRS 26 CFR 301.7216-3 retention.
+const FULL_DOCUMENT_TEXT = `${TITLE}\n\n${PARAS.join('\n\n')}`;
+
 export default function ConsentPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
   const [checked, setChecked] = useIntakeField<boolean>('consent.checked', false);
   const [signed, setSigned] = useIntakeField<boolean>('consent.signed', false);
   const [fullName] = useIntakeField<string>('personal.fullName', '');
+  const [signError, setSignError] = React.useState<string | null>(null);
 
   const ready = checked && signed;
+
+  // §7216 has criminal penalty if recorded wrong (26 USC 7216).
+  // Persist the full provenance — text hash, ip, ua, server timestamp
+  // — to the signatures table BEFORE flipping the local boolean.
+  // Failed server write = unsigned UI = retry.
+  const onSign = async () => {
+    if (signed) return;
+    setSignError(null);
+    const result = await recordIntakeSignature({
+      type: 'consent_7216',
+      documentText: FULL_DOCUMENT_TEXT,
+    });
+    if (result.ok) {
+      setSigned(true);
+    } else {
+      setSignError(result.error ?? 'Could not record consent. Please try again.');
+    }
+  };
 
   const handleNext = () => {
     const target = getNextStep('/consent', {});
@@ -82,7 +109,7 @@ export default function ConsentPage() {
         </div>
 
         <Stack gap={16} style={{ padding: '20px 24px 16px', flex: 1 }}>
-          <LegalDoc t={t} title="§7216 Consent - Use of Tax Information" paras={PARAS} />
+          <LegalDoc t={t} title={TITLE} paras={PARAS} />
 
           <Row gap={10} align="flex-start">
             <div
@@ -136,9 +163,21 @@ export default function ConsentPage() {
             <SignaturePad
               t={t}
               signed={signed}
-              onSign={() => setSigned(true)}
+              onSign={onSign}
               name={fullName || 'Your signature'}
             />
+            {signError && (
+              <div
+                style={{
+                  marginTop: 8,
+                  fontSize: 12.5,
+                  color: '#a13d2c',
+                  fontFamily: t.sans,
+                }}
+              >
+                {signError}
+              </div>
+            )}
           </div>
         </Stack>
 

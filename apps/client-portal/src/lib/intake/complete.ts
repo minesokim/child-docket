@@ -16,6 +16,7 @@ export async function completeIntake(): Promise<{ ok: boolean; error?: string }>
   if (!authed) return { ok: false, error: 'Not signed in' };
 
   const taxYear = await getCurrentTaxYear();
+  const startedAt = Date.now();
 
   try {
     return await withTenant(asTenantId(authed.tenantId), async (db) => {
@@ -31,6 +32,23 @@ export async function completeIntake(): Promise<{ ok: boolean; error?: string }>
             eq(schema.intakeResponses.taxYear, taxYear),
           ),
         );
+
+      // Append-only audit row in the SAME transaction. SOC 2 evidence
+      // for the moment a taxpayer "submits" their intake package — the
+      // schema.intakeResponses.completedAt column is mutable, but
+      // actions is trigger-protected (migration 0007). If this insert
+      // fails the whole transaction rolls back, including the status
+      // update — we never claim a completion without an audit row.
+      await db.insert(schema.actions).values({
+        tenantId: authed.tenantId,
+        clientId: authed.clientId,
+        actionClass: 'send-internal',
+        toolName: 'completeIntake',
+        toolInput: { taxYear },
+        latencyMs: Date.now() - startedAt,
+        success: true,
+      });
+
       return { ok: true };
     });
   } catch (error) {

@@ -230,12 +230,28 @@ export const messages = pgTable(
 );
 
 // THE MOAT — every tool call, every AI inference, every approval.
+//
+// FK retention rules (May 2026 security audit):
+//   - tenantId: ON DELETE CASCADE. If a tenant is fully removed (very
+//     rare, manual op), audit history goes with it; tenant data should
+//     not be queryable post-deletion under any circumstance.
+//   - clientId: ON DELETE SET NULL. CCPA right-to-delete must be able
+//     to remove a client's PII (clients row, intake_responses, etc.)
+//     while PRESERVING the audit trail of what happened to that data.
+//     `actions` is append-only by trigger (migration 0007); cascading
+//     deletes from clients would defeat the SOC 2 evidence chain by
+//     silently bypassing the trigger via FK action. Set-null keeps
+//     the audit row, the action_class, the timestamp, and the
+//     anonymized record of what was done — without retaining linkage
+//     to the deleted PII subject.
+//   - userId: no cascade (default). Same logic — user departures
+//     shouldn't erase the actions they took.
 export const actions = pgTable(
   'actions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
     userId: uuid('user_id').references(() => users.id),
     agentId: text('agent_id'),
     actionClass: actionClassEnum('action_class').notNull(),
