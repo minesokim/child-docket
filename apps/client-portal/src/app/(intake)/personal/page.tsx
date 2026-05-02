@@ -186,7 +186,10 @@ export default function PersonalPage() {
           <div
             style={{
               marginTop: 14,
-              padding: '20px 18px 4px',
+              // Bottom padding bumped 4 -> 24 so City / State / ZIP have
+              // breathing room below them inside the card. Top padding
+              // bumped slightly to keep the card visually balanced.
+              padding: '24px 20px 28px',
               background: '#fffefc',
               boxShadow: '0 2px 10px rgba(15, 62, 23, 0.06)',
               borderRadius: t.radius,
@@ -195,15 +198,15 @@ export default function PersonalPage() {
             <div
               style={{
                 fontFamily: t.serif,
-                fontSize: 15,
-                color: t.ink,
-                letterSpacing: -0.2,
+                fontSize: 16,
+                color: t.ease.forestDark,
+                letterSpacing: -0.48,
                 marginBottom: 4,
               }}
             >
-              Home address
+              Home Address
             </div>
-            <div style={{ fontSize: 12, color: t.muted, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: t.muted, marginBottom: 18 }}>
               Where you lived most of the tax year
             </div>
 
@@ -218,7 +221,7 @@ export default function PersonalPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
               <div style={{ flex: 2, minWidth: 0 }}>
                 <FieldLabel t={t}>City</FieldLabel>
                 <TextField

@@ -308,19 +308,23 @@ export function AskAntonioChat({ t }: { t: Theme }) {
               at the top of the scrollback. */}
           <div
             style={{
-              background: t.ease.mintGlaze,
-              borderRadius: 14,
-              padding: '14px 16px',
+              // Banner softened: keylimeWash (light mint) instead of
+              // mintGlaze (mid sage). 15% smaller padding + smaller
+              // icon circle so it reads as a calm system note rather
+              // than a celebratory tile.
+              background: t.ease.keylimeWash,
+              borderRadius: 12,
+              padding: '12px 14px',
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 12,
+              gap: 10,
               marginBottom: 4,
             }}
           >
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 30,
+                height: 30,
                 borderRadius: '50%',
                 background: '#fffefc',
                 display: 'flex',
@@ -330,7 +334,7 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                 color: t.ease.forestDark,
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3.5 11.5h9l-1-1.5V7a3.5 3.5 0 00-7 0v3l-1 1.5z" />
                 <path d="M6.5 13.5a1.5 1.5 0 003 0" />
               </svg>
@@ -339,10 +343,10 @@ export function AskAntonioChat({ t }: { t: Theme }) {
               style={{
                 flex: 1,
                 fontFamily: t.sans,
-                fontSize: 14,
+                fontSize: 12,
                 lineHeight: 1.5,
                 color: t.ease.forestDark,
-                letterSpacing: -0.42,
+                letterSpacing: -0.36,
               }}
             >
               Antonio is reviewing your intake. He&apos;ll reach out within 24 hours.
@@ -445,14 +449,13 @@ export function AskAntonioChat({ t }: { t: Theme }) {
               width: 38,
               height: 38,
               borderRadius: '50%',
-              // Active: forestDark fill (clear forest green, no orange
-              // cast). Inactive: keylimeWash with muted icon — sits
-              // calmly in the soft palette without an "orange-tan disabled"
-              // look.
-              background: input.trim() ? t.ease.forestDark : t.ease.keylimeWash,
+              // Active: mintGlaze (mid sage — darker than keylime but
+              // not the heavy forest. Reads as 'send is ready' without
+              // shouting). Inactive: keylimeWash, muted icon.
+              background: input.trim() ? t.ease.mintGlaze : t.ease.keylimeWash,
               border: 'none',
               cursor: input.trim() ? 'pointer' : 'not-allowed',
-              color: input.trim() ? '#fffefc' : t.ease.forestDark,
+              color: t.ease.forestDark,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

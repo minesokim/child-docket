@@ -73,18 +73,14 @@ export function TextField({
   style?: StyleProp;
   autoComplete?: string;
 }) {
-  // Filled telegraphs progress without checkmarks. Resting state for a
-  // filled field is SUPER subtle (mintWhisper, near-white with a hint
-  // of green) — visible only when scanning, not noisy. Focus state on
-  // any field deepens to keylimeWash (the visible light mint) so it's
-  // clear which field you're typing into.
-  //   empty  + not focused -> softNeutral (warm off-white, no green)
-  //   empty  + focused     -> keylimeWash
-  //   filled + not focused -> mintWhisper (super-subtle green)
-  //   filled + focused     -> keylimeWash
+  // Two-state palette only — filled vs empty. Focus does NOT add a
+  // color change; the cursor itself is the focus indicator. The green
+  // appears only when the field has been answered.
+  //   empty  -> softNeutral (warm off-white)
+  //   filled -> mintWhisper (super-subtle green, "this is done")
   const filled = value.length > 0;
   const restingBg = filled ? t.ease.mintWhisper : t.ease.softNeutral;
-  const focusBg = t.ease.keylimeWash;
+  const focusBg = restingBg;
   return (
     <input
       type={type}
@@ -368,13 +364,11 @@ export function EncryptedTextField({
     }
   };
 
-  // Same state palette as TextField:
-  //   empty resting     -> softNeutral
-  //   filled resting    -> mintWhisper (super subtle)
-  //   any focus         -> keylimeWash
+  // Same two-state palette as TextField. Focus doesn't add a color
+  // change — the green only appears when the field is filled.
   const encFilled = value.length > 0;
   const encRestingBg = encFilled ? t.ease.mintWhisper : t.ease.softNeutral;
-  const encFocusBg = t.ease.keylimeWash;
+  const encFocusBg = encRestingBg;
 
   if (!editing && masked) {
     // Masked display + Edit affordance — always filled by definition.

@@ -332,7 +332,7 @@ export default function LoginPage() {
                 transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
               }}
               onFocus={(e) => {
-                e.target.style.background = t.ease.keylimeWash;
+                e.target.style.background = phoneDigits ? t.ease.mintWhisper : t.ease.softNeutral;
               }}
               onBlur={(e) => {
                 e.target.style.background = phoneDigits ? t.ease.mintWhisper : t.ease.softNeutral;
