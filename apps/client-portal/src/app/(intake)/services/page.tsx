@@ -92,24 +92,28 @@ export default function ServicesPathPage() {
         <Stack gap={12} style={{ padding: '24px 24px 16px', flex: 1 }}>
           {SERVICE_CATALOG.paths.map((p) => {
             const on = path === p.id;
+            // 'Something else' gets a neutral wash on select instead of
+            // mintKiss - the sub-options below already carry green
+            // accents, doubling up made the whole row feel saturated.
+            const selectedBg = p.id === 'other' ? t.ease.softNeutral : t.ease.mintKiss;
             return (
             <div
               key={p.id}
               onClick={() => setPath(p.id)}
               style={{
-                // Selected: green-tinted entire card (highlighted box).
-                // Unselected: white. Icon container stays WHITE in both
-                // states - only the surrounding card surface flips.
-                // Selection reads as "this row is the choice" via the
-                // green wash on the whole row.
-                background: on ? t.ease.mintKiss : '#fffefc',
+                background: on ? selectedBg : '#fffefc',
                 borderRadius: t.radius,
                 padding: '16px 18px',
                 cursor: 'pointer',
                 boxShadow: on
                   ? '0 4px 20px rgba(15, 62, 23, 0.10)'
                   : '0 1px 4px rgba(15, 62, 23, 0.04)',
-                transition: 'all 200ms cubic-bezier(.2,.8,.2,1)',
+                // Slower easing curve so the highlight reads as gliding
+                // between tiles when the user clicks across options. The
+                // ease-out-quint tail (.16, 1, .3, 1) gives the feeling
+                // of the selection settling into place rather than
+                // snapping.
+                transition: 'background 480ms cubic-bezier(.16, 1, .3, 1), box-shadow 360ms cubic-bezier(.2,.8,.2,1)',
               }}
             >
               <Row gap={16} align="center">

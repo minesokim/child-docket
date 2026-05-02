@@ -136,7 +136,7 @@ export default function ServicesAddonsPage() {
                   boxShadow: selected
                     ? '0 4px 16px rgba(15, 62, 23, 0.08)'
                     : '0 1px 4px rgba(15, 62, 23, 0.04)',
-                  transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
+                  transition: 'background 480ms cubic-bezier(.16, 1, .3, 1), box-shadow 360ms cubic-bezier(.2,.8,.2,1)',
                 }}
               >
                 <Row gap={14} align="center">
