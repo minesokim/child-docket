@@ -9,7 +9,7 @@
 // The tab-bar logic lives in <PortalFrame> (client component) since it
 // needs usePathname + useRouter.
 
-import { getOrCreateIntakeAnswers } from '@/lib/intake-actions';
+import { getOrCreateIntakeAnswers } from '@/lib/intake';
 import { IntakeProvider } from '@/lib/intake-context';
 import { PortalFrame } from './_portal-frame';
 

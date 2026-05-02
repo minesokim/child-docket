@@ -31,7 +31,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getAtPath, setAtPath, type IntakeState } from '@docket/shared';
-import { revealIntakeField, saveIntakeField } from './intake-actions';
+import { revealIntakeField, saveIntakeField } from './intake';
 
 type SetFieldFn = (path: string, value: unknown) => void;
 

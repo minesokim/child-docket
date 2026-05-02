@@ -21,7 +21,7 @@ import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { consumeRateToken } from '@docket/shared';
-import { saveIntakeField } from '@/lib/intake-actions';
+import { saveIntakeField } from '@/lib/intake';
 
 type FlushWrite = { path: string; value: unknown };
 type FlushBody = { writes: FlushWrite[] };

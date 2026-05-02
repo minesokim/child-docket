@@ -7,7 +7,7 @@
 // Inner client logic (route-transition direction, AskAntonioChat overlay)
 // lives in <IntakeFrame> so this file can stay a Server Component.
 
-import { getOrCreateIntakeAnswers } from '@/lib/intake-actions';
+import { getOrCreateIntakeAnswers } from '@/lib/intake';
 import { IntakeProvider } from '@/lib/intake-context';
 import { IntakeFrame } from './_intake-frame';
 

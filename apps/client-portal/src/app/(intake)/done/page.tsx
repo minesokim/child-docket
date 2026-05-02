@@ -21,7 +21,7 @@ import type { Theme } from '@docket/ui';
 import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
-import { completeIntake } from '@/lib/intake-actions';
+import { completeIntake } from '@/lib/intake';
 
 type ApptFormat = 'phone' | 'video' | 'inperson';
 
