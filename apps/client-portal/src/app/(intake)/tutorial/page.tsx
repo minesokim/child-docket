@@ -287,9 +287,9 @@ function TutorialCard({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontFamily: t.serif,
-                fontSize: 14,
-                fontWeight: 500,
+                fontFamily: t.sans,
+                fontSize: 13,
+                fontWeight: 600,
                 color: t.rustInk,
                 flexShrink: 0,
               }}
