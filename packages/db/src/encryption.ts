@@ -190,10 +190,33 @@ export function decryptFieldForTenant(marker: EncryptedMarker, dek: Buffer): str
  * Decrypt-if-marked variant for tree-walking on the read path. If the value
  * isn't an EncryptedMarker, pass-through; otherwise decrypt with the tenant
  * DEK.
+ *
+ * LEGACY FALLBACK
+ *   v0 production data written BEFORE batch 9 (per-tenant DEKs) was
+ *   encrypted with the master KEK directly. After per-tenant DEKs shipped,
+ *   those legacy values can't be decrypted with a tenant DEK — the GCM
+ *   auth-tag check fails ("Unsupported state or unable to authenticate
+ *   data"). To avoid breaking existing data, we try the DEK first, and on
+ *   auth-tag failure fall back to the master KEK.
+ *
+ *   Writes always go through the tenant DEK path, so any field the user
+ *   touches gets upgraded to the new format on save. Over time the legacy
+ *   master-encrypted blobs disappear naturally.
  */
 export function decryptIfMarkedForTenant(value: unknown, dek: Buffer): unknown {
-  if (isEncrypted(value)) return decryptFieldForTenant(value, dek);
-  return value;
+  if (!isEncrypted(value)) return value;
+  try {
+    return decryptFieldForTenant(value, dek);
+  } catch (err) {
+    // Likely legacy data encrypted with master KEK (pre-batch-9). Try
+    // the master-key path. If THAT also fails, the original tenant-DEK
+    // error is the right one to surface — masters this odd shape isn't.
+    try {
+      return decryptField(value);
+    } catch {
+      throw err;
+    }
+  }
 }
 
 // ────────────────────────────────────────────────────────────────

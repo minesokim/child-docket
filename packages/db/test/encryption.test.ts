@@ -223,3 +223,36 @@ describe('Legacy single-key API (deprecated, kept for migration)', () => {
     expect(decryptIfMarked(42)).toBe(42);
   });
 });
+
+describe('decryptIfMarkedForTenant — legacy master-encrypted fallback', () => {
+  test('legacy master-key ciphertext decrypts via fallback when tenant DEK fails', () => {
+    // Simulate v0 production data: a value encrypted with the master KEK
+    // before per-tenant DEKs shipped. A NEW request comes in with a fresh
+    // per-tenant DEK that obviously can't decrypt the legacy ciphertext.
+    // The fallback should kick in and recover the plaintext via master.
+    const legacy = encryptField('legacy-ssn-123-45-6789');
+    const newTenantDek = randomBytes(32);
+    const recovered = decryptIfMarkedForTenant(legacy, newTenantDek);
+    expect(recovered).toBe('legacy-ssn-123-45-6789');
+  });
+
+  test('tenant-encrypted ciphertext still decrypts directly (not via fallback)', () => {
+    // Sanity: the fast path (tenant DEK works) is still the primary.
+    const dek = randomBytes(32);
+    const ct = encryptFieldForTenant('new-ssn-987-65-4321', dek);
+    expect(decryptIfMarkedForTenant(ct, dek)).toBe('new-ssn-987-65-4321');
+  });
+
+  test('plain values still pass through', () => {
+    const dek = randomBytes(32);
+    expect(decryptIfMarkedForTenant('not-encrypted', dek)).toBe('not-encrypted');
+    expect(decryptIfMarkedForTenant(42, dek)).toBe(42);
+    expect(decryptIfMarkedForTenant(null, dek)).toBe(null);
+  });
+
+  test('garbage ciphertext (decryptable by neither key) throws', () => {
+    const dek = randomBytes(32);
+    const garbage = { __enc: Buffer.from('garbage-not-real-ciphertext').toString('base64') };
+    expect(() => decryptIfMarkedForTenant(garbage, dek)).toThrow();
+  });
+});
