@@ -191,7 +191,7 @@ export function decryptFieldForTenant(marker: EncryptedMarker, dek: Buffer): str
  * isn't an EncryptedMarker, pass-through; otherwise decrypt with the tenant
  * DEK.
  *
- * LEGACY FALLBACK
+ * LEGACY FALLBACK (scheduled for removal)
  *   v0 production data written BEFORE batch 9 (per-tenant DEKs) was
  *   encrypted with the master KEK directly. After per-tenant DEKs shipped,
  *   those legacy values can't be decrypted with a tenant DEK — the GCM
@@ -202,6 +202,16 @@ export function decryptFieldForTenant(marker: EncryptedMarker, dek: Buffer): str
  *   Writes always go through the tenant DEK path, so any field the user
  *   touches gets upgraded to the new format on save. Over time the legacy
  *   master-encrypted blobs disappear naturally.
+ *
+ *   Removal procedure:
+ *     1. pnpm --filter @docket/db reencrypt-legacy --dry-run
+ *        (confirms how many leaves are still legacy; safe scan, no writes)
+ *     2. pnpm --filter @docket/db reencrypt-legacy
+ *        (rewrites legacy leaves with the tenant DEK, idempotent)
+ *     3. Re-run --dry-run; expect "legacy migrated: 0"
+ *     4. Delete the master-KEK fallback below + the deprecated
+ *        decryptField / decryptIfMarked exports
+ *     5. Run the audit-immutability + RLS suites; both must pass
  */
 export function decryptIfMarkedForTenant(value: unknown, dek: Buffer): unknown {
   if (!isEncrypted(value)) return value;

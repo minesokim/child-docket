@@ -12,6 +12,12 @@ Migrations live in `migrations/`. Drizzle generates them from `src/schema.ts`; R
 |---|---|---|---|
 | 0000 | `0000_fancy_vampiro` | Drizzle-generated | Creates 13 tables + 12 enums + 27 indexes + foreign keys |
 | 0001 | `0001_rls_policies` | Manual | Enables + FORCEs RLS on all 12 tenant-scoped tables, adds `current_tenant_id()` helper, creates `tenant_isolation_*` policies |
+| 0002 | `0002_safe_shaman` | Drizzle-generated | Adds `clients.clerk_user_id` (unique) so Clerk-authed clients map to a row |
+| 0003 | `0003_ordinary_captain_midlands` | Drizzle-generated | Drops the old `(client_id, tax_year)` index in favor of `(tenant_id, client_id, tax_year)` unique; adds `intake_responses.updated_at` |
+| 0004 | `0004_fast_the_executioner` | Drizzle-generated | Adds `mutate-intake` value to the `action_class` enum |
+| 0005 | `0005_concerned_stellaris` | Drizzle-generated | Adds `tenants.dek_encrypted` (per-tenant data-encryption key, AES-GCM-wrapped) |
+| 0006 | `0006_stormy_skreet` | Drizzle-generated | Drops `clients.stripe_identity_session_id` (Stripe Identity replaced by DocuSign + KBA path) |
+| 0007 | `0007_actions_append_only` | Manual | Installs `BEFORE UPDATE/DELETE/TRUNCATE` triggers on `actions` that raise `insufficient_privilege` — SOC 2 append-only evidence trail |
 
 ### Workflow
 
@@ -64,6 +70,26 @@ DATABASE_URL_RLS_TEST=postgres://... pnpm --filter @docket/db test:rls
 ```
 
 Skipped automatically when the env var is unset, so unit-test loops stay fast.
+
+### Audit immutability test (mig 0007)
+
+`test/audit-immutability.test.ts` proves the `actions` table is append-only end-to-end: UPDATE / DELETE / TRUNCATE attempts all raise `insufficient_privilege`, and INSERT still works (we can write new audit entries, we just can't rewrite history). Run with the same `DATABASE_URL_RLS_TEST` env var.
+
+## Re-encrypt legacy master-KEK blobs
+
+`scripts/reencrypt-legacy.ts` walks every encrypted leaf in `intake_responses.answers`, detects ones encrypted with the master KEK (pre-batch-9 legacy data), decrypts them, and re-encrypts with the per-tenant DEK. Run before removing the master-KEK fallback in `decryptIfMarkedForTenant`.
+
+```bash
+# Scan only — reports how many legacy blobs exist, makes no changes:
+DATABASE_URL=postgres://... PII_ENCRYPTION_KEY=... \
+  pnpm --filter @docket/db reencrypt-legacy --dry-run
+
+# Rewrite — idempotent. Re-run --dry-run after to confirm legacy=0:
+DATABASE_URL=postgres://... PII_ENCRYPTION_KEY=... \
+  pnpm --filter @docket/db reencrypt-legacy
+```
+
+Once `--dry-run` reports zero legacy blobs across the entire DB, the master-KEK fallback path in `encryption.ts` is safe to delete. See the procedure block in `decryptIfMarkedForTenant`.
 
 ## Schema overview (v0)
 

@@ -1,0 +1,95 @@
+# Dependabot configuration for Docket.
+#
+# Goals:
+#   1. Catch security advisories within hours of disclosure (security updates
+#      are not subject to the schedule below — Dependabot opens a PR on detection).
+#   2. Keep production dependencies fresh without drowning the queue in noise.
+#   3. Group minor + patch updates so we review fewer PRs that are mostly
+#      mechanical bumps.
+#
+# Major version bumps land as separate PRs each. Review them carefully —
+# breaking changes hide here.
+#
+# SOC 2 expects a documented vulnerability-management process: Dependabot +
+# the GitHub Actions audit job in ci.yml together provide that.
+
+version: 2
+updates:
+  # ────────────────────────────────────────────────────────────────
+  # npm — single workspace root. pnpm hoists deps so a single ecosystem
+  # entry covers all packages and apps.
+  # ────────────────────────────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    labels:
+      - dependencies
+    groups:
+      # Group minor + patch updates per ecosystem cluster so we don't get
+      # 30 PRs every Monday. Major bumps still come through as individual PRs.
+      next-and-react:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - minor
+          - patch
+      drizzle:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-kit"
+        update-types:
+          - minor
+          - patch
+      clerk:
+        patterns:
+          - "@clerk/*"
+        update-types:
+          - minor
+          - patch
+      sentry:
+        patterns:
+          - "@sentry/*"
+        update-types:
+          - minor
+          - patch
+      anthropic:
+        patterns:
+          - "@anthropic-ai/*"
+        update-types:
+          - minor
+          - patch
+      types-and-tooling:
+        patterns:
+          - "@types/*"
+          - "typescript"
+          - "turbo"
+          - "tailwindcss"
+          - "postcss"
+        update-types:
+          - minor
+          - patch
+
+  # ────────────────────────────────────────────────────────────────
+  # GitHub Actions — keep workflow runners + actions current so security
+  # patches in actions/checkout, setup-node, etc. land automatically.
+  # ────────────────────────────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    labels:
+      - dependencies
+      - github-actions

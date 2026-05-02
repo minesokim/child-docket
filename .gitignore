@@ -11,9 +11,12 @@ out/
 *.tsbuildinfo
 
 # Environment
-.env
-.env.local
-.env.*.local
+# Match every .env* variant (.env, .env.local, .env.production, .env.staging,
+# .env.development, .env.<anything>.local, etc.) so a new convention added
+# upstream can't accidentally bypass gitignore. Allowlist .env.example so the
+# template stays tracked.
+.env*
+!.env.example
 
 # Editor / OS
 .vscode/
@@ -32,3 +35,8 @@ coverage/
 .memsearch/
 
 .vercel
+
+# gstack runtime (security reports, incident postmortems, brain queues,
+# session timelines). Anything here is an internal developer artifact and
+# must not ship to the remote.
+.gstack/

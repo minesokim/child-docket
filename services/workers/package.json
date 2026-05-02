@@ -12,19 +12,19 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@docket/shared": "workspace:*",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@docket/db": "workspace:*",
     "@docket/orchestrator": "workspace:*",
-    "@anthropic-ai/sdk": "^0.91.1",
+    "@docket/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "inngest": "^3.27.4",
-    "drizzle-orm": "^0.36.4",
     "postgres": "^3.4.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
     "@types/node": "^22.10.2",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }

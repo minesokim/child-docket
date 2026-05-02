@@ -50,6 +50,13 @@
       "when": 1777678752502,
       "tag": "0006_stormy_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777750000000,
+      "tag": "0007_actions_append_only",
+      "breakpoints": true
     }
   ]
 }
