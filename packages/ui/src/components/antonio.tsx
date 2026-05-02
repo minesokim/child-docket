@@ -262,8 +262,11 @@ export function AskAntonioChat({ t }: { t: Theme }) {
             <div style={{ fontSize: 15, fontWeight: 500, color: t.ease.forestDark, letterSpacing: -0.45 }}>
               Antonio Vazquez, EA
             </div>
+            {/* No bullet — the green dot on the avatar already carries the
+                online signal. A second indicator next to "Online" was
+                redundant. */}
             <div style={{ fontSize: 12, color: '#4a8f5f', letterSpacing: -0.36, marginTop: 1 }}>
-              ● Online · typically replies within an hour
+              Online · typically replies within an hour
             </div>
           </div>
           <button
@@ -363,7 +366,11 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                     maxWidth: '82%',
                     padding: '14px 16px 12px',
                     borderRadius: 16,
-                    background: isUser ? t.ease.mintGlaze : t.ease.keylimeWash,
+                    // Antonio (incoming): warm tan bubble — feels like
+                    // a letter from the firm. Client (outgoing): light
+                    // mint, the same palette the inputs use. Keeps the
+                    // "you = mint, Antonio = warm" reading consistent.
+                    background: isUser ? t.ease.keylimeWash : t.ease.warmTan,
                     color: t.ease.forestDark,
                     fontFamily: t.sans,
                   }}
@@ -390,7 +397,8 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           })}
         </div>
 
-        {/* Composer — strokeless. Input is a soft keylimeWash pill. */}
+        {/* Composer — strokeless. Input pill is neutral (softNeutral)
+            so it doesn't compete with the bubble palette above. */}
         <div
           style={{
             padding: '12px 14px 18px',
@@ -403,7 +411,7 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           <div
             style={{
               flex: 1,
-              background: t.ease.keylimeWash,
+              background: t.ease.softNeutral,
               borderRadius: 20,
               padding: '10px 16px',
               display: 'flex',
@@ -437,16 +445,22 @@ export function AskAntonioChat({ t }: { t: Theme }) {
               width: 38,
               height: 38,
               borderRadius: '50%',
-              background: input.trim() ? t.rust : t.border,
+              // Active: forestDark fill (clear forest green, no orange
+              // cast). Inactive: keylimeWash with muted icon — sits
+              // calmly in the soft palette without an "orange-tan disabled"
+              // look.
+              background: input.trim() ? t.ease.forestDark : t.ease.keylimeWash,
               border: 'none',
               cursor: input.trim() ? 'pointer' : 'not-allowed',
+              color: input.trim() ? '#fffefc' : t.ease.forestDark,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'background 120ms',
+              transition: 'background 120ms, color 120ms',
+              opacity: input.trim() ? 1 : 0.4,
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 8l10-5-5 10-1.5-4.5L3 8z" />
             </svg>
           </button>

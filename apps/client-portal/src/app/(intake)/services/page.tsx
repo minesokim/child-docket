@@ -264,10 +264,12 @@ export default function ServicesPathPage() {
               </div>
               <div
                 style={{
-                  fontFamily: t.serif,
+                  fontFamily: t.sans,
                   fontSize: 20,
+                  fontWeight: 500,
                   color: t.ink,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.6,
+                  fontFeatureSettings: '"tnum" 1, "lnum" 1',
                 }}
               >
                 {headline}

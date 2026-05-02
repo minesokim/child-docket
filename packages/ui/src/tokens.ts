@@ -30,6 +30,7 @@ export const EASE = {
   mintKiss: '#cfe7d3',       // medium mint — middle-emphasis surface
   mintWhisper: '#f4faf3',    // near-white with a green tinge — focus tint
   softNeutral: '#f5f4f1',    // warm off-white, no green tint — empty input bg
+  warmTan: '#ebe2cf',        // soft warm tan — Antonio incoming chat bubbles
   // Neutrals
   inkText: '#222222',
   darkCharcoal: '#333333',
