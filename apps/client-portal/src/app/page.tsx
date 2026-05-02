@@ -80,7 +80,7 @@ export default function LandingPage() {
           }}
         />
 
-        <div style={{ width: '100%', maxWidth: 340, textAlign: 'left' }}>
+        <div style={{ width: '100%', maxWidth: 340, textAlign: 'center' }}>
           <h1
             style={{
               fontFamily: t.serif,
