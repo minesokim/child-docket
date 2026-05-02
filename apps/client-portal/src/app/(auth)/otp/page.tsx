@@ -414,7 +414,7 @@ function OtpFlow() {
             fontWeight: 400,
             fontFeatureSettings: '"tnum" 1, "lnum" 1',
             letterSpacing: code ? 8 : 1,
-            background: t.ease.mintWhisper,
+            background: code ? t.ease.keylimeWash : t.ease.softNeutral,
             border: 'none',
             borderRadius: 14,
             color: t.ease.forestDark,
@@ -423,10 +423,10 @@ function OtpFlow() {
             transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
           }}
           onFocus={(e) => {
-            e.target.style.background = t.ease.keylimeWash;
+            e.target.style.background = code ? t.ease.mintKiss : t.ease.mintWhisper;
           }}
           onBlur={(e) => {
-            e.target.style.background = t.ease.mintWhisper;
+            e.target.style.background = code ? t.ease.keylimeWash : t.ease.softNeutral;
           }}
         />
 

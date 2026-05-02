@@ -106,8 +106,13 @@ export default function ServicesPathPage() {
                     width: 44,
                     height: 44,
                     borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    background: path === p.id ? t.ease.forestDark : t.ease.keylimeWash,
-                    color: path === p.id ? '#fff' : t.ease.forestDark,
+                    // Selected: mintGlaze well (deeper than the card's
+                    // mintKiss bg) with forestDark icon. Unselected: same
+                    // pattern at one tone lower (keylime well + forest
+                    // icon). The icon stays in-palette in both states —
+                    // no jarring forestDark slab.
+                    background: path === p.id ? t.ease.mintGlaze : t.ease.keylimeWash,
+                    color: t.ease.forestDark,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

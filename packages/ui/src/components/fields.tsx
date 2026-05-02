@@ -73,6 +73,13 @@ export function TextField({
   style?: StyleProp;
   autoComplete?: string;
 }) {
+  // Two-state fill that telegraphs progress without checkmarks:
+  //   empty  -> softNeutral (warm off-white, no green tint)
+  //   filled -> keylimeWash (light mint — "I have something to save")
+  // Focus deepens whichever base we're on by one tone.
+  const filled = value.length > 0;
+  const restingBg = filled ? t.ease.keylimeWash : t.ease.softNeutral;
+  const focusBg = filled ? t.ease.mintKiss : t.ease.mintWhisper;
   return (
     <input
       type={type}
@@ -82,12 +89,9 @@ export function TextField({
       placeholder={placeholder}
       readOnly={readOnly}
       autoComplete={autoComplete}
-      // Zero stroke. Soft keylimeWash fill is the input affordance —
-      // matches ease's preference for tinted surfaces over outlines.
-      // Focus state deepens the fill slightly via mintKiss.
       style={{
         width: '100%',
-        background: t.ease.mintWhisper,
+        background: restingBg,
         border: 'none',
         borderRadius: 12,
         padding: '12px 14px',
@@ -100,10 +104,10 @@ export function TextField({
         ...style,
       }}
       onFocus={(e) => {
-        e.target.style.background = t.ease.keylimeWash;
+        e.target.style.background = focusBg;
       }}
       onBlur={(e) => {
-        e.target.style.background = t.ease.mintWhisper;
+        e.target.style.background = restingBg;
       }}
     />
   );
@@ -175,6 +179,12 @@ export function SSNField({
     }
   };
 
+  // SSN filled = any digits typed OR a server mask sentinel present.
+  // Either way the user has provided something — light-mint fill earns
+  // its place. Empty + editing -> softNeutral.
+  const ssnFilled = value.length > 0;
+  const ssnRestingBg = ssnFilled ? t.ease.keylimeWash : t.ease.softNeutral;
+
   if (editing) {
     return (
       <div
@@ -183,8 +193,9 @@ export function SSNField({
           alignItems: 'center',
           gap: 10,
           padding: '12px 14px',
-          background: t.ease.mintWhisper,
+          background: ssnRestingBg,
           borderRadius: 12,
+          transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
         <input
@@ -218,6 +229,7 @@ export function SSNField({
     );
   }
 
+  // Masked display (server-supplied mask sentinel = filled).
   return (
     <div
       onClick={handleStartEdit}
@@ -226,7 +238,7 @@ export function SSNField({
         alignItems: 'center',
         gap: 10,
         padding: '12px 14px',
-        background: t.ease.mintWhisper,
+        background: t.ease.keylimeWash,
         borderRadius: 12,
         cursor: revealing ? 'wait' : 'text',
         opacity: revealing ? 0.6 : 1,
@@ -351,8 +363,14 @@ export function EncryptedTextField({
     }
   };
 
+  // Same two-state pattern as TextField: empty -> softNeutral, filled
+  // -> keylimeWash. Server-masked values are filled by definition.
+  const encFilled = value.length > 0;
+  const encRestingBg = encFilled ? t.ease.keylimeWash : t.ease.softNeutral;
+  const encFocusBg = encFilled ? t.ease.mintKiss : t.ease.mintWhisper;
+
   if (!editing && masked) {
-    // Masked display + Edit affordance.
+    // Masked display + Edit affordance — always filled by definition.
     return (
       <div
         onClick={handleStartEdit}
@@ -361,7 +379,7 @@ export function EncryptedTextField({
           alignItems: 'center',
           gap: 10,
           padding: '12px 14px',
-          background: t.ease.mintWhisper,
+          background: t.ease.keylimeWash,
           borderRadius: 12,
           cursor: revealing ? 'wait' : 'text',
           opacity: revealing ? 0.6 : 1,
@@ -397,7 +415,7 @@ export function EncryptedTextField({
         autoComplete="off"
         style={{
           flex: 1,
-          background: t.ease.mintWhisper,
+          background: encRestingBg,
           border: 'none',
           borderRadius: 12,
           padding: '12px 14px',
@@ -410,10 +428,10 @@ export function EncryptedTextField({
           ...style,
         }}
         onFocus={(e) => {
-          e.target.style.background = t.ease.mintKiss;
+          e.target.style.background = encFocusBg;
         }}
         onBlur={(e) => {
-          e.target.style.background = t.ease.keylimeWash;
+          e.target.style.background = encRestingBg;
         }}
       />
       {hint && (

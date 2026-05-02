@@ -324,7 +324,7 @@ export default function LoginPage() {
                 paddingLeft: country.dial.length === 2 ? 38 : country.dial.length === 3 ? 46 : 52,
                 fontSize: 16,
                 fontFamily: t.sans,
-                background: t.ease.mintWhisper,
+                background: phoneDigits ? t.ease.keylimeWash : t.ease.softNeutral,
                 border: 'none',
                 borderRadius: 12,
                 color: t.ease.forestDark,
@@ -332,10 +332,10 @@ export default function LoginPage() {
                 transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
               }}
               onFocus={(e) => {
-                e.target.style.background = t.ease.keylimeWash;
+                e.target.style.background = phoneDigits ? t.ease.mintKiss : t.ease.mintWhisper;
               }}
               onBlur={(e) => {
-                e.target.style.background = t.ease.mintWhisper;
+                e.target.style.background = phoneDigits ? t.ease.keylimeWash : t.ease.softNeutral;
               }}
             />
           </div>

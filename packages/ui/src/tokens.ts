@@ -28,7 +28,8 @@ export const EASE = {
   slateMist: '#b6ced5',      // powder blue — secondary category encoding
   keylimeWash: '#e1f4df',    // lightest mint per Refero spec — surfaces
   mintKiss: '#cfe7d3',       // medium mint — middle-emphasis surface
-  mintWhisper: '#f4faf3',    // near-white with a green tinge — input field bg
+  mintWhisper: '#f4faf3',    // near-white with a green tinge — focus tint
+  softNeutral: '#f5f4f1',    // warm off-white, no green tint — empty input bg
   // Neutrals
   inkText: '#222222',
   darkCharcoal: '#333333',
