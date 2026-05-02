@@ -73,7 +73,10 @@ export default async function ClientDetailPage({ params }: PageProps) {
     .join('');
 
   return (
-    <AppShell user={{ name: user.name, email: user.email }} activeHref="/clients">
+    <AppShell
+      user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
+      activeHref="/clients"
+    >
       <div style={{ padding: '32px 36px 60px', maxWidth: 1200 }}>
         {/* Breadcrumb */}
         <Link

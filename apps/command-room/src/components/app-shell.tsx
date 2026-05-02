@@ -13,7 +13,7 @@ type NavItem = {
 };
 
 type AppShellProps = {
-  user: { name: string | null; email: string };
+  user: { name: string | null; email: string; avatarUrl?: string | null };
   activeHref: string;
   children: React.ReactNode;
 };
@@ -121,18 +121,36 @@ export function AppShell({ user, activeHref, children }: AppShellProps) {
               width: 32,
               height: 32,
               borderRadius: '50%',
-              background: `radial-gradient(circle at 30% 30%, ${t.rustSoft}, ${t.bgElev})`,
+              overflow: 'hidden',
               border: `1px solid ${t.border}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
+              // Clerk profile image when available, otherwise the
+              // editorial gradient + initials we always had.
+              background: user.avatarUrl
+                ? t.bgElev
+                : `radial-gradient(circle at 30% 30%, ${t.rustSoft}, ${t.bgElev})`,
               fontFamily: t.serif,
               fontSize: 13,
               color: t.rustInk,
-              flexShrink: 0,
             }}
           >
-            {initials}
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.name ?? user.email}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+            ) : (
+              initials
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
             <div

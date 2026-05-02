@@ -39,6 +39,9 @@ export type DocketUser = {
   name: string | null;
   /** Schema-enforced enum — see @docket/shared USER_ROLES. */
   role: Role;
+  /** Profile picture URL (from Clerk imageUrl, captured on sign-in).
+   *  Surfaces in the AppShell sidebar avatar. NULL → initials. */
+  avatarUrl: string | null;
   /** Tenant display name, joined from tenants table for UI headers. */
   tenantName: string;
   /** Tenant slug — useful for URL prefixes / per-tenant redirects later. */
@@ -91,6 +94,7 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
       email: schema.users.email,
       name: schema.users.name,
       role: schema.users.role,
+      avatarUrl: schema.users.avatarUrl,
       tenantName: schema.tenants.name,
       tenantSlug: schema.tenants.slug,
     })
@@ -100,6 +104,23 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
     .limit(1);
 
   if (byClerkId[0]) {
+    // Lazy backfill: users who signed in before Day 4 (when imageUrl
+    // capture was added to the email-claim + auto-provision paths)
+    // have avatar_url = NULL. Pull it from Clerk on the next read,
+    // one-shot UPDATE, then never again. Cost: one Clerk currentUser()
+    // call per user per "ever" — once it's set, this branch is skipped
+    // forever.
+    if (!byClerkId[0].avatarUrl) {
+      const clerkUser = await currentUser();
+      const imageUrl = clerkUser?.imageUrl;
+      if (imageUrl) {
+        await db
+          .update(schema.users)
+          .set({ avatarUrl: imageUrl })
+          .where(eq(schema.users.id, byClerkId[0].id));
+        byClerkId[0].avatarUrl = imageUrl;
+      }
+    }
     return byClerkId[0] satisfies DocketUser;
   }
 
@@ -141,6 +162,7 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
       email: schema.users.email,
       name: schema.users.name,
       role: schema.users.role,
+      avatarUrl: schema.users.avatarUrl,
       tenantName: schema.tenants.name,
       tenantSlug: schema.tenants.slug,
     })
@@ -166,6 +188,7 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
         email: schema.users.email,
         name: schema.users.name,
         role: schema.users.role,
+        avatarUrl: schema.users.avatarUrl,
       });
 
     if (!updated) return null;
@@ -230,6 +253,7 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
         email: schema.users.email,
         name: schema.users.name,
         role: schema.users.role,
+        avatarUrl: schema.users.avatarUrl,
       });
 
     if (!created) {
@@ -272,6 +296,7 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
         email: schema.users.email,
         name: schema.users.name,
         role: schema.users.role,
+        avatarUrl: schema.users.avatarUrl,
         tenantName: schema.tenants.name,
         tenantSlug: schema.tenants.slug,
       })
