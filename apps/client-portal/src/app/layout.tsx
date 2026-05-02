@@ -16,7 +16,17 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      // Route auth flows to our own pages, NOT Clerk's hosted
+      // accounts.dev domain. Without these, a session timeout sends
+      // the user to https://lucky-crane-50.accounts.dev/sign-in?...
+      // which is the dev account host — confusing for clients.
+      signInUrl="/login"
+      signUpUrl="/login"
+      signInFallbackRedirectUrl="/welcome"
+      signUpFallbackRedirectUrl="/welcome"
+      afterSignOutUrl="/login"
+    >
       <html lang="en">
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />

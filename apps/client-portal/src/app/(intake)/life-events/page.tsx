@@ -13,14 +13,14 @@ import {
   IconBeach,
   IconBriefcase,
   IconGift,
-  IconKey,
   IconMinus,
-  IconRings,
-  IconStroller,
   IntakeBackButton,
   IntakeHeader,
   Row,
   Screen,
+  SolarHomePurchase,
+  SolarMarriage,
+  SolarNewChild,
   Stack,
   ToggleCard,
 } from '@docket/ui';
@@ -66,9 +66,9 @@ export default function LifeEventsPage() {
   };
 
   const items: Array<{ k: ItemKey; icon: React.ReactNode; label: string }> = [
-    { k: 'marriage', icon: <IconRings />, label: 'Got married or divorced' },
-    { k: 'baby', icon: <IconStroller />, label: 'Had a baby or adopted' },
-    { k: 'home', icon: <IconKey />, label: 'Bought or sold a home' },
+    { k: 'marriage', icon: <SolarMarriage size={28} />, label: 'Got married or divorced' },
+    { k: 'baby', icon: <SolarNewChild size={28} />, label: 'Had a baby or adopted' },
+    { k: 'home', icon: <SolarHomePurchase size={28} />, label: 'Bought or sold a home' },
     { k: 'business', icon: <IconBriefcase />, label: 'Started a business' },
     { k: 'inherit', icon: <IconGift />, label: 'Received an inheritance' },
     { k: 'retire', icon: <IconBeach />, label: 'Retired' },

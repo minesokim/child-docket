@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 // Public routes a client can hit without an active session:
 //   - /login + /otp     → the auth flow itself
@@ -13,9 +14,18 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
+  if (isPublicRoute(request)) return;
+
+  const { userId } = await auth();
+  if (userId) return;
+
+  // No session: send to OUR /login page, not Clerk's hosted
+  // accounts.dev sign-in. auth.protect() would redirect to the
+  // hosted page; we want clients to stay on docket-portal.vercel.app.
+  const url = request.nextUrl.clone();
+  url.pathname = '/login';
+  url.searchParams.set('redirect_url', request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.redirect(url);
 });
 
 export const config = {

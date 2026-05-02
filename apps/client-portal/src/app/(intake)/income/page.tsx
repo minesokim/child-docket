@@ -10,14 +10,16 @@ import {
   Body,
   Button,
   buildTheme,
-  Card,
   H1,
-  IncomeIcon,
-  type IncomeIconKind,
   IntakeBackButton,
   IntakeHeader,
   Row,
   Screen,
+  SolarW2Wages,
+  SolarSelfEmploymentIncome,
+  SolarRentalProperty,
+  SolarDividends,
+  SolarRetirement,
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
@@ -25,16 +27,21 @@ import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IncomeType } from '@docket/shared';
 
-// Local alias matches the existing UI catalog. Kept for parity with the
-// other places in this file that use IncomeId.
 type IncomeId = IncomeType;
 
-const OPTIONS: Array<{ id: IncomeId; name: string; sub: string; icon: IncomeIconKind }> = [
-  { id: 'w2', name: 'W-2 Employee', sub: 'Regular paycheck from an employer', icon: 'w2' },
-  { id: 'self', name: 'Self-Employed / 1099', sub: 'Freelance, gig work, contracting', icon: 'self' },
-  { id: 'rental', name: 'Rental Property', sub: 'Income from property you own', icon: 'rental' },
-  { id: 'invest', name: 'Investments / Crypto', sub: 'Stocks, crypto, capital gains', icon: 'invest' },
-  { id: 'retire', name: 'Retirement / Social Security', sub: 'Pension, IRA distributions, SSA', icon: 'retire' },
+type Option = {
+  id: IncomeId;
+  name: string;
+  sub: string;
+  Icon: React.ComponentType<{ size?: number }>;
+};
+
+const OPTIONS: Option[] = [
+  { id: 'w2', name: 'W-2 Employee', sub: 'Regular paycheck from an employer', Icon: SolarW2Wages },
+  { id: 'self', name: 'Self-Employed / 1099', sub: 'Freelance, gig work, contracting', Icon: SolarSelfEmploymentIncome },
+  { id: 'rental', name: 'Rental Property', sub: 'Income from property you own', Icon: SolarRentalProperty },
+  { id: 'invest', name: 'Investments / Crypto', sub: 'Stocks, crypto, capital gains', Icon: SolarDividends },
+  { id: 'retire', name: 'Retirement / Social Security', sub: 'Pension, IRA distributions, SSA', Icon: SolarRetirement },
 ];
 
 export default function IncomePage() {
@@ -96,33 +103,45 @@ export default function IncomePage() {
         <Stack gap={10} style={{ padding: '20px 24px 16px', flex: 1 }}>
           {OPTIONS.map((o) => {
             const on = sel.includes(o.id);
+            const Icon = o.Icon;
             return (
-              <Card
+              <div
                 key={o.id}
-                t={t}
                 onClick={() => toggle(o.id)}
-                selected={on}
-                tinted={on}
-                style={{ padding: '14px 16px' }}
+                style={{
+                  background: on ? t.ease.mintKiss : '#fffefc',
+                  borderRadius: t.radius,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  boxShadow: on
+                    ? '0 4px 16px rgba(15, 62, 23, 0.08)'
+                    : '0 1px 4px rgba(15, 62, 23, 0.04)',
+                  transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
+                }}
               >
                 <Row gap={14} align="center">
                   <div
                     style={{
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       borderRadius: t.tone === 'magazine' ? 4 : 10,
-                      background: on ? t.ease.forestDark : t.ease.keylimeWash,
-                      color: on ? '#fff' : t.ease.forestDark,
+                      // White well in both states — Solar icons render
+                      // their own duotone palette inside.
+                      background: '#fffefc',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
+                      boxShadow: on
+                        ? '0 1px 6px rgba(15, 62, 23, 0.10)'
+                        : '0 1px 3px rgba(15, 62, 23, 0.04)',
+                      transition: 'box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
                     }}
                   >
-                    <IncomeIcon kind={o.icon} />
+                    <Icon size={28} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, marginBottom: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, marginBottom: 2, letterSpacing: -0.1 }}>
                       {o.name}
                     </div>
                     <div style={{ fontSize: 12, color: t.muted, lineHeight: 1.4 }}>{o.sub}</div>
@@ -132,11 +151,12 @@ export default function IncomePage() {
                       width: 22,
                       height: 22,
                       borderRadius: 5,
-                      background: on ? t.ease.forestDark : t.ease.keylimeWash,
+                      background: on ? t.ease.forestMid : t.ease.softNeutral,
                       flexShrink: 0,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      transition: 'background 140ms',
                     }}
                   >
                     {on && (
@@ -152,7 +172,7 @@ export default function IncomePage() {
                     )}
                   </div>
                 </Row>
-              </Card>
+              </div>
             );
           })}
 
