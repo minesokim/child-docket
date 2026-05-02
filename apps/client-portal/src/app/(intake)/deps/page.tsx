@@ -43,14 +43,14 @@ function StepperButton({
       disabled={disabled}
       aria-label={ariaLabel}
       style={{
-        width: 52,
-        height: 52,
+        width: 48,
+        height: 48,
         borderRadius: '50%',
         border: 'none',
-        background: disabled ? 'transparent' : t.ease.keylimeWash,
+        background: disabled ? 'transparent' : '#fffefc',
         color: disabled ? t.borderSoft : t.ease.forestDark,
         fontFamily: t.serif,
-        fontSize: 26,
+        fontSize: 24,
         fontWeight: 400,
         lineHeight: 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -63,16 +63,16 @@ function StepperButton({
         padding: 0,
       }}
       onMouseDown={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.mintGlaze;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.keylimeWash;
       }}
       onMouseUp={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.keylimeWash;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = '#fffefc';
       }}
       onTouchStart={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.mintGlaze;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.keylimeWash;
       }}
       onTouchEnd={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = t.ease.keylimeWash;
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = '#fffefc';
       }}
     >
       {symbol}
@@ -133,19 +133,29 @@ export default function DepsCountPage() {
           </Stack>
         </div>
 
-        <Stack gap={20} style={{ padding: '32px 24px 16px', flex: 1 }}>
+        {/* Stepper card. At count=0 the surface is neutral (no
+            commitment yet). When count>0 it shifts to mintWhisper
+            (super-subtle green, matches the filled-input pattern).
+            Tightened dimensions: max-width caps the box so it doesn't
+            stretch full-bleed on a phone. Smaller buttons + tighter
+            gap reduce the empty space inside. */}
+        <Stack gap={20} style={{ padding: '24px 24px 16px', flex: 1 }}>
           <div
             style={{
-              background: t.ease.keylimeWash,
+              background: count > 0 ? t.ease.mintWhisper : t.ease.softNeutral,
               borderRadius: t.radius,
-              padding: '36px 24px 30px',
+              padding: '28px 20px 24px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 14,
+              gap: 10,
+              maxWidth: 280,
+              marginInline: 'auto',
+              width: '100%',
+              transition: 'background 200ms cubic-bezier(.2,.8,.2,1)',
             }}
           >
-            <Row gap={32} align="center" justify="center">
+            <Row gap={20} align="center" justify="center">
               <StepperButton
                 t={t}
                 symbol="−"
@@ -156,12 +166,12 @@ export default function DepsCountPage() {
               <div
                 style={{
                   fontFamily: t.serif,
-                  fontSize: 72,
-                  fontWeight: 400,
+                  fontSize: 64,
+                  fontWeight: 300,
                   color: t.ink,
-                  letterSpacing: -2.5,
+                  letterSpacing: -2,
                   lineHeight: 1,
-                  minWidth: 60,
+                  minWidth: 48,
                   textAlign: 'center',
                   fontFeatureSettings: '"tnum" 1, "lnum" 1',
                 }}
@@ -178,11 +188,10 @@ export default function DepsCountPage() {
             </Row>
             <div
               style={{
-                fontFamily: t.serif,
-                fontStyle: 'italic',
-                fontSize: 14,
+                fontFamily: t.sans,
+                fontSize: 13,
                 color: t.muted,
-                letterSpacing: 0.1,
+                letterSpacing: -0.39,
               }}
             >
               {count === 1 ? 'dependent' : 'dependents'}
