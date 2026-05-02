@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 12/13 — Documents upload. 4 visual phases driven by local state.
+// Intake step 12/13 - Documents upload. 4 visual phases driven by local state.
 // Phases: empty → scanning → (parsed | retake) → uploaded.
 // 5/15 v0: phases mocked on a timer so the demo flow is identical to live.
 // Real Haiku 4.5 vision call swaps in via docs/DOCS-CAPTURE-PIPELINE.md.
@@ -564,7 +564,7 @@ function DocCardRetake({ t, onRetry }: { t: Theme; onRetry: () => void }) {
               }}
             />
             <div style={{ fontSize: 12.5, color: '#6E2B0C', lineHeight: 1.45 }}>
-              Bright, even lighting — avoid glare or shadows across the page
+              Bright, even lighting - avoid glare or shadows across the page
             </div>
           </Row>
         </Stack>

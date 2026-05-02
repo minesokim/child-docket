@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 1A — Service path selection.
+// Intake step 1A - Service path selection.
 // 1-to-1 port of ScreenServicePath from the JSX prototype.
 
 import {
@@ -49,7 +49,7 @@ export default function ServicesPathPage() {
     path === 'other'
       ? currentOther
         ? currentOther.fee
-        : 'Pick a service below'
+        : 'Pick a service above'
       : currentPath.fee;
 
   const canContinue = path !== 'other' || !!otherSub;
@@ -84,7 +84,7 @@ export default function ServicesPathPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              Not sure? Pick the closest match — we can adjust once I see your documents.
+              Not sure? Pick the closest match - we can adjust once I see your documents.
             </AntonioNote>
           </Stack>
         </div>
@@ -99,7 +99,7 @@ export default function ServicesPathPage() {
               style={{
                 // Selected: green-tinted entire card (highlighted box).
                 // Unselected: white. Icon container stays WHITE in both
-                // states — only the surrounding card surface flips.
+                // states - only the surrounding card surface flips.
                 // Selection reads as "this row is the choice" via the
                 // green wash on the whole row.
                 background: on ? t.ease.mintKiss : '#fffefc',
@@ -112,26 +112,17 @@ export default function ServicesPathPage() {
                 transition: 'all 200ms cubic-bezier(.2,.8,.2,1)',
               }}
             >
-              <Row gap={14} align="flex-start">
+              <Row gap={16} align="center">
                 <div
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    background: '#fffefc',
+                    flexShrink: 0,
                     color: t.ease.forestDark,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
-                    boxShadow: on
-                      ? '0 1px 6px rgba(15, 62, 23, 0.10)'
-                      : '0 1px 3px rgba(15, 62, 23, 0.04)',
-                    transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
                   }}
                 >
-                  <ServiceIcon t={t} kind={p.icon} />
+                  <ServiceIcon t={t} kind={p.icon} size={52} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Row justify="space-between" align="baseline" gap={10}>
@@ -277,7 +268,7 @@ export default function ServicesPathPage() {
           })}
 
           {/* Starting estimate sits inline at the bottom of the
-              scrollable content — not sticky. Scrolls with the cards
+              scrollable content - not sticky. Scrolls with the cards
               above so it doesn't compete with the AskAntonioBar +
               Continue button below. */}
           <div
@@ -330,7 +321,7 @@ export default function ServicesPathPage() {
               Back
             </Button>
             <Button t={t} onClick={handleNext} style={{ flex: 1 }} disabled={!canContinue}>
-              {path === 'other' ? 'Continue' : 'Next — add-ons'}
+              {path === 'other' ? 'Continue' : 'Next - add-ons'}
             </Button>
           </Row>
         </div>

@@ -1,10 +1,10 @@
 'use client';
 
-// Intake step 11/13 — Refund preference.
+// Intake step 11/13 - Refund preference.
 //
 // IRS discontinued paper refund checks in September 2025, so direct
 // deposit is the ONLY option for federal refunds. There's no real
-// choice to make here — the page is a bank-info form, not a picker.
+// choice to make here - the page is a bank-info form, not a picker.
 // Antonio's note acknowledges that fact + frames the "what if you
 // owe" case.
 
@@ -34,7 +34,7 @@ export default function RefundPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
 
-  // Bank routing + account are sensitive — encrypted at rest server-side.
+  // Bank routing + account are sensitive - encrypted at rest server-side.
   const [bankName, setBankName] = useIntakeField<string>('refund.bankName', '');
   const [routingNumber, setRoutingNumber] = useIntakeField<string>('refund.bankRouting', '');
   const [accountNumber, setAccountNumber] = useIntakeField<string>('refund.bankAccount', '');
@@ -80,7 +80,7 @@ export default function RefundPage() {
             <Stack gap={10}>
               <H1 t={t}>Where to send your refund</H1>
               <Body t={t} size={15}>
-                Federal refunds go by direct deposit only — the IRS retired paper checks in September 2025.
+                Federal refunds go by direct deposit only - the IRS retired paper checks in September 2025.
               </Body>
             </Stack>
             <AntonioNote t={t}>
@@ -89,7 +89,7 @@ export default function RefundPage() {
           </Stack>
         </div>
 
-        {/* Bank info — the actual form. No fake "preselected" tile, no
+        {/* Bank info - the actual form. No fake "preselected" tile, no
             redundant advisory. The heading carries the IRS context. */}
         <Stack gap={16} style={{ padding: '22px 24px 32px', flex: 1 }}>
           <div>

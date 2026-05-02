@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 7 (continued) — Rental property detail. MIGRATED to
+// Intake step 7 (continued) - Rental property detail. MIGRATED to
 // Postgres-backed state via useIntakeAnswers + useSetIntakeField.
 // First property only at v0; v1+ supports multiple.
 
@@ -120,7 +120,7 @@ export default function RentalDetailPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              Rental properties are one of the best tax advantages. Depreciation, repairs, insurance, mortgage interest — we&apos;ll capture everything. I&apos;ll also verify your depreciation schedule, since IRS Section 167 requires it.
+              Rental properties are one of the best tax advantages. Depreciation, repairs, insurance, mortgage interest - we&apos;ll capture everything. I&apos;ll also verify your depreciation schedule, since IRS Section 167 requires it.
             </AntonioNote>
           </Stack>
         </div>

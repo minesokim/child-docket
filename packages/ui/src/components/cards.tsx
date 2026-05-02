@@ -137,16 +137,16 @@ export function ToggleCard({
     >
       <div
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: iconWellBg,
+          // No box around the icon — let the icon's own duotone palette
+          // sit on the row. iconColor still applies to currentColor-driven
+          // legacy icons (IconHome, IconCar, etc.) for unselected
+          // contrast, but Solar Line Duotone icons use their own fixed
+          // colors and ignore it.
           color: iconColor,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          transition: 'background 160ms cubic-bezier(.2,.8,.2,1)',
         }}
       >
         {icon}

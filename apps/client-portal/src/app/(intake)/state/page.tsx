@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 3/13 — State & prior year. 1-to-1 port of ScreenStateAndPriorYear.
+// Intake step 3/13 - State & prior year. 1-to-1 port of ScreenStateAndPriorYear.
 
 import {
   AntonioNote,
@@ -70,7 +70,7 @@ export default function StatePage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              If you have a copy of last year&apos;s return, upload it in the documents step — it helps me catch things you might have missed.
+              If you have a copy of last year&apos;s return, upload it in the documents step - it helps me catch things you might have missed.
             </AntonioNote>
           </Stack>
         </div>

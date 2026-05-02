@@ -1,6 +1,6 @@
 'use client';
 
-// Returning portal — Profile tab. Account, refund tracking, signed documents,
+// Returning portal - Profile tab. Account, refund tracking, signed documents,
 // firm info, actions. 1-to-1 port of ScreenProfile.
 
 import {
@@ -254,12 +254,12 @@ export default function PortalProfilePage() {
           <div>
             <SectionEyebrow t={t}>Track your refund</SectionEyebrow>
             <Card t={t} style={{ padding: '4px 18px' }}>
-              <ExtLinkRow t={t} label="Federal refund" host="irs.gov/refunds — Where's My Refund" />
+              <ExtLinkRow t={t} label="Federal refund" host="irs.gov/refunds - Where's My Refund" />
               <div style={{ height: 1, background: t.borderSoft }} />
               <ExtLinkRow
                 t={t}
                 label="State refund"
-                host="ftb.ca.gov — California FTB Refund Tracker"
+                host="ftb.ca.gov - California FTB Refund Tracker"
               />
             </Card>
           </div>
@@ -309,7 +309,7 @@ export default function PortalProfilePage() {
                           letterSpacing: 0.8,
                         }}
                       >
-                        —
+                        -
                       </span>
                     ) : (
                       <button

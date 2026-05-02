@@ -6,7 +6,7 @@
 import { taxYearForDate } from '@docket/shared';
 
 /**
- * Tax year for the active intake — wraps the timezone-aware helper from
+ * Tax year for the active intake - wraps the timezone-aware helper from
  * @docket/shared with `now` and the Vazant default tenant timezone.
  * When multi-tenant lands, this takes a tenant id + reads its timezone
  * column.

@@ -13,7 +13,7 @@ function setDirection(direction: 'forward' | 'back' | 'jump') {
   try {
     window.sessionStorage.setItem(NAV_KEY, direction);
   } catch {
-    // sessionStorage unavailable in private browsing — animation stays at default
+    // sessionStorage unavailable in private browsing - animation stays at default
   }
 }
 

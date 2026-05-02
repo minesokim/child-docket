@@ -1,6 +1,6 @@
 'use client';
 
-// Portal state — session-backed form data for the intake flow.
+// Portal state - session-backed form data for the intake flow.
 //
 // v0: sessionStorage. Refreshing the page keeps progress; closing the tab clears it.
 // v1: server-backed via POST to /api/intake/[engagementId] on each step. The
@@ -25,7 +25,7 @@ function write<T>(key: string, value: T): void {
   try {
     window.sessionStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
-    // sessionStorage can throw in private browsing — silently fail.
+    // sessionStorage can throw in private browsing - silently fail.
   }
 }
 

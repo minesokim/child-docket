@@ -24,7 +24,7 @@ type ClerkError = {
 };
 
 // Pull the most descriptive available message out of a Clerk error.
-// Clerk's error shape varies by error type — sometimes errors[0], sometimes
+// Clerk's error shape varies by error type - sometimes errors[0], sometimes
 // top-level. Try every known location in order.
 function extractError(e: unknown): { code: string | undefined; message: string | undefined } {
   const err = e as ClerkError;
@@ -38,7 +38,7 @@ function extractError(e: unknown): { code: string | undefined; message: string |
   return { code, message };
 }
 
-// Most common countries in Antonio's market. Ordered by usage prior — US/CA top,
+// Most common countries in Antonio's market. Ordered by usage prior - US/CA top,
 // then Latino markets, then APAC. Full international list can land later.
 const COUNTRIES: Array<{ code: string; name: string; dial: string; flag: string }> = [
   { code: 'US', name: 'United States', dial: '+1', flag: '🇺🇸' },
@@ -88,7 +88,7 @@ function friendlyError(code: string | undefined, fallback: string | undefined): 
   // Fall back to message-content matching for codes I haven't enumerated.
   const m = (fallback ?? '').toLowerCase();
   if (m.includes('too many') || m.includes('rate limit') || m.includes('verification code requests')) {
-    return 'Too many verification code requests for this number. Wait 10–15 minutes, then try again — or use a different phone.';
+    return 'Too many verification code requests for this number. Wait 10–15 minutes, then try again - or use a different phone.';
   }
   if (m.includes('captcha')) {
     return 'Verification challenge could not load. Refresh the page and try again.';
@@ -113,7 +113,7 @@ function normalizeDigits(raw: string, country: Country): string {
 // Display value for the input field.
 function formatForCountry(digits: string, country: Country): string {
   if (country.code === 'US' || country.code === 'CA') return formatUS(digits);
-  // Most other countries — break into groups of 3 for readability.
+  // Most other countries - break into groups of 3 for readability.
   return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
 }
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
   const onSubmit = async () => {
     if (submitting) return;
     if (!signInLoaded || !signUpLoaded) {
-      setError('Auth still loading — try again in a sec');
+      setError('Auth still loading - try again in a sec');
       return;
     }
     if (!signIn || !signUp) {
@@ -181,7 +181,7 @@ export default function LoginPage() {
     } catch (e) {
       const { code, message } = extractError(e);
 
-      // Expected recoverable cases — quiet path, no scary console.error.
+      // Expected recoverable cases - quiet path, no scary console.error.
       // 'form_identifier_not_found' = new user, fall through to signUp
       // 'session_exists'           = already signed in, route to /welcome
       // 'verification_already_*'   = re-using a pending verification
@@ -192,7 +192,7 @@ export default function LoginPage() {
         code === 'verification_already_verified';
 
       if (!isRecoverable) {
-        // Real failure — log + surface to user
+        // Real failure - log + surface to user
         console.error('[login] signIn error', { code, message, raw: e });
       }
 
@@ -280,7 +280,7 @@ export default function LoginPage() {
         </h1>
 
         {/* Country picker + phone input row. Both surfaces stay white
-            (#fffefc) in every state — empty, filled, focused, blurred.
+            (#fffefc) in every state - empty, filled, focused, blurred.
             A soft drop shadow gives the field elevation so it reads
             against the cream page bg without needing a stroke or fill
             tint. Matches ease.health's white-card-with-shadow input
@@ -400,7 +400,7 @@ export default function LoginPage() {
         {/* Clerk CAPTCHA mount point. */}
         <div id="clerk-captcha" style={{ marginTop: 16 }} />
 
-        {/* Next button — forestDark fill, full pill, no stroke. */}
+        {/* Next button - forestDark fill, full pill, no stroke. */}
         <div style={{ marginTop: 28, width: '100%' }}>
           <button
             type="button"
@@ -454,7 +454,7 @@ function CountryPickerButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        // White surface, soft shadow — matches the phone input next to
+        // White surface, soft shadow - matches the phone input next to
         // it. Text color is muted so the country code reads as a quiet
         // selector, not the focal element. The phone input on the right
         // is what the user is here to fill.

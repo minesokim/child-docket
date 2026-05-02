@@ -8,7 +8,7 @@
 //   Wraps the read-modify-write in a transaction with FOR UPDATE on the
 //   intake_responses row. Concurrent saves to different paths serialize
 //   on the row lock, so the JSONB merge is safe. Without FOR UPDATE,
-//   T1 + T2 could each read {}, T1 writes {a:1}, T2 writes {b:2} —
+//   T1 + T2 could each read {}, T1 writes {a:1}, T2 writes {b:2} -
 //   T1's update would be lost.
 //
 // AUDIT TRAIL
@@ -19,7 +19,7 @@
 //   write without audit.
 //
 // RATE LIMIT
-//   Not applied here — saveIntakeField is hit on every keystroke
+//   Not applied here - saveIntakeField is hit on every keystroke
 //   debounce, which would always trip a per-minute limit. The
 //   debounce + Clerk session gating are the protection. Reveal +
 //   flush are the abuse-prone surfaces and ARE rate-limited.
@@ -70,14 +70,14 @@ export async function saveIntakeField(
 
   try {
     return await withTenant(asTenantId(authed.tenantId), async (db) => {
-      // 3. Resolve the tenant's DEK before the row read — keeps the
+      // 3. Resolve the tenant's DEK before the row read - keeps the
       // critical-section logic clean and avoids holding the row lock
       // across a (potentially) DEK-cache-miss DB read.
       const dek = sensitive
         ? await getTenantDek(db, asTenantId(authed.tenantId))
         : null;
 
-      // 4. Load current row WITH FOR UPDATE — locks it for the duration
+      // 4. Load current row WITH FOR UPDATE - locks it for the duration
       // of this transaction. Concurrent saveIntakeField calls to the
       // same intake row serialize through this lock, so the
       // read-modify-write below is safe.
@@ -96,14 +96,14 @@ export async function saveIntakeField(
       if (!existing) {
         return {
           ok: false,
-          error: 'Intake row not found — call getOrCreateIntakeAnswers first',
+          error: 'Intake row not found - call getOrCreateIntakeAnswers first',
           path,
         };
       }
 
       // 5. Compute the storage value. Sensitive paths get encrypted
       // with the tenant DEK; everything else stores plain. Mixed
-      // encrypted/plain in the same JSONB tree is fine — decryptTree()
+      // encrypted/plain in the same JSONB tree is fine - decryptTree()
       // handles both on read.
       const valueToStore =
         sensitive && dek ? encryptFieldForTenant(String(validatedValue), dek) : validatedValue;
@@ -120,11 +120,11 @@ export async function saveIntakeField(
         })
         .where(eq(schema.intakeResponses.id, existing.id));
 
-      // 7. Audit log. NOT best-effort — if the audit insert fails,
+      // 7. Audit log. NOT best-effort - if the audit insert fails,
       // the whole transaction rolls back. SOC 2 / IRS Pub 1345
       // requirement: every state-changing write leaves a tamper-
       // evident audit trail. The path is recorded but the VALUE is
-      // not — only the value's type — so the audit trail itself is
+      // not - only the value's type - so the audit trail itself is
       // not a PII surface.
       const latencyMs = Date.now() - startedAt;
       await db.insert(schema.actions).values({
@@ -152,6 +152,6 @@ export async function saveIntakeField(
     Sentry.captureException(error, {
       tags: { component: 'intake-write', path, sensitive: String(sensitive) },
     });
-    return { ok: false, error: 'Save failed — please try again', path };
+    return { ok: false, error: 'Save failed - please try again', path };
   }
 }

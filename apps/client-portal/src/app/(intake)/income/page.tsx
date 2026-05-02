@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 7/13 — Income sources. Multi-select. Conditional routing:
+// Intake step 7/13 - Income sources. Multi-select. Conditional routing:
 // "self" → /self-employment, else "rental" → /rental-detail, else /tax-questions.
 // 1-to-1 port of ScreenIncomeSources.
 
@@ -119,26 +119,16 @@ export default function IncomePage() {
                   transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
                 }}
               >
-                <Row gap={14} align="center">
+                <Row gap={16} align="center">
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: t.tone === 'magazine' ? 4 : 10,
-                      // White well in both states — Solar icons render
-                      // their own duotone palette inside.
-                      background: '#fffefc',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      boxShadow: on
-                        ? '0 1px 6px rgba(15, 62, 23, 0.10)'
-                        : '0 1px 3px rgba(15, 62, 23, 0.04)',
-                      transition: 'box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
                     }}
                   >
-                    <Icon size={28} />
+                    <Icon size={48} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 500, color: t.ink, marginBottom: 2, letterSpacing: -0.1 }}>

@@ -33,7 +33,7 @@ export default function Sign8879Page() {
 
   // No persona-name fallback. Real client signing the 8879 must have
   // their actual name (the form is legally tied to it). If fullName is
-  // somehow empty we show empty — better than rendering somebody else's
+  // somehow empty we show empty - better than rendering somebody else's
   // name on a federal tax document.
   const firstName = fullName.split(' ')[0] || 'there';
 
@@ -186,7 +186,7 @@ export default function Sign8879Page() {
                 marginTop: 10,
               }}
             >
-              I consent to allow my Electronic Return Originator (Antonio Vazquez, EA — P00456789)
+              I consent to allow my Electronic Return Originator (Antonio Vazquez, EA - P00456789)
               to send my return to the IRS, to receive the acknowledgement of acceptance or reason
               for rejection, and if necessary, to transmit the corrected return.
             </div>

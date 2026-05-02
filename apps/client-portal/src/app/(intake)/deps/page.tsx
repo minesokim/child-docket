@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 6/13 — Dependents count.
+// Intake step 6/13 - Dependents count.
 // Replaces the four-card discrete picker with a tasteful +/− counter.
 
 import {
@@ -128,7 +128,7 @@ export default function DepsCountPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              Dependents unlock credits like the Child Tax Credit ($2,000+ per child). If you&apos;re unsure someone qualifies, mention them — I&apos;ll check.
+              Dependents unlock credits like the Child Tax Credit ($2,000+ per child). If you&apos;re unsure someone qualifies, mention them - I&apos;ll check.
             </AntonioNote>
           </Stack>
         </div>

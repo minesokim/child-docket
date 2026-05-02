@@ -1,8 +1,8 @@
 'use client';
 
-// Intake step 5 — Spouse info (conditional, MFJ/MFS only).
+// Intake step 5 - Spouse info (conditional, MFJ/MFS only).
 // Migrated to Postgres-backed state. Spouse SSN is encrypted at rest
-// (same path as personal.ssn — see SENSITIVE_INTAKE_PATHS in @docket/shared).
+// (same path as personal.ssn - see SENSITIVE_INTAKE_PATHS in @docket/shared).
 
 import {
   AntonioNote,
@@ -26,7 +26,7 @@ import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { FilingStatus } from '@docket/shared';
 
-// DOB format helpers — shared with /personal. UI uses "MM / DD / YYYY",
+// DOB format helpers - shared with /personal. UI uses "MM / DD / YYYY",
 // storage uses ISO YYYY-MM-DD.
 function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);

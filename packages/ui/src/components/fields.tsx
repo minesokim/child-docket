@@ -16,15 +16,22 @@ export function FieldLabel({
   t,
   children,
   hint,
+  icon,
 }: {
   t: Theme;
   children: React.ReactNode;
   hint?: string;
+  /** Optional small icon rendered to the left of the label text.
+   *  Best at ~20px square — Solar Line Duotone icons fit naturally. */
+  icon?: React.ReactNode;
 }) {
   return (
     <Row justify="space-between" align="baseline" style={{ marginBottom: 6 }}>
       <span
         style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
           fontFamily: t.sans,
           fontSize: 12,
           color: t.muted,
@@ -32,6 +39,9 @@ export function FieldLabel({
           letterSpacing: 0,
         }}
       >
+        {icon && (
+          <span style={{ display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
+        )}
         {children}
       </span>
       {hint && (

@@ -22,7 +22,7 @@ export default async function IntakeLayout({
   const bundle = await getOrCreateIntakeAnswers();
 
   // Defensive: if Vazant tenant isn't seeded or auth is missing, render
-  // with empty answers — pages still work via their default values, and
+  // with empty answers - pages still work via their default values, and
   // the user gets bounced to /login by the route handlers downstream.
   const initialAnswers = bundle?.answers ?? {};
 

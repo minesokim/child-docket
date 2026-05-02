@@ -1,6 +1,6 @@
 'use client';
 
-// Returning portal — Home tab. Hero status, balance, sign 8879, appointment,
+// Returning portal - Home tab. Hero status, balance, sign 8879, appointment,
 // progress timeline, Antonio's message. 1-to-1 port of ScreenHome.
 
 import {
@@ -48,7 +48,7 @@ export default function PortalHomePage() {
   // gets persisted under their tenant DEK.
   const onPay = () => void setDepositPaid(true);
   const onSign = () => router.push('/portal/sign-8879');
-  void setSigned8879; // intentionally unused locally — sign action lives in /portal/sign-8879
+  void setSigned8879; // intentionally unused locally - sign action lives in /portal/sign-8879
 
   return (
     <>
@@ -350,7 +350,7 @@ export default function PortalHomePage() {
                 lineHeight: 1.55,
               }}
             >
-              Hi {firstName} — your return looks good. Refund estimate is in line with last year.
+              Hi {firstName} - your return looks good. Refund estimate is in line with last year.
               Once you pay the balance, I&apos;ll send the 8879 for your signature and file the
               same day. Any questions, text me.
             </div>
@@ -439,7 +439,7 @@ function SignRow({
               fontWeight: 500,
             }}
           >
-            {signed8879 ? 'Form 8879 — signed' : 'Sign Form 8879'}
+            {signed8879 ? 'Form 8879 - signed' : 'Sign Form 8879'}
           </div>
           <div style={{ fontSize: 12, color: t.muted, marginTop: 2 }}>
             {signed8879

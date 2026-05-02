@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 8/13 — Tax questions. 7 multi-select yes/no toggles.
+// Intake step 8/13 - Tax questions. 7 multi-select yes/no toggles.
 // 1-to-1 port of ScreenTaxQuestions.
 
 import {
@@ -69,45 +69,45 @@ export default function TaxQuestionsPage() {
   }> = [
     {
       k: 'crypto',
-      icon: <SolarCrypto size={28} />,
+      icon: <SolarCrypto size={44} />,
       label: 'Did you transact in digital assets?',
-      sub: 'Crypto, NFTs, stablecoins — even small airdrops count',
+      sub: 'Crypto, NFTs, stablecoins - even small airdrops count',
     },
     {
       k: 'estimated',
-      icon: <IconReceipt />,
+      icon: <IconReceipt size={36} />,
       label: 'Did you make estimated tax payments?',
       sub: 'Quarterly payments to the IRS',
     },
     {
       k: 'healthAll',
-      icon: <SolarHealthInsurance size={28} />,
+      icon: <SolarHealthInsurance size={44} />,
       label: 'Did you have health insurance all year?',
       sub: 'Through employer, marketplace, or Medicare',
     },
     {
       k: 'retirement',
-      icon: <SolarRetirement size={28} />,
+      icon: <SolarRetirement size={44} />,
       label: 'Did you contribute to an IRA or HSA?',
       sub: 'Traditional IRA, Roth IRA, or Health Savings Account',
     },
     {
       k: 'foreign',
-      icon: <SolarForeignAccounts size={28} />,
+      icon: <SolarForeignAccounts size={44} />,
       label: 'Do you have foreign bank accounts or assets over $10,000?',
-      sub: 'At any point in 2025 — triggers FBAR reporting',
+      sub: 'At any point in 2025 - triggers FBAR reporting',
     },
     {
       k: 'overtime',
-      icon: <IconClock />,
+      icon: <IconClock size={36} />,
       label: 'Did you earn overtime pay?',
-      sub: 'New 2025 deduction — triggers paystub request',
+      sub: 'New 2025 deduction - triggers paystub request',
     },
     {
       k: 'tips',
-      icon: <IconTip />,
+      icon: <IconTip size={36} />,
       label: 'Did you earn tips at work?',
-      sub: 'New 2025 deduction — triggers tip summary request',
+      sub: 'New 2025 deduction - triggers tip summary request',
     },
   ];
 
@@ -136,7 +136,7 @@ export default function TaxQuestionsPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              The digital assets question is on the front page of the 1040 now. The IRS is watching this closely. Foreign accounts and crypto are audit magnets — better to disclose than hide.
+              The digital assets question is on the front page of the 1040 now. The IRS is watching this closely. Foreign accounts and crypto are audit magnets - better to disclose than hide.
             </AntonioNote>
           </Stack>
         </div>

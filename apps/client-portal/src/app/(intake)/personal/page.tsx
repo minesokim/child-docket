@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 2 — Personal info. MIGRATED to Postgres-backed state via
+// Intake step 2 - Personal info. MIGRATED to Postgres-backed state via
 // useIntakeField. Each field maps to a path on IntakeState.personal.
 //
 // Storage notes:
@@ -34,7 +34,7 @@ import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { formatStateCode, formatZip } from '@docket/shared';
 
 // ────────────────────────────────────────────────────────────────
-// Format helpers — display vs storage
+// Format helpers - display vs storage
 // ────────────────────────────────────────────────────────────────
 
 /** "MM / DD / YYYY" → "YYYY-MM-DD". Returns empty when incomplete. */
@@ -52,7 +52,7 @@ function dobIsoToDisplay(iso: string): string {
   return `${m[2]} / ${m[3]} / ${m[1]}`;
 }
 
-/** Display formatter while typing — adds slashes/spaces as digits arrive. */
+/** Display formatter while typing - adds slashes/spaces as digits arrive. */
 function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
@@ -71,7 +71,7 @@ export default function PersonalPage() {
   // Each field is its own server-backed atom. Optimistic locally; sensitive
   // fields (ssn) get encrypted server-side before hitting JSONB.
   // fullName + dateOfBirth + email come pre-filled from /quick-start.
-  // Phone is intentionally NOT collected here — Clerk has it from OTP login.
+  // Phone is intentionally NOT collected here - Clerk has it from OTP login.
   const [fullName, setFullName] = useIntakeField<string>('personal.fullName', '');
   const [dobIso, setDobIso] = useIntakeField<string>('personal.dateOfBirth', '');
   const [ssn, setSsn] = useIntakeField<string>('personal.ssn', '');
@@ -91,7 +91,7 @@ export default function PersonalPage() {
     setDobDisplay(shaped);
     const iso = dobDisplayToIso(shaped);
     if (iso) {
-      // Only persist when complete — server's Zod will reject partial.
+      // Only persist when complete - server's Zod will reject partial.
       void setDobIso(iso);
     }
   };

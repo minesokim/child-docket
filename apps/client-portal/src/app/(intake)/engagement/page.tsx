@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 13/13 (legal A) — Engagement letter. Read + checkbox + tap-to-sign.
+// Intake step 13/13 (legal A) - Engagement letter. Read + checkbox + tap-to-sign.
 // 1-to-1 port of ScreenEngagement.
 
 import {
@@ -68,7 +68,7 @@ export default function EngagementPage() {
         </div>
 
         <Stack gap={16} style={{ padding: '20px 24px 16px', flex: 1 }}>
-          <LegalDoc t={t} title="Engagement Letter — 2025 Tax Year" paras={PARAS} />
+          <LegalDoc t={t} title="Engagement Letter - 2025 Tax Year" paras={PARAS} />
 
           <Row gap={10} align="flex-start">
             <div

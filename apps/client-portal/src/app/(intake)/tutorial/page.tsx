@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 1.5 — Tutorial overlay shown after Welcome's "Let's get started",
+// Intake step 1.5 - Tutorial overlay shown after Welcome's "Let's get started",
 // before the first intake question. 3 sequential cards over a blurred mock
 // filing screen. 1-to-1 port of ScreenTutorial / TutorialOverlay.
 
@@ -30,7 +30,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
       style={{
         marginTop: 14,
         padding: '14px 14px 16px',
-        // Neutral wash — the demo box is a sandbox, not the page
+        // Neutral wash - the demo box is a sandbox, not the page
         // surface. softNeutral keeps it visually distinct from the
         // page bg without competing for "this is selected" energy.
         background: t.ease.softNeutral,
@@ -46,7 +46,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
           marginBottom: 10,
         }}
       >
-        TRY IT — TAP ONE
+        TRY IT - TAP ONE
       </div>
       <Stack gap={8}>
         {options.map((o) => {
@@ -238,7 +238,7 @@ function TutorialCard({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        // Sans for the step number — Fraunces italic "1" reads as a
+        // Sans for the step number - Fraunces italic "1" reads as a
         // capital I on small caps. Sans + tabular nums removes the
         // ambiguity and lets larger steps share visual weight.
         fontFamily: t.sans,

@@ -14,7 +14,7 @@
 //   - Local state updates are SYNCHRONOUS on every keystroke. No await.
 //   - Server saves are DEBOUNCED (400ms after typing stops, per path).
 //     Typing "David" is one server request, not five.
-//   - We do NOT replace local state with the server response — typing
+//   - We do NOT replace local state with the server response - typing
 //     never gets clobbered by a stale-response race. The server is
 //     validating + encrypting + writing; we trust it to do so reliably,
 //     and surface errors via console + Sentry rather than reverting
@@ -42,7 +42,7 @@ type IntakeContextValue = {
 
 const IntakeContext = createContext<IntakeContextValue | null>(null);
 
-// Debounce window per path. 400ms is the sweet spot — feels instant in
+// Debounce window per path. 400ms is the sweet spot - feels instant in
 // the UI but coalesces rapid typing into one server round-trip.
 const SAVE_DEBOUNCE_MS = 400;
 
@@ -68,23 +68,23 @@ export function IntakeProvider({
   // Flush every pending debounced write to the server. Used by THREE
   // triggers (registered in the effect below):
   //
-  //   1. React unmount  — user navigates AWAY from the (intake) layout
+  //   1. React unmount  - user navigates AWAY from the (intake) layout
   //      via Next.js client-side nav. The cleanup runs synchronously
   //      and we have no reliable way to await server actions, so we
   //      use sendBeacon for guaranteed delivery during nav teardown.
   //
-  //   2. beforeunload   — user closes the tab / hard refreshes / closes
+  //   2. beforeunload   - user closes the tab / hard refreshes / closes
   //      the browser. Browsers cancel pending fetches but sendBeacon is
   //      explicitly carved out to survive unload.
   //
-  //   3. visibilitychange (hidden) — mobile-specific. iOS Safari often
+  //   3. visibilitychange (hidden) - mobile-specific. iOS Safari often
   //      doesn't fire beforeunload at all; the user navigating to home
   //      screen or switching apps fires visibilitychange instead. This
   //      catches the data-loss case the other two miss.
   //
   // The flush hits /api/intake/flush which runs each pending write
   // through the same saveIntakeField pipeline (auth + validation +
-  // per-tenant encryption + audit log). Failures land in Sentry — the
+  // per-tenant encryption + audit log). Failures land in Sentry - the
   // tab is closing so a toast wouldn't help anyone.
   const flushPending = useCallback(() => {
     const pending = pendingRef.current;
@@ -100,7 +100,7 @@ export function IntakeProvider({
     const url = '/api/intake/flush';
     const payload = JSON.stringify({ writes });
 
-    // Prefer sendBeacon — explicitly designed for unload-time delivery,
+    // Prefer sendBeacon - explicitly designed for unload-time delivery,
     // browser-managed queue, no response handling needed.
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
       try {
@@ -113,7 +113,7 @@ export function IntakeProvider({
           return;
         }
       } catch {
-        // sendBeacon failed (e.g., payload too large) — fall through to
+        // sendBeacon failed (e.g., payload too large) - fall through to
         // keepalive fetch.
       }
     }
@@ -154,7 +154,7 @@ export function IntakeProvider({
   }, [flushPending]);
 
   const setField = useCallback<SetFieldFn>((path, value) => {
-    // 1. Synchronous local update — UI feels instant.
+    // 1. Synchronous local update - UI feels instant.
     setAnswers((prev) => setAtPath(prev, path, value));
 
     // 2. Debounce the server save. If the user is still typing, we
@@ -179,7 +179,7 @@ export function IntakeProvider({
             error: result.error,
           });
         }
-        // We DON'T replace local state with result.answers here —
+        // We DON'T replace local state with result.answers here -
         // doing so causes typing-clobber races where a stale response
         // overwrites whatever the user has typed since the save fired.
         // Server is canonical for storage; React state is canonical for
@@ -212,7 +212,7 @@ function useIntakeContext(): IntakeContextValue {
   return ctx;
 }
 
-/** Get the full IntakeState. Use sparingly — most components want a single field. */
+/** Get the full IntakeState. Use sparingly - most components want a single field. */
 export function useIntakeAnswers(): IntakeState {
   return useIntakeContext().answers;
 }
@@ -233,7 +233,7 @@ export function useSetIntakeField(): SetFieldFn {
  *   const [value, setValue] = useIntakeField<string>('personal.firstName', '');
  *   <input onChange={(e) => setValue(e.target.value)} value={value} />
  *
- * setValue is synchronous — local state updates instantly, server save
+ * setValue is synchronous - local state updates instantly, server save
  * fires after typing stops. No await needed; errors are logged.
  */
 export function useIntakeField<T>(

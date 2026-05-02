@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 13/13 (legal B) — IRS §7216 separate consent.
+// Intake step 13/13 (legal B) - IRS §7216 separate consent.
 // 1-to-1 port of ScreenConsent7216.
 
 import {
@@ -82,7 +82,7 @@ export default function ConsentPage() {
         </div>
 
         <Stack gap={16} style={{ padding: '20px 24px 16px', flex: 1 }}>
-          <LegalDoc t={t} title="§7216 Consent — Use of Tax Information" paras={PARAS} />
+          <LegalDoc t={t} title="§7216 Consent - Use of Tax Information" paras={PARAS} />
 
           <Row gap={10} align="flex-start">
             <div

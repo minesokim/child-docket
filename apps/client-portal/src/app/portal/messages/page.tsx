@@ -1,6 +1,6 @@
 'use client';
 
-// Returning portal — Messages tab. Chat thread w/ Antonio + system "answer"
+// Returning portal - Messages tab. Chat thread w/ Antonio + system "answer"
 // cards (the AI auto-responder for factual questions). 1-to-1 port of
 // ScreenMessages.
 
@@ -206,7 +206,7 @@ export default function PortalMessagesPage() {
         </div>
 
         <Bubble t={t} from="them" time="10:24 AM">
-          Hey Maria — I&apos;m finishing up your return. Could you send a photo of your 1099-K from
+          Hey Maria - I&apos;m finishing up your return. Could you send a photo of your 1099-K from
           Stripe when you get a moment?
         </Bubble>
 
@@ -217,7 +217,7 @@ export default function PortalMessagesPage() {
         </Bubble>
 
         <Bubble t={t} from="them" time="11:08 AM">
-          Got it, thanks. Already reading cleanly — I&apos;ll flag if anything else comes up.
+          Got it, thanks. Already reading cleanly - I&apos;ll flag if anything else comes up.
         </Bubble>
 
         <Bubble t={t} from="me" time="4:31 PM">

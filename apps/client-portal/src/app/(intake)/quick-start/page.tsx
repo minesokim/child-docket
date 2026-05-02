@@ -1,13 +1,13 @@
 'use client';
 
-// Quick-start — sequential 3-step onboarding right after Welcome.
+// Quick-start - sequential 3-step onboarding right after Welcome.
 //
 // Modern SaaS onboarding feel (Linear / Notion). One question per
 // "slide": name → date of birth → email. Each slide fades + slides up
 // from below. Press Enter or tap Continue to advance. Saves to the
 // IntakeState as you type, so /personal later auto-populates.
 //
-// Phone is intentionally NOT collected here — Clerk already has it from
+// Phone is intentionally NOT collected here - Clerk already has it from
 // the OTP login.
 
 import { Body, Button, buildTheme, Screen, TextField } from '@docket/ui';
@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 
-// DOB format helpers — display "MM / DD / YYYY", store ISO YYYY-MM-DD.
+// DOB format helpers - display "MM / DD / YYYY", store ISO YYYY-MM-DD.
 function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
@@ -125,7 +125,7 @@ export default function QuickStartPage() {
           minHeight: '100%',
         }}
       >
-        {/* Top — back arrow + 3-dot progress indicator */}
+        {/* Top - back arrow + 3-dot progress indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
           <button
             type="button"
@@ -139,7 +139,7 @@ export default function QuickStartPage() {
               height: 36,
               borderRadius: 999,
               border: 'none',
-              // Neutral surface — no green even when "active". The
+              // Neutral surface - no green even when "active". The
               // form on this page is identity-only, so coloring it
               // would imply a state that doesn't exist here.
               background: t.ease.softNeutral,
@@ -174,7 +174,7 @@ export default function QuickStartPage() {
           </div>
         </div>
 
-        {/* Sliding content — keyed on step so React remounts and re-runs animation */}
+        {/* Sliding content - keyed on step so React remounts and re-runs animation */}
         <div key={step} className="qs-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {step === 0 && (
             <>
@@ -206,7 +206,7 @@ export default function QuickStartPage() {
                 style={{
                   width: '100%',
                   padding: '16px 18px',
-                  // Neutral fill in every state — empty, filled,
+                  // Neutral fill in every state - empty, filled,
                   // focused, blurred. The page is identity-only;
                   // green would imply form-validation state.
                   background: '#fffefc',
@@ -316,7 +316,7 @@ export default function QuickStartPage() {
           )}
         </div>
 
-        {/* Bottom — Continue button, sticky-feeling */}
+        {/* Bottom - Continue button, sticky-feeling */}
         <div style={{ marginTop: 28 }}>
           <Button
             t={t}

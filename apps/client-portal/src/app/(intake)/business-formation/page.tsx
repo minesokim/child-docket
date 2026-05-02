@@ -1,8 +1,8 @@
 'use client';
 
-// Intake step 2 alt — Business Formation. MIGRATED to Postgres-backed state.
+// Intake step 2 alt - Business Formation. MIGRATED to Postgres-backed state.
 // Conditional path for users who selected "Business formation" sub-option
-// on Services. Shorter intake than /business-info — covers desired entity,
+// on Services. Shorter intake than /business-info - covers desired entity,
 // state of incorporation, owner count.
 //
 // Storage paths:
@@ -123,7 +123,7 @@ export default function BusinessFormationPage() {
 
   const [businessName, setBusinessName] = useIntakeField<string>('business.legalName', '');
   const [description, setDescription] = useIntakeField<string>('business.activity', '');
-  // Stored as free-form string ('llc'|'scorp'|...) — Antonio normalizes to
+  // Stored as free-form string ('llc'|'scorp'|...) - Antonio normalizes to
   // a canonical entity type during prep when filing forms (1065/1120/1120-S).
   const [entity, setEntity] = useIntakeField<string>('business.entityType', 'llc');
   const [formationState, setFormationState] = useIntakeField<string>(

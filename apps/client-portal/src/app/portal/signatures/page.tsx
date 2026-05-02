@@ -1,6 +1,6 @@
 'use client';
 
-// Returning portal — Signatures tab. SigCard list. Awaiting + Completed groups.
+// Returning portal - Signatures tab. SigCard list. Awaiting + Completed groups.
 // 1-to-1 port of ScreenSignatures.
 
 import {

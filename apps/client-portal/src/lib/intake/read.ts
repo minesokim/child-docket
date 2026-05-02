@@ -3,7 +3,7 @@
 // Load (or create on first visit) the active intake row for the signed-in
 // client. Sensitive fields are decrypted with the tenant DEK and then
 // MASKED before returning to the client (see maskSensitiveFields). The
-// client never receives plaintext SSN/EIN/bank by default — to see
+// client never receives plaintext SSN/EIN/bank by default - to see
 // plaintext, the client must explicitly call revealIntakeField().
 //
 // Wrapped in React.cache(): memoizes the result for the duration of a
@@ -47,7 +47,7 @@ export const getOrCreateIntakeAnswers = cache(async (): Promise<IntakeBundle | n
     const dek = await getTenantDek(db, asTenantId(authed.tenantId));
 
     // Try to insert. If the row already exists (per the unique index),
-    // this returns nothing — we then SELECT to load the canonical row.
+    // this returns nothing - we then SELECT to load the canonical row.
     await db
       .insert(schema.intakeResponses)
       .values({
@@ -87,7 +87,7 @@ export const getOrCreateIntakeAnswers = cache(async (): Promise<IntakeBundle | n
 
     // Decrypt every encrypted leaf with the tenant DEK, then mask
     // sensitive paths before returning. Plaintext SSN/EIN/bank never
-    // crosses the server-client boundary by default — the client must
+    // crosses the server-client boundary by default - the client must
     // call revealIntakeField for each path it wants in plaintext, which
     // is audit-logged.
     const decrypted = decryptTree(row.answers ?? {}, dek) as IntakeState;

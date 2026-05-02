@@ -1,6 +1,6 @@
 'use client';
 
-// Returning portal — Docs tab. Document tracker grouped by category with
+// Returning portal - Docs tab. Document tracker grouped by category with
 // progress bar + upload zone. Simplified port: drops the deep preview/info
 // modal flow from the JSX prototype (defer until docs pipeline is wired).
 
@@ -136,7 +136,7 @@ function DocRow({ t, doc }: { t: Theme; doc: Doc }) {
             letterSpacing: 0.6,
           }}
         >
-          —
+          -
         </span>
       )}
     </div>

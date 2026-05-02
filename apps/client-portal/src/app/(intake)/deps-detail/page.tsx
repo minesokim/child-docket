@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 6 (continued) — Dependent details. MIGRATED to Postgres-backed
+// Intake step 6 (continued) - Dependent details. MIGRATED to Postgres-backed
 // state via useIntakeAnswers + useSetIntakeField. Each card writes to
 // `dependents.list[i].{fullName,dateOfBirth,ssn,relationship,monthsLivedWithYou}`.
 //
@@ -41,7 +41,7 @@ import { formatDigits } from '@docket/shared';
 import type { IntakeDependent } from '@docket/shared';
 
 // ────────────────────────────────────────────────────────────────
-// DOB format helpers — display ↔ ISO storage (mirror /personal)
+// DOB format helpers - display ↔ ISO storage (mirror /personal)
 // ────────────────────────────────────────────────────────────────
 
 /** "MM / DD / YYYY" → "YYYY-MM-DD". Returns empty when incomplete. */
@@ -59,7 +59,7 @@ function dobIsoToDisplay(iso: string | undefined): string {
   return `${m[2]} / ${m[3]} / ${m[1]}`;
 }
 
-/** Display formatter while typing — adds slashes/spaces as digits arrive. */
+/** Display formatter while typing - adds slashes/spaces as digits arrive. */
 function dobShape(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
@@ -68,7 +68,7 @@ function dobShape(raw: string): string {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Single dependent card — drives writes through callbacks
+// Single dependent card - drives writes through callbacks
 // ────────────────────────────────────────────────────────────────
 
 function DependentCardDetails({
@@ -82,7 +82,7 @@ function DependentCardDetails({
   dep: IntakeDependent;
   onField: (field: keyof IntakeDependent, value: string) => void;
 }) {
-  // Per-card SSN reveal — each dependent's path includes its array index,
+  // Per-card SSN reveal - each dependent's path includes its array index,
   // so each card calls useFieldReveal with its own path. Hooks rules hold:
   // each card invokes it exactly once per render.
   const revealSsn = useFieldReveal(`dependents.list.${index - 1}.ssn`);
@@ -99,7 +99,7 @@ function DependentCardDetails({
     setDobDisplay(shaped);
     const iso = dobDisplayToIso(shaped);
     if (iso) {
-      // Only persist when complete — server's Zod will reject partial.
+      // Only persist when complete - server's Zod will reject partial.
       onField('dateOfBirth', iso);
     }
   };
@@ -108,7 +108,7 @@ function DependentCardDetails({
     <div
       style={{
         padding: '20px 20px 26px',
-        // Neutral container — same warm off-white as the resting input
+        // Neutral container - same warm off-white as the resting input
         // state. Inputs INSIDE this card flip to mintWhisper as the user
         // fills them, so the card itself doesn't need to carry color.
         // Bottom padding bumped from 6 to 26 so 'Months living with you'
@@ -217,7 +217,7 @@ export default function DepsDetailPage() {
     void setField(`dependents.list.${i}.${field}`, value);
   };
 
-  // Pass the live answers snapshot to flow helpers — empty state would
+  // Pass the live answers snapshot to flow helpers - empty state would
   // make /deps-detail itself "non-applicable" (it requires count > 0),
   // so getPrevStep would return null and the back button would silently
   // no-op. With the real snapshot the route resolves and back works.
@@ -255,7 +255,7 @@ export default function DepsDetailPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              If you have a child under 13 and pay for daycare, that&apos;s a big credit we don&apos;t want to miss — I&apos;ll ask about that next.
+              If you have a child under 13 and pay for daycare, that&apos;s a big credit we don&apos;t want to miss - I&apos;ll ask about that next.
             </AntonioNote>
           </Stack>
         </div>

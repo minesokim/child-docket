@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       // Route auth flows to our own pages, NOT Clerk's hosted
       // accounts.dev domain. Without these, a session timeout sends
       // the user to https://lucky-crane-50.accounts.dev/sign-in?...
-      // which is the dev account host — confusing for clients.
+      // which is the dev account host - confusing for clients.
       signInUrl="/login"
       signUpUrl="/login"
       signInFallbackRedirectUrl="/welcome"
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
           {/* Font stack:
-              1. Trial: Suisse Int'l + FAIRE Octave — local files, gitignored,
+              1. Trial: Suisse Int'l + FAIRE Octave - local files, gitignored,
                  only loaded in dev (when the trial folder is populated).
               2. Free production fallbacks: Inter + Playfair Display, both
                  Refero-listed as the official ease fallbacks.

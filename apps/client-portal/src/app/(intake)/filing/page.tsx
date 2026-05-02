@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 4/13 — Filing status. 1-to-1 port of ScreenFilingStatus.
+// Intake step 4/13 - Filing status. 1-to-1 port of ScreenFilingStatus.
 
 import {
   AntonioNote,
@@ -35,7 +35,7 @@ export default function FilingPage() {
 
   // Next step is computed from the central INTAKE_FLOW (see intake-flow.ts).
   // Filing branches: mfj/mfs → /spouse, else → /deps. Logic lives in one
-  // place now — adding a new filing-status branch means editing intake-flow.ts,
+  // place now - adding a new filing-status branch means editing intake-flow.ts,
   // not this page.
   const next = () => {
     const target = getNextStep('/filing', { filing: { status: sel } });
@@ -67,7 +67,7 @@ export default function FilingPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              If you&apos;re not sure which applies, pick your best guess — I&apos;ll verify during our call.
+              If you&apos;re not sure which applies, pick your best guess - I&apos;ll verify during our call.
             </AntonioNote>
           </Stack>
         </div>

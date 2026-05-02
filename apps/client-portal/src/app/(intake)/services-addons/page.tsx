@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 1B — Service add-ons.
+// Intake step 1B - Service add-ons.
 // 1-to-1 port of ScreenServiceAddons from the JSX prototype.
 
 import {
@@ -101,21 +101,21 @@ export default function ServicesAddonsPage() {
                 <span
                   onClick={handleBack}
                   style={{
-                    fontFamily: t.sans,
-                    fontSize: 12,
-                    fontWeight: 500,
+                    fontFamily: t.serif,
+                    fontStyle: 'italic',
+                    fontSize: 11,
                     color: t.ease.forestDark,
                     cursor: 'pointer',
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
                   }}
                 >
-                  Change
+                  change
                 </span>
               </div>
             </Stack>
             <AntonioNote t={t}>
-              If none of these apply, skip ahead — I&apos;ll catch anything we miss during review.
+              If none of these apply, skip ahead - I&apos;ll catch anything we miss during review.
             </AntonioNote>
           </Stack>
         </div>
@@ -147,7 +147,7 @@ export default function ServicesAddonsPage() {
                       height: 22,
                       flexShrink: 0,
                       borderRadius: t.tone === 'magazine' ? 3 : 5,
-                      // Light mint check well — forestDark check stroke
+                      // Light mint check well - forestDark check stroke
                       // for high contrast inside the pale fill.
                       background: selected ? t.ease.mintGlaze : t.ease.softNeutral,
                       display: 'flex',
@@ -195,7 +195,7 @@ export default function ServicesAddonsPage() {
           })}
 
           {/* Your estimate sits inline at the bottom of the scrollable
-              content — not sticky. Scrolls with the addon list above
+              content - not sticky. Scrolls with the addon list above
               so the AskAntonioBar + Continue button below stay
               uncluttered. */}
           <div

@@ -10,9 +10,9 @@
 // Resume behavior: we read the IntakeState from context (loaded by the
 // (intake) layout server-side). If the client has any progress, the CTA
 // changes to "Continue where you left off" and jumps straight to the
-// first incomplete step — bypassing the tutorial they've already seen.
+// first incomplete step - bypassing the tutorial they've already seen.
 //
-// Visual: ease.health aesthetic — display-size headline at light weight
+// Visual: ease.health aesthetic - display-size headline at light weight
 // (300) per the ease type scale, firm name in italic for editorial
 // presence, status pill below CTA replaces the stacked muted footnotes
 // for cleaner hierarchy.
@@ -115,7 +115,7 @@ export function WelcomeContent() {
               {ctaLabel}
             </Button>
             {/* Single-row signature replaces the previous two stacked
-                footnotes. Very-light mint pill, forestDark text —
+                footnotes. Very-light mint pill, forestDark text -
                 quiet, calm, signature-feel. */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <span

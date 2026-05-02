@@ -23,7 +23,7 @@ import {
 } from './intake-flow';
 
 // ────────────────────────────────────────────────────────────────
-// Helpers — common state fixtures
+// Helpers - common state fixtures
 // ────────────────────────────────────────────────────────────────
 
 const empty: IntakeState = {};
@@ -49,10 +49,10 @@ const rentalOnly: IntakeState = { income: { types: ['rental'] } };
 const selfPlusRental: IntakeState = { income: { types: ['self', 'rental'] } };
 
 // ────────────────────────────────────────────────────────────────
-// getNextStep — every branch
+// getNextStep - every branch
 // ────────────────────────────────────────────────────────────────
 
-describe('getNextStep — happy linear path', () => {
+describe('getNextStep - happy linear path', () => {
   test('welcome → quick-start', () => {
     expect(getNextStep('/welcome', empty)).toBe('/quick-start');
   });
@@ -76,7 +76,7 @@ describe('getNextStep — happy linear path', () => {
   });
 });
 
-describe('getNextStep — filing branches on status', () => {
+describe('getNextStep - filing branches on status', () => {
   test('mfj → spouse', () => {
     expect(getNextStep('/filing', { filing: { status: 'mfj' } })).toBe('/spouse');
   });
@@ -94,13 +94,13 @@ describe('getNextStep — filing branches on status', () => {
   });
 });
 
-describe('getNextStep — spouse always goes to deps', () => {
+describe('getNextStep - spouse always goes to deps', () => {
   test('spouse → deps', () => {
     expect(getNextStep('/spouse', mfjNoDeps)).toBe('/deps');
   });
 });
 
-describe('getNextStep — deps branches on count', () => {
+describe('getNextStep - deps branches on count', () => {
   test('count=0 → income (skips deps-detail)', () => {
     expect(getNextStep('/deps', singleNoDeps)).toBe('/income');
   });
@@ -115,13 +115,13 @@ describe('getNextStep — deps branches on count', () => {
   });
 });
 
-describe('getNextStep — deps-detail always goes to income', () => {
+describe('getNextStep - deps-detail always goes to income', () => {
   test('deps-detail → income', () => {
     expect(getNextStep('/deps-detail', mfjWithDeps)).toBe('/income');
   });
 });
 
-describe('getNextStep — income branches on selected types', () => {
+describe('getNextStep - income branches on selected types', () => {
   test('w2 only → tax-questions', () => {
     expect(getNextStep('/income', w2Only)).toBe('/tax-questions');
   });
@@ -144,7 +144,7 @@ describe('getNextStep — income branches on selected types', () => {
   });
 });
 
-describe('getNextStep — self-employment branches on rental presence', () => {
+describe('getNextStep - self-employment branches on rental presence', () => {
   test('self only → tax-questions', () => {
     expect(getNextStep('/self-employment', selfOnly)).toBe('/tax-questions');
   });
@@ -153,7 +153,7 @@ describe('getNextStep — self-employment branches on rental presence', () => {
   });
 });
 
-describe('getNextStep — rental-detail always goes to tax-questions', () => {
+describe('getNextStep - rental-detail always goes to tax-questions', () => {
   test('rental-detail → tax-questions', () => {
     expect(getNextStep('/rental-detail', rentalOnly)).toBe('/tax-questions');
   });
@@ -162,7 +162,7 @@ describe('getNextStep — rental-detail always goes to tax-questions', () => {
   });
 });
 
-describe('getNextStep — back half of flow', () => {
+describe('getNextStep - back half of flow', () => {
   test('tax-questions → deductions', () => {
     expect(getNextStep('/tax-questions', empty)).toBe('/deductions');
   });
@@ -195,17 +195,17 @@ describe('getNextStep — back half of flow', () => {
   });
 });
 
-describe('getNextStep — defensive: unknown route', () => {
+describe('getNextStep - defensive: unknown route', () => {
   test('unknown route returns null', () => {
     expect(getNextStep('/totally-fake-route', empty)).toBeNull();
   });
 });
 
 // ────────────────────────────────────────────────────────────────
-// getPrevStep — back-nav respects applicable filtering
+// getPrevStep - back-nav respects applicable filtering
 // ────────────────────────────────────────────────────────────────
 
-describe('getPrevStep — back-nav skips inapplicable steps', () => {
+describe('getPrevStep - back-nav skips inapplicable steps', () => {
   test('welcome has no prev (start of flow)', () => {
     expect(getPrevStep('/welcome', empty)).toBeNull();
   });
@@ -249,10 +249,10 @@ describe('getPrevStep — back-nav skips inapplicable steps', () => {
 });
 
 // ────────────────────────────────────────────────────────────────
-// isApplicable — side-path gating
+// isApplicable - side-path gating
 // ────────────────────────────────────────────────────────────────
 
-describe('isApplicable — side paths gated correctly', () => {
+describe('isApplicable - side paths gated correctly', () => {
   test('spouse applicable iff mfj or mfs', () => {
     expect(getStep('/spouse')!.isApplicable({ filing: { status: 'mfj' } })).toBe(true);
     expect(getStep('/spouse')!.isApplicable({ filing: { status: 'mfs' } })).toBe(true);
@@ -295,7 +295,7 @@ describe('isApplicable — side paths gated correctly', () => {
 });
 
 // ────────────────────────────────────────────────────────────────
-// getResumeStep — first applicable + incomplete
+// getResumeStep - first applicable + incomplete
 // ────────────────────────────────────────────────────────────────
 
 describe('getResumeStep', () => {
@@ -336,7 +336,7 @@ describe('getResumeStep', () => {
 });
 
 // ────────────────────────────────────────────────────────────────
-// getApplicableSteps — count varies by state
+// getApplicableSteps - count varies by state
 // ────────────────────────────────────────────────────────────────
 
 describe('getApplicableSteps', () => {
@@ -368,7 +368,7 @@ describe('getApplicableSteps', () => {
 });
 
 // ────────────────────────────────────────────────────────────────
-// getStepProgress — "step N of M"
+// getStepProgress - "step N of M"
 // ────────────────────────────────────────────────────────────────
 
 describe('getStepProgress', () => {
@@ -390,7 +390,7 @@ describe('getStepProgress', () => {
 });
 
 // ────────────────────────────────────────────────────────────────
-// isIntakeComplete — full-flow gating
+// isIntakeComplete - full-flow gating
 // ────────────────────────────────────────────────────────────────
 
 describe('isIntakeComplete', () => {

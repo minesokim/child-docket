@@ -1,5 +1,5 @@
 // Sentry client-side init. Next.js 15 auto-loads this file on the browser
-// boot path — no manual import needed.
+// boot path - no manual import needed.
 //
 // Sample rates: 10% tracing for now; bump if dashboards stay quiet but
 // users report issues. PII off by default.
@@ -15,7 +15,7 @@ Sentry.init({
   replaysOnErrorSampleRate: 0,
   replaysSessionSampleRate: 0,
   sendDefaultPii: false,
-  // PII scrubber — runs on every event before it leaves the browser. The
+  // PII scrubber - runs on every event before it leaves the browser. The
   // intake form holds SSN/EIN values in component state; if those ever
   // make it into a stack frame's local var (React DevTools-style frame
   // capture), this is the last gate. See lib/sentry-scrubber.ts.

@@ -51,7 +51,7 @@ export async function getOrCreateClient(): Promise<AuthedClient | null> {
     .limit(1);
 
   if (!tenant) {
-    Sentry.captureMessage('[intake] Vazant tenant not seeded — cannot provision client', 'error');
+    Sentry.captureMessage('[intake] Vazant tenant not seeded - cannot provision client', 'error');
     return null;
   }
 

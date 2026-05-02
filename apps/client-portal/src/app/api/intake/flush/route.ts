@@ -1,4 +1,4 @@
-// API route — flush pending intake field writes during page unload.
+// API route - flush pending intake field writes during page unload.
 //
 // Why this exists separately from the saveIntakeField Server Action:
 // Server Actions are RPC'd via Next.js's internal POST mechanism, which
@@ -8,13 +8,13 @@
 // The handler accepts a batch of pending writes from IntakeProvider's
 // flush handler and runs each through the same saveIntakeField pipeline
 // (auth, validation, per-tenant encryption, audit log). Failures don't
-// surface to the user — the tab is closing, there's nowhere to put a
+// surface to the user - the tab is closing, there's nowhere to put a
 // toast. Failures land in Sentry instead.
 //
 // THREAT MODEL DELTA
 //   sendBeacon over HTTPS includes cookies, so Clerk auth() picks up the
 //   session normally. Sensitive plaintext (SSN/EIN/bank) crosses the
-//   wire here under TLS — same as a regular saveIntakeField call.
+//   wire here under TLS - same as a regular saveIntakeField call.
 //   Server-side encryption + audit log handle the rest.
 
 import { auth } from '@clerk/nextjs/server';
@@ -29,7 +29,7 @@ type FlushBody = { writes: FlushWrite[] };
 const MAX_WRITES_PER_FLUSH = 50;
 
 export async function POST(req: Request): Promise<Response> {
-  // Rate limit BEFORE parsing the body — keeps the cheap-to-block path
+  // Rate limit BEFORE parsing the body - keeps the cheap-to-block path
   // cheap. Key on Clerk user id (sendBeacon includes cookies, so auth()
   // resolves the session). 6 flushes per minute is generous: a typical
   // intake does maybe 1-2 page navigations per minute, each MAYBE
@@ -73,7 +73,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  // Apply each write. Don't bail on a single failure — flush is
+  // Apply each write. Don't bail on a single failure - flush is
   // best-effort, the user is leaving the page. Capture errors to Sentry
   // (already PII-scrubbed by the beforeSend hook) so we can debug
   // patterns later.

@@ -56,7 +56,7 @@ export default function LandingPage() {
         ${GLIDEY_KEYFRAMES}
       `}</style>
 
-      {/* Content column — vertically centered, ease aesthetic. */}
+      {/* Content column - vertically centered, ease aesthetic. */}
       <div
         style={{
           flex: 1,

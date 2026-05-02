@@ -1,7 +1,7 @@
 'use server';
 
 // Mark the intake complete. Called from /done after the final step.
-// Idempotent — a re-call on an already-complete intake is a no-op
+// Idempotent - a re-call on an already-complete intake is a no-op
 // (sets the same status + timestamp again).
 
 import { eq, and } from 'drizzle-orm';

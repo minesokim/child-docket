@@ -1,6 +1,6 @@
 'use client';
 
-// Final intake step (post-13) — $50 deposit. Stripe placeholder form.
+// Final intake step (post-13) - $50 deposit. Stripe placeholder form.
 // 1-to-1 port of ScreenDeposit. Card fields ship empty (privacy: never
 // pre-fill financial fields).
 
@@ -26,7 +26,7 @@ import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 type ApptFormat = 'phone' | 'video' | 'inperson';
 
-// Card details are kept LOCAL only — never persisted to our Postgres.
+// Card details are kept LOCAL only - never persisted to our Postgres.
 // PCI compliance (SAQ-A) requires us to never touch raw card data.
 // v1 swap: replace this form with Square's hosted card iframe (or
 // Stripe Elements). For v0 we just collect into ephemeral state and
@@ -155,7 +155,7 @@ export default function DepositPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              This $50 goes toward your final bill. Cancel 48 hours ahead and you get it back. This is just to protect my time — I used to have people book and never show up.
+              This $50 goes toward your final bill. Cancel 48 hours ahead and you get it back. This is just to protect my time - I used to have people book and never show up.
             </AntonioNote>
           </Stack>
         </div>
@@ -378,7 +378,7 @@ export default function DepositPage() {
               </div>
               <div
                 style={{
-                  // Sans for the total — matches the /services starting
+                  // Sans for the total - matches the /services starting
                   // estimate and /services-addons "Your estimate" big
                   // numbers. Tabular nums keeps digit columns aligned.
                   fontFamily: t.sans,

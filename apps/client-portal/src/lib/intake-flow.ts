@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────────
-// Intake flow — single declarative source of truth for the 25-step
+// Intake flow - single declarative source of truth for the 25-step
 // onboarding graph.
 //
 // Every conditional branch (filing → spouse vs deps, income → self-employment
@@ -8,8 +8,8 @@
 //
 // The INTAKE_FLOW array drives:
 //   - Forward nav    (getNextStep)
-//   - Back nav       (getPrevStep — walks applicable steps in order)
-//   - Resume on load (getResumeStep — first applicable + incomplete)
+//   - Back nav       (getPrevStep - walks applicable steps in order)
+//   - Resume on load (getResumeStep - first applicable + incomplete)
 //   - Progress bar   (getStepProgress, getApplicableSteps)
 //   - Server-side validation of "did the client actually finish intake"
 //
@@ -45,17 +45,17 @@ export type IntakeStep = {
 };
 
 // ────────────────────────────────────────────────────────────────
-// The flow. Order in this array is canonical — getPrevStep walks
+// The flow. Order in this array is canonical - getPrevStep walks
 // backwards through this list filtered by isApplicable.
 //
 // Side-path docs (when each step is applicable):
-//   - /spouse           — only when filing.status is mfj or mfs
-//   - /deps-detail      — only when dependents.count > 0
-//   - /self-employment  — only when income.types includes 'self'
-//   - /rental-detail    — only when income.types includes 'rental'
-//   - /business-info    — only when service.kind is 'biz'
-//   - /business-formation — only when service.otherSub is 'formation'
-//   - /strategic-topics — only when service.otherSub is 'strategy' (advisory path)
+//   - /spouse           - only when filing.status is mfj or mfs
+//   - /deps-detail      - only when dependents.count > 0
+//   - /self-employment  - only when income.types includes 'self'
+//   - /rental-detail    - only when income.types includes 'rental'
+//   - /business-info    - only when service.kind is 'biz'
+//   - /business-formation - only when service.otherSub is 'formation'
+//   - /strategic-topics - only when service.otherSub is 'strategy' (advisory path)
 //
 // The "happy path" for an individual W-2 filer skips all six side paths
 // and walks: welcome → quick-start → tutorial → services → services-addons
@@ -65,7 +65,7 @@ export type IntakeStep = {
 //
 // /quick-start is the 3-stage onboarding (name → DOB → email) right
 // after welcome. The standalone /contact-info page is no longer in the
-// canonical flow — quick-start already collects everything it would
+// canonical flow - quick-start already collects everything it would
 // have asked for, and the redundant second prompt was confusing. The
 // /contact-info route file stays for direct-link fallback only.
 // ────────────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     label: 'Welcome',
     section: 'welcome',
     isApplicable: () => true,
-    isComplete: () => true, // pure intro — always passable
+    isComplete: () => true, // pure intro - always passable
     next: () => '/quick-start',
   },
   {
@@ -116,7 +116,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     label: 'Add-ons',
     section: 'welcome',
     isApplicable: () => true,
-    isComplete: () => true, // optional by design — addons can be empty
+    isComplete: () => true, // optional by design - addons can be empty
     next: () => '/personal',
   },
 
@@ -326,7 +326,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'wrap-up',
     isApplicable: () => true,
     isComplete: (s) => !!s.documents?.uploadComplete,
-    // Contact info already captured at the top of the flow — proceed
+    // Contact info already captured at the top of the flow - proceed
     // directly to the legal sign-offs.
     next: () => '/engagement',
   },
@@ -358,7 +358,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     label: 'Schedule call',
     section: 'wrap-up',
     isApplicable: () => true,
-    isComplete: () => true, // optional — client may skip scheduling
+    isComplete: () => true, // optional - client may skip scheduling
     next: () => '/deposit',
   },
   {
@@ -417,7 +417,7 @@ export function getNextStep(currentRoute: string, state: IntakeState): string | 
   // disagrees with the upstream step's prediction.
   while (target) {
     const targetStep = getStep(target);
-    if (!targetStep) return target;             // unknown route — let it route anyway
+    if (!targetStep) return target;             // unknown route - let it route anyway
     if (targetStep.isApplicable(state)) return target;
     target = targetStep.next(state);
   }
@@ -427,7 +427,7 @@ export function getNextStep(currentRoute: string, state: IntakeState): string | 
 /**
  * Back navigation. Walks the canonical INTAKE_FLOW order (filtered by
  * applicable) backwards from the current route. This solves the bug where
- * pages hardcode a back target — e.g. `/income` hardcoding `nav.back('/deps-detail')`
+ * pages hardcode a back target - e.g. `/income` hardcoding `nav.back('/deps-detail')`
  * even when the user came from `/deps` (because they had 0 dependents).
  */
 export function getPrevStep(currentRoute: string, state: IntakeState): string | null {
@@ -448,7 +448,7 @@ export function getResumeStep(state: IntakeState): string {
 }
 
 /**
- * Progress index for the IntakeHeader / progress bar — "Step 4 of 12".
+ * Progress index for the IntakeHeader / progress bar - "Step 4 of 12".
  * Counts only applicable steps so the denominator matches what the client
  * actually walks through.
  */
@@ -462,7 +462,7 @@ export function getStepProgress(
 }
 
 /**
- * Whether the entire intake is complete — every applicable step's
+ * Whether the entire intake is complete - every applicable step's
  * isComplete() returns true. Used by command room to show
  * "intake done" status on a client.
  */
@@ -475,7 +475,7 @@ export function isIntakeComplete(state: IntakeState): boolean {
  *
  * Different from isIntakeComplete (full completion) and from getResumeStep
  * (next incomplete step). This answers "have they made any progress at
- * all" — used by the welcome page to flip between first-time and returning
+ * all" - used by the welcome page to flip between first-time and returning
  * UX without depending on which specific step gates "completion."
  *
  * Returns true if any meaningful field is populated. Empty arrays / false

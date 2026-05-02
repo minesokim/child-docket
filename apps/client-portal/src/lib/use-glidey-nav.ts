@@ -46,7 +46,7 @@ export function useGlideyNav() {
   return { exiting, glide, glideReplace };
 }
 
-// CSS keyframes shared across pages — inject this <style> block once
+// CSS keyframes shared across pages - inject this <style> block once
 // per page that uses glidey nav. Animation name: `glidey-fade-out`.
 //
 // The receiving page should use a complementary fade-in (handled by

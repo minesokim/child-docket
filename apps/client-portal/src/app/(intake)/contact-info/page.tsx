@@ -1,10 +1,10 @@
 'use client';
 
-// Intake step 2 — Contact info. Sits at the TOP of the flow, right
+// Intake step 2 - Contact info. Sits at the TOP of the flow, right
 // after /tutorial. Captures name + email up front so Antonio has
 // reachable identity from the very first step.
 //
-// Phone is intentionally NOT collected here — Clerk already has it
+// Phone is intentionally NOT collected here - Clerk already has it
 // from the OTP login. DOB is collected later in /personal alongside
 // SSN and address.
 

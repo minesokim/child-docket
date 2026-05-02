@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 9/13 — Deductions. 7 multi-select toggles + exclusive "None"
+// Intake step 9/13 - Deductions. 7 multi-select toggles + exclusive "None"
 // + inline Form 2441 expansion when "Childcare" is on.
 // 1-to-1 port of ScreenDeductions.
 
@@ -94,15 +94,15 @@ export default function DeductionsPage() {
   };
 
   const items: Array<{ k: ItemKey; icon: React.ReactNode; label: string; sub?: string }> = [
-    { k: 'mortgage', icon: <SolarMortgageInterest size={28} />, label: 'Home mortgage' },
-    { k: 'student', icon: <SolarStudentLoan size={28} />, label: 'Student loans' },
-    { k: 'charity', icon: <SolarCharity size={28} />, label: 'Charitable donations' },
-    { k: 'childcare', icon: <SolarChildcare size={28} />, label: 'Childcare costs' },
-    { k: 'medical', icon: <SolarMedical size={28} />, label: 'Medical expenses' },
-    { k: 'education', icon: <SolarEducation size={28} />, label: 'Education / tuition' },
+    { k: 'mortgage', icon: <SolarMortgageInterest size={44} />, label: 'Home mortgage' },
+    { k: 'student', icon: <SolarStudentLoan size={44} />, label: 'Student loans' },
+    { k: 'charity', icon: <SolarCharity size={44} />, label: 'Charitable donations' },
+    { k: 'childcare', icon: <SolarChildcare size={44} />, label: 'Childcare costs' },
+    { k: 'medical', icon: <SolarMedical size={44} />, label: 'Medical expenses' },
+    { k: 'education', icon: <SolarEducation size={44} />, label: 'Education / tuition' },
     {
       k: 'educator',
-      icon: <SolarEducator size={28} />,
+      icon: <SolarEducator size={44} />,
       label: 'Educator expenses',
       sub: 'K–12 teacher supplies, up to $300',
     },
@@ -133,7 +133,7 @@ export default function DeductionsPage() {
               </Body>
             </Stack>
             <AntonioNote t={t}>
-              Pick everything that maybe applies — childcare under 13 alone is worth $3k–$6k. I verify what actually qualifies during prep.
+              Pick everything that maybe applies - childcare under 13 alone is worth $3k–$6k. I verify what actually qualifies during prep.
             </AntonioNote>
           </Stack>
         </div>
@@ -233,7 +233,7 @@ export default function DeductionsPage() {
               t={t}
               on={!!state.none}
               onClick={() => toggle('none')}
-              icon={<IconMinus />}
+              icon={<IconMinus size={36} />}
               label="None of these"
               sub="Skip straight to the next step"
             />

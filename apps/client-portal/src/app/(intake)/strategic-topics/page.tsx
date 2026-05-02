@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 2 alt — Strategic Topics. MIGRATED to Postgres-backed state.
+// Intake step 2 alt - Strategic Topics. MIGRATED to Postgres-backed state.
 // Multi-select consultation topics. Conditional path for "Strategic tax &
 // business consultation" service.
 //

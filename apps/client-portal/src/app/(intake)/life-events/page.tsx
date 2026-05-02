@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 10/13 — Life events. 6 multi-select toggles + exclusive "None".
+// Intake step 10/13 - Life events. 6 multi-select toggles + exclusive "None".
 // 1-to-1 port of ScreenLifeEvents.
 
 import {
@@ -66,12 +66,12 @@ export default function LifeEventsPage() {
   };
 
   const items: Array<{ k: ItemKey; icon: React.ReactNode; label: string }> = [
-    { k: 'marriage', icon: <SolarMarriage size={28} />, label: 'Got married or divorced' },
-    { k: 'baby', icon: <SolarNewChild size={28} />, label: 'Had a baby or adopted' },
-    { k: 'home', icon: <SolarHomePurchase size={28} />, label: 'Bought or sold a home' },
-    { k: 'business', icon: <IconBriefcase />, label: 'Started a business' },
-    { k: 'inherit', icon: <IconGift />, label: 'Received an inheritance' },
-    { k: 'retire', icon: <IconBeach />, label: 'Retired' },
+    { k: 'marriage', icon: <SolarMarriage size={44} />, label: 'Got married or divorced' },
+    { k: 'baby', icon: <SolarNewChild size={44} />, label: 'Had a baby or adopted' },
+    { k: 'home', icon: <SolarHomePurchase size={44} />, label: 'Bought or sold a home' },
+    { k: 'business', icon: <IconBriefcase size={36} />, label: 'Started a business' },
+    { k: 'inherit', icon: <IconGift size={36} />, label: 'Received an inheritance' },
+    { k: 'retire', icon: <IconBeach size={36} />, label: 'Retired' },
   ];
 
   return (
@@ -121,7 +121,7 @@ export default function LifeEventsPage() {
               t={t}
               on={!!state.none}
               onClick={() => toggle('none')}
-              icon={<IconMinus />}
+              icon={<IconMinus size={36} />}
               label="None of these"
               sub="Nothing major happened this year"
             />

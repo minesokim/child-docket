@@ -2,7 +2,7 @@
 
 // Reveal the plaintext value of a single sensitive field. The client
 // calls this when the user clicks 'Edit' on a masked SSN/EIN/bank field
-// — we decrypt that ONE leaf with the tenant DEK and return it for
+// - we decrypt that ONE leaf with the tenant DEK and return it for
 // inline editing. The reveal is audit-logged with the path, so SOC 2
 // evidence shows every plaintext access.
 //
@@ -42,7 +42,7 @@ export type RevealIntakeFieldResult =
   | { ok: false; error: string };
 
 export async function revealIntakeField(path: string): Promise<RevealIntakeFieldResult> {
-  // 1. Path must be sensitive — refuse any other reveal request.
+  // 1. Path must be sensitive - refuse any other reveal request.
   if (!isSensitivePath(path)) {
     return { ok: false, error: 'Path is not a sensitive field' };
   }
@@ -98,7 +98,7 @@ export async function revealIntakeField(path: string): Promise<RevealIntakeField
       }
 
       // Audit log: 'read' actionClass. Path goes in toolInput; value
-      // does NOT — the audit trail records that a reveal happened
+      // does NOT - the audit trail records that a reveal happened
       // without itself becoming a PII surface.
       const latencyMs = Date.now() - startedAt;
       await db.insert(schema.actions).values({
@@ -120,6 +120,6 @@ export async function revealIntakeField(path: string): Promise<RevealIntakeField
     Sentry.captureException(error, {
       tags: { component: 'intake-reveal', path },
     });
-    return { ok: false, error: 'Reveal failed — please try again' };
+    return { ok: false, error: 'Reveal failed - please try again' };
   }
 }

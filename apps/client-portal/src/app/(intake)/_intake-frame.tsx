@@ -3,11 +3,11 @@
 // Inner client wrapper for the (intake) layout. Owns:
 //   - Page-transition direction (forward / back / jump)
 //   - AskAntonioChat overlay
-//   - SignOut handler — provided via SignOutProvider so IntakeHeader
+//   - SignOut handler - provided via SignOutProvider so IntakeHeader
 //     can render its own discreet "Logout" pill above the progress bar.
 //     The /welcome page doesn't render IntakeHeader, so no logout button
 //     shows there (intentional).
-//   - Last-visited-route tracking — saves pathname to IntakeState so
+//   - Last-visited-route tracking - saves pathname to IntakeState so
 //     /welcome can resume to the exact page on next visit.
 
 import { useCallback, useEffect, useState } from 'react';
@@ -42,7 +42,7 @@ export function IntakeFrame({ children }: { children: React.ReactNode }) {
       // Reset so manual back-button (browser) doesn't reuse stale direction.
       window.sessionStorage.removeItem(NAV_KEY);
     } catch {
-      // sessionStorage unavailable — fall back to jump
+      // sessionStorage unavailable - fall back to jump
     }
   }, [pathname]);
 
@@ -54,7 +54,7 @@ export function IntakeFrame({ children }: { children: React.ReactNode }) {
   }, [pathname, setField]);
 
   const handleSignOut = useCallback(() => {
-    // signOut() returns a promise; we don't need to await — the redirect
+    // signOut() returns a promise; we don't need to await - the redirect
     // callback fires after Clerk clears the session cookie.
     void signOut(() => router.push('/'));
   }, [signOut, router]);

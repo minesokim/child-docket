@@ -82,7 +82,7 @@ function OtpFlow() {
     inputRef.current?.focus();
   }, []);
 
-  // Phone display: reveal full number — no masking. Matches Arcade reference.
+  // Phone display: reveal full number - no masking. Matches Arcade reference.
   const dial = COUNTRY_DIALS[countryCode] ?? '+1';
   const display =
     countryCode === 'US' || countryCode === 'CA'
@@ -96,7 +96,7 @@ function OtpFlow() {
 
     // If we landed here with the signUp already complete (e.g. user verified
     // earlier but the page errored before activating the session), just
-    // activate now and route forward — don't re-attempt verification.
+    // activate now and route forward - don't re-attempt verification.
     if (mode === 'signup' && signUp.status === 'complete' && signUp.createdSessionId) {
       try {
         await setActiveSignUp({ session: signUp.createdSessionId });
@@ -150,7 +150,7 @@ function OtpFlow() {
           });
           setError(
             `Sign-up needs more info: ${missing.length ? missing.join(', ') : 'unknown requirement'}. ` +
-              `Check Clerk dashboard → User & authentication — make sure phone is the only required field.`,
+              `Check Clerk dashboard → User & authentication - make sure phone is the only required field.`,
           );
           setVerifying(false);
           return;
@@ -274,7 +274,7 @@ function OtpFlow() {
           </svg>
         </Link>
 
-        {/* Resend toast — center-top after Resend click. No stroke. */}
+        {/* Resend toast - center-top after Resend click. No stroke. */}
         {resentToast && (
           <div
             style={{
@@ -382,7 +382,7 @@ function OtpFlow() {
           </button>
         </div>
 
-        {/* Code input — sans, big, tabular nums, mintWhisper fill, no stroke.
+        {/* Code input - sans, big, tabular nums, mintWhisper fill, no stroke.
             Placeholder uses thin Unicode hyphens (U+2010) with spaces, in
             a low-contrast forest green so they read as subtle guides
             rather than bold dashes. The browser default placeholder color
@@ -414,7 +414,7 @@ function OtpFlow() {
             fontWeight: 400,
             fontFeatureSettings: '"tnum" 1, "lnum" 1',
             letterSpacing: code ? 8 : 4,
-            // Background stays neutral white in every state — empty,
+            // Background stays neutral white in every state - empty,
             // filled, focused, blurred. Code digits render in true
             // black for max contrast against the white surface.
             background: '#fffefc',
@@ -444,7 +444,7 @@ function OtpFlow() {
           </p>
         )}
 
-        {/* Verify button — forestDark fill, full pill, no stroke. */}
+        {/* Verify button - forestDark fill, full pill, no stroke. */}
         <div style={{ marginTop: 28, width: '100%' }}>
           <button
             type="button"

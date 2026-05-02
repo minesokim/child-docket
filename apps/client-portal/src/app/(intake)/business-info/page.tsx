@@ -1,6 +1,6 @@
 'use client';
 
-// Intake step 2 alt — Business Info. MIGRATED to Postgres-backed state.
+// Intake step 2 alt - Business Info. MIGRATED to Postgres-backed state.
 // Conditional path for users who selected "Business Tax Return" on Services.
 // Replaces /personal for that branch.
 //

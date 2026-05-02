@@ -1,6 +1,6 @@
 'use client';
 
-// Final intake screen — completion. Confetti-adjacent success mark +
+// Final intake screen - completion. Confetti-adjacent success mark +
 // appointment summary + "what happens next" timeline.
 //
 // Visual: ease.health aesthetic. Display headline (light weight 300,
@@ -131,7 +131,7 @@ export default function DonePage() {
   const steps = [
     { n: 1, title: 'Antonio reviews your intake', sub: 'Within 24 hours' },
     { n: 2, title: 'You get a confirmation text & email', sub: 'From (951) 555-0234' },
-    { n: 3, title: 'Upload remaining documents', sub: 'In the portal — W-2s, 1099s, etc.' },
+    { n: 3, title: 'Upload remaining documents', sub: 'In the portal - W-2s, 1099s, etc.' },
     {
       n: 4,
       title: 'Antonio prepares your return',
@@ -156,7 +156,7 @@ export default function DonePage() {
 
           <Stack gap={12} style={{ textAlign: 'center', padding: '0 8px' }}>
             {/* Display headline at ease's light weight (300). The whole
-                screen is a celebratory hero — let the type carry it. */}
+                screen is a celebratory hero - let the type carry it. */}
             <div
               style={{
                 fontFamily: t.serif,
@@ -176,7 +176,7 @@ export default function DonePage() {
             </Body>
           </Stack>
 
-          {/* Appointment card with keylimeWash accent — reads as a
+          {/* Appointment card with keylimeWash accent - reads as a
               celebration tile, not a generic info card. The eyebrow
               line drops the rust band; the accent fill carries the
               same job with less visual chrome. */}
@@ -230,7 +230,7 @@ export default function DonePage() {
                       flex: 1,
                       padding: '10px 14px',
                       fontSize: 13,
-                      // Inverted on the keylime card — solid white fill,
+                      // Inverted on the keylime card - solid white fill,
                       // forestDark text. No stroke.
                       background: '#fffefc',
                       color: t.ease.forestDark,

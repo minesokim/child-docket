@@ -3,7 +3,7 @@
 // Server Component: hydrates the IntakeState from Postgres (same shape +
 // same provider as the intake flow), then wraps children in
 // <IntakeProvider> so every portal page (home, docs, messages,
-// signatures, profile) can read/write via useIntakeField — fully
+// signatures, profile) can read/write via useIntakeField - fully
 // migrated off sessionStorage.
 //
 // The tab-bar logic lives in <PortalFrame> (client component) since it
@@ -18,7 +18,7 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Same pattern as (intake)/layout.tsx — one DB round trip per page
+  // Same pattern as (intake)/layout.tsx - one DB round trip per page
   // load, memoized per-render via React.cache. Sensitive fields come
   // back masked; portal pages call useFieldReveal for plaintext when
   // the user explicitly wants to see them.

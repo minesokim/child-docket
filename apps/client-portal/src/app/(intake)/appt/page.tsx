@@ -1,6 +1,6 @@
 'use client';
 
-// Final intake step (post-13) — Schedule appointment. Format radio + date pills
+// Final intake step (post-13) - Schedule appointment. Format radio + date pills
 // + time slots + summary card. 1-to-1 port of ScreenScheduleAppt.
 
 import {
@@ -25,7 +25,7 @@ import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 type ApptFormat = 'video' | 'inperson';
 
-// Demo dates / times — would come from Antonio's calendar in v1
+// Demo dates / times - would come from Antonio's calendar in v1
 const DATES = [
   { d: 'Mon', n: 3, m: 'Mar' },
   { d: 'Tue', n: 4, m: 'Mar' },
@@ -45,7 +45,7 @@ const FORMAT_LABELS: Record<ApptFormat, string> = {
 
 // ─── Inline icons ────────────────────────────────────────────────
 
-// Real Google Meet brand logo. Native multi-color SVG — not tinted by
+// Real Google Meet brand logo. Native multi-color SVG - not tinted by
 // container `color`. Use at the standard meeting-app brand sizes.
 function IconGoogleMeet({ size = 22 }: { size?: number }) {
   return (
@@ -228,7 +228,7 @@ export default function ApptPage() {
   const selTime = TIMES[timeIdx] ?? TIMES[0]!;
 
   // Gate the appointment summary card behind first interaction. The card
-  // sticks around once any of {format, date, time} changes — we don't
+  // sticks around once any of {format, date, time} changes - we don't
   // want it to flicker away if the user clicks back to the same value.
   // Reveals with a subtle bottom-to-top slide.
   const [touched, setTouched] = React.useState(false);

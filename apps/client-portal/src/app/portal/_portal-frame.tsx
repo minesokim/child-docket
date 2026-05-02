@@ -3,7 +3,7 @@
 // Inner client wrapper for the /portal layout. Owns the persistent
 // 5-tab navigation bar at the bottom. Outer (Server Component) layout
 // hydrates the IntakeProvider with Postgres-backed state so every
-// portal page can read/write IntakeState via useIntakeField — same
+// portal page can read/write IntakeState via useIntakeField - same
 // data model as the (intake) flow.
 
 import { usePathname, useRouter } from 'next/navigation';
