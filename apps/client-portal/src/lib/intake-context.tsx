@@ -42,6 +42,18 @@ type IntakeContextValue = {
 
 const IntakeContext = createContext<IntakeContextValue | null>(null);
 
+// Tenant display context (firm owner name, avatar, tenant name) lives
+// in @docket/ui so the AskAntonioBar / AskAntonioChat / AntonioNote /
+// AvatarSlot components can consume it without prop-drilling. Re-export
+// here for consumer convenience — pages importing from
+// '@/lib/intake-context' get useFirmOwner / useTenantName / FirmOwner.
+export {
+  useFirmOwner,
+  useTenantName,
+  TenantDisplayProvider,
+  type FirmOwner,
+} from '@docket/ui';
+
 // Debounce window per path. 400ms is the sweet spot - feels instant in
 // the UI but coalesces rapid typing into one server round-trip.
 const SAVE_DEBOUNCE_MS = 400;

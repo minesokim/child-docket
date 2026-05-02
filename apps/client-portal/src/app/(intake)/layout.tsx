@@ -8,6 +8,7 @@
 // lives in <IntakeFrame> so this file can stay a Server Component.
 
 import { redirect } from 'next/navigation';
+import { TenantDisplayProvider } from '@docket/ui';
 import { resolveClient } from '@/lib/intake/auth';
 import { getOrCreateIntakeAnswers } from '@/lib/intake';
 import { IntakeProvider } from '@/lib/intake-context';
@@ -38,9 +39,19 @@ export default async function IntakeLayout({
   // the render from crashing if we somehow reach this point.
   const initialAnswers = bundle?.answers ?? {};
 
+  // Tenant display data — surfaces the firm owner's name + avatar
+  // through AskAntonioBar / AskAntonioChat / AntonioNote / AvatarSlot
+  // via context, replacing the hardcoded "Antonio Vazquez" defaults.
+  // null when no auth (signed-out fallthrough); UI components have
+  // their own fallback to legacy Antonio defaults.
+  const tenantName = auth.kind === 'authed' ? auth.client.tenantName : null;
+  const firmOwner = auth.kind === 'authed' ? auth.client.firmOwner : null;
+
   return (
-    <IntakeProvider initialAnswers={initialAnswers}>
-      <IntakeFrame>{children}</IntakeFrame>
-    </IntakeProvider>
+    <TenantDisplayProvider tenantName={tenantName} firmOwner={firmOwner}>
+      <IntakeProvider initialAnswers={initialAnswers}>
+        <IntakeFrame>{children}</IntakeFrame>
+      </IntakeProvider>
+    </TenantDisplayProvider>
   );
 }

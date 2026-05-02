@@ -1,49 +1,102 @@
 // Image + video tiles.
-//   - AvatarSlot: round headshot, used everywhere Antonio appears.
+//   - AvatarSlot: round headshot for the firm owner. Reads avatarUrl
+//     from useFirmOwner() context; falls back to initials of the
+//     owner's name when no URL is set; falls back to /antonio.webp
+//     when there's no firm-owner data at all (legacy layouts that
+//     don't wrap with TenantDisplayProvider).
 //   - VideoPlaceholder: leafy-green tinted video tile on Welcome. Real
 //     YouTube embed when a youtubeId is supplied; otherwise a styled mock.
 
 import * as React from 'react';
 import type { Theme } from '../tokens.js';
 import type { StyleProp } from './_types.js';
+import { initialsOf, useFirmOwner } from '../tenant-display-context.js';
 
 export function AvatarSlot({
   t,
   size = 56,
-  src = '/antonio.webp',
-  label = 'A',
+  src,
+  label,
   style,
 }: {
   t: Theme;
   size?: number;
-  src?: string;
+  /** Override avatar URL. When undefined, reads from useFirmOwner();
+   *  when null, forces initials fallback even if context has a URL. */
+  src?: string | null;
+  /** Override the alt + initials text. When undefined, derives from
+   *  the firm owner's name in context. */
   label?: string;
   style?: StyleProp;
 }) {
+  const owner = useFirmOwner();
+
+  // Resolution order:
+  //   1. Explicit src prop (wins all)
+  //   2. firmOwner.avatarUrl from context
+  //   3. /antonio.webp legacy default (only if owner is null —
+  //      i.e., layout never wrapped with TenantDisplayProvider)
+  //   4. Initials fallback (when owner is set but avatarUrl is null)
+  const resolvedSrc =
+    src !== undefined
+      ? src
+      : owner
+      ? owner.avatarUrl
+      : '/antonio.webp';
+
+  const resolvedLabel = label ?? owner?.name ?? 'A';
+  const initials = initialsOf(owner?.name);
+
+  const baseStyle: React.CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: '50%',
+    overflow: 'hidden',
+    border: `1px solid ${t.border}`,
+    flexShrink: 0,
+    background: t.bgElev,
+    ...(style as React.CSSProperties | undefined),
+  };
+
+  if (resolvedSrc) {
+    return (
+      <div style={baseStyle}>
+        <img
+          src={resolvedSrc}
+          alt={resolvedLabel}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: '50% 22%',
+            display: 'block',
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Initials fallback. Sized to match the avatar; uses the editorial
+  // serif so it reads as a name plate, not a generic avatar mock.
   return (
     <div
       style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        border: `1px solid ${t.border}`,
-        flexShrink: 0,
-        background: t.bgElev,
-        ...style,
+        ...baseStyle,
+        background: t.ease.keylimeWash,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: t.ease.forestDark,
+        fontFamily: t.serif,
+        // Text size scales with the avatar — ~40% of diameter.
+        fontSize: Math.max(10, Math.round(size * 0.4)),
+        fontWeight: 500,
+        letterSpacing: -0.4,
+        textTransform: 'uppercase',
       }}
+      aria-label={resolvedLabel}
     >
-      <img
-        src={src}
-        alt={label}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: '50% 22%',
-          display: 'block',
-        }}
-      />
+      {initials || '·'}
     </div>
   );
 }

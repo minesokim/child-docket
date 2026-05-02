@@ -10,6 +10,7 @@
 // needs usePathname + useRouter.
 
 import { redirect } from 'next/navigation';
+import { TenantDisplayProvider } from '@docket/ui';
 import { resolveClient } from '@/lib/intake/auth';
 import { getOrCreateIntakeAnswers } from '@/lib/intake';
 import { IntakeProvider } from '@/lib/intake-context';
@@ -34,9 +35,14 @@ export default async function PortalLayout({
   const bundle = await getOrCreateIntakeAnswers();
   const initialAnswers = bundle?.answers ?? {};
 
+  const tenantName = auth.kind === 'authed' ? auth.client.tenantName : null;
+  const firmOwner = auth.kind === 'authed' ? auth.client.firmOwner : null;
+
   return (
-    <IntakeProvider initialAnswers={initialAnswers}>
-      <PortalFrame>{children}</PortalFrame>
-    </IntakeProvider>
+    <TenantDisplayProvider tenantName={tenantName} firmOwner={firmOwner}>
+      <IntakeProvider initialAnswers={initialAnswers}>
+        <PortalFrame>{children}</PortalFrame>
+      </IntakeProvider>
+    </TenantDisplayProvider>
   );
 }

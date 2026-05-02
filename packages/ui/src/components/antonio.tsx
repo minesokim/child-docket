@@ -22,6 +22,14 @@
 import * as React from 'react';
 import type { Theme } from '../tokens.js';
 import { AvatarSlot } from './media.js';
+import { useFirmOwner } from '../tenant-display-context.js';
+
+// Default copy when no firm owner is wired through the layout. Keeps
+// existing pages rendering while a tenant migrates onto the new
+// TenantDisplayProvider. Once the context is mounted with real data,
+// these defaults are bypassed.
+const DEFAULT_FIRST_NAME = 'Antonio';
+const DEFAULT_FULL_NAME = 'Antonio Vazquez, EA';
 
 // ────────────────────────────────────────────────────────────────
 // AskAntonioBar — sticky bottom rail.
@@ -45,6 +53,9 @@ export function AskAntonioBar({
   t: Theme;
   onMessage?: () => void;
 }) {
+  const owner = useFirmOwner();
+  const firstName = owner?.firstName ?? DEFAULT_FIRST_NAME;
+
   const handleClick = () => {
     if (onMessage) onMessage();
     try {
@@ -114,7 +125,7 @@ export function AskAntonioBar({
             fontWeight: 400,
           }}
         >
-          Stuck? Ask Antonio
+          Stuck? Ask {firstName}
         </span>
         <button
           onClick={(e) => {
@@ -165,6 +176,10 @@ const WELCOME_MSG: ChatMsg = {
 const FIRST_OPEN_KEY = 'docket:antonio_chat_first_open_seen';
 
 export function AskAntonioChat({ t }: { t: Theme }) {
+  const owner = useFirmOwner();
+  const firstName = owner?.firstName ?? DEFAULT_FIRST_NAME;
+  const fullName = owner?.name ?? DEFAULT_FULL_NAME;
+
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
   // SSR-safe default: assume returning visitor (welcome already there).
@@ -307,7 +322,7 @@ export function AskAntonioChat({ t }: { t: Theme }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 500, color: t.ease.forestDark, letterSpacing: -0.45 }}>
-              Antonio Vazquez, EA
+              {fullName}
             </div>
             {/* No bullet — the green dot on the avatar already carries the
                 online signal. A second indicator next to "Online" was
@@ -399,13 +414,13 @@ export function AskAntonioChat({ t }: { t: Theme }) {
                 letterSpacing: -0.36,
               }}
             >
-              Antonio is reviewing your intake. He&apos;ll reach out within 24 hours.
+              {firstName} is reviewing your intake. They&apos;ll reach out within 24 hours.
             </div>
           </div>
 
           {messages.map((m, i) => {
             const isUser = m.from === 'u';
-            const senderName = isUser ? 'You' : 'Antonio';
+            const senderName = isUser ? 'You' : firstName;
             // Animate any message at or after the threshold captured at
             // mount. First-time visitors: threshold is 0, so the welcome
             // animates in. Returning visitors: threshold is 1, welcome

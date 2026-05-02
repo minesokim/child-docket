@@ -150,10 +150,14 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
     .limit(1);
 
   if (byEmail[0]) {
-    // Found a pre-provisioned row by email. Bind it to this Clerk identity.
+    // Found a pre-provisioned row by email. Bind it to this Clerk
+    // identity AND capture the Clerk profile image. Surfaces in the
+    // client-portal AskAntonioBar / AskAntonioChat / AvatarSlot via
+    // the firm-owner JOIN in client-portal/lib/intake/auth.ts. NULL
+    // when Clerk hasn't captured an image — UI falls back to initials.
     const [updated] = await db
       .update(schema.users)
-      .set({ clerkUserId })
+      .set({ clerkUserId, avatarUrl: clerkUser.imageUrl ?? null })
       .where(eq(schema.users.id, byEmail[0].id))
       .returning({
         id: schema.users.id,
@@ -213,6 +217,10 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
         clerkUserId,
         email,
         name,
+        // Capture the Clerk profile image for the client-portal
+        // firm-owner avatar surface (see client-portal/lib/intake/
+        // auth.ts loadFirmOwner). NULL → UI falls back to initials.
+        avatarUrl: clerkUser.imageUrl ?? null,
         role: 'preparer',
       })
       .returning({

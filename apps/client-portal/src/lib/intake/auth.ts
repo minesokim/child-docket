@@ -37,9 +37,39 @@
 //   line of defense.
 
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, asc } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import { getAdminDb, schema } from '@docket/db';
+
+// Resolves the firm owner for a tenant. Returns the OLDEST firm_owner
+// row by createdAt — deterministic when there are multiple, which v0
+// shouldn't have but the schema permits.
+//
+// Pulled out of resolveClient so both the fast-path read and the
+// post-bind read can call it. One round-trip per call; we do at most
+// one per resolveClient invocation.
+async function loadFirmOwner(
+  db: ReturnType<typeof getAdminDb>,
+  tenantId: string,
+): Promise<AuthedClient['firmOwner']> {
+  const [owner] = await db
+    .select({
+      name: schema.users.name,
+      avatarUrl: schema.users.avatarUrl,
+    })
+    .from(schema.users)
+    .where(and(eq(schema.users.tenantId, tenantId), eq(schema.users.role, 'firm_owner')))
+    .orderBy(asc(schema.users.createdAt))
+    .limit(1);
+
+  if (!owner || !owner.name) return null;
+  const firstName = owner.name.split(/\s+/)[0] ?? owner.name;
+  return {
+    name: owner.name,
+    firstName,
+    avatarUrl: owner.avatarUrl,
+  };
+}
 
 export type AuthedClient = {
   clientId: string;
@@ -47,6 +77,28 @@ export type AuthedClient = {
   clerkUserId: string;
   /** Tenant timezone, used by tax-year computation. */
   timezone: string;
+  /** Tenant display name — surfaces in /welcome H1 etc. */
+  tenantName: string;
+  /**
+   * The firm owner of the current tenant. Surfaces in AskAntonioBar
+   * ("Stuck? Ask {firstName}"), AskAntonioChat header, AvatarSlot,
+   * AntonioNote — replaces the previous hardcoded "Antonio" copy.
+   *
+   * Multi-firm note: a tenant could have multiple users with role
+   * 'firm_owner' down the road; for v0 we pick LIMIT 1 deterministically
+   * (oldest by createdAt). Refine when that case actually exists.
+   *
+   * `null` if the tenant has no firm_owner row yet (shouldn't happen
+   * post-seed, but the UI falls back to "Antonio Vazquez" / antonio.webp
+   * defaults so this can't crash a render).
+   */
+  firmOwner: {
+    name: string;
+    /** First-name slice for "Ask {firstName}" copy. */
+    firstName: string;
+    /** Avatar URL from Clerk imageUrl. NULL → UI shows initials of name. */
+    avatarUrl: string | null;
+  } | null;
 };
 
 /**
@@ -77,13 +129,16 @@ export async function resolveClient(): Promise<AuthResolution> {
   const db = getAdminDb();
 
   // Fast path: already bound. Vast majority of requests land here.
-  // Join tenants to pull timezone in the same round-trip — every
-  // server action ends up needing it for tax-year computation.
+  // Join tenants to pull timezone + display name in the same
+  // round-trip — every server action ends up needing the timezone
+  // for tax-year computation, and most pages need the tenant name
+  // for headers.
   const [existing] = await db
     .select({
       id: schema.clients.id,
       tenantId: schema.clients.tenantId,
       timezone: schema.tenants.timezone,
+      tenantName: schema.tenants.name,
     })
     .from(schema.clients)
     .innerJoin(schema.tenants, eq(schema.tenants.id, schema.clients.tenantId))
@@ -91,6 +146,7 @@ export async function resolveClient(): Promise<AuthResolution> {
     .limit(1);
 
   if (existing) {
+    const firmOwner = await loadFirmOwner(db, existing.tenantId);
     return {
       kind: 'authed',
       client: {
@@ -98,6 +154,8 @@ export async function resolveClient(): Promise<AuthResolution> {
         tenantId: existing.tenantId,
         clerkUserId: userId,
         timezone: existing.timezone,
+        tenantName: existing.tenantName,
+        firmOwner,
       },
     };
   }
@@ -160,6 +218,7 @@ export async function resolveClient(): Promise<AuthResolution> {
         id: schema.clients.id,
         tenantId: schema.clients.tenantId,
         timezone: schema.tenants.timezone,
+        tenantName: schema.tenants.name,
       })
       .from(schema.clients)
       .innerJoin(schema.tenants, eq(schema.tenants.id, schema.clients.tenantId))
@@ -167,6 +226,7 @@ export async function resolveClient(): Promise<AuthResolution> {
       .limit(1);
 
     if (reread) {
+      const firmOwner = await loadFirmOwner(db, reread.tenantId);
       return {
         kind: 'authed',
         client: {
@@ -174,6 +234,8 @@ export async function resolveClient(): Promise<AuthResolution> {
           tenantId: reread.tenantId,
           clerkUserId: userId,
           timezone: reread.timezone,
+          tenantName: reread.tenantName,
+          firmOwner,
         },
       };
     }
@@ -185,14 +247,18 @@ export async function resolveClient(): Promise<AuthResolution> {
     return { kind: 'no_invite' };
   }
 
-  // Pull timezone for the bound row. Could fold into the UPDATE...RETURNING
-  // with a join, but Drizzle's UPDATE...RETURNING doesn't support joins —
-  // a follow-up SELECT is the simpler shape.
-  const [withTz] = await db
-    .select({ timezone: schema.tenants.timezone })
+  // Pull tenant + firm owner for the freshly-bound row. Could fold
+  // into the UPDATE...RETURNING with a join, but Drizzle's
+  // UPDATE...RETURNING doesn't support joins — a follow-up SELECT is
+  // the simpler shape, and the row is fresh so cache-invalidation
+  // isn't a concern.
+  const [tenantRow] = await db
+    .select({ timezone: schema.tenants.timezone, name: schema.tenants.name })
     .from(schema.tenants)
     .where(eq(schema.tenants.id, bound.tenantId))
     .limit(1);
+
+  const firmOwner = await loadFirmOwner(db, bound.tenantId);
 
   return {
     kind: 'authed',
@@ -200,7 +266,9 @@ export async function resolveClient(): Promise<AuthResolution> {
       clientId: bound.id,
       tenantId: bound.tenantId,
       clerkUserId: userId,
-      timezone: withTz?.timezone ?? 'America/Los_Angeles',
+      timezone: tenantRow?.timezone ?? 'America/Los_Angeles',
+      tenantName: tenantRow?.name ?? 'Your tax preparer',
+      firmOwner,
     },
   };
 }
