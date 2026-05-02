@@ -189,6 +189,14 @@ export const users = pgTable(
     email: text('email').notNull(),
     name: text('name'),
     role: userRoleEnum('role').notNull().default('preparer'),
+    // Profile picture URL. Populated from Clerk's user.imageUrl on
+    // sign-in (claim path or auto-provision). NULL when Clerk hasn't
+    // captured one yet — UI falls back to initials of `name`.
+    //
+    // Stored at the column level (not pulled from Clerk on every read)
+    // so client portal pages — which surface the firm owner's avatar
+    // to taxpayers — don't need to fetch a Clerk session per request.
+    avatarUrl: text('avatar_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ tenantIdx: index('users_tenant_idx').on(t.tenantId) }),
