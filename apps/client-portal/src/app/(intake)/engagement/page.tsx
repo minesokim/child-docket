@@ -128,7 +128,7 @@ export default function EngagementPage() {
           </div>
         </Stack>
 
-        <IntakeBottomBar t={t}>
+        <IntakeBottomBar t={t} sticky={false}>
           <Button
             t={t}
             variant="ghost"

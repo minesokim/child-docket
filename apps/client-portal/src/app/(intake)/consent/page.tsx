@@ -142,7 +142,7 @@ export default function ConsentPage() {
           </div>
         </Stack>
 
-        <IntakeBottomBar t={t}>
+        <IntakeBottomBar t={t} sticky={false}>
           <Button
             t={t}
             variant="ghost"

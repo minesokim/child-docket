@@ -227,16 +227,24 @@ export function BottomBar({
 export function IntakeBottomBar({
   t,
   children,
+  sticky = true,
 }: {
   t: Theme;
   children: React.ReactNode;
+  /** Default true. Pass `sticky={false}` on long-form legal pages
+   *  (engagement letter, §7216 consent) where the user expects to
+   *  scroll the contract and reach the buttons at its natural bottom
+   *  — pinning them on top of the contract reads as pressure. */
+  sticky?: boolean;
 }) {
   return (
     <div
       style={{
-        position: 'sticky',
-        bottom: 0,
-        background: `linear-gradient(to top, ${t.bg} 70%, transparent)`,
+        position: sticky ? 'sticky' : 'static',
+        bottom: sticky ? 0 : undefined,
+        background: sticky
+          ? `linear-gradient(to top, ${t.bg} 70%, transparent)`
+          : 'transparent',
         padding: '24px 24px 32px',
         display: 'flex',
         gap: 10,
