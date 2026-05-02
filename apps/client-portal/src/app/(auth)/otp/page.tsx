@@ -382,7 +382,19 @@ function OtpFlow() {
           </button>
         </div>
 
-        {/* Code input — sans, big, tabular nums, mintWhisper fill, no stroke. */}
+        {/* Code input — sans, big, tabular nums, mintWhisper fill, no stroke.
+            Placeholder uses thin Unicode hyphens (U+2010) with spaces, in
+            a low-contrast forest green so they read as subtle guides
+            rather than bold dashes. The browser default placeholder color
+            (often near-black at full opacity) is overridden via the
+            `<style>` block below. */}
+        <style>{`
+          #otp-code::placeholder {
+            color: rgba(15, 62, 23, 0.28);
+            font-weight: 300;
+            letter-spacing: 6px;
+          }
+        `}</style>
         <input
           ref={inputRef}
           id="otp-code"
@@ -391,7 +403,7 @@ function OtpFlow() {
           inputMode="numeric"
           autoComplete="one-time-code"
           maxLength={6}
-          placeholder="------"
+          placeholder="‐ ‐ ‐ ‐ ‐ ‐"
           disabled={verifying}
           style={{
             width: '100%',
