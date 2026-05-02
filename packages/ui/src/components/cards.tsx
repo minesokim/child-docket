@@ -1,5 +1,7 @@
 // Card patterns:
-//   - Card: the base container — bordered tile with optional click + selected states.
+//   - Card: the base container — bordered tile with optional click +
+//     selected states. Accepts an `accent` prop for ease-aligned tinted
+//     variants (mintGlaze / slateMist / keylimeWash / mintKiss / forestDark).
 //   - ToggleCard: multi-select with icon well + check square.
 //   - RadioRowCard: single-select with circle indicator.
 //   - DependentCountCard: count-icon variant for the dependents-count screen.
@@ -8,6 +10,24 @@ import * as React from 'react';
 import type { Theme } from '../tokens.js';
 import type { StyleProp } from './_types.js';
 
+/** Card accent variants — map directly onto the ease palette. The
+ *  `forestDark` variant flips the foreground to white because it's the
+ *  only dark surface; everything else keeps ink text. */
+export type CardAccent =
+  | 'mintGlaze'
+  | 'slateMist'
+  | 'keylimeWash'
+  | 'mintKiss'
+  | 'forestDark';
+
+const ACCENT_FILL: Record<CardAccent, { bg: string; fg: string }> = {
+  mintGlaze:    { bg: '#b1dbb8', fg: '#0f3e17' },
+  slateMist:    { bg: '#b6ced5', fg: '#0f3e17' },
+  keylimeWash:  { bg: '#e1f4df', fg: '#0f3e17' },
+  mintKiss:     { bg: '#cfe7d3', fg: '#0f3e17' },
+  forestDark:   { bg: '#0f3e17', fg: '#fffefc' },
+};
+
 export function Card({
   t,
   children,
@@ -15,6 +35,7 @@ export function Card({
   onClick,
   selected,
   tinted,
+  accent,
 }: {
   t: Theme;
   children: React.ReactNode;
@@ -22,13 +43,26 @@ export function Card({
   onClick?: () => void;
   selected?: boolean;
   tinted?: boolean;
+  /** ease-palette tinted variant. Pairs with `tile` density at the
+   *  caller (e.g. portal home action grid). Mutually exclusive with
+   *  `tinted`; if both set, `accent` wins. */
+  accent?: CardAccent;
 }) {
+  // Resolve the surface. `accent` (ease palette) > `tinted` (legacy
+  // rust-soft tint) > default card white.
+  const accentFill = accent ? ACCENT_FILL[accent] : null;
+  const background = accentFill?.bg ?? (tinted ? t.tintAccent : t.card);
+  // Accent variants drop the visible border — the fill carries the
+  // shape. Default + tinted variants keep the hairline.
+  const borderColor = accentFill ? 'transparent' : selected ? t.rust : t.border;
+
   return (
     <div
       onClick={onClick}
       style={{
-        background: tinted ? t.tintAccent : t.card,
-        border: `1px solid ${selected ? t.rust : t.border}`,
+        background,
+        color: accentFill?.fg ?? t.ink,
+        border: `1px solid ${borderColor}`,
         borderRadius: t.radius,
         padding: t.pad,
         transition: 'all 0.15s ease',

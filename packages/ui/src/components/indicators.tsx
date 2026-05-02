@@ -117,3 +117,118 @@ export function TrustPill({
     </div>
   );
 }
+
+// ────────────────────────────────────────────────────────────────
+// StatusPill — compact status tag in the ease palette. Pill-rounded,
+// solid sage / mint / slate / amber fill. Use for: pipeline stage tags,
+// issue severity, "Weekly" / "New" / "Pending" labels, etc.
+//
+// Five named tones map onto ease's accent palette plus a neutral and
+// an amber for warning. All have ink text on light fill so contrast
+// stays high without needing white-on-color.
+// ────────────────────────────────────────────────────────────────
+
+export type StatusTone = 'mint' | 'sage' | 'slate' | 'amber' | 'neutral';
+
+const STATUS_FILL: Record<StatusTone, { bg: string; fg: string }> = {
+  mint:    { bg: '#cfe7d3', fg: '#0f3e17' },
+  sage:    { bg: '#b1dbb8', fg: '#0f3e17' },
+  slate:   { bg: '#b6ced5', fg: '#0f3e17' },
+  amber:   { bg: '#f4e9b8', fg: '#5a4a0a' },
+  neutral: { bg: '#e5e7eb', fg: '#333333' },
+};
+
+export function StatusPill({
+  t,
+  tone = 'mint',
+  children,
+}: {
+  t: Theme;
+  tone?: StatusTone;
+  children: React.ReactNode;
+}) {
+  const fill = STATUS_FILL[tone];
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '4px 10px',
+        background: fill.bg,
+        color: fill.fg,
+        borderRadius: 999,
+        fontFamily: t.sans,
+        fontSize: 12,
+        fontWeight: 500,
+        letterSpacing: -0.36,
+        lineHeight: 1.5,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// StatNumber — confident large numerical headline. Fraunces serif at
+// the ease `display` size with a light weight. Optional StatusPill
+// caption underneath plus a tight sans label.
+//
+// Pattern lifted from ease's CRM hero: a card with one big number, a
+// small status pill, and a sans label. Use for morning-brief tiles,
+// pipeline stat cards, dashboards.
+// ────────────────────────────────────────────────────────────────
+
+export function StatNumber({
+  t,
+  value,
+  label,
+  pill,
+  pillTone = 'mint',
+}: {
+  t: Theme;
+  value: number | string;
+  label?: string;
+  pill?: string;
+  pillTone?: StatusTone;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        style={{
+          fontFamily: t.serif,
+          fontSize: 56,
+          fontWeight: 300,
+          lineHeight: 1.0,
+          letterSpacing: -1.68,
+          color: '#0f3e17',
+          fontFeatureSettings: '"tnum" 1, "lnum" 1',
+        }}
+      >
+        {value}
+      </div>
+      {pill && (
+        <div>
+          <StatusPill t={t} tone={pillTone}>
+            {pill}
+          </StatusPill>
+        </div>
+      )}
+      {label && (
+        <div
+          style={{
+            fontFamily: t.sans,
+            fontSize: 14,
+            fontWeight: 400,
+            lineHeight: 1.5,
+            letterSpacing: -0.42,
+            color: t.inkSoft,
+          }}
+        >
+          {label}
+        </div>
+      )}
+    </div>
+  );
+}

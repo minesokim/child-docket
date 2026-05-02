@@ -1,6 +1,7 @@
 // Button primitives.
-//   - Button: 4 variants (primary/success/ghost/dark). Pill in editorial,
-//     square in magazine tone.
+//   - Button: 4 variants (primary/success/ghost/dark). Soft-corner
+//     rectangle (14px) in editorial — matches the ease design system's
+//     `--radius-buttons: 14px`. Square in magazine tone.
 //   - BackButton: chevron + label, every intake screen after step 1.
 //   - IntakeBackButton: smaller "← Back" link at the top of intake screens.
 
@@ -34,6 +35,10 @@ export function Button({
     dark: { bg: t.ink, fg: t.bgElev, border: t.ink },
   };
   const base = variants[variant];
+  // Radius: 4px in magazine, 14px elsewhere (ease parity). Was 999/full
+  // pill in editorial — softer rectangle reads as a deliberate action,
+  // not a candy button.
+  const cornerRadius = t.tone === 'magazine' ? 4 : 14;
   return (
     <button
       type={type}
@@ -43,7 +48,7 @@ export function Button({
         background: disabled ? t.borderSoft : base.bg,
         color: disabled ? t.muted : base.fg,
         border: `1px solid ${disabled ? t.border : base.border}`,
-        borderRadius: t.tone === 'magazine' ? 4 : 999,
+        borderRadius: cornerRadius,
         padding: '14px 22px',
         fontFamily: t.sans,
         fontSize: 16,
