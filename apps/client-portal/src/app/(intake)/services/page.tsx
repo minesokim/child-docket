@@ -284,22 +284,16 @@ export default function ServicesPathPage() {
             );
           })}
 
-        </Stack>
-
-        <div
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            background: `linear-gradient(to top, ${t.bg} 70%, transparent)`,
-            padding: '20px 24px 28px',
-          }}
-        >
+          {/* Starting estimate sits inline at the bottom of the
+              scrollable content — not sticky. Scrolls with the cards
+              above so it doesn't compete with the AskAntonioBar +
+              Continue button below. */}
           <div
             style={{
               background: '#fffefc',
               borderRadius: t.radius,
               padding: '14px 16px',
-              marginBottom: 12,
+              marginTop: 6,
               boxShadow: '0 6px 18px rgba(60, 40, 28, 0.06)',
             }}
           >
@@ -321,6 +315,16 @@ export default function ServicesPathPage() {
               </div>
             </Row>
           </div>
+        </Stack>
+
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            background: `linear-gradient(to top, ${t.bg} 70%, transparent)`,
+            padding: '20px 24px 28px',
+          }}
+        >
           <div style={{ marginBottom: 12 }}>
             <AskAntonioBar t={t} />
           </div>
