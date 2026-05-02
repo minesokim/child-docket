@@ -25,6 +25,7 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { formatDigits, formatEin, formatStateCode, formatZip } from '@/lib/format';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function BusinessInfoPage() {
@@ -148,7 +149,7 @@ export default function BusinessInfoPage() {
             <EncryptedTextField
               t={t}
               value={ein}
-              onChange={(v) => void setEin(v)}
+              onChange={(v) => void setEin(formatEin(v))}
               onReveal={revealEin}
               placeholder="XX-XXXXXXX"
               mono
@@ -181,7 +182,7 @@ export default function BusinessInfoPage() {
             <TextField
               t={t}
               value={employees}
-              onChange={(v) => void setEmployees(v.replace(/\D/g, ''))}
+              onChange={(v) => void setEmployees(formatDigits(v, 6))}
               mono
               inputMode="numeric"
               placeholder="0"
@@ -260,7 +261,7 @@ export default function BusinessInfoPage() {
                 <TextField
                   t={t}
                   value={addressState}
-                  onChange={(v) => void setAddressState(v.toUpperCase().slice(0, 2))}
+                  onChange={(v) => void setAddressState(formatStateCode(v))}
                   mono
                   style={{ textTransform: 'uppercase', letterSpacing: 1 }}
                   autoComplete="address-level1"
@@ -271,7 +272,7 @@ export default function BusinessInfoPage() {
                 <TextField
                   t={t}
                   value={zip}
-                  onChange={(v) => void setZip(v.replace(/\D/g, '').slice(0, 5))}
+                  onChange={(v) => void setZip(formatZip(v))}
                   mono
                   inputMode="numeric"
                   autoComplete="postal-code"
@@ -349,9 +350,9 @@ export default function BusinessInfoPage() {
                   <TextField
                     t={t}
                     value={ownerPercent}
-                    onChange={(v) => void setOwnerPercent(v.replace(/\D/g, '').slice(0, 3))}
+                    onChange={(v) => void setOwnerPercent(formatDigits(v, 3))}
                     mono
-                    inputMode="decimal"
+                    inputMode="numeric"
                     placeholder="100"
                   />
                 </div>

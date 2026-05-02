@@ -65,7 +65,6 @@ export default function TaxQuestionsPage() {
     icon: React.ReactNode;
     label: string;
     sub: string;
-    emphasis?: boolean;
   }> = [
     {
       k: 'crypto',
@@ -96,7 +95,6 @@ export default function TaxQuestionsPage() {
       icon: <IconGlobe />,
       label: 'Do you have foreign bank accounts or assets over $10,000?',
       sub: 'At any point in 2025 — triggers FBAR reporting',
-      emphasis: true,
     },
     {
       k: 'overtime',
@@ -147,7 +145,6 @@ export default function TaxQuestionsPage() {
               icon={q.icon}
               label={q.label}
               sub={q.sub}
-              emphasis={q.emphasis}
             />
           ))}
 

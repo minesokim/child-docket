@@ -31,6 +31,7 @@ import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { formatEin, formatMoney } from '@/lib/format';
 
 type ItemKey =
   | 'mortgage'
@@ -200,7 +201,7 @@ export default function DeductionsPage() {
                       <TextField
                         t={t}
                         value={childcare.providerEin ?? ''}
-                        onChange={(v) => updateChildcare('providerEin', v)}
+                        onChange={(v) => updateChildcare('providerEin', formatEin(v))}
                         placeholder="XX-XXXXXXX"
                         mono
                         inputMode="numeric"
@@ -211,10 +212,10 @@ export default function DeductionsPage() {
                       <TextField
                         t={t}
                         value={childcare.amountPaid ?? ''}
-                        onChange={(v) => updateChildcare('amountPaid', v)}
+                        onChange={(v) => updateChildcare('amountPaid', formatMoney(v))}
                         placeholder="$0"
                         mono
-                        inputMode="decimal"
+                        inputMode="numeric"
                       />
                     </div>
                   </Stack>

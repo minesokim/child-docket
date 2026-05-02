@@ -22,6 +22,7 @@ import {
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { formatDigits, formatMoney, formatYear } from '@/lib/format';
 import type { IntakeRentalProperty } from '@docket/shared';
 
 type RentalType = NonNullable<IntakeRentalProperty['rentalType']>;
@@ -172,7 +173,7 @@ export default function RentalDetailPage() {
                   <TextField
                     t={t}
                     value={property.monthlyRent ?? ''}
-                    onChange={(v) => update('monthlyRent', v)}
+                    onChange={(v) => update('monthlyRent', formatMoney(v))}
                     placeholder="$0"
                     mono
                     inputMode="numeric"
@@ -183,7 +184,7 @@ export default function RentalDetailPage() {
                   <TextField
                     t={t}
                     value={property.monthlyMortgage ?? ''}
-                    onChange={(v) => update('monthlyMortgage', v)}
+                    onChange={(v) => update('monthlyMortgage', formatMoney(v))}
                     placeholder="$0"
                     mono
                     inputMode="numeric"
@@ -196,7 +197,7 @@ export default function RentalDetailPage() {
                   <TextField
                     t={t}
                     value={property.yearAcquired ?? ''}
-                    onChange={(v) => update('yearAcquired', v.replace(/\D/g, '').slice(0, 4))}
+                    onChange={(v) => update('yearAcquired', formatYear(v))}
                     placeholder="2020"
                     mono
                     inputMode="numeric"
@@ -207,7 +208,7 @@ export default function RentalDetailPage() {
                   <TextField
                     t={t}
                     value={property.rentalCount ?? ''}
-                    onChange={(v) => update('rentalCount', v.replace(/\D/g, '').slice(0, 3))}
+                    onChange={(v) => update('rentalCount', formatDigits(v, 3))}
                     placeholder="1"
                     mono
                     inputMode="numeric"

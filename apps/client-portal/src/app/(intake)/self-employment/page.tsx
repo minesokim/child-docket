@@ -24,6 +24,7 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { formatEin, formatMoney } from '@/lib/format';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IncomeType } from '@docket/shared';
 
@@ -146,7 +147,7 @@ export default function SelfEmploymentPage() {
             <EncryptedTextField
               t={t}
               value={ein}
-              onChange={(v) => void setEin(v)}
+              onChange={(v) => void setEin(formatEin(v))}
               onReveal={revealEin}
               placeholder="XX-XXXXXXX or N/A"
               mono
@@ -159,10 +160,10 @@ export default function SelfEmploymentPage() {
             <TextField
               t={t}
               value={revenue}
-              onChange={(v) => void setRevenue(v)}
+              onChange={(v) => void setRevenue(formatMoney(v))}
               placeholder="e.g., $50,000"
               mono
-              inputMode="decimal"
+              inputMode="numeric"
             />
           </div>
 
@@ -199,7 +200,6 @@ export default function SelfEmploymentPage() {
               icon={<IconCash />}
               label="Is most of my revenue in cash?"
               sub="Cash businesses require more documentation"
-              emphasis
             />
           </div>
 

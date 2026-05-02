@@ -30,6 +30,7 @@ import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { formatStateCode, formatZip } from '@/lib/format';
 
 // ────────────────────────────────────────────────────────────────
 // Format helpers — display vs storage
@@ -227,7 +228,7 @@ export default function PersonalPage() {
                 <TextField
                   t={t}
                   value={addressState}
-                  onChange={(v) => void setAddressState(v.toUpperCase().slice(0, 2))}
+                  onChange={(v) => void setAddressState(formatStateCode(v))}
                   placeholder="CA"
                   mono
                   style={{ textTransform: 'uppercase', letterSpacing: 1 }}
@@ -239,7 +240,7 @@ export default function PersonalPage() {
                 <TextField
                   t={t}
                   value={zip}
-                  onChange={(v) => void setZip(v.replace(/\D/g, '').slice(0, 5))}
+                  onChange={(v) => void setZip(formatZip(v))}
                   placeholder="00000"
                   mono
                   inputMode="numeric"

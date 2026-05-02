@@ -714,15 +714,22 @@ export function AskAntonioBar({
   // the original pill shape.
   const hasTip = !!tip;
 
+  // Visual posture: when there's a tip, the bar reads as a CARD with
+  // soft elevation (Antonio is saying something useful). When there's
+  // no tip, it shrinks to a calmer pill — no shadow, thinner border —
+  // so it's there if you need it but not yelling at every screen.
+  const elevated = hasTip;
+
   return (
     <div
       onClick={handleClick}
       style={{
         background: '#FFFFFF',
-        border: `1.5px solid ${t.rustSoft}`,
+        border: `1px solid ${t.rustSoft}`,
         borderRadius: hasTip ? 18 : 999,
-        boxShadow:
-          '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)',
+        boxShadow: elevated
+          ? '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)'
+          : 'none',
         cursor: 'pointer',
         overflow: 'hidden',
         transition:
@@ -730,87 +737,95 @@ export function AskAntonioBar({
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow =
-          '0 10px 24px rgba(150, 60, 28, 0.14), 0 2px 4px rgba(60, 40, 28, 0.08)';
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow =
-          '0 6px 18px rgba(150, 60, 28, 0.10), 0 1px 2px rgba(60, 40, 28, 0.06)';
       }}
     >
       {/* Tip row — only renders when a tip is provided. Sits ABOVE the
           ask row, separated by a hairline divider in the same rust-soft
-          tone as the outer border so the whole component reads as one. */}
+          tone as the outer border so the whole component reads as one.
+          Avatar (not a lightbulb) + serif italic body + '—Antonio'
+          signature signal that this is HIM speaking, not a generic UI
+          tip. Bigger font (13.5) is readable on mobile. */}
       {hasTip && (
         <div
           style={{
-            padding: '10px 14px 11px',
+            padding: '12px 14px 13px',
             borderBottom: `1px solid ${t.rustSoft}`,
             background: t.tintAccent,
             display: 'flex',
-            gap: 9,
+            gap: 11,
             alignItems: 'flex-start',
           }}
         >
-          {/* Lightbulb glyph — reads as 'Antonio is hinting'. */}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke={t.rustInk}
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ flexShrink: 0, marginTop: 2 }}
-            aria-hidden
-          >
-            <path d="M7 1.5a3.8 3.8 0 0 0-2.3 6.85c.55.42.85.93.85 1.55V11h2.9V9.9c0-.62.3-1.13.85-1.55A3.8 3.8 0 0 0 7 1.5z" />
-            <path d="M5.55 12.5h2.9M6.1 13.5h1.8" />
-          </svg>
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              fontFamily: t.sans,
-              fontSize: 12.5,
-              lineHeight: 1.45,
-              color: t.inkSoft,
-              letterSpacing: -0.05,
-            }}
-          >
-            {tip}
+          <div style={{ flexShrink: 0, marginTop: 1 }}>
+            <AvatarSlot t={t} size={28} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: t.serif,
+                fontSize: 13.5,
+                fontStyle: 'italic',
+                lineHeight: 1.5,
+                color: t.ink,
+                letterSpacing: -0.1,
+              }}
+            >
+              {tip}
+            </div>
+            <div
+              style={{
+                marginTop: 4,
+                fontFamily: t.sans,
+                fontSize: 11,
+                color: t.muted,
+                letterSpacing: 0.2,
+              }}
+            >
+              — Antonio
+            </div>
           </div>
         </div>
       )}
 
-      {/* Ask row — same shape regardless of whether a tip is present. */}
+      {/* Ask row — slim by default (avatar 24, smaller text, no shadow on
+          button), elevates a touch when a tip is present (avatar 28). The
+          calm sizing makes the bar a footer the user can ignore until
+          they need it, instead of a status bar that always demands
+          attention. */}
       <div
         style={{
-          padding: '7px 9px 7px 11px',
+          padding: hasTip ? '8px 10px 8px 12px' : '6px 8px 6px 10px',
           display: 'flex',
           alignItems: 'center',
-          gap: 11,
+          gap: hasTip ? 11 : 9,
         }}
       >
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <AvatarSlot t={t} size={32} />
+          <AvatarSlot t={t} size={hasTip ? 28 : 24} />
           <div
             style={{
               position: 'absolute',
               bottom: -1,
               right: -1,
-              width: 10,
-              height: 10,
+              width: 8,
+              height: 8,
               borderRadius: '50%',
               background: '#4a8f5f',
               border: `2px solid #FFFFFF`,
-              boxShadow: '0 0 0 1px rgba(74, 143, 95, 0.20)',
             }}
           />
         </div>
-        <span style={{ flex: 1, fontSize: 13, color: t.ink, fontWeight: 500 }}>
+        <span
+          style={{
+            flex: 1,
+            fontSize: hasTip ? 13 : 12.5,
+            color: t.inkSoft,
+            fontWeight: 400,
+          }}
+        >
           Not sure? Ask Antonio
         </span>
         <button
@@ -819,9 +834,9 @@ export function AskAntonioBar({
             handleClick();
           }}
           style={{
-            padding: '7px 16px',
-            fontSize: 12.5,
-            fontWeight: 600,
+            padding: hasTip ? '6px 14px' : '5px 12px',
+            fontSize: 12,
+            fontWeight: 500,
             background: t.rust,
             color: '#fff',
             border: 'none',
@@ -829,7 +844,6 @@ export function AskAntonioBar({
             cursor: 'pointer',
             fontFamily: t.sans,
             letterSpacing: -0.05,
-            boxShadow: '0 2px 4px rgba(150, 60, 28, 0.20)',
           }}
         >
           Message
@@ -2035,7 +2049,13 @@ export function BackButton({
 // ────────────────────────────────────────────────────────────────
 // ToggleCard — multi-select card with icon well + check square.
 // Used by self-employment, tax-questions, deductions, life-events.
-// `emphasis: true` switches selected accent from ink (default) to rust.
+//
+// Selected toggles are always ink-on-card (consistent black). The
+// previous `emphasis` prop tinted some toggles green for "important"
+// items (foreign accounts, cash businesses) — pulled because the
+// inconsistency read as a UI bug, not a hint. If we want to call
+// attention to specific items later we'll do it with a small
+// 'IMPORTANT' label on the row, not a different selected color.
 // ────────────────────────────────────────────────────────────────
 
 export function ToggleCard({
@@ -2045,7 +2065,6 @@ export function ToggleCard({
   icon,
   label,
   sub,
-  emphasis = false,
 }: {
   t: Theme;
   on: boolean;
@@ -2053,10 +2072,9 @@ export function ToggleCard({
   icon: React.ReactNode;
   label: string;
   sub?: string;
-  emphasis?: boolean;
 }) {
-  const accent = emphasis ? t.rust : t.ink;
-  const accentSoft = emphasis ? t.tintAccent : t.bgElev;
+  const accent = t.ink;
+  const accentSoft = t.bgElev;
   const borderColor = on ? accent : t.border;
   const bg = on ? accentSoft : t.card;
 

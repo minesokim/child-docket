@@ -36,6 +36,7 @@ import {
   useSetIntakeField,
 } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { formatDigits } from '@/lib/format';
 import type { IntakeDependent } from '@docket/shared';
 
 // ────────────────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ function DependentCardDetails({
           <TextField
             t={t}
             value={dep.monthsLivedWithYou ?? ''}
-            onChange={(v) => onField('monthsLivedWithYou', v.replace(/\D/g, '').slice(0, 2))}
+            onChange={(v) => onField('monthsLivedWithYou', formatDigits(v, 2))}
             placeholder="12"
             mono
             inputMode="numeric"

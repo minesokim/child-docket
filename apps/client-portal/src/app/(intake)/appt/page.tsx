@@ -21,7 +21,7 @@ import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
-type ApptFormat = 'phone' | 'video' | 'inperson';
+type ApptFormat = 'video' | 'inperson';
 
 // Demo dates / times — would come from Antonio's calendar in v1
 const DATES = [
@@ -37,29 +37,11 @@ const DATES = [
 const TIMES = ['9:00 AM', '10:30 AM', '1:00 PM', '2:30 PM', '4:00 PM'];
 
 const FORMAT_LABELS: Record<ApptFormat, string> = {
-  phone: 'Phone call',
   video: 'Video call · Google Meet',
   inperson: 'In person · Claremont',
 };
 
 // ─── Inline icons ────────────────────────────────────────────────
-
-function IconPhone({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 3h3l1 3-1.5 1a8 8 0 004 4l1-1.5 3 1v3a1 1 0 01-1 1A11 11 0 012 4a1 1 0 011-1z" />
-    </svg>
-  );
-}
 
 function IconVideo({ size = 16 }: { size?: number }) {
   return (
@@ -272,14 +254,6 @@ export default function ApptPage() {
           <div>
             <FieldLabel t={t}>Format</FieldLabel>
             <Stack gap={10}>
-              <FormatCard
-                t={t}
-                on={format === 'phone'}
-                onClick={() => setFormat('phone')}
-                icon={<IconPhone />}
-                label="Phone call"
-                sub="We'll go through your return over the phone"
-              />
               <FormatCard
                 t={t}
                 on={format === 'video'}

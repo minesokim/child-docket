@@ -309,7 +309,11 @@ export type IntakeState = {
   // Appointment selection — matches /appt UX. dateIdx/timeIdx point
   // into Antonio's calendar slot list (resolved server-side later).
   appointment?: {
-    format?: 'phone' | 'video' | 'inperson';
+    // Phone removed in May 2026 — Antonio prefers video for the relationship
+    // signal (face-to-face) and in-person for new high-touch clients.
+    // Existing rows with format='phone' from earlier intakes still parse;
+    // the UI just no longer offers it as a choice going forward.
+    format?: 'video' | 'inperson';
     dateIdx?: number;
     timeIdx?: number;
   };

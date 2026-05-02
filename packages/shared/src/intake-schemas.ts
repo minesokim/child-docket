@@ -299,8 +299,11 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'contactInfo.preferredMethod': ContactMethodSchema,
   'contactInfo.bestTimeToReach': z.string().max(200),
 
-  // Appointment — calendar slot indices for v0; v1 stores actual ISO datetime
-  'appointment.format': z.enum(['phone', 'video', 'inperson']),
+  // Appointment — calendar slot indices for v0; v1 stores actual ISO datetime.
+  // 'phone' was removed May 2026 — Antonio prefers face-to-face. We accept
+  // legacy rows that already have it (no schema migration needed) but the
+  // UI no longer offers it. Validation accepts only video/inperson on writes.
+  'appointment.format': z.enum(['video', 'inperson']),
   'appointment.dateIdx': z.number().int().min(0).max(50),
   'appointment.timeIdx': z.number().int().min(0).max(50),
 

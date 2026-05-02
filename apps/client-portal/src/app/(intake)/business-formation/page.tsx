@@ -30,6 +30,7 @@ import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { formatDigits } from '@/lib/format';
 
 type EntityId = 'llc' | 'scorp' | 'ccorp' | 'unsure';
 
@@ -241,7 +242,7 @@ export default function BusinessFormationPage() {
             <TextField
               t={t}
               value={ownerCount}
-              onChange={(v) => void setOwnerCount(v.replace(/\D/g, '').slice(0, 3))}
+              onChange={(v) => void setOwnerCount(formatDigits(v, 3))}
               mono
               inputMode="numeric"
               placeholder="1"

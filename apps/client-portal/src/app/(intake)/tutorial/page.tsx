@@ -5,6 +5,7 @@
 // filing screen. 1-to-1 port of ScreenTutorial / TutorialOverlay.
 
 import {
+  AvatarSlot,
   Button,
   buildTheme,
   Row,
@@ -141,23 +142,7 @@ function TutorialAntonioDemo({ t }: { t: Theme }) {
         }}
       >
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              background: `radial-gradient(circle at 30% 30%, ${t.rustSoft}, ${t.bgElev})`,
-              border: `1px solid ${t.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: t.serif,
-              fontSize: 15,
-              color: t.rustInk,
-            }}
-          >
-            A
-          </div>
+          <AvatarSlot t={t} size={34} />
           <div
             style={{
               position: 'absolute',
@@ -205,17 +190,8 @@ function TutorialAntonioDemo({ t }: { t: Theme }) {
           pointerEvents: asked ? 'auto' : 'none',
         }}
       >
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10,
-            color: t.rustInk,
-            letterSpacing: 0.5,
-            paddingTop: 1,
-            flexShrink: 0,
-          }}
-        >
-          A
+        <div style={{ flexShrink: 0, marginTop: 1 }}>
+          <AvatarSlot t={t} size={22} />
         </div>
         <div
           style={{
@@ -230,19 +206,6 @@ function TutorialAntonioDemo({ t }: { t: Theme }) {
           &ldquo;No worries! Just type your question and I&apos;ll get back to you personally.
           Nothing is a dumb question.&rdquo;
         </div>
-      </div>
-
-      <div
-        style={{
-          marginTop: 10,
-          textAlign: 'center',
-          fontSize: 11,
-          color: t.rustInk,
-          fontFamily: t.mono,
-          letterSpacing: 0.6,
-        }}
-      >
-        ALWAYS AT THE BOTTOM OF EVERY SCREEN
       </div>
     </div>
   );
@@ -299,46 +262,54 @@ function TutorialCard({
     headline = "You're ready.";
     sub = "Answer what you can, skip what you can't, message me for anything.";
     body = (
-      <div
-        style={{
-          marginTop: 14,
-          padding: '14px 16px',
-          background: t.bgElev,
-          border: `1px solid ${t.borderSoft}`,
-          borderRadius: t.radius,
-        }}
-      >
+      <Stack gap={14} style={{ marginTop: 18 }}>
         {[
           'Tap to select answers',
-          'Message Antonio if unsure',
+          'Message me if unsure',
           'Upload docs now or later',
           'Progress saves automatically',
-        ].map((line, i, arr) => (
+        ].map((line, i) => (
           <div
             key={i}
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-              padding: '8px 0',
-              borderBottom: i < arr.length - 1 ? `1px solid ${t.borderSoft}` : 'none',
+              alignItems: 'center',
+              gap: 14,
             }}
           >
-            <span
+            <div
               style={{
-                fontFamily: t.mono,
-                fontSize: 11,
-                color: t.rust,
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: t.tintAccent,
+                border: `1px solid ${t.rustSoft}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: t.serif,
+                fontSize: 14,
                 fontWeight: 500,
-                minWidth: 16,
+                color: t.rustInk,
+                flexShrink: 0,
               }}
             >
-              {i + 1}.
+              {i + 1}
+            </div>
+            <span
+              style={{
+                fontSize: 14,
+                color: t.ink,
+                flex: 1,
+                lineHeight: 1.4,
+                letterSpacing: -0.05,
+              }}
+            >
+              {line}
             </span>
-            <span style={{ fontSize: 13.5, color: t.ink, flex: 1, lineHeight: 1.45 }}>{line}</span>
           </div>
         ))}
-      </div>
+      </Stack>
     );
   }
 

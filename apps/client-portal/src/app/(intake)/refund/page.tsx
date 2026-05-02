@@ -24,6 +24,7 @@ import {
 import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { formatDigits } from '@/lib/format';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function RefundPage() {
@@ -250,7 +251,7 @@ export default function RefundPage() {
               <EncryptedTextField
                 t={t}
                 value={routingNumber}
-                onChange={(v) => setRoutingNumber(v.replace(/\D/g, '').slice(0, 9))}
+                onChange={(v) => setRoutingNumber(formatDigits(v, 9))}
                 onReveal={revealRouting}
                 placeholder="XXXXXXXXX"
                 mono
@@ -263,7 +264,7 @@ export default function RefundPage() {
               <EncryptedTextField
                 t={t}
                 value={accountNumber}
-                onChange={(v) => setAccountNumber(v.replace(/\D/g, '').slice(0, 17))}
+                onChange={(v) => setAccountNumber(formatDigits(v, 17))}
                 onReveal={revealAccount}
                 placeholder="Your account number"
                 mono
