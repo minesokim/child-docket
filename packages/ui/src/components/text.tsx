@@ -125,19 +125,34 @@ export function Body({
   children: React.ReactNode;
   style?: StyleProp;
 }) {
+  // Same docket-ghost-in keyframe as H1 — page-top subtext ghosts in
+  // alongside the headline as one breath. The keyframe is defined
+  // inside <H1> already; if a page renders Body without an H1 above,
+  // we redeclare it here so the animation still has a target. Identical
+  // declarations are harmless.
   return (
-    <p
-      style={{
-        fontFamily: mono ? t.mono : t.sans,
-        fontSize: size,
-        lineHeight: 1.5,
-        color: muted ? t.muted : t.inkSoft,
-        margin: 0,
-        textWrap: 'pretty' as React.CSSProperties['textWrap'],
-        ...style,
-      }}
-    >
-      {children}
-    </p>
+    <>
+      <style>{`
+        @keyframes docket-ghost-in {
+          from { opacity: 0; transform: translateY(4px); filter: blur(6px); }
+          to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        }
+      `}</style>
+      <p
+        style={{
+          fontFamily: mono ? t.mono : t.sans,
+          fontSize: size,
+          lineHeight: 1.5,
+          color: muted ? t.muted : t.inkSoft,
+          margin: 0,
+          textWrap: 'pretty' as React.CSSProperties['textWrap'],
+          animation: 'docket-ghost-in 1600ms cubic-bezier(.16, 1, .3, 1) both',
+          willChange: 'opacity, transform, filter',
+          ...style,
+        }}
+      >
+        {children}
+      </p>
+    </>
   );
 }
