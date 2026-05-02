@@ -18,6 +18,7 @@ import {
   Stack,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
+import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
@@ -202,7 +203,7 @@ function FormatCard({
           width: 20,
           height: 20,
           borderRadius: '50%',
-          background: on ? t.ease.forestDark : t.ease.keylimeWash,
+          background: on ? t.ease.forestMid : t.ease.keylimeWash,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -225,6 +226,26 @@ export default function ApptPage() {
 
   const selDate = DATES[dateIdx] ?? DATES[0]!;
   const selTime = TIMES[timeIdx] ?? TIMES[0]!;
+
+  // Gate the appointment summary card behind first interaction. The card
+  // sticks around once any of {format, date, time} changes — we don't
+  // want it to flicker away if the user clicks back to the same value.
+  // Reveals with a subtle bottom-to-top slide.
+  const [touched, setTouched] = React.useState(false);
+  const touch = () => setTouched(true);
+
+  const onFormat = (f: ApptFormat) => {
+    setFormat(f);
+    touch();
+  };
+  const onDate = (i: number) => {
+    setDateIdx(i);
+    touch();
+  };
+  const onTime = (i: number) => {
+    setTimeIdx(i);
+    touch();
+  };
 
   const handleNext = () => {
     const target = getNextStep('/appt', {});
@@ -272,7 +293,7 @@ export default function ApptPage() {
               <FormatCard
                 t={t}
                 on={format === 'video'}
-                onClick={() => setFormat('video')}
+                onClick={() => onFormat('video')}
                 icon={<IconGoogleMeet size={22} />}
                 brandIcon
                 label="Video call (Google Meet)"
@@ -281,7 +302,7 @@ export default function ApptPage() {
               <FormatCard
                 t={t}
                 on={format === 'inperson'}
-                onClick={() => setFormat('inperson')}
+                onClick={() => onFormat('inperson')}
                 icon={<IconPin />}
                 label="In person"
                 sub="My Claremont office, 35 mins from LA"
@@ -330,7 +351,7 @@ export default function ApptPage() {
                 return (
                   <button
                     key={i}
-                    onClick={() => setDateIdx(i)}
+                    onClick={() => onDate(i)}
                     style={{
                       flex: '0 0 auto',
                       width: 58,
@@ -392,7 +413,7 @@ export default function ApptPage() {
                 return (
                   <button
                     key={i}
-                    onClick={() => setTimeIdx(i)}
+                    onClick={() => onTime(i)}
                     style={{
                       padding: '14px 16px',
                       borderRadius: t.radius,
@@ -421,7 +442,7 @@ export default function ApptPage() {
                         width: 18,
                         height: 18,
                         borderRadius: '50%',
-                        background: on ? t.ease.forestDark : t.ease.keylimeWash,
+                        background: on ? t.ease.forestMid : t.ease.keylimeWash,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -455,70 +476,80 @@ export default function ApptPage() {
             marginTop: 12,
           }}
         >
-          <div
-            style={{
-              padding: '14px 16px',
-              background: t.ink,
-              borderRadius: t.radius,
-              color: '#fff',
-              marginBottom: 12,
-            }}
-          >
-            <Row justify="space-between" align="flex-start">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: t.sans,
-                    fontSize: 11,
-                    color: 'rgba(255,255,255,0.55)',
-                    letterSpacing: 0.6,
-                    textTransform: 'uppercase',
-                    marginBottom: 6,
-                  }}
-                >
-                  Your appointment
+          <style>{`
+            @keyframes docket-appt-rise {
+              from { opacity: 0; transform: translateY(16px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          {touched && (
+            <div
+              style={{
+                padding: '14px 16px',
+                background: t.ink,
+                borderRadius: t.radius,
+                color: '#fff',
+                marginBottom: 12,
+                animation: 'docket-appt-rise 320ms cubic-bezier(.2,.8,.2,1) both',
+                willChange: 'opacity, transform',
+              }}
+            >
+              <Row justify="space-between" align="flex-start">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontFamily: t.sans,
+                      fontSize: 11,
+                      color: 'rgba(255,255,255,0.55)',
+                      letterSpacing: 0.6,
+                      textTransform: 'uppercase',
+                      marginBottom: 6,
+                    }}
+                  >
+                    Your appointment
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: t.sans,
+                      fontSize: 18,
+                      fontWeight: 500,
+                      letterSpacing: -0.3,
+                      lineHeight: 1.2,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {selDate.d}, {selDate.m} {selDate.n} · {selTime}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12.5,
+                      color: 'rgba(255,255,255,0.7)',
+                    }}
+                  >
+                    {FORMAT_LABELS[format]} · 30 min
+                  </div>
                 </div>
-                <div
+                <button
                   style={{
-                    fontFamily: t.sans,
-                    fontSize: 18,
-                    fontWeight: 500,
-                    letterSpacing: -0.3,
-                    lineHeight: 1.2,
-                    marginBottom: 4,
+                    flexShrink: 0,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
+                  aria-label="Add to calendar"
                 >
-                  {selDate.d}, {selDate.m} {selDate.n} · {selTime}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    color: 'rgba(255,255,255,0.7)',
-                  }}
-                >
-                  {FORMAT_LABELS[format]} · 30 min
-                </div>
-              </div>
-              <button
-                style={{
-                  flexShrink: 0,
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                aria-label="Add to calendar"
-              >
-                <IconCalPlus size={14} />
-              </button>
-            </Row>
-          </div>
+                  <IconCalPlus size={14} />
+                </button>
+              </Row>
+            </div>
+          )}
 
           <div style={{ marginBottom: 12 }}>
             <AskAntonioBar t={t} />

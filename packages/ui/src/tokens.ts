@@ -23,6 +23,9 @@ export type Density = 'comfortable' | 'cozy';
 export const EASE = {
   // Brand
   forestDark: '#0f3e17',     // primary brand green; darker than oklch rust
+  forestMid: '#3a6b40',      // ~30% lighter forestDark — for selection dots
+                             // and "active" indicators where forestDark reads
+                             // too heavy. White content stays readable.
   // Accent surfaces (semantic backgrounds for tile cards / status pills)
   mintGlaze: '#b1dbb8',      // mid sage — primary accent fill
   slateMist: '#b6ced5',      // powder blue — secondary category encoding

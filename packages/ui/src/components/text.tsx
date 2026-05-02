@@ -40,22 +40,34 @@ export function H1({
   children: React.ReactNode;
   style?: StyleProp;
 }) {
+  // Slow, deliberate, breathing-like fade-in. The headline is the first
+  // thing on every intake page; the entrance is the rhythm of the page.
   return (
-    <h1
-      style={{
-        fontFamily: t.serif,
-        fontWeight: 400,
-        fontSize: 34,
-        lineHeight: 1.12,
-        letterSpacing: -0.8,
-        margin: 0,
-        color: t.ink,
-        textWrap: 'pretty' as React.CSSProperties['textWrap'],
-        ...style,
-      }}
-    >
-      {children}
-    </h1>
+    <>
+      <style>{`
+        @keyframes docket-h1-rise {
+          from { opacity: 0; transform: translateY(8px); filter: blur(2px); }
+          to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        }
+      `}</style>
+      <h1
+        style={{
+          fontFamily: t.serif,
+          fontWeight: 400,
+          fontSize: 34,
+          lineHeight: 1.12,
+          letterSpacing: -0.8,
+          margin: 0,
+          color: t.ink,
+          textWrap: 'pretty' as React.CSSProperties['textWrap'],
+          animation: 'docket-h1-rise 700ms cubic-bezier(.2,.8,.2,1) both',
+          willChange: 'opacity, transform, filter',
+          ...style,
+        }}
+      >
+        {children}
+      </h1>
+    </>
   );
 }
 

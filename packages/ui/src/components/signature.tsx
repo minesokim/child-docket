@@ -20,8 +20,9 @@ export function LegalDoc({
     <div
       style={{
         // Legal documents look like paper — white surface, no green.
-        // Soft drop shadow gives elevation without an outline. Larger
-        // viewport so the contract text has room to breathe.
+        // Soft drop shadow gives elevation without an outline. Width
+        // capped at 80% (centered) so the user has thumb space along
+        // the right edge to scroll without occluding the text.
         background: '#fffefc',
         border: 'none',
         borderRadius: t.radius,
@@ -33,6 +34,8 @@ export function LegalDoc({
         color: t.inkSoft,
         fontFamily: t.serif,
         boxShadow: '0 2px 12px rgba(15, 23, 12, 0.06)',
+        width: '80%',
+        marginInline: 'auto',
       }}
     >
       <div
@@ -94,6 +97,9 @@ export function SignaturePad({
         borderRadius: t.radius,
         padding: signed ? '14px 18px' : '28px 18px',
         cursor: signed ? 'default' : 'pointer',
+        width: '80%',
+        marginInline: 'auto',
+        boxSizing: 'border-box',
         boxShadow: '0 2px 12px rgba(15, 23, 12, 0.06)',
       }}
     >

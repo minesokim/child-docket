@@ -88,7 +88,7 @@ export default function FilingPage() {
                     width: 20,
                     height: 20,
                     borderRadius: '50%',
-                    background: sel === o.id ? t.ease.forestDark : t.ease.keylimeWash,
+                    background: sel === o.id ? t.ease.forestMid : t.ease.keylimeWash,
                     flexShrink: 0,
                     marginTop: 2,
                     display: 'flex',

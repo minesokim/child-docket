@@ -498,40 +498,90 @@ export function AntonioNote({
   t,
   children,
   avatarSize = 26,
+  /** Delay (ms) before the first word appears. Tuned so the H1
+   *  fade-in (700ms) finishes first; default 850ms gives breathing room. */
+  delay = 850,
+  /** Per-word stagger (ms). Lower = faster typing. */
+  stagger = 35,
 }: {
   t: Theme;
   children: React.ReactNode;
-  /** Override avatar diameter. Defaults to 26px — small enough to
-   *  read as a signature next to the text, large enough to recognize. */
   avatarSize?: number;
+  delay?: number;
+  stagger?: number;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        // Lives directly under the H1+Body block. Vertical breathing
-        // room is set by the caller via the Stack gap, not by margin
-        // here — keeps the primitive composable.
-      }}
-    >
-      <AvatarSlot t={t} size={avatarSize} />
+    <>
+      <style>{`
+        @keyframes docket-word-reveal {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
       <div
         style={{
-          flex: 1,
-          paddingTop: Math.max(0, (avatarSize - 22) / 2),
-          fontFamily: t.serif,
-          fontSize: 15.5,
-          lineHeight: 1.5,
-          color: t.inkSoft,
-          letterSpacing: -0.15,
-          textWrap: 'pretty' as React.CSSProperties['textWrap'],
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 12,
+          // Avatar fades in with the title; the words stream after.
+          animation: 'docket-h1-rise 700ms cubic-bezier(.2,.8,.2,1) both',
         }}
       >
-        {children}
+        <AvatarSlot t={t} size={avatarSize} />
+        <div
+          style={{
+            flex: 1,
+            paddingTop: Math.max(0, (avatarSize - 22) / 2),
+            fontFamily: t.serif,
+            fontSize: 15.5,
+            lineHeight: 1.5,
+            color: t.inkSoft,
+            letterSpacing: -0.15,
+            textWrap: 'pretty' as React.CSSProperties['textWrap'],
+          }}
+        >
+          <AnimatedWords node={children} delay={delay} stagger={stagger} />
+        </div>
       </div>
-    </div>
+    </>
+  );
+}
+
+/** Render text content one word at a time with a CSS opacity stagger.
+ *  Falls back to rendering the node as-is if it isn't a plain string. */
+function AnimatedWords({
+  node,
+  delay,
+  stagger,
+}: {
+  node: React.ReactNode;
+  delay: number;
+  stagger: number;
+}) {
+  if (typeof node !== 'string') return <>{node}</>;
+  const parts = node.split(/(\s+)/); // keep whitespace as separators
+  let wordIdx = 0;
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^\s+$/.test(part) || part === '') {
+          return <React.Fragment key={i}>{part}</React.Fragment>;
+        }
+        const ms = delay + wordIdx * stagger;
+        wordIdx += 1;
+        return (
+          <span
+            key={i}
+            style={{
+              opacity: 0,
+              animation: `docket-word-reveal 220ms ease-out ${ms}ms forwards`,
+            }}
+          >
+            {part}
+          </span>
+        );
+      })}
+    </>
   );
 }
 

@@ -108,12 +108,14 @@ export function ToggleCard({
   label: string;
   sub?: string;
 }) {
-  const bg = on ? t.ease.mintGlaze : '#fffefc';
+  // Match services-page selection convention: mintKiss card bg
+  // (lighter) + forestMid icon well + check.
+  const bg = on ? t.ease.mintKiss : '#fffefc';
   const labelColor = on ? t.ease.forestDark : t.ink;
   const subColor = on ? t.ease.forestDark : t.muted;
-  const iconWellBg = on ? t.ease.forestDark : t.ease.keylimeWash;
+  const iconWellBg = on ? t.ease.forestMid : t.ease.keylimeWash;
   const iconColor = on ? '#fffefc' : t.ease.forestDark;
-  const checkBg = on ? t.ease.forestDark : '#fffefc';
+  const checkBg = on ? t.ease.forestMid : '#fffefc';
 
   return (
     <button
@@ -210,10 +212,12 @@ export function RadioRowCard({
   label: string;
   sub: string;
 }) {
-  const bg = selected ? t.ease.mintGlaze : '#fffefc';
+  // Match the services-page selection convention: mintKiss card bg
+  // (lighter than mintGlaze) + forestMid dot (lighter than forestDark).
+  const bg = selected ? t.ease.mintKiss : '#fffefc';
   const labelColor = selected ? t.ease.forestDark : t.ink;
   const subColor = selected ? t.ease.forestDark : t.muted;
-  const dotWellBg = selected ? t.ease.forestDark : t.ease.keylimeWash;
+  const dotWellBg = selected ? t.ease.forestMid : t.ease.keylimeWash;
 
   return (
     <button

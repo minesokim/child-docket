@@ -92,7 +92,7 @@ export default function ConsentPage() {
                 height: 22,
                 flexShrink: 0,
                 borderRadius: 5,
-                background: checked ? t.ease.forestDark : t.ease.keylimeWash,
+                background: checked ? t.ease.forestMid : t.ease.keylimeWash,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',

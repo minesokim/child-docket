@@ -74,7 +74,7 @@ function TutorialDemoCards({ t }: { t: Theme }) {
                   width: 22,
                   height: 22,
                   borderRadius: '50%',
-                  background: on ? t.ease.forestDark : t.ease.softNeutral,
+                  background: on ? t.ease.forestMid : t.ease.softNeutral,
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
