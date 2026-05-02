@@ -30,7 +30,7 @@ import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
-import { formatDigits } from '@/lib/format';
+import { formatDigits } from '@docket/shared';
 
 type EntityId = 'llc' | 'scorp' | 'ccorp' | 'unsure';
 

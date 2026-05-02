@@ -36,7 +36,7 @@ import {
   useSetIntakeField,
 } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
-import { formatDigits } from '@/lib/format';
+import { formatDigits } from '@docket/shared';
 import type { IntakeDependent } from '@docket/shared';
 
 // ────────────────────────────────────────────────────────────────

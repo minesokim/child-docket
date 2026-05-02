@@ -25,7 +25,7 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
-import { formatDigits, formatEin, formatStateCode, formatZip } from '@/lib/format';
+import { formatDigits, formatEin, formatStateCode, formatZip } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function BusinessInfoPage() {

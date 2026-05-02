@@ -17,6 +17,12 @@ export * from './sentry-scrubber.js';
 // per-instance; swap to Upstash Redis when traffic justifies.
 export * from './rate-limit.js';
 
+// Input formatters — strict digit-only filter + auto-format for
+// EIN, money, ZIP, year, count fields. Used by every intake page
+// at the onChange boundary so the UI never accepts garbage that
+// the Zod schema would later reject.
+export * from './format.js';
+
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.
 // ────────────────────────────────────────────────────────────────

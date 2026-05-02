@@ -31,7 +31,7 @@ import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
-import { formatEin, formatMoney } from '@/lib/format';
+import { formatEin, formatMoney } from '@docket/shared';
 
 type ItemKey =
   | 'mortgage'

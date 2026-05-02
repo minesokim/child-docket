@@ -24,7 +24,7 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
-import { formatEin, formatMoney } from '@/lib/format';
+import { formatEin, formatMoney } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import type { IncomeType } from '@docket/shared';
 

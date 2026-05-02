@@ -24,7 +24,7 @@ import {
 import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
-import { formatDigits } from '@/lib/format';
+import { formatDigits } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function RefundPage() {

@@ -22,7 +22,7 @@ import {
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
-import { formatDigits, formatMoney, formatYear } from '@/lib/format';
+import { formatDigits, formatMoney, formatYear } from '@docket/shared';
 import type { IntakeRentalProperty } from '@docket/shared';
 
 type RentalType = NonNullable<IntakeRentalProperty['rentalType']>;

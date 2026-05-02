@@ -30,7 +30,7 @@ import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
-import { formatStateCode, formatZip } from '@/lib/format';
+import { formatStateCode, formatZip } from '@docket/shared';
 
 // ────────────────────────────────────────────────────────────────
 // Format helpers — display vs storage
