@@ -1,14 +1,25 @@
 'use client';
 
-// Form 8879 e-file authorization sign flow. Reached from /portal/home or
-// /portal/signatures when the balance is paid. Submitting marks
-// portal.signed8879 = true and routes back to /portal/home.
+// Form 8879 e-file authorization sign flow.
+//
+// SECURITY GATE (May 2026 audit): the implementation below is a MOCK.
+// It flips `engagement.signed = true` after a fake signature pad and
+// displays HARDCODED tax figures (AGI / refund / SSN suffix / bank
+// destination) that are NOT the taxpayer's real return. IRS Pub 1345
+// requires credit-bureau KBA on every remote 8879 — this mock has none.
+//
+// This route is therefore HARD-DISABLED in production until DocuSign
+// + LexisNexis KBA lands (Day 13 of the 14-day rebuild plan). Set the
+// `NEXT_PUBLIC_ENABLE_MOCK_8879=true` env var ONLY for demo/Loom
+// recording. Real California taxpayer e-file authorization must not
+// be issued through this route.
 
 import {
   Body,
   Button,
   buildTheme,
   Eyebrow,
+  H1,
   H2,
   HandCheckmark,
   Row,
@@ -20,7 +31,53 @@ import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useIntakeField } from '@/lib/intake-context';
 
+const MOCK_8879_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MOCK_8879 === 'true';
+
 export default function Sign8879Page() {
+  if (!MOCK_8879_ENABLED) {
+    return <Sign8879Disabled />;
+  }
+  return <Sign8879Mock />;
+}
+
+// Honest placeholder shown to real clients until DocuSign + KBA ships.
+// No fake tax figures, no fake signature surface, no claim of legal
+// effect — just an explanation and a way back to the portal home.
+function Sign8879Disabled() {
+  const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
+  const router = useRouter();
+  return (
+    <Screen t={t}>
+      <div
+        style={{
+          padding: '40px 24px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+        }}
+      >
+        <Stack gap={20} style={{ flex: 1 }}>
+          <Eyebrow t={t}>E-file authorization</Eyebrow>
+          <H1 t={t}>We&apos;re wiring this up</H1>
+          <Body t={t} size={15}>
+            Your Form 8879 will be ready to sign once Antonio finishes preparing your
+            return. We use DocuSign with identity verification (a short set of
+            knowledge-based questions) so the IRS accepts the e-file authorization.
+          </Body>
+          <Body t={t} size={14}>
+            We&apos;ll text and email you the moment it&apos;s your turn — no need to
+            check back here.
+          </Body>
+        </Stack>
+        <Button t={t} onClick={() => router.push('/portal/home')} style={{ width: '100%' }}>
+          Back to portal
+        </Button>
+      </div>
+    </Screen>
+  );
+}
+
+function Sign8879Mock() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
   const [fullName] = useIntakeField<string>('personal.fullName', '');

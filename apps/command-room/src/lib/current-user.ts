@@ -44,10 +44,32 @@ export async function getCurrentDocketUser(): Promise<DocketUser | null> {
     return byClerkId[0] as DocketUser;
   }
 
-  // Claim path: match by email, bind clerkUserId.
+  // Claim path: match by VERIFIED PRIMARY email, bind clerkUserId.
+  //
+  // Hardening from the May 2026 security audit:
+  //   - Use the *primary* email (clerkUser.primaryEmailAddressId), not
+  //     emailAddresses[0]. Clerk users can have multiple email addresses
+  //     in any order; emailAddresses[0] is non-deterministic and can be
+  //     a secondary, unverified address an attacker controls.
+  //   - Require Clerk's verification.status === 'verified'. Without this
+  //     check, anyone who *claims* an email matching a pre-seeded admin
+  //     row could bind their Clerk identity to it before proving they
+  //     own the inbox.
+  //   - TODO(multi-tenant): when the second firm onboards, scope this
+  //     lookup by Clerk Organization id (auth().orgId → tenants.clerkOrgId).
+  //     `email` is intentionally NOT unique on users — two firms can have
+  //     the same email seeded (a contractor working both books). Without a
+  //     tenant filter, the first-match-wins UPDATE is non-deterministic.
   const clerkUser = await currentUser();
-  const email = clerkUser?.emailAddresses[0]?.emailAddress?.toLowerCase();
-  if (!email) return null;
+  if (!clerkUser) return null;
+
+  const primary = clerkUser.emailAddresses.find(
+    (ea) => ea.id === clerkUser.primaryEmailAddressId,
+  );
+  if (!primary) return null;
+  if (primary.verification?.status !== 'verified') return null;
+
+  const email = primary.emailAddress.toLowerCase();
 
   const byEmail = await db
     .select()
