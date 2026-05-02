@@ -12,13 +12,13 @@ import {
   EncryptedTextField,
   FieldLabel,
   H1,
-  IconCar,
-  IconCash,
-  IconHome,
   IntakeBackButton,
   IntakeHeader,
   Row,
   Screen,
+  SolarCashDocumentation,
+  SolarHomeOffice,
+  SolarVehicle,
   Stack,
   TextField,
   ToggleCard,
@@ -179,7 +179,7 @@ export default function SelfEmploymentPage() {
                 t={t}
                 on={homeOffice}
                 onClick={() => void setHomeOffice(!homeOffice)}
-                icon={<IconHome size={36} />}
+                icon={<SolarHomeOffice size={44} />}
                 label="I use a home office"
                 sub="Dedicated space used regularly for work"
               />
@@ -187,7 +187,7 @@ export default function SelfEmploymentPage() {
                 t={t}
                 on={vehicle}
                 onClick={() => void setVehicle(!vehicle)}
-                icon={<IconCar size={36} />}
+                icon={<SolarVehicle size={44} />}
                 label="I use a vehicle for business"
                 sub="Mileage, parking, tolls for client work"
               />
@@ -202,7 +202,7 @@ export default function SelfEmploymentPage() {
               t={t}
               on={cash}
               onClick={() => void setCash(!cash)}
-              icon={<IconCash size={36} />}
+              icon={<SolarCashDocumentation size={44} />}
               label="Is most of my revenue in cash?"
               sub="Cash businesses require more documentation"
             />

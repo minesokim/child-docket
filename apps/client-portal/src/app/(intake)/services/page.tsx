@@ -104,6 +104,13 @@ export default function ServicesPathPage() {
               onClick={() => setPath(p.id)}
               style={{
                 position: 'relative',
+                // Selected tile owns a higher stacking context so the
+                // framer-motion layoutId glide renders ABOVE intermediate
+                // tiles in both directions. Without this, going
+                // bottom-to-top would slide the highlight underneath
+                // tiles between source and destination (DOM order wins
+                // when z-indexes tie).
+                zIndex: on ? 2 : 1,
                 background: '#fffefc',
                 borderRadius: t.radius,
                 padding: '16px 18px',
@@ -325,6 +332,11 @@ export default function ServicesPathPage() {
           style={{
             position: 'sticky',
             bottom: 0,
+            // Beat the per-tile z-index (1/2). Without this the
+            // 'Something else' sub-options expansion (which sits inside
+            // the highest-zIndex tile during scroll) overlaps the
+            // AskAntonio button when scrolling content slides past it.
+            zIndex: 20,
             background: `linear-gradient(to top, ${t.bg} 70%, transparent)`,
             padding: '20px 24px 28px',
           }}

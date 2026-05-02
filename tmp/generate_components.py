@@ -54,6 +54,18 @@ ICON_MAP = [
     ("bruh2-30.svg", "SolarJobChange",            "Job change (life events)"),
     ("bruh2-31.svg", "SolarMovedStates",          "Moved states (life events)"),
     ("bruh2-32.svg", "SolarDeathOfSpouse",        "Death of spouse (life events)"),
+    # bruh3 batch — added May 2026
+    ("bruh2-33.svg", "SolarOvertimePay",          "Overtime pay (tax questions)"),
+    ("bruh2-34.svg", "SolarNoneOfThese",          "None of these (shared, deductions + life events)"),
+    ("bruh2-35.svg", "SolarVehicle",              "Vehicle for business (self-employment)"),
+    ("bruh2-36.svg", "SolarRetired",              "Retired (life events)"),
+    ("bruh2-37.svg", "SolarHomeOffice",           "Home office (self-employment)"),
+    ("bruh2-38.svg", "SolarTips",                 "Tips earned at work (tax questions)"),
+    ("bruh2-39.svg", "SolarBusinessStarted",      "Started a business (life events)"),
+    ("bruh2-40.svg", "SolarInheritance",          "Received an inheritance (life events)"),
+    ("bruh2-41.svg", "SolarEstimatedTax",         "Estimated tax payments (tax questions)"),
+    ("bruh2-42.svg", "SolarCashDocumentation",    "Cash revenue documentation (self-employment)"),
+    ("bruh2-43.svg", "SolarInPersonPin",          "In-person location pin (appt format)"),
 ]
 
 

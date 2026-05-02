@@ -15,6 +15,7 @@ import {
   IntakeHeader,
   Row,
   Screen,
+  SolarInPersonPin,
   Stack,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
@@ -66,24 +67,6 @@ function IconGoogleMeet({ size = 22 }: { size?: number }) {
         d="M82.6 8.68L69.5 19.42v33.66l13.13 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.88-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z"
       />
       <path fill="#ffba00" d="M63.5 0h-43v20.5h29V36l20-.04V6c0-3.315-2.685-6-6-6z" />
-    </svg>
-  );
-}
-
-function IconPin({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 14s5-4.5 5-8a5 5 0 10-10 0c0 3.5 5 8 5 8z" />
-      <circle cx="8" cy="6" r="1.8" />
     </svg>
   );
 }
@@ -303,7 +286,8 @@ export default function ApptPage() {
                 t={t}
                 on={format === 'inperson'}
                 onClick={() => onFormat('inperson')}
-                icon={<IconPin />}
+                icon={<SolarInPersonPin size={28} />}
+                brandIcon
                 label="In person"
                 sub="My Claremont office, 35 mins from LA"
                 note="Opening next month"

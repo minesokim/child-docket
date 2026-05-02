@@ -12,7 +12,6 @@ import {
   buildTheme,
   FieldLabel,
   H1,
-  IconMinus,
   IntakeBackButton,
   IntakeHeader,
   Row,
@@ -23,6 +22,7 @@ import {
   SolarEducator,
   SolarMedical,
   SolarMortgageInterest,
+  SolarNoneOfThese,
   SolarStudentLoan,
   Stack,
   TextField,
@@ -236,7 +236,7 @@ export default function DeductionsPage() {
               t={t}
               on={!!state.none}
               onClick={() => toggle('none')}
-              icon={<IconMinus size={36} />}
+              icon={<SolarNoneOfThese size={44} />}
               label="None of these"
               sub="Skip straight to the next step"
             />

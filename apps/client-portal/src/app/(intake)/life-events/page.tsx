@@ -10,17 +10,17 @@ import {
   Button,
   buildTheme,
   H1,
-  IconBeach,
-  IconBriefcase,
-  IconGift,
-  IconMinus,
   IntakeBackButton,
   IntakeHeader,
   Row,
   Screen,
+  SolarBusinessStarted,
   SolarHomePurchase,
+  SolarInheritance,
   SolarMarriage,
   SolarNewChild,
+  SolarNoneOfThese,
+  SolarRetired,
   Stack,
   ToggleCard,
 } from '@docket/ui';
@@ -69,9 +69,9 @@ export default function LifeEventsPage() {
     { k: 'marriage', icon: <SolarMarriage size={44} />, label: 'Got married or divorced' },
     { k: 'baby', icon: <SolarNewChild size={44} />, label: 'Had a baby or adopted' },
     { k: 'home', icon: <SolarHomePurchase size={44} />, label: 'Bought or sold a home' },
-    { k: 'business', icon: <IconBriefcase size={36} />, label: 'Started a business' },
-    { k: 'inherit', icon: <IconGift size={36} />, label: 'Received an inheritance' },
-    { k: 'retire', icon: <IconBeach size={36} />, label: 'Retired' },
+    { k: 'business', icon: <SolarBusinessStarted size={44} />, label: 'Started a business' },
+    { k: 'inherit', icon: <SolarInheritance size={44} />, label: 'Received an inheritance' },
+    { k: 'retire', icon: <SolarRetired size={44} />, label: 'Retired' },
   ];
 
   return (
@@ -121,7 +121,7 @@ export default function LifeEventsPage() {
               t={t}
               on={!!state.none}
               onClick={() => toggle('none')}
-              icon={<IconMinus size={36} />}
+              icon={<SolarNoneOfThese size={44} />}
               label="None of these"
               sub="Nothing major happened this year"
             />
