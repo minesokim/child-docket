@@ -246,19 +246,6 @@ export default function DepositPage() {
               >
                 Payment method
               </span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  fontFamily: t.sans,
-                  fontSize: 12,
-                  color: t.muted,
-                  letterSpacing: 0,
-                }}
-              >
-                <IconLockTiny size={11} /> Stripe
-              </span>
             </Row>
 
             <Stack gap={16}>
@@ -447,7 +434,7 @@ export default function DepositPage() {
                 marginTop: 2,
               }}
             >
-              <IconLockTiny size={10} /> Secured by Stripe · Your card is encrypted
+              <IconLockTiny size={10} /> Your card is encrypted
             </div>
           </Stack>
         </div>

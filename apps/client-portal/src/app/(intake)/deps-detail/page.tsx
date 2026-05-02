@@ -107,10 +107,12 @@ function DependentCardDetails({
   return (
     <div
       style={{
-        padding: '18px 18px 6px',
+        padding: '20px 20px 26px',
         // Neutral container — same warm off-white as the resting input
         // state. Inputs INSIDE this card flip to mintWhisper as the user
         // fills them, so the card itself doesn't need to carry color.
+        // Bottom padding bumped from 6 to 26 so 'Months living with you'
+        // has breathing room below it.
         background: t.ease.softNeutral,
         borderRadius: t.radius,
       }}

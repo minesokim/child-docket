@@ -244,7 +244,7 @@ export default function PersonalPage() {
                   autoComplete="address-level1"
                 />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1.2, minWidth: 0 }}>
                 <FieldLabel t={t}>ZIP</FieldLabel>
                 <TextField
                   t={t}
@@ -254,6 +254,7 @@ export default function PersonalPage() {
                   mono
                   inputMode="numeric"
                   autoComplete="postal-code"
+                  style={{ padding: '12px 10px', letterSpacing: 1 }}
                 />
               </div>
             </div>

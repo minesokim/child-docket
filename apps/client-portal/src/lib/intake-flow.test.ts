@@ -53,14 +53,14 @@ const selfPlusRental: IntakeState = { income: { types: ['self', 'rental'] } };
 // ────────────────────────────────────────────────────────────────
 
 describe('getNextStep — happy linear path', () => {
-  test('welcome → tutorial', () => {
-    expect(getNextStep('/welcome', empty)).toBe('/tutorial');
+  test('welcome → quick-start', () => {
+    expect(getNextStep('/welcome', empty)).toBe('/quick-start');
   });
-  test('tutorial → contact-info', () => {
-    expect(getNextStep('/tutorial', empty)).toBe('/contact-info');
+  test('quick-start → tutorial', () => {
+    expect(getNextStep('/quick-start', empty)).toBe('/tutorial');
   });
-  test('contact-info → services', () => {
-    expect(getNextStep('/contact-info', empty)).toBe('/services');
+  test('tutorial → services', () => {
+    expect(getNextStep('/tutorial', empty)).toBe('/services');
   });
   test('services → services-addons', () => {
     expect(getNextStep('/services', empty)).toBe('/services-addons');
@@ -209,14 +209,14 @@ describe('getPrevStep — back-nav skips inapplicable steps', () => {
   test('welcome has no prev (start of flow)', () => {
     expect(getPrevStep('/welcome', empty)).toBeNull();
   });
-  test('tutorial → welcome', () => {
-    expect(getPrevStep('/tutorial', empty)).toBe('/welcome');
+  test('quick-start → welcome', () => {
+    expect(getPrevStep('/quick-start', empty)).toBe('/welcome');
   });
-  test('contact-info → tutorial', () => {
-    expect(getPrevStep('/contact-info', empty)).toBe('/tutorial');
+  test('tutorial → quick-start', () => {
+    expect(getPrevStep('/tutorial', empty)).toBe('/quick-start');
   });
-  test('services → contact-info', () => {
-    expect(getPrevStep('/services', empty)).toBe('/contact-info');
+  test('services → tutorial', () => {
+    expect(getPrevStep('/services', empty)).toBe('/tutorial');
   });
   test('personal → services-addons', () => {
     expect(getPrevStep('/personal', empty)).toBe('/services-addons');
@@ -299,15 +299,16 @@ describe('isApplicable — side paths gated correctly', () => {
 // ────────────────────────────────────────────────────────────────
 
 describe('getResumeStep', () => {
-  test('empty state → tutorial (welcome is always pass-through)', () => {
-    // welcome.isComplete() === true always; tutorial needs the user to
-    // click through. (contact-info needs name+email.)
-    expect(getResumeStep(empty)).toBe('/tutorial');
+  test('empty state → quick-start (welcome is always pass-through)', () => {
+    // welcome.isComplete() === true always; quick-start needs name+DOB+email.
+    expect(getResumeStep(empty)).toBe('/quick-start');
   });
 
-  test('tutorial complete but no contact info → contact-info', () => {
-    const state: IntakeState = { tutorial: { completed: true } };
-    expect(getResumeStep(state)).toBe('/contact-info');
+  test('quick-start filled, tutorial not complete → tutorial', () => {
+    const state: IntakeState = {
+      personal: { fullName: 'A B', dateOfBirth: '1990-01-01', email: 'a@b.com' },
+    };
+    expect(getResumeStep(state)).toBe('/tutorial');
   });
 
   test('through filing complete, single → deps', () => {

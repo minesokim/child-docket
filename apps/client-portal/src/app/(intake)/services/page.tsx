@@ -97,17 +97,19 @@ export default function ServicesPathPage() {
               key={p.id}
               onClick={() => setPath(p.id)}
               style={{
-                // Card stays white in both states — the green wash on
-                // selection was unwanted. Selection is communicated by
-                // shadow elevation + the icon well swap below.
-                background: '#fffefc',
+                // Selected: green-tinted entire card (highlighted box).
+                // Unselected: white. Icon container stays WHITE in both
+                // states — only the surrounding card surface flips.
+                // Selection reads as "this row is the choice" via the
+                // green wash on the whole row.
+                background: on ? t.ease.mintKiss : '#fffefc',
                 borderRadius: t.radius,
                 padding: '16px 18px',
                 cursor: 'pointer',
                 boxShadow: on
                   ? '0 4px 20px rgba(15, 62, 23, 0.10)'
                   : '0 1px 4px rgba(15, 62, 23, 0.04)',
-                transition: 'box-shadow 200ms cubic-bezier(.2,.8,.2,1)',
+                transition: 'all 200ms cubic-bezier(.2,.8,.2,1)',
               }}
             >
               <Row gap={14} align="flex-start">
@@ -116,20 +118,21 @@ export default function ServicesPathPage() {
                     width: 44,
                     height: 44,
                     borderRadius: t.tone === 'magazine' ? 4 : 10,
-                    // Selected: white well with the same forestDark icon —
-                    // the white well "pops" out of the card via a small
-                    // inner shadow. Unselected: keylimeWash well +
-                    // forestDark icon (the unchanged pale-mint tile).
-                    // Icon color is identical in both states; only the
-                    // tile color flips.
-                    background: on ? '#fffefc' : t.ease.keylimeWash,
+                    // White well in both states — the icon stays clean
+                    // and identical; the surrounding card is what
+                    // changes color on select. Soft inner shadow so the
+                    // white well stands out against the tinted selected
+                    // card without a stroke.
+                    background: '#fffefc',
                     color: t.ease.forestDark,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: 2,
-                    boxShadow: on ? '0 1px 6px rgba(15, 62, 23, 0.10)' : 'none',
+                    boxShadow: on
+                      ? '0 1px 6px rgba(15, 62, 23, 0.10)'
+                      : '0 1px 3px rgba(15, 62, 23, 0.04)',
                     transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
                   }}
                 >

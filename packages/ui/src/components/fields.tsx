@@ -257,12 +257,9 @@ export function SSNField({
       {/* Single span with one continuous text node — same font, size,
           letter-spacing, and line-height as the editing input above.
           Color is the only thing that switches: muted on the masked
-          5 digits + dashes, ink on the lastFour. No flex, no gap, no
-          per-span overrides — the field can't re-flow because it's
-          one piece of text. Mask character is `●` (BLACK CIRCLE) — same
-          width and visual weight as a digit in DM Mono, unlike the
-          smaller `•` BULLET which made the dots look pinched next to
-          the visible digits. */}
+          5 digits + dashes, ink on the lastFour. Mask is `•` (BULLET)
+          — thinner and smaller than BLACK CIRCLE, reads as a quiet
+          placeholder rather than a heavy redaction block. */}
       <span
         style={{
           flex: 1,
@@ -273,7 +270,7 @@ export function SSNField({
           lineHeight: 1.2,
         }}
       >
-        ●●●-●●-<span style={{ color: t.ink }}>{lastFour}</span>
+        •••-••-<span style={{ color: t.ink }}>{lastFour}</span>
       </span>
       <EncryptedPill t={t} />
     </div>

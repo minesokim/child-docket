@@ -37,7 +37,7 @@ export function WelcomeContent() {
   const lastVisited = answers._meta?.lastVisitedRoute;
   const resumeRoute = isReturning
     ? lastVisited ?? getResumeStep(answers)
-    : '/tutorial';
+    : '/quick-start';
 
   const ctaLabel = isReturning ? 'Continue where you left off' : "Let's get started";
   const ctaTarget = resumeRoute;
@@ -115,18 +115,16 @@ export function WelcomeContent() {
               {ctaLabel}
             </Button>
             {/* Single-row signature replaces the previous two stacked
-                footnotes. Solid forestDark pill, white text — high
-                contrast so the white reads cleanly (white on the
-                pale mintGlaze/sage was unreadable). Reads as a
-                signature line, not a soft caption. */}
+                footnotes. Very-light mint pill, forestDark text —
+                quiet, calm, signature-feel. */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   padding: '5px 12px',
-                  background: t.ease.forestDark,
-                  color: '#fff',
+                  background: t.ease.keylimeWash,
+                  color: t.ease.forestDark,
                   borderRadius: 999,
                   fontFamily: t.sans,
                   fontSize: 12,

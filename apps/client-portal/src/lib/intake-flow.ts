@@ -58,18 +58,16 @@ export type IntakeStep = {
 //   - /strategic-topics — only when service.otherSub is 'strategy' (advisory path)
 //
 // The "happy path" for an individual W-2 filer skips all six side paths
-// and walks: welcome → tutorial → contact-info → services → services-addons
+// and walks: welcome → quick-start → tutorial → services → services-addons
 // → personal → state → filing → deps → income → tax-questions →
 // deductions → life-events → refund → docs → engagement → consent →
 // appt → deposit → done.
 //
-// Why /contact-info sits AT THE TOP (right after /tutorial): the client
-// just signed in via SMS OTP, so we already have their phone. Asking
-// for name + email up front (before any tax-question depth) gives
-// Antonio reachable identity from the very first step. The page only
-// collects full legal name + email — phone is already from Clerk.
-// /quick-start is no longer in the canonical flow (the same name/email
-// it collected now lives in /contact-info; DOB moves to /personal).
+// /quick-start is the 3-stage onboarding (name → DOB → email) right
+// after welcome. The standalone /contact-info page is no longer in the
+// canonical flow — quick-start already collects everything it would
+// have asked for, and the redundant second prompt was confusing. The
+// /contact-info route file stays for direct-link fallback only.
 // ────────────────────────────────────────────────────────────────
 
 export const INTAKE_FLOW: readonly IntakeStep[] = [
@@ -81,6 +79,17 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'welcome',
     isApplicable: () => true,
     isComplete: () => true, // pure intro — always passable
+    next: () => '/quick-start',
+  },
+  {
+    id: 'quick-start',
+    route: '/quick-start',
+    label: 'Quick start',
+    section: 'welcome',
+    isApplicable: () => true,
+    // 3 stages: name → DOB → email. Phone is from Clerk OTP login.
+    isComplete: (s) =>
+      !!s.personal?.fullName && !!s.personal?.dateOfBirth && !!s.personal?.email,
     next: () => '/tutorial',
   },
   {
@@ -90,18 +99,6 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'welcome',
     isApplicable: () => true,
     isComplete: (s) => !!s.tutorial?.completed,
-    next: () => '/contact-info',
-  },
-  // /contact-info MOVED to the top: collected up front so Antonio has
-  // reachable identity (name + email) from the first step. Phone is
-  // already on file from Clerk OTP login. DOB lives in /personal.
-  {
-    id: 'contact-info',
-    route: '/contact-info',
-    label: 'How to reach you',
-    section: 'welcome',
-    isApplicable: () => true,
-    isComplete: (s) => !!s.personal?.fullName && !!s.personal?.email,
     next: () => '/services',
   },
   {

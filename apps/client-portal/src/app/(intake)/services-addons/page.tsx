@@ -83,34 +83,34 @@ export default function ServicesAddonsPage() {
               </Body>
               <div
                 style={{
-                  marginTop: 6,
+                  marginTop: 8,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 10px',
+                  gap: 12,
+                  padding: '8px 16px',
                   background: t.ease.keylimeWash,
                   borderRadius: t.tone === 'magazine' ? 2 : 999,
                   alignSelf: 'flex-start',
                 }}
               >
                 <ServiceIcon t={t} kind={pathDef.icon} />
-                <span style={{ fontSize: 12.5, color: t.inkSoft }}>
+                <span style={{ fontSize: 12.5, color: t.inkSoft, letterSpacing: 0.1 }}>
                   Building on{' '}
                   <span style={{ color: t.ink, fontWeight: 500 }}>{pathDef.name}</span>
                 </span>
                 <span
                   onClick={handleBack}
                   style={{
-                    fontFamily: t.serif,
-                    fontStyle: 'italic',
+                    fontFamily: t.sans,
                     fontSize: 12,
-                    color: t.rustInk,
+                    fontWeight: 500,
+                    color: t.ease.forestDark,
                     cursor: 'pointer',
-                    textDecoration: 'underline',
-                    textUnderlineOffset: 2,
+                    letterSpacing: 0.4,
+                    textTransform: 'uppercase',
                   }}
                 >
-                  change
+                  Change
                 </span>
               </div>
             </Stack>
@@ -128,16 +128,16 @@ export default function ServicesAddonsPage() {
                 key={item.id}
                 onClick={() => toggleAddon(item.id)}
                 style={{
-                  // White card in both states — selection is shown via
-                  // the checkbox + shadow lift, not a green wash.
-                  background: '#fffefc',
+                  // Selected: green-tinted entire card (highlighted box).
+                  // Unselected: white.
+                  background: selected ? t.ease.mintKiss : '#fffefc',
                   borderRadius: t.radius,
                   padding: '14px 16px',
                   cursor: 'pointer',
                   boxShadow: selected
                     ? '0 4px 16px rgba(15, 62, 23, 0.08)'
                     : '0 1px 4px rgba(15, 62, 23, 0.04)',
-                  transition: 'box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
+                  transition: 'all 160ms cubic-bezier(.2,.8,.2,1)',
                 }}
               >
                 <Row gap={14} align="center">
@@ -147,7 +147,9 @@ export default function ServicesAddonsPage() {
                       height: 22,
                       flexShrink: 0,
                       borderRadius: t.tone === 'magazine' ? 3 : 5,
-                      background: selected ? t.ease.forestDark : t.ease.softNeutral,
+                      // Light mint check well — forestDark check stroke
+                      // for high contrast inside the pale fill.
+                      background: selected ? t.ease.mintGlaze : t.ease.softNeutral,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -158,7 +160,7 @@ export default function ServicesAddonsPage() {
                       <svg width="12" height="10" viewBox="0 0 12 10">
                         <path
                           d="M1 5l3.5 3.5L11 1"
-                          stroke="#fff"
+                          stroke={t.ease.forestDark}
                           strokeWidth="2"
                           fill="none"
                           strokeLinecap="round"

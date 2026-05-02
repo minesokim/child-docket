@@ -412,9 +412,7 @@ export default function TutorialPage() {
     // Mark tutorial complete so the welcome page knows to show
     // "Continue where you left off" on next visit.
     void setTutorialCompleted(true);
-    // Tutorial → contact-info per the canonical flow (was /services
-    // before contact-info moved up).
-    nav.next('/contact-info');
+    nav.next('/services');
   };
 
   return (

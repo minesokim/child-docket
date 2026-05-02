@@ -337,7 +337,11 @@ export default function ApptPage() {
                       padding: '10px 0 12px',
                       borderRadius: 10,
                       border: 'none',
-                      background: on ? t.ease.forestDark : '#fffefc',
+                      // Selected: lighter saturated mid-green (was the
+                      // heavy forestDark slab). Reads as 'this is the
+                      // day' without competing with the appointment
+                      // summary card below.
+                      background: on ? t.ease.mintGlaze : '#fffefc',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -345,6 +349,9 @@ export default function ApptPage() {
                       gap: 2,
                       fontFamily: t.sans,
                       transition: 'background 120ms',
+                      boxShadow: on
+                        ? '0 2px 8px rgba(15, 62, 23, 0.10)'
+                        : '0 1px 3px rgba(15, 62, 23, 0.04)',
                     }}
                   >
                     <span
@@ -352,7 +359,7 @@ export default function ApptPage() {
                         fontFamily: t.mono,
                         fontSize: 10,
                         letterSpacing: 0.8,
-                        color: on ? 'rgba(255,255,255,0.75)' : t.muted,
+                        color: on ? t.ease.forestDark : t.muted,
                         textTransform: 'uppercase',
                       }}
                     >
@@ -363,7 +370,7 @@ export default function ApptPage() {
                         fontFamily: t.sans,
                         fontSize: 20,
                         fontWeight: 500,
-                        color: on ? '#fff' : t.ink,
+                        color: on ? t.ease.forestDark : t.ink,
                         letterSpacing: -0.3,
                         lineHeight: 1,
                         fontFeatureSettings: '"tnum" 1, "lnum" 1',
@@ -473,10 +480,11 @@ export default function ApptPage() {
                 </div>
                 <div
                   style={{
-                    fontFamily: t.serif,
+                    fontFamily: t.sans,
                     fontSize: 18,
+                    fontWeight: 500,
                     letterSpacing: -0.3,
-                    lineHeight: 1.15,
+                    lineHeight: 1.2,
                     marginBottom: 4,
                   }}
                 >
