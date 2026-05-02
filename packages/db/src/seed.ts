@@ -58,6 +58,16 @@ async function seed() {
 
   // ──────────────────────────────────────────────────────────────
   // TENANT 0 — Vazant Consulting
+  //
+  // Multi-firm note (Day 2 post-audit hardening): clerkOrgId is left
+  // NULL by the seed. Antonio creates the Clerk Organization via the
+  // dashboard, copies the org id, and runs:
+  //
+  //   UPDATE tenants SET clerk_org_id = '<org-id>' WHERE slug = 'vazant';
+  //
+  // Once that lands, command-room sign-ins resolve tenant via
+  // auth().orgId → tenants.clerk_org_id (multi-firm path). Until then
+  // the legacy email-claim path keeps the dev loop working.
   // ──────────────────────────────────────────────────────────────
   const [vazant] = await db
     .insert(tenants)

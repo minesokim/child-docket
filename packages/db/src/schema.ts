@@ -124,6 +124,18 @@ export const tenants = pgTable('tenants', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   timezone: text('timezone').notNull().default('America/Los_Angeles'),
+  // Clerk Organization id mapping. One Clerk Org = one tenant.
+  // Firm staff (owner / preparer / reviewer / admin) are members of the
+  // org with Clerk-managed memberships + roles. Clients (taxpayers)
+  // are NOT in any Clerk org — they auth via phone OTP and bind to
+  // pre-seeded `clients` rows by phone match. See May 2026 multi-firm
+  // wiring (Day 2 of post-audit hardening).
+  //
+  // Nullable for migration backfill. Code paths that read this should
+  // fall back gracefully when null — Antonio creates the Clerk Org via
+  // dashboard, then UPDATE this once. Subsequent firms will set this
+  // at provisioning time.
+  clerkOrgId: text('clerk_org_id').unique(),
   defaultTrustLevel: trustLevelEnum('default_trust_level').notNull().default('1'),
   bedrockEnabled: boolean('bedrock_enabled').notNull().default(false),
   awsRegion: text('aws_region'),
@@ -183,6 +195,13 @@ export const clients = pgTable(
     tenantIdx: index('clients_tenant_idx').on(t.tenantId),
     phoneIdx: index('clients_phone_idx').on(t.tenantId, t.phone),
     clerkIdx: index('clients_clerk_user_idx').on(t.clerkUserId),
+    // Global phone index for the binding lookup at first sign-in.
+    // We don't yet know the tenant when a client completes phone OTP,
+    // so the lookup is global (`SELECT ... WHERE phone = X AND
+    // clerk_user_id IS NULL`). The (tenantId, phone) composite above
+    // is leading-key tenantId, which Postgres can't use efficiently
+    // for a phone-only predicate. See client-portal/src/lib/intake/auth.ts.
+    phoneGlobalIdx: index('clients_phone_global_idx').on(t.phone),
   }),
 );
 
