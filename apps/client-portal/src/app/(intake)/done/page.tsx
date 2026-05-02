@@ -1,9 +1,12 @@
 'use client';
 
-// Final intake screen — completion. Confetti-adjacent success mark + appointment
-// summary + "what happens next" timeline. 1-to-1 port of ScreenDone.
-// Routes to portal home (Batch D) when wired; for now stays at /done with a
-// disabled-looking continue.
+// Final intake screen — completion. Confetti-adjacent success mark +
+// appointment summary + "what happens next" timeline.
+//
+// Visual: ease.health aesthetic. Display headline (light weight 300,
+// forestDark color). Appointment card uses the keylimeWash accent so
+// it reads as a celebration tile rather than another generic card.
+// Routes to portal home when wired.
 
 import {
   Body,
@@ -11,7 +14,6 @@ import {
   buildTheme,
   Card,
   Eyebrow,
-  H1,
   HandCheckmark,
   Row,
   Screen,
@@ -152,49 +154,69 @@ export default function DonePage() {
             <HandCheckmark t={t} size={128} />
           </Row>
 
-          <Stack gap={10} style={{ textAlign: 'center', padding: '0 8px' }}>
-            <H1 t={t} style={{ fontSize: 30 }}>
-              You&apos;re all set, {firstName}
-            </H1>
+          <Stack gap={12} style={{ textAlign: 'center', padding: '0 8px' }}>
+            {/* Display headline at ease's light weight (300). The whole
+                screen is a celebratory hero — let the type carry it. */}
+            <div
+              style={{
+                fontFamily: t.serif,
+                fontWeight: 300,
+                fontSize: 38,
+                lineHeight: 1.1,
+                letterSpacing: -1.2,
+                color: t.ease.forestDark,
+                margin: 0,
+              }}
+            >
+              You&apos;re all set, <span style={{ fontStyle: 'italic' }}>{firstName}</span>
+            </div>
             <Body t={t} size={15}>
               Antonio will review your submission within 24 hours and reach out to confirm your
               appointment. You&apos;ll receive a text and email when he&apos;s reviewed your info.
             </Body>
           </Stack>
 
-          <Card t={t} style={{ padding: 0, overflow: 'hidden' }}>
+          {/* Appointment card with keylimeWash accent — reads as a
+              celebration tile, not a generic info card. The eyebrow
+              line drops the rust band; the accent fill carries the
+              same job with less visual chrome. */}
+          <Card t={t} accent="keylimeWash" style={{ padding: 0, overflow: 'hidden' }}>
             <div
               style={{
-                padding: '14px 18px',
-                background: t.tintAccent,
-                borderBottom: `1px solid ${t.border}`,
+                padding: '14px 20px 0',
                 fontFamily: t.mono,
                 fontSize: 10,
-                color: t.rustInk,
-                letterSpacing: 1,
+                color: t.ease.forestDark,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+                opacity: 0.7,
               }}
             >
-              YOUR APPOINTMENT
+              Your appointment
             </div>
-            <div style={{ padding: 20 }}>
+            <div style={{ padding: '8px 20px 20px' }}>
               <Stack gap={14}>
                 <div>
                   <div
                     style={{
                       fontFamily: t.serif,
-                      fontSize: 22,
-                      color: t.ink,
-                      letterSpacing: -0.3,
+                      fontWeight: 400,
+                      fontSize: 26,
+                      lineHeight: 1.15,
+                      color: t.ease.forestDark,
+                      letterSpacing: -0.78,
                     }}
                   >
                     {dayName}, {selDate.m} {selDate.n}
                   </div>
                   <div
                     style={{
-                      fontFamily: t.mono,
+                      fontFamily: t.sans,
                       fontSize: 14,
-                      color: t.inkSoft,
+                      color: t.ease.forestDark,
+                      opacity: 0.75,
                       marginTop: 4,
+                      letterSpacing: -0.42,
                     }}
                   >
                     {selTime} PT · {FORMAT_LABELS[format]}
@@ -204,14 +226,30 @@ export default function DonePage() {
                   <Button
                     t={t}
                     variant="ghost"
-                    style={{ flex: 1, padding: '10px 14px', fontSize: 13 }}
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      // Override Card-accent context: keep the ghost
+                      // button readable on the keylime fill.
+                      background: '#fffefc',
+                      border: `1px solid ${t.ease.forestDark}33`,
+                      color: t.ease.forestDark,
+                    }}
                   >
                     Add to calendar
                   </Button>
                   <Button
                     t={t}
                     variant="ghost"
-                    style={{ flex: 1, padding: '10px 14px', fontSize: 13 }}
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      background: '#fffefc',
+                      border: `1px solid ${t.ease.forestDark}33`,
+                      color: t.ease.forestDark,
+                    }}
                   >
                     Reschedule
                   </Button>

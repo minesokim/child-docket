@@ -11,8 +11,13 @@
 // (intake) layout server-side). If the client has any progress, the CTA
 // changes to "Continue where you left off" and jumps straight to the
 // first incomplete step — bypassing the tutorial they've already seen.
+//
+// Visual: ease.health aesthetic — display-size headline at light weight
+// (300) per the ease type scale, firm name in italic for editorial
+// presence, status pill below CTA replaces the stacked muted footnotes
+// for cleaner hierarchy.
 
-import { Body, Button, buildTheme, Screen, Stack, VideoPlaceholder } from '@docket/ui';
+import { Body, Button, buildTheme, Screen, Stack, StatusPill, VideoPlaceholder } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers } from '@/lib/intake-context';
 import { getResumeStep, hasIntakeProgress } from '@/lib/intake-flow';
@@ -63,16 +68,18 @@ export function WelcomeContent() {
           <VideoPlaceholder t={t} youtubeId="P8nQkkkWJl4" startSeconds={15} />
         </div>
 
-        <Stack gap={12} style={{ textAlign: 'center', marginTop: 28 }}>
+        <Stack gap={14} style={{ textAlign: 'center', marginTop: 32 }}>
+          {/* Display-size headline. ease type scale: 40px @ weight 300,
+              letter-spacing -0.4. Firm name in italic for editorial pop. */}
           <div
             className="welcome-fade welcome-fade-headline"
             style={{
               fontFamily: t.serif,
-              fontWeight: 400,
-              fontSize: 26,
-              lineHeight: 1.15,
-              letterSpacing: -0.4,
-              color: t.ink,
+              fontWeight: 300,
+              fontSize: 38,
+              lineHeight: 1.1,
+              letterSpacing: -1.2,
+              color: t.ease.forestDark,
             }}
           >
             {isReturning ? (
@@ -90,7 +97,7 @@ export function WelcomeContent() {
             )}
           </div>
           <div className="welcome-fade welcome-fade-subtext">
-            <Body t={t} size={14.5} style={{ maxWidth: 320, margin: '0 auto' }}>
+            <Body t={t} size={15} style={{ maxWidth: 340, margin: '0 auto' }}>
               {isReturning
                 ? 'Picking up where you left off. Your progress is saved.'
                 : "I'm Antonio Vazquez, Enrolled Agent. Watch this short intro to see how we'll work together."}
@@ -99,37 +106,22 @@ export function WelcomeContent() {
         </Stack>
 
         <div className="welcome-fade welcome-fade-cta" style={{ marginTop: 'auto', paddingTop: 32 }}>
-          <Stack gap={10}>
+          <Stack gap={14}>
             <Button
-            t={t}
-            onClick={() => nav.next(ctaTarget)}
-            style={{ width: '100%', padding: '15px 22px', fontSize: 15 }}
-          >
-            {ctaLabel}
-          </Button>
-          <div
-            style={{
-              fontSize: 12,
-              color: t.muted,
-              textAlign: 'center',
-              paddingTop: 2,
-            }}
-          >
-            {isReturning ? 'Your data is encrypted at rest' : 'Takes about 10 minutes'}
-          </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: t.muted,
-              letterSpacing: 0.4,
-              textAlign: 'center',
-              fontFamily: t.mono,
-              textTransform: 'uppercase',
-              paddingTop: 6,
-            }}
-          >
-            Your information is never shared or sold
-          </div>
+              t={t}
+              onClick={() => nav.next(ctaTarget)}
+              style={{ width: '100%', padding: '15px 22px', fontSize: 15 }}
+            >
+              {ctaLabel}
+            </Button>
+            {/* Single-row signature replaces the previous two stacked
+                footnotes. Status pill carries the time/security cue
+                with semantic color rather than muted gray text. */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <StatusPill t={t} tone={isReturning ? 'mint' : 'sage'}>
+                {isReturning ? 'AES-256 encrypted at rest' : '~10 minutes · never shared'}
+              </StatusPill>
+            </div>
           </Stack>
         </div>
       </div>
