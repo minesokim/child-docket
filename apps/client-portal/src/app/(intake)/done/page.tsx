@@ -168,7 +168,7 @@ export default function DonePage() {
                 margin: 0,
               }}
             >
-              You&apos;re all set, <span style={{ fontStyle: 'italic' }}>{firstName}</span>
+              You&apos;re all set, {firstName}
             </div>
             <Body t={t} size={15}>
               Antonio will review your submission within 24 hours and reach out to confirm your

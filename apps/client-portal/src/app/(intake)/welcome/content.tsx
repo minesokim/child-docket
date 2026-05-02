@@ -86,13 +86,13 @@ export function WelcomeContent() {
               <>
                 Welcome back to
                 <br />
-                <span style={{ fontStyle: 'italic' }}>Vazant Consulting</span>
+                Vazant Consulting
               </>
             ) : (
               <>
                 Welcome to
                 <br />
-                <span style={{ fontStyle: 'italic' }}>Vazant Consulting</span>
+                Vazant Consulting
               </>
             )}
           </div>
