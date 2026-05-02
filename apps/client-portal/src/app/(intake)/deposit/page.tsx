@@ -161,7 +161,9 @@ export default function DepositPage() {
         </div>
 
         <Stack gap={22} style={{ padding: '22px 24px 16px', flex: 1 }}>
-          {/* Appointment recap */}
+          {/* Appointment recap. Sans throughout to match the /appt page
+              summary card. AV avatar circle removed - the 'with Antonio'
+              line is enough on its own. */}
           <div
             style={{
               padding: '16px 18px',
@@ -172,29 +174,32 @@ export default function DepositPage() {
           >
             <div
               style={{
-                fontFamily: t.serif,
-                fontStyle: 'italic',
-                fontSize: 13,
-                color: 'rgba(255,255,255,0.6)',
-                marginBottom: 8,
+                fontFamily: t.sans,
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.55)',
+                letterSpacing: 0.6,
+                textTransform: 'uppercase',
+                marginBottom: 6,
               }}
             >
               Your appointment
             </div>
             <div
               style={{
-                fontFamily: t.serif,
-                fontSize: 20,
+                fontFamily: t.sans,
+                fontSize: 18,
+                fontWeight: 500,
                 letterSpacing: -0.3,
-                lineHeight: 1.15,
-                marginBottom: 6,
+                lineHeight: 1.2,
+                marginBottom: 4,
               }}
             >
               {selDate.d}, {selDate.m} {selDate.n} · {selTime}
             </div>
             <div
               style={{
-                fontSize: 13,
+                fontFamily: t.sans,
+                fontSize: 12.5,
                 color: 'rgba(255,255,255,0.7)',
                 marginBottom: 12,
               }}
@@ -203,33 +208,14 @@ export default function DepositPage() {
             </div>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                paddingTop: 12,
+                fontFamily: t.sans,
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.85)',
+                paddingTop: 10,
               }}
             >
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: t.rust,
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: t.serif,
-                  fontSize: 13,
-                  fontWeight: 500,
-                }}
-              >
-                AV
-              </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>
-                with{' '}
-                <span style={{ color: '#fff', fontWeight: 500 }}>Antonio Vazquez, EA</span>
-              </div>
+              with{' '}
+              <span style={{ color: '#fff', fontWeight: 500 }}>Antonio Vazquez, EA</span>
             </div>
           </div>
 
