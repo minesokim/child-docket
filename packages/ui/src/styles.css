@@ -1,8 +1,107 @@
 /* Docket UI — global styles. Imported by both apps. */
 
+/* ────────────────────────────────────────────────────────────────
+ * TRIAL FONTS — local-only evaluation
+ *
+ * Suisse Int'l (Swiss Typefaces) and FAIRE Octave (Faire Type) are the
+ * exact fonts ease.health uses. Trial licenses forbid production use,
+ * so the .woff2 files live in apps/client-portal/public/fonts/trial/
+ * which is gitignored. When the files are present (local dev), the
+ * browser loads them and the app looks like the licensed system.
+ * When absent (Vercel / production), each @font-face fails silently
+ * and the browser falls through to the next family in the CSS stack —
+ * Inter / Playfair Display, both free and license-clean.
+ *
+ * To upgrade to licensed fonts:
+ *   1. Buy Suisse Int'l + FAIRE Octave on the foundry sites
+ *   2. Replace files in apps/client-portal/public/fonts/trial/ with
+ *      the licensed weights, OR ship them via a different CDN path
+ *   3. Drop the gitignore line for the trial folder + commit
+ * ────────────────────────────────────────────────────────────────*/
+
 @font-face {
-  font-family: 'Fraunces';
-  src: url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap');
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-Book.woff2') format('woff2');
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-RegularIt.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Suisse Int\'l Trial';
+  src: url('/fonts/trial/SuisseIntlTrial-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'FAIRE Octave Trial';
+  src: url('/fonts/trial/FAIRE-Octave-Trial-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'FAIRE Octave Trial';
+  src: url('/fonts/trial/FAIRE-Octave-Trial-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'FAIRE Octave Trial';
+  src: url('/fonts/trial/FAIRE-Octave-Trial-RegularItalic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'FAIRE Octave Trial';
+  src: url('/fonts/trial/FAIRE-Octave-Trial-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'FAIRE Octave Trial';
+  src: url('/fonts/trial/FAIRE-Octave-Trial-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
   font-display: swap;
 }
 

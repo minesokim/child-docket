@@ -78,9 +78,14 @@ export const DOCKET_TOKENS = {
     card: '#FFFFFF',
     tintAccent: 'rgba(51, 94, 69, 0.06)',
     tintAccentStrong: 'rgba(51, 94, 69, 0.11)',
-    serif: '"Fraunces", "Georgia", serif',
-    sans: '"DM Sans", -apple-system, system-ui, sans-serif',
-    mono: '"DM Sans", -apple-system, system-ui, sans-serif',
+    // Font stacks — trial fonts first (only load when local files are
+    // present — see styles.css), then ease's official free fallbacks
+    // (Inter / Playfair Display), then the original Docket fonts
+    // (DM Sans / Fraunces), then system. Each layer is a clean
+    // visual fallback for the next.
+    serif: '"FAIRE Octave Trial", "Playfair Display", "Fraunces", "Georgia", serif',
+    sans: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
+    mono: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
     radius: 14,
     radiusLg: 20,
   },
@@ -95,9 +100,14 @@ export const DOCKET_TOKENS = {
     card: '#FFFFFF',
     tintAccent: 'rgba(51, 94, 69, 0.05)',
     tintAccentStrong: 'rgba(51, 94, 69, 0.09)',
-    serif: '"Fraunces", "Georgia", serif',
-    sans: '"DM Sans", -apple-system, system-ui, sans-serif',
-    mono: '"DM Sans", -apple-system, system-ui, sans-serif',
+    // Font stacks — trial fonts first (only load when local files are
+    // present — see styles.css), then ease's official free fallbacks
+    // (Inter / Playfair Display), then the original Docket fonts
+    // (DM Sans / Fraunces), then system. Each layer is a clean
+    // visual fallback for the next.
+    serif: '"FAIRE Octave Trial", "Playfair Display", "Fraunces", "Georgia", serif',
+    sans: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
+    mono: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
     radius: 10,
     radiusLg: 14,
   },
@@ -112,9 +122,14 @@ export const DOCKET_TOKENS = {
     card: '#FFFFFF',
     tintAccent: 'rgba(51, 94, 69, 0.08)',
     tintAccentStrong: 'rgba(51, 94, 69, 0.15)',
-    serif: '"Fraunces", "Georgia", serif',
-    sans: '"DM Sans", -apple-system, system-ui, sans-serif',
-    mono: '"DM Sans", -apple-system, system-ui, sans-serif',
+    // Font stacks — trial fonts first (only load when local files are
+    // present — see styles.css), then ease's official free fallbacks
+    // (Inter / Playfair Display), then the original Docket fonts
+    // (DM Sans / Fraunces), then system. Each layer is a clean
+    // visual fallback for the next.
+    serif: '"FAIRE Octave Trial", "Playfair Display", "Fraunces", "Georgia", serif',
+    sans: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
+    mono: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
     radius: 6,
     radiusLg: 10,
   },
@@ -122,10 +137,15 @@ export const DOCKET_TOKENS = {
 
 export const FONT_PAIRINGS = {
   classic: {
-    serif: '"Fraunces", "Georgia", serif',
-    sans: '"DM Sans", -apple-system, system-ui, sans-serif',
-    mono: '"DM Sans", -apple-system, system-ui, sans-serif',
-    label: 'Fraunces / DM Sans',
+    // Font stacks — trial fonts first (only load when local files are
+    // present — see styles.css), then ease's official free fallbacks
+    // (Inter / Playfair Display), then the original Docket fonts
+    // (DM Sans / Fraunces), then system. Each layer is a clean
+    // visual fallback for the next.
+    serif: '"FAIRE Octave Trial", "Playfair Display", "Fraunces", "Georgia", serif',
+    sans: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
+    mono: '"Suisse Int\'l Trial", "Inter", "DM Sans", -apple-system, system-ui, sans-serif',
+    label: 'Octave / Suisse (trial) → Playfair / Inter → Fraunces / DM Sans',
   },
   instrument: {
     serif: '"Instrument Serif", "Georgia", serif',

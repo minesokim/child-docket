@@ -40,3 +40,19 @@ coverage/
 # session timelines). Anything here is an internal developer artifact and
 # must not ship to the remote.
 .gstack/
+
+# Trial font files. Suisse Int'l (Swiss Typefaces) and FAIRE Octave (Faire
+# Type) are commercial fonts. Their trial license permits "test
+# visualizations, presentations, and pitches, for use within your company"
+# but forbids "any final files for any project." A Vercel preview that
+# nobody outside the team uses to evaluate before licensing falls within
+# trial intent; an actual production deployment serving real clients does
+# not.
+#
+# CURRENT STATUS (May 2026): trial files ARE tracked and pushed to
+# Vercel for visual evaluation by David. Antonio's clients are not yet
+# onboarded, so the live site has no real traffic. **Decide by
+# May 14, 2026** — license + keep, or revert to Inter + Playfair Display.
+# The @font-face declarations in styles.css already chain to those free
+# fallbacks, so reverting is a single commit that removes the .woff2
+# files (or restores this gitignore line + force-pushes the cleanup).
