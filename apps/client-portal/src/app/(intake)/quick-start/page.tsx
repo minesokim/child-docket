@@ -138,6 +138,7 @@ export default function QuickStartPage() {
               width: 36,
               height: 36,
               borderRadius: 999,
+              border: 'none',
               background: t.ease.keylimeWash,
               color: t.ease.forestDark,
               cursor: 'pointer',

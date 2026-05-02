@@ -46,6 +46,7 @@ function StepperButton({
         width: 52,
         height: 52,
         borderRadius: '50%',
+        border: 'none',
         background: disabled ? 'transparent' : t.ease.keylimeWash,
         color: disabled ? t.borderSoft : t.ease.forestDark,
         fontFamily: t.serif,

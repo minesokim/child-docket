@@ -390,6 +390,7 @@ export default function BusinessInfoPage() {
                       padding: '14px 16px',
                       background: on ? t.ease.mintGlaze : '#fffefc',
                       borderRadius: t.radius,
+                      border: 'none',
                       cursor: 'pointer',
                       fontFamily: t.sans,
                       display: 'flex',

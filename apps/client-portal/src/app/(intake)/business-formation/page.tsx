@@ -68,6 +68,7 @@ function EntityCard({
         padding: '14px 14px',
         background: selected ? t.ease.mintGlaze : '#fffefc',
         borderRadius: t.radius,
+        border: 'none',
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: t.sans,
