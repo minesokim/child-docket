@@ -27,6 +27,7 @@ import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { formatEin, formatMoney } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { IncomeType } from '@docket/shared';
 
 export default function SelfEmploymentPage() {
@@ -231,9 +232,9 @@ export default function SelfEmploymentPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleContinue} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/self-employment" onClick={handleContinue} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

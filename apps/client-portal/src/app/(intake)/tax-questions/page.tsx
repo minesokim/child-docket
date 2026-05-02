@@ -27,6 +27,7 @@ import {
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { IncomeType } from '@docket/shared';
 
 type TaxQuestionKey =
@@ -172,9 +173,9 @@ export default function TaxQuestionsPage() {
             <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/tax-questions" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

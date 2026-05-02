@@ -37,6 +37,7 @@ import {
   useSetIntakeField,
 } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatDigits } from '@docket/shared';
 import type { IntakeDependent } from '@docket/shared';
 
@@ -294,9 +295,9 @@ export default function DepsDetailPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/deps-detail" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

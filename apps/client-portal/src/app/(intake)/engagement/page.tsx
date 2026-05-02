@@ -20,6 +20,7 @@ import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { recordIntakeSignature } from '@/lib/intake/sign';
 
 const TITLE = 'Engagement Letter - 2025 Tax Year';
@@ -177,14 +178,15 @@ export default function EngagementPage() {
           >
             Back
           </Button>
-          <Button
+          <IntakeContinueButton
             t={t}
+            route="/engagement"
             onClick={handleNext}
-            disabled={!ready}
+            pageGatePass={ready}
             style={{ flex: 1, opacity: ready ? 1 : 0.45 }}
           >
             Sign and continue
-          </Button>
+          </IntakeContinueButton>
         </IntakeBottomBar>
       </div>
     </Screen>

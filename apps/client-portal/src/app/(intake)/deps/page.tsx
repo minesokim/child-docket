@@ -20,6 +20,7 @@ import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { FilingStatus } from '@docket/shared';
 
 const MAX_DEPS = 10;
@@ -221,9 +222,9 @@ export default function DepsCountPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleContinue} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/deps" onClick={handleContinue} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

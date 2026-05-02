@@ -32,6 +32,7 @@ import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatEin, formatMoney } from '@docket/shared';
 
 type ItemKey =
@@ -265,9 +266,9 @@ export default function DeductionsPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/deductions" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

@@ -23,6 +23,7 @@ import {
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatDigits, formatMoney, formatYear } from '@docket/shared';
 import type { IntakeRentalProperty } from '@docket/shared';
 
@@ -245,9 +246,9 @@ export default function RentalDetailPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/rental-detail" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { FilingStatus } from '@docket/shared';
 
 // DOB format helpers - shared with /personal. UI uses "MM / DD / YYYY",
@@ -194,9 +195,9 @@ export default function SpousePage() {
             <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/spouse" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

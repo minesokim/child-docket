@@ -107,7 +107,14 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     label: 'Service',
     section: 'welcome',
     isApplicable: () => true,
-    isComplete: (s) => !!s.service?.kind,
+    // Service kind is required. If they pick 'other', the otherSub
+    // sub-selection is required too (the /services page surfaces a
+    // second tier of choices in that case).
+    isComplete: (s) => {
+      if (!s.service?.kind) return false;
+      if (s.service.kind === 'other' && !s.service.otherSub) return false;
+      return true;
+    },
     next: () => '/services-addons',
   },
   {
@@ -468,6 +475,47 @@ export function getStepProgress(
  */
 export function isIntakeComplete(state: IntakeState): boolean {
   return getApplicableSteps(state).every((s) => s.isComplete(state));
+}
+
+// ────────────────────────────────────────────────────────────────
+// Continue-button gating
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Steps where the Continue button is ALWAYS clickable, regardless of
+ * the step's `isComplete()` value. The user shouldn't be locked into
+ * uploading documents to keep going (they can skip and come back), and
+ * "Welcome" / "Tutorial" / "Add-ons" / "Life events" already mark
+ * themselves complete unconditionally.
+ *
+ * /docs is the special one: its `isComplete` checks
+ * `documents.uploadComplete`, which is meaningful for `isIntakeComplete`
+ * (full-flow finish detection), but for forward nav we want to let the
+ * client move past even if they haven't uploaded yet.
+ */
+const STEPS_WITHOUT_GATE = new Set<string>([
+  'docs',
+]);
+
+/**
+ * Can the client advance from the current step? Used by intake pages
+ * to drive `<Button disabled={!canAdvance}>` so the Continue button is
+ * visibly + functionally locked until required fields are filled.
+ *
+ * Returns true when:
+ *   - The step is in the "no gate" list (docs, etc.)
+ *   - OR the step's `isComplete(state)` returns true
+ *
+ * Returns false when the step has required fields and they aren't
+ * all filled. Pages whose `isComplete` is `() => true` (welcome,
+ * tutorial, services-addons, life-events, appt, done) naturally
+ * always pass — no special handling needed.
+ */
+export function canAdvanceFromStep(currentRoute: string, state: IntakeState): boolean {
+  const step = getStep(currentRoute);
+  if (!step) return true; // unknown route — let the page handle its own gating
+  if (STEPS_WITHOUT_GATE.has(step.id)) return true;
+  return step.isComplete(state);
 }
 
 /**

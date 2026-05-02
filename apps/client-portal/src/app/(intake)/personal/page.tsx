@@ -31,6 +31,7 @@ import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatStateCode, formatZip } from '@docket/shared';
 
 // ────────────────────────────────────────────────────────────────
@@ -278,9 +279,9 @@ export default function PersonalPage() {
             <Button t={t} variant="ghost" onClick={handleBack} style={{ flex: '0 0 auto' }}>
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/personal" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

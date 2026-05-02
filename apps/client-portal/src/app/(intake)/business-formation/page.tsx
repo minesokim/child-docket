@@ -31,6 +31,7 @@ import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatDigits } from '@docket/shared';
 
 type EntityId = 'llc' | 'scorp' | 'ccorp' | 'unsure';
@@ -275,9 +276,9 @@ export default function BusinessFormationPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/business-formation" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

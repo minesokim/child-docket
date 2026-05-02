@@ -23,6 +23,7 @@ import { motion, LayoutGroup } from 'framer-motion';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { ServiceOtherSubKind } from '@docket/shared';
 
 export default function ServicesPathPage() {
@@ -353,9 +354,14 @@ export default function ServicesPathPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }} disabled={!canContinue}>
+            <IntakeContinueButton
+              t={t}
+              route="/services"
+              onClick={handleNext}
+              style={{ flex: 1 }}
+            >
               {path === 'other' ? 'Continue' : 'Next - add-ons'}
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

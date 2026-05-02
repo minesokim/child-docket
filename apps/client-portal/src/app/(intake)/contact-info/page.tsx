@@ -25,6 +25,7 @@ import {
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
 import { getNextStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 
 export default function ContactInfoPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
@@ -116,9 +117,9 @@ export default function ContactInfoPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/contact-info" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

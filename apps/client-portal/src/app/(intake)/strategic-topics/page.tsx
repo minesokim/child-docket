@@ -23,6 +23,7 @@ import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { StrategicTopic } from '@docket/shared';
 
 const TOPICS: Array<{ id: StrategicTopic; label: string; sub?: string }> = [
@@ -202,9 +203,9 @@ export default function StrategicTopicsPage() {
             >
               Back
             </Button>
-            <Button t={t} onClick={handleNext} style={{ flex: 1 }}>
+            <IntakeContinueButton t={t} route="/strategic-topics" onClick={handleNext} style={{ flex: 1 }}>
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>

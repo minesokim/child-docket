@@ -25,6 +25,7 @@ import {
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
+import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { IncomeType } from '@docket/shared';
 
 type IncomeId = IncomeType;
@@ -188,14 +189,15 @@ export default function IncomePage() {
             >
               Back
             </Button>
-            <Button
+            <IntakeContinueButton
               t={t}
+              route="/income"
               onClick={handleContinue}
-              disabled={!canContinue}
+              pageGatePass={canContinue}
               style={{ flex: 1, opacity: canContinue ? 1 : 0.45 }}
             >
               Continue
-            </Button>
+            </IntakeContinueButton>
           </Row>
         </div>
       </div>
