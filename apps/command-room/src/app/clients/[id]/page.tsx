@@ -3,18 +3,24 @@
 //   - latest engagement
 //   - open issues
 //   - recent messages
+//   - intake_responses (decrypted + masked)  ← Day 5 wiring
+//   - documents (uploaded files for this client)
+//   - signatures (engagement letter, §7216 consent, 8879)
 // All scoped by tenant via withTenant() (RLS enforced).
-//
-// Layout: client header + engagement summary + issues column + messages thread.
 
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
+import { decryptTree, getTenantDek } from '@docket/db';
 import { and, desc, eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/require-role';
 import { AppShell } from '@/components/app-shell';
-import type { TenantId } from '@docket/shared';
+import { IntakeSummary } from '@/components/intake-summary';
+import { DocumentsSection } from '@/components/documents-section';
+import { SignaturesSection } from '@/components/signatures-section';
+import type { TenantId, IntakeState } from '@docket/shared';
+import { asTenantId, maskSensitiveFields } from '@docket/shared';
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -59,11 +65,67 @@ export default async function ClientDetailPage({ params }: PageProps) {
       .orderBy(desc(schema.messages.createdAt))
       .limit(50);
 
-    return { client, engagement, issues, messages: messages.reverse() };
+    // Intake responses — decrypt with tenant DEK, mask sensitive paths
+    // (SSN/EIN/bank). Antonio sees redacted values by default; the
+    // preparer-side reveal flow (gated by assertRole + audit-logged)
+    // lands as Day 6 work. For now the masked values let him see
+    // what the client filled in without exposing plaintext PII to
+    // every page render.
+    const dek = await getTenantDek(db, asTenantId(user.tenantId));
+    const [intakeRow] = await db
+      .select()
+      .from(schema.intakeResponses)
+      .where(eq(schema.intakeResponses.clientId, id))
+      .orderBy(desc(schema.intakeResponses.taxYear))
+      .limit(1);
+
+    let intake: {
+      taxYear: number;
+      status: string;
+      completedSteps: string[];
+      answers: IntakeState;
+      startedAt: Date;
+      updatedAt: Date;
+      completedAt: Date | null;
+    } | null = null;
+    if (intakeRow) {
+      const decrypted = decryptTree(intakeRow.answers ?? {}, dek) as IntakeState;
+      intake = {
+        taxYear: intakeRow.taxYear,
+        status: intakeRow.status,
+        completedSteps: intakeRow.completedSteps,
+        answers: maskSensitiveFields(decrypted),
+        startedAt: intakeRow.startedAt,
+        updatedAt: intakeRow.updatedAt,
+        completedAt: intakeRow.completedAt,
+      };
+    }
+
+    const documents = await db
+      .select()
+      .from(schema.documents)
+      .where(eq(schema.documents.clientId, id))
+      .orderBy(desc(schema.documents.createdAt));
+
+    const signatures = await db
+      .select()
+      .from(schema.signatures)
+      .where(eq(schema.signatures.clientId, id))
+      .orderBy(desc(schema.signatures.createdAt));
+
+    return {
+      client,
+      engagement,
+      issues,
+      messages: messages.reverse(),
+      intake,
+      documents,
+      signatures,
+    };
   });
 
   if (!data) notFound();
-  const { client, engagement, issues, messages } = data;
+  const { client, engagement, issues, messages, intake, documents, signatures } = data;
 
   const initials = client.fullName
     .split(/\s+/)
@@ -159,8 +221,28 @@ export default async function ClientDetailPage({ params }: PageProps) {
             alignItems: 'flex-start',
           }}
         >
-          {/* Left column — engagement + messages */}
+          {/* Left column — intake summary, documents, signatures, engagement, messages */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <Section t={t} label="Intake">
+              <IntakeSummary t={t} intake={intake} />
+            </Section>
+
+            <Section
+              t={t}
+              label="Documents"
+              count={documents.length > 0 ? documents.length : undefined}
+            >
+              <DocumentsSection t={t} documents={documents} />
+            </Section>
+
+            <Section
+              t={t}
+              label="Signatures"
+              count={signatures.length > 0 ? signatures.length : undefined}
+            >
+              <SignaturesSection t={t} signatures={signatures} />
+            </Section>
+
             <Section t={t} label="Engagement">
               {engagement ? (
                 <div
