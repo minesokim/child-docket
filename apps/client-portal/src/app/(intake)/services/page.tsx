@@ -19,6 +19,7 @@ import {
   SERVICE_CATALOG,
   Stack,
 } from '@docket/ui';
+import { motion, LayoutGroup } from 'framer-motion';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
@@ -90,6 +91,7 @@ export default function ServicesPathPage() {
         </div>
 
         <Stack gap={12} style={{ padding: '24px 24px 16px', flex: 1 }}>
+          <LayoutGroup id="services-tiles">
           {SERVICE_CATALOG.paths.map((p) => {
             const on = path === p.id;
             // 'Something else' gets a neutral wash on select instead of
@@ -101,22 +103,36 @@ export default function ServicesPathPage() {
               key={p.id}
               onClick={() => setPath(p.id)}
               style={{
-                background: on ? selectedBg : '#fffefc',
+                position: 'relative',
+                background: '#fffefc',
                 borderRadius: t.radius,
                 padding: '16px 18px',
                 cursor: 'pointer',
                 boxShadow: on
                   ? '0 4px 20px rgba(15, 62, 23, 0.10)'
                   : '0 1px 4px rgba(15, 62, 23, 0.04)',
-                // Slower easing curve so the highlight reads as gliding
-                // between tiles when the user clicks across options. The
-                // ease-out-quint tail (.16, 1, .3, 1) gives the feeling
-                // of the selection settling into place rather than
-                // snapping.
-                transition: 'background 720ms cubic-bezier(.19, 1, .22, 1), box-shadow 540ms cubic-bezier(.19, 1, .22, 1)',
+                transition: 'box-shadow 540ms cubic-bezier(.19, 1, .22, 1)',
               }}
             >
-              <Row gap={16} align="center">
+              {/* Shared highlight: framer-motion sees the same layoutId
+                  on every tile and animates the SAME element from the
+                  previous selection to the new one — true iOS-segmented-
+                  control glide. The element exists only on the selected
+                  tile; mounting elsewhere triggers the layout animation. */}
+              {on && (
+                <motion.div
+                  layoutId="services-highlight"
+                  transition={{ type: 'spring', stiffness: 360, damping: 38 }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: selectedBg,
+                    borderRadius: t.radius,
+                    zIndex: 0,
+                  }}
+                />
+              )}
+              <Row gap={16} align="center" style={{ position: 'relative', zIndex: 1 }}>
                 <div
                   style={{
                     flexShrink: 0,
@@ -158,7 +174,7 @@ export default function ServicesPathPage() {
               </Row>
 
               {p.id === 'other' && path === 'other' && (
-                <div style={{ marginTop: 18, paddingTop: 16 }}>
+                <div style={{ marginTop: 18, paddingTop: 16, position: 'relative', zIndex: 1 }}>
                   <div
                     style={{
                       fontFamily: t.sans,
@@ -270,6 +286,7 @@ export default function ServicesPathPage() {
             </div>
             );
           })}
+          </LayoutGroup>
 
           {/* Starting estimate sits inline at the bottom of the
               scrollable content - not sticky. Scrolls with the cards
