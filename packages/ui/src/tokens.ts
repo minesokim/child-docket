@@ -71,8 +71,8 @@ export const RADIUS = {
 
 export const DOCKET_TOKENS = {
   editorial: {
-    bg: '#FEFDFA',
-    bgElev: '#FFFFFE',
+    bg: '#FFFEFC',
+    bgElev: '#FFFFFF',
     ink: '#1A1612',
     inkSoft: '#4A4038',
     muted: '#8A7F72',

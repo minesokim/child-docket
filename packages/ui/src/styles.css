@@ -107,8 +107,8 @@
 
 :root {
   /* Editorial tone — default. */
-  --bg: #FEFDFA;
-  --bg-elev: #FFFFFE;
+  --bg: #FFFEFC;
+  --bg-elev: #FFFFFF;
   --ink: #1A1612;
   --ink-soft: #4A4038;
   --muted: #8A7F72;
