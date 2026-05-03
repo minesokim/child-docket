@@ -42,6 +42,7 @@ const config: NextConfig = {
   serverExternalPackages: [
     'sharp',
     'pdf-lib',
+    'tesseract.js',
     '@docket/document-processing',
     '@docket/workers',
     '@docket/orchestrator',

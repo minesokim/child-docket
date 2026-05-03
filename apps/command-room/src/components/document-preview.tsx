@@ -16,6 +16,7 @@
 
 import * as React from 'react';
 import type { Theme } from '@docket/ui';
+import { Skeleton, SkeletonGroup } from '@docket/ui';
 import {
   getCommandRoomDocumentViewUrl,
   type GetDocumentViewUrlResult,
@@ -338,18 +339,18 @@ function ToggleButton({
   );
 }
 
-// Document-shaped skeleton placeholder while the signed URL is
-// being minted + the iframe is loading. Uses the .skel-shimmer
-// effect from packages/ui/styles.css. Imitates the silhouette of
-// a single doc page (heading + lines) so the loading state reads
-// as "we're fetching your document" instead of an opaque spinner.
+// Document-shaped skeleton placeholder while the signed URL is being
+// minted + the iframe is loading. Uses the SHIMMER variant from
+// @docket/ui (premium feel for a single focal item — see the
+// handoff README's variant guidance for "dense documents, hero
+// sections"). Two faux paragraphs with heading rules give the silhouette
+// of a typical scanned doc page.
 function DocumentSkeleton() {
   return (
-    <div
-      className="skel-shimmer skel-panel"
-      aria-busy="true"
-      aria-live="polite"
-      aria-label="Loading document preview"
+    <SkeletonGroup
+      variant="shimmer"
+      panel
+      label="Loading document preview"
       style={{
         background: '#fdfcf7',
         width: 'min(72%, 640px)',
@@ -363,18 +364,18 @@ function DocumentSkeleton() {
         gap: 14,
       }}
     >
-      <div className="skel-bar skel-h-heading skel-w-50" />
-      <div className="skel-bar skel-w-100" />
-      <div className="skel-bar skel-w-86" />
-      <div className="skel-bar skel-w-100" />
-      <div className="skel-bar skel-w-64" />
+      <Skeleton.Heading width="50%" />
+      <Skeleton.Line width="100%" />
+      <Skeleton.Line width="86%" />
+      <Skeleton.Line width="100%" />
+      <Skeleton.Line width="64%" />
       <div style={{ height: 8 }} />
-      <div className="skel-bar skel-h-heading skel-w-32" />
-      <div className="skel-bar skel-w-100" />
-      <div className="skel-bar skel-w-86" />
-      <div className="skel-bar skel-w-100" />
-      <div className="skel-bar skel-w-50" />
-    </div>
+      <Skeleton.Heading width="32%" />
+      <Skeleton.Line width="100%" />
+      <Skeleton.Line width="86%" />
+      <Skeleton.Line width="100%" />
+      <Skeleton.Line width="50%" />
+    </SkeletonGroup>
   );
 }
 

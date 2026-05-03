@@ -38,6 +38,8 @@ import {
   IntakeHeader,
   Row,
   Screen,
+  Skeleton,
+  SkeletonGroup,
   Stack,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
@@ -544,10 +546,35 @@ function PhaseBlock({
   }
 
   // ─── Reading (uploaded / classifying) ───
+  // Document-shaped SHIMMER skeleton — the AI-vision call takes a few
+  // seconds, and a paper-toned shimmering doc silhouette reads as
+  // "we're looking at it" instead of "we're loading something."
   if (state.phase === 'uploaded' || state.phase === 'classifying') {
     return (
       <Stack gap={20}>
-        <DocHero t={t} caption="Reading…" pulse />
+        <SkeletonGroup
+          variant="shimmer"
+          panel
+          label={`Reading your ${readingLabel(slot)}`}
+          style={{
+            background: '#fdfcf7',
+            aspectRatio: '4 / 3',
+            borderRadius: 14,
+            padding: '28px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            justifyContent: 'center',
+          }}
+        >
+          <Skeleton.Heading width="46%" />
+          <Skeleton.Line width="100%" />
+          <Skeleton.Line width="86%" />
+          <Skeleton.Line width="64%" />
+          <div style={{ height: 6 }} />
+          <Skeleton.Line width="100%" />
+          <Skeleton.Line width="50%" />
+        </SkeletonGroup>
         <div
           style={{
             textAlign: 'center',
@@ -929,31 +956,33 @@ function DocumentPreview({
     );
   }
 
-  // Loading state — same shell as the hero so the card doesn't reflow.
+  // Loading state — pulse skeleton on the same keylime card so the
+  // verification preview doesn't reflow when the image arrives.
+  // Pulse (not shimmer) here because this is a quick fetch, not a
+  // dense doc render — pulse reads as "almost there" rather than the
+  // more deliberate shimmer cadence.
   if (!url && !errored) {
     return (
-      <div
+      <SkeletonGroup
+        variant="pulse"
+        panel
+        label="Loading document preview"
         style={{
           aspectRatio: '4 / 3',
           borderRadius: 14,
           background: t.ease.keylimeWash,
+          padding: '28px 32px',
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
+          gap: 10,
           justifyContent: 'center',
         }}
       >
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 9.5,
-            color: t.muted,
-            letterSpacing: 1,
-            textTransform: 'uppercase',
-          }}
-        >
-          Loading preview…
-        </div>
-      </div>
+        <Skeleton.Heading width="42%" />
+        <Skeleton.Line width="100%" />
+        <Skeleton.Line width="86%" />
+        <Skeleton.Line width="64%" />
+      </SkeletonGroup>
     );
   }
 

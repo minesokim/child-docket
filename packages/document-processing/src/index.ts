@@ -27,6 +27,9 @@
 
 import sharp from 'sharp';
 import { PDFDocument } from 'pdf-lib';
+import { ocrToSearchablePdf } from './ocr.js';
+
+export { ocrToSearchablePdf } from './ocr.js';
 
 export type ProcessOptions = {
   /** Raw bytes from R2 — original upload. */
@@ -52,13 +55,17 @@ export type ProcessResult = {
  *
  * Branching:
  *   - PDF input → pass-through (no re-encoding). Don't degrade clean inputs.
- *   - Image (any kind, including IDs) → grayscale + normalize + Otsu
- *     binarize → 1-bit PDF.
+ *   - Image (any kind, including IDs) → binarize → Tesseract OCR
+ *     → searchable PDF (image embedded + invisible text layer).
+ *
+ * If OCR fails (worker init crash, language load timeout, etc.) we
+ * fall back to wrapImageInPdf — same image, no text layer. The user
+ * still gets a valid PDF; they just can't Cmd+F search it.
  */
 export async function processDocument(opts: ProcessOptions): Promise<ProcessResult> {
   // PDF input — pass through. The user uploaded a clean PDF (downloaded
-  // their official W-2 from ADP, etc.). Don't binarize a multi-page PDF
-  // with embedded vector text — we'd lose searchability and quality.
+  // their official W-2 from ADP, etc.). It's already searchable if the
+  // source PDF had a text layer; re-OCR'ing would just degrade it.
   if (opts.inputMimeType === 'application/pdf') {
     return {
       pdf: opts.input,
@@ -67,15 +74,25 @@ export async function processDocument(opts: ProcessOptions): Promise<ProcessResu
     };
   }
 
-  // All image inputs (W-2s, 1099s, IDs, statements, receipts) →
-  // grayscale + normalize + Otsu binarize. Single-page PDF.
+  // All image inputs → binarize + Tesseract OCR PDF.
   const binarizedPng = await binarize(opts.input);
-  const pdfBytes = await wrapImageInPdf(binarizedPng, 'image/png', true);
-  return {
-    pdf: pdfBytes,
-    sizeBytes: pdfBytes.length,
-    binarized: true,
-  };
+
+  try {
+    const pdfBytes = await ocrToSearchablePdf(binarizedPng);
+    return {
+      pdf: pdfBytes,
+      sizeBytes: pdfBytes.length,
+      binarized: true,
+    };
+  } catch (err) {
+    console.error('[document-processing] OCR failed; producing image-only PDF:', err);
+    const pdfBytes = await wrapImageInPdf(binarizedPng, 'image/png', true);
+    return {
+      pdf: pdfBytes,
+      sizeBytes: pdfBytes.length,
+      binarized: true,
+    };
+  }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -102,22 +119,34 @@ export async function processMultiPage(opts: {
   if (opts.pages.length === 0) {
     throw new Error('processMultiPage: at least one page required');
   }
-  // Binarize each page independently — phone shots vary in lighting
-  // page-to-page, so a single Otsu threshold across all pages would
-  // wash out one or the other.
-  const binarizedPages: Buffer[] = [];
+
+  // Per-page strategy: binarize → OCR-to-PDF (preferred) or wrap-only
+  // (fallback). Each page becomes its own single-page searchable PDF;
+  // we then merge with mergePdfs to produce the final composite.
+  //
+  // Binarize + OCR per page (not in a single batch) because phone
+  // shots vary in lighting page-to-page — a single Otsu threshold
+  // would wash one out — and each page's invisible text layer needs
+  // to align with that page's specific image dimensions.
+  const perPagePdfs: Buffer[] = [];
+
   for (const page of opts.pages) {
     if (page.inputMimeType === 'application/pdf') {
       throw new Error('processMultiPage does not accept PDF inputs');
     }
-    binarizedPages.push(await binarize(page.input));
+    const binarized = await binarize(page.input);
+    try {
+      perPagePdfs.push(await ocrToSearchablePdf(binarized));
+    } catch (err) {
+      console.error('[document-processing] OCR failed for page; image-only PDF:', err);
+      perPagePdfs.push(await wrapImageInPdf(binarized, 'image/png', true));
+    }
   }
-  const pdfBytes = await wrapImagesInPdf(
-    binarizedPages.map((bytes) => ({ bytes, mimeType: 'image/png' })),
-  );
+
+  const merged = await mergePdfs(perPagePdfs);
   return {
-    pdf: pdfBytes,
-    sizeBytes: pdfBytes.length,
+    pdf: merged,
+    sizeBytes: merged.length,
     binarized: true,
   };
 }
@@ -344,6 +373,26 @@ export async function wrapImagesInPdf(
   }
 
   const bytes = await pdfDoc.save();
+  return Buffer.from(bytes);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Merge multiple single-page PDFs into one. Used by processMultiPage
+// to combine per-page Tesseract searchable PDFs into the final
+// composite (e.g., DL front + back as a 2-page searchable PDF).
+//
+// Each input is loaded as a PDFDocument; its pages are copied into
+// the destination. Page order is preserved.
+// ────────────────────────────────────────────────────────────────
+export async function mergePdfs(pdfs: Buffer[]): Promise<Buffer> {
+  const out = await PDFDocument.create();
+  for (const pdf of pdfs) {
+    const src = await PDFDocument.load(pdf);
+    const indices = src.getPageIndices();
+    const copied = await out.copyPages(src, indices);
+    for (const page of copied) out.addPage(page);
+  }
+  const bytes = await out.save();
   return Buffer.from(bytes);
 }
 

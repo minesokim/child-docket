@@ -18,6 +18,7 @@
 //   signature      LegalDoc, SignaturePad
 //   portal         PortalTabBar (+ PortalTabId)
 //   citation       Citation, CitationList (+ CitationStatus, CitationProps)
+//   skeleton       Skeleton (+ Line, Heading, Small, Circle), SkeletonGroup
 
 export * from './layout.js';
 export * from './text.js';
@@ -32,3 +33,4 @@ export * from './icons.js';
 export * from './signature.js';
 export * from './portal.js';
 export * from './citation.js';
+export * from './skeleton.js';
