@@ -19,7 +19,11 @@ export const gmailPoll = inngest.createFunction(
   {
     id: 'gmail-poll',
     name: 'Gmail poll (every 10 min per tenant)',
-    concurrency: { limit: 10 },
+    // Concurrency 5 fits the Inngest free-tier plan limit. Bump up
+    // after upgrading the plan if Gmail polling at scale starts
+    // serializing. v0 has no real Gmail load anyway (feature-flagged
+    // off until OAuth lands).
+    concurrency: { limit: 5 },
   },
   // Cron expression: every 10 minutes. When ENABLE_GMAIL_POLL is unset
   // or false, the function bails on entry — keeping the trigger
