@@ -11,17 +11,33 @@
 // styles.css.
 //
 // USAGE
-//   <DriversLicenseFrontSkeleton />     // wider than tall, photo + fields
-//   <DriversLicenseBackSkeleton />      // barcode + magstripe + 2D code
-//   <SocialSecurityCardSkeleton />      // navy banner + ornate columns + seal
+//   <DriversLicenseFrontSkeleton variant="shimmer" />
+//   <DriversLicenseBackSkeleton variant="wave" />     // upload phase
+//   <SocialSecurityCardSkeleton variant="shimmer" />  // idle / reading
 //   <TaxFormSkeleton title="W-2" subtitle="Wage and Tax Statement" />
 //
-// All four wrap themselves in `.v-shimmer` so the shimmer engine in
-// skeleton-docs.css runs without callers needing to add the variant
-// class. The doc-card frame is included; drop them straight into a
-// page (or into the per-slot reading hero) at full width.
+// VARIANT
+//   'shimmer' (default) — calm diagonal sweep, used for IDLE (waiting
+//                         for the user to upload) and READING (AI is
+//                         classifying the doc).
+//   'wave'              — staggered opacity-pulse, used during the
+//                         UPLOAD phase (file is being PUT to R2) so
+//                         the doc reads as "moving" rather than
+//                         "being looked at."
+//
+// SIZING
+//   Each component sizes itself to fit its parent flex container,
+//   preserving the document's native aspect ratio (DL: 1.586/1,
+//   SSN: 240/158, tax form: 8.5/11). Drop them inside a flex-center
+//   container of any dimension.
 
 import * as React from 'react';
+
+export type DocSkeletonVariant = 'shimmer' | 'wave';
+
+function variantClass(variant: DocSkeletonVariant | undefined): string {
+  return variant === 'wave' ? 'v-wave' : 'v-shimmer';
+}
 
 // ─── DRIVER'S LICENSE — FRONT ──────────────────────────────────
 //
@@ -31,9 +47,11 @@ import * as React from 'react';
 //   • Field column (DL #, EXP, last name, first name, address, DOB, RSTR)
 //   • Right column (CLASS / END / mini-photo / iss number)
 //   • Bottom row of mini fields (SEX/HGT, HAIR/WGT, EYES/ISS)
-export function DriversLicenseFrontSkeleton() {
+export function DriversLicenseFrontSkeleton({
+  variant = 'shimmer',
+}: { variant?: DocSkeletonVariant } = {}) {
   return (
-    <div className="v-shimmer" aria-busy="true" aria-label="Reading driver's license front">
+    <div className={variantClass(variant)} aria-busy="true" aria-label="Driver's license front">
       <div className="doc-card id-card">
         <div className="id-page id-front">
           <div className="id-header">
@@ -89,9 +107,11 @@ export function DriversLicenseFrontSkeleton() {
 //     light on solid black reads as suspicious motion)
 //   • Three content rows
 //   • PDF417 2D barcode + four lines of fineprint side-by-side
-export function DriversLicenseBackSkeleton() {
+export function DriversLicenseBackSkeleton({
+  variant = 'shimmer',
+}: { variant?: DocSkeletonVariant } = {}) {
   return (
-    <div className="v-shimmer" aria-busy="true" aria-label="Reading driver's license back">
+    <div className={variantClass(variant)} aria-busy="true" aria-label="Driver's license back">
       <div className="doc-card id-card">
         <div className="id-page id-back">
           <div className="top-barcode" />
@@ -126,9 +146,11 @@ export function DriversLicenseBackSkeleton() {
 //   • Circular seal behind the SSN number
 //   • SSN bar with hint dashes for the dash positions
 //   • "Established for" line + name bar + signature line
-export function SocialSecurityCardSkeleton() {
+export function SocialSecurityCardSkeleton({
+  variant = 'shimmer',
+}: { variant?: DocSkeletonVariant } = {}) {
   return (
-    <div className="v-shimmer" aria-busy="true" aria-label="Reading Social Security card">
+    <div className={variantClass(variant)} aria-busy="true" aria-label="Social Security card">
       <div className="doc-card ssn-card">
         <div className="ssn-page">
           <div className="ssn-banner">
@@ -185,14 +207,16 @@ export function TaxFormSkeleton({
   title,
   subtitle,
   rows,
+  variant = 'shimmer',
 }: {
   title: string;
   subtitle?: string;
   rows?: ReadonlyArray<'w-92' | 'w-86' | 'w-78' | 'w-64' | 'w-50' | 'w-40'>;
+  variant?: DocSkeletonVariant;
 }) {
   const widths = rows ?? (['w-92', 'w-86', 'w-78', 'w-64', 'w-50', 'w-40'] as const);
   return (
-    <div className="v-shimmer" aria-busy="true" aria-label={`Reading ${title}`}>
+    <div className={variantClass(variant)} aria-busy="true" aria-label={title}>
       <div className="doc-card taxform">
         <div className="doc-page">
           <div className="bar heading titled">

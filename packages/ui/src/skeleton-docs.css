@@ -23,7 +23,6 @@
   --doc-ink:         #1a1a1a;
   --doc-ink-soft:    #5b5a55;
   --doc-forest:      #294b34;
-  --doc-sage-50:     #e6efe1;
   --doc-tan-50:      #f4e8d8;
   --doc-tan-100:     #ecd9bf;
   --doc-tan-200:     #e3c89f;
@@ -31,16 +30,30 @@
   --doc-rule:        rgba(28, 40, 30, 0.08);
 }
 
-/* ── doc-card: green panel that frames each document skeleton ── */
+/* ── doc-card: thin wrapper around the actual document silhouette.
+ *
+ * The prototype rendered the card on a sage-green panel of its own.
+ * In Docket's app, the parent (the per-slot upload "hero") provides
+ * the keylime tint via t.ease.keylimeWash — so .doc-card itself is
+ * transparent. The .doc-page inside is what's visible: warm-paper
+ * card with the document layout. ── */
 .doc-card {
-  background: var(--doc-sage-50);
-  border-radius: 14px;
-  padding: 24px 38px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
   display: flex;
   align-items: stretch;
   justify-content: center;
   overflow: hidden;
   position: relative;
+  /* Responsive sizing — the parent flex container caps width/height.
+   * The card scales to fit while preserving its aspect-ratio (set
+   * per-document below: id-card, ssn-card, taxform). */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  align-self: center;
 }
 .doc-page {
   flex: 1;
@@ -237,11 +250,8 @@
  * IDENTITY DOCUMENTS — Driver's License (front + back)
  * ═══════════════════════════════════════════════════════════════ */
 .doc-card.id-card {
-  width: 100%;
-  max-width: 380px;
   aspect-ratio: 1.586 / 1;
   padding: 14px 16px;
-  align-self: center;
 }
 .doc-card.id-card .id-page { flex: 1; }
 
@@ -489,12 +499,8 @@
  * SOCIAL SECURITY CARD
  * ═══════════════════════════════════════════════════════════════ */
 .doc-card.ssn-card {
-  width: 100%;
-  max-width: 320px;
   aspect-ratio: 240 / 158;
   padding: 14px 18px;
-  background: var(--doc-sage-50);
-  align-self: center;
 }
 .ssn-page {
   flex: 1;
@@ -648,12 +654,86 @@
  * 1098-*, 1095-*, K-1, statements, and prior returns.
  * ═══════════════════════════════════════════════════════════════ */
 .doc-card.taxform {
-  width: 100%;
-  max-width: 380px;
   aspect-ratio: 8.5 / 11;
   padding: 18px 22px;
-  align-self: center;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ * VARIANT — WAVE
+ *
+ * Used during the UPLOAD phase (file is being PUT to R2). Wave is
+ * a staggered opacity-pulse that reads as "the doc is moving" rather
+ * than the calm-sweeping shimmer of "the doc is being read."
+ *
+ * Mechanics: the wave variant overrides the shimmer engine. Each
+ * skeleton element drops its gradient (`background-image: none`) and
+ * gains an opacity-breathing animation. Body bars get nth-of-type
+ * staggering so the wave reads top-to-bottom.
+ * ═══════════════════════════════════════════════════════════════ */
+@keyframes docskel-wave {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1;    }
+}
+
+.v-wave .bar,
+.v-wave .photo,
+.v-wave .seal,
+.v-wave .barcode,
+.v-wave .stripe,
+.v-wave .sigline,
+.v-wave .ssn-num,
+.v-wave .ssn-established,
+.v-wave .ssn-name,
+.v-wave .ssn-banner .arched,
+.v-wave .id-front .id-state,
+.v-wave .id-front .id-doctype,
+.v-wave .id-front .id-emblem,
+.v-wave .id-front .id-usa,
+.v-wave .id-front .id-label,
+.v-wave .id-front .mini-photo {
+  background-image: none !important;
+  background-color: var(--doc-tan-50);
+  animation: docskel-wave 1.8s ease-in-out infinite;
+}
+
+/* DL back magstripe stays solid black, no animation. */
+.v-wave .id-back .stripe {
+  background-color: #1a1a1a !important;
+  animation: none !important;
+}
+
+/* The card-wide shimmer-sweep doesn't apply in wave mode. */
+.v-wave .doc-card::after {
+  display: none;
+}
+
+/* Top-to-bottom stagger for tax-form body bars (direct children of
+ * .doc-page). Negative delays keep the wave already in motion at t=0. */
+.v-wave .doc-page > .bar:nth-of-type(1)  { animation-delay: -1.80s; }
+.v-wave .doc-page > .bar:nth-of-type(2)  { animation-delay: -1.65s; }
+.v-wave .doc-page > .bar:nth-of-type(3)  { animation-delay: -1.50s; }
+.v-wave .doc-page > .bar:nth-of-type(4)  { animation-delay: -1.35s; }
+.v-wave .doc-page > .bar:nth-of-type(5)  { animation-delay: -1.20s; }
+.v-wave .doc-page > .bar:nth-of-type(6)  { animation-delay: -1.05s; }
+.v-wave .doc-page > .bar:nth-of-type(7)  { animation-delay: -0.90s; }
+.v-wave .doc-page > .bar:nth-of-type(8)  { animation-delay: -0.75s; }
+
+/* DL front: stagger field rows top-to-bottom. The id-fields column
+ * is the densest column so it carries most of the wave rhythm. */
+.v-wave .id-front .id-fields .id-row:nth-of-type(1) .id-value { animation-delay: -1.80s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(2) .id-value { animation-delay: -1.65s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(3) .id-value { animation-delay: -1.50s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(4) .id-value { animation-delay: -1.35s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(5) .id-value { animation-delay: -1.20s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(6) .id-value { animation-delay: -1.05s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(7) .id-value { animation-delay: -0.90s; }
+.v-wave .id-front .id-fields .id-row:nth-of-type(8) .id-value { animation-delay: -0.75s; }
+
+/* DL back: fineprint lines staggered. */
+.v-wave .id-back .id-fineprint .bar:nth-of-type(1) { animation-delay: -1.80s; }
+.v-wave .id-back .id-fineprint .bar:nth-of-type(2) { animation-delay: -1.65s; }
+.v-wave .id-back .id-fineprint .bar:nth-of-type(3) { animation-delay: -1.50s; }
+.v-wave .id-back .id-fineprint .bar:nth-of-type(4) { animation-delay: -1.35s; }
 
 /* ═══════════════════════════════════════════════════════════════
  * REDUCED MOTION
@@ -670,6 +750,16 @@
   .v-shimmer .ssn-established,
   .v-shimmer .ssn-name,
   .v-shimmer .doc-card::after,
+  .v-wave .bar,
+  .v-wave .photo,
+  .v-wave .seal,
+  .v-wave .barcode,
+  .v-wave .stripe,
+  .v-wave .sigline,
+  .v-wave .ssn-num,
+  .v-wave .ssn-established,
+  .v-wave .ssn-name,
+  .v-wave .ssn-banner .arched,
   .ssn-banner .arched {
     animation: none !important;
   }

@@ -498,10 +498,14 @@ function PhaseBlock({
   }
 
   // ─── Empty / idle ───
+  // Document-shape skeleton in SHIMMER mode. The user clicked into
+  // this slot; the placeholder previews what they're about to capture
+  // (DL-shaped if it's a DL slot, SSN-shaped if SSN, etc.). Glimmers
+  // calmly while waiting for them to tap "Take a photo" or "Upload."
   if (state.phase === 'idle') {
     return (
       <Stack gap={20}>
-        <DocHero t={t} />
+        <DocPlaceholder t={t} slot={slot} dl={dl} variant="shimmer" />
         {slot.antonioNote && <AntonioNote t={t}>{slot.antonioNote}</AntonioNote>}
         {slot.whereToFind && (
           <div
@@ -541,24 +545,26 @@ function PhaseBlock({
   }
 
   // ─── Uploading ───
+  // Same document-shape skeleton, switched to WAVE mode. Wave reads
+  // as "the doc is moving / being transmitted" rather than the calm
+  // shimmer of "we're looking at it" — feels right for the file
+  // physically being PUT to R2.
   if (state.phase === 'uploading') {
     return (
       <Stack gap={20}>
-        <DocHero t={t} caption="Uploading…" />
+        <DocPlaceholder t={t} slot={slot} dl={dl} variant="wave" />
         <ProgressBar t={t} percent={state.uploadProgress} />
       </Stack>
     );
   }
 
   // ─── Reading (uploaded / classifying) ───
-  // Document-shaped skeleton — picks the silhouette that matches what
-  // we're reading. A DL-shaped skeleton while we're reading a DL, an
-  // SSN-card skeleton for an SSN, a titled tax-form skeleton for W-2 /
-  // 1099 / 1098 / 1095 / K-1 / statements / prior return.
+  // Back to SHIMMER — file's in R2, AI vision is now reading. The
+  // calm sweep matches the "we're looking at it" beat.
   if (state.phase === 'uploaded' || state.phase === 'classifying') {
     return (
       <Stack gap={20}>
-        <ReadingSkeleton slot={slot} dl={dl} />
+        <DocPlaceholder t={t} slot={slot} dl={dl} variant="shimmer" />
         <div
           style={{
             textAlign: 'center',
@@ -1549,39 +1555,55 @@ function readingLabel(slot: ExpectedDoc): string {
   }
 }
 
-// Per-slot reading-state skeleton dispatcher. Picks the document-
-// shaped skeleton that matches what's being read.
+// Document-shape skeleton placeholder for the per-slot upload page.
+//
+// Layout:
+//   - Outer keylime-tinted hero frame at 4:3 aspect, full-width — same
+//     visual size as the original DocHero (which the user explicitly
+//     liked). Provides the green "panel" the document silhouette sits
+//     on. The .doc-card inside is now transparent so OUR keylime is
+//     what shows through, not the prototype's sage-50.
+//   - Inner: a document-shaped skeleton picked by slot.kind. DL front
+//     or back, SSN card, or generic titled tax-form for everything
+//     else. The skeleton scales to fit the hero, preserving its
+//     native aspect ratio.
+//
+// Variant is driven by the upload phase:
+//   IDLE      → shimmer (waiting for the user to act)
+//   UPLOADING → wave    (file is moving to R2)
+//   READING   → shimmer (AI is looking at it)
 //
 //   drivers_license + dl.step === 'back'  → DL back silhouette
 //   drivers_license (front or unset)      → DL front silhouette
 //   ssn_card                              → SSN-card silhouette
-//   tax docs (W-2, 1099-*, 1098-*, etc.)  → titled tax-form skeleton
-//
-// Wrapped in a centering flex container so the doc-card sits in the
-// hero area at its native aspect ratio, with breathing room above
-// + below if the parent column is taller than the document.
-function ReadingSkeleton({
+//   tax docs                              → titled tax-form skeleton
+function DocPlaceholder({
+  t,
   slot,
   dl,
+  variant,
 }: {
+  t: Theme;
   slot: ExpectedDoc;
   dl: DlContext | undefined;
+  variant: 'shimmer' | 'wave';
 }) {
   let inner: React.ReactNode;
   switch (slot.kind) {
     case 'drivers_license':
       inner = dl?.step === 'back'
-        ? <DriversLicenseBackSkeleton />
-        : <DriversLicenseFrontSkeleton />;
+        ? <DriversLicenseBackSkeleton variant={variant} />
+        : <DriversLicenseFrontSkeleton variant={variant} />;
       break;
     case 'ssn_card':
-      inner = <SocialSecurityCardSkeleton />;
+      inner = <SocialSecurityCardSkeleton variant={variant} />;
       break;
     default:
       inner = (
         <TaxFormSkeleton
           title={slot.title}
           subtitle={taxFormSubtitleFor(slot)}
+          variant={variant}
         />
       );
       break;
@@ -1590,10 +1612,18 @@ function ReadingSkeleton({
   return (
     <div
       style={{
+        // Match DocHero's outer dimensions exactly — the user liked
+        // this size; we're just swapping the inner illustration for
+        // a per-doc-kind silhouette.
+        position: 'relative',
+        aspectRatio: '4 / 3',
+        borderRadius: 14,
+        background: t.ease.keylimeWash,
+        overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 240,
+        padding: 20,
       }}
     >
       {inner}
