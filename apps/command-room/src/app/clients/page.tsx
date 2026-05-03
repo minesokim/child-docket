@@ -75,37 +75,77 @@ export default async function ClientsPage() {
       activeHref="/clients"
     >
       <div style={{ padding: '32px 36px 48px', maxWidth: 1200 }}>
-        <header style={{ marginBottom: 28 }}>
-          <div
-            style={{
-              fontFamily: t.mono,
-              fontSize: 10.5,
-              color: t.muted,
-              letterSpacing: 1,
-              marginBottom: 8,
-            }}
-          >
-            {user.tenantName.toUpperCase()} · TENANT
+        <header
+          style={{
+            marginBottom: 28,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            gap: 24,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: t.mono,
+                fontSize: 10.5,
+                color: t.muted,
+                letterSpacing: 1,
+                marginBottom: 8,
+              }}
+            >
+              {user.tenantName.toUpperCase()} · TENANT
+            </div>
+            <h1
+              style={{
+                fontFamily: t.serif,
+                fontSize: 36,
+                color: t.ink,
+                letterSpacing: -0.8,
+                margin: 0,
+                marginBottom: 6,
+              }}
+            >
+              Clients
+            </h1>
+            <p style={{ fontSize: 14.5, color: t.inkSoft, lineHeight: 1.5, margin: 0 }}>
+              {rows.length} {rows.length === 1 ? 'client' : 'clients'} · open issues across all
+              engagements:{' '}
+              <span style={{ fontFamily: t.mono, color: t.rustInk }}>
+                {rows.reduce((sum, r) => sum + (r.openIssueCount || 0), 0)}
+              </span>
+            </p>
           </div>
-          <h1
+          <Link
+            href="/clients/new"
             style={{
-              fontFamily: t.serif,
-              fontSize: 36,
-              color: t.ink,
-              letterSpacing: -0.8,
-              margin: 0,
-              marginBottom: 6,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 18px',
+              background: t.ink,
+              color: '#fff',
+              fontSize: 13.5,
+              fontFamily: t.sans,
+              fontWeight: 500,
+              borderRadius: 8,
+              textDecoration: 'none',
+              flexShrink: 0,
             }}
           >
-            Clients
-          </h1>
-          <p style={{ fontSize: 14.5, color: t.inkSoft, lineHeight: 1.5, margin: 0 }}>
-            {rows.length} {rows.length === 1 ? 'client' : 'clients'} · open issues across all
-            engagements:{' '}
-            <span style={{ fontFamily: t.mono, color: t.rustInk }}>
-              {rows.reduce((sum, r) => sum + (r.openIssueCount || 0), 0)}
-            </span>
-          </p>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            >
+              <path d="M7 2v10M2 7h10" />
+            </svg>
+            New client
+          </Link>
         </header>
 
         <div
@@ -143,13 +183,63 @@ export default async function ClientsPage() {
           {rows.length === 0 ? (
             <div
               style={{
-                padding: '40px 20px',
+                padding: '60px 24px',
                 textAlign: 'center',
-                fontSize: 14,
-                color: t.muted,
+                fontFamily: t.sans,
               }}
             >
-              No clients yet. Run the seed script or onboard a client through intake.
+              <div
+                style={{
+                  fontFamily: t.serif,
+                  fontSize: 22,
+                  color: t.ink,
+                  letterSpacing: -0.4,
+                  marginBottom: 8,
+                }}
+              >
+                No clients yet
+              </div>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: t.inkSoft,
+                  lineHeight: 1.5,
+                  maxWidth: 380,
+                  margin: '0 auto 18px',
+                }}
+              >
+                Invite your first client by entering their name and phone number.
+                They&apos;ll get a sign-in link to start their intake.
+              </p>
+              <Link
+                href="/clients/new"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 22px',
+                  background: t.ink,
+                  color: '#fff',
+                  fontSize: 13.5,
+                  fontFamily: t.sans,
+                  fontWeight: 500,
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                >
+                  <path d="M7 2v10M2 7h10" />
+                </svg>
+                New client
+              </Link>
             </div>
           ) : (
             rows.map((row, i) => (

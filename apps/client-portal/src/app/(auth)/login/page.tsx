@@ -131,6 +131,45 @@ export default function LoginPage() {
   const [countryCode, setCountryCode] = usePortalState<string>('phone-country', 'US');
   const [phoneDigits, setPhoneDigits] = usePortalState<string>('phone-digits', '');
 
+  // Invite-link prefill: when a preparer sends a client a sign-in link
+  // generated from /clients/new, the URL carries `?phone=...&country=...`.
+  // Apply it once at mount, then strip the params from the URL so the
+  // phone doesn't sit in the address bar (privacy: shoulder-surfing,
+  // browser history, accidental re-share).
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlPhone = params.get('phone');
+    const urlCountry = params.get('country');
+    if (!urlPhone && !urlCountry) return;
+
+    if (urlCountry) {
+      const match = COUNTRIES.find((c) => c.code === urlCountry.toUpperCase());
+      if (match) setCountryCode(match.code);
+    }
+
+    if (urlPhone) {
+      // Phone arrives in E.164 (e.g., "+15622736682"). Strip the
+      // country dial — the input field stores national digits only.
+      const cc = urlCountry?.toUpperCase();
+      const matched = cc ? COUNTRIES.find((c) => c.code === cc) : undefined;
+      const country = matched ?? COUNTRIES[0]!;
+      let digits = urlPhone.replace(/[^\d+]/g, '');
+      if (digits.startsWith(country.dial)) {
+        digits = digits.slice(country.dial.length);
+      } else {
+        digits = digits.replace(/\D/g, '');
+      }
+      setPhoneDigits(digits.slice(0, country.code === 'US' || country.code === 'CA' ? 10 : 15));
+    }
+
+    // Strip params from the visible URL without navigating.
+    window.history.replaceState({}, '', window.location.pathname);
+    // Mount-only — running this on every searchParams change would
+    // clobber the user's typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
