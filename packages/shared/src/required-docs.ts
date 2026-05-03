@@ -87,28 +87,27 @@ export function requiredDocsFor(state: IntakeState): ExpectedDoc[] {
   // filing — IRS Pub 1345 requires identity verification on remote
   // signing, and CA FTB has parallel requirements.
   //
-  // DL is two slots (front + back). The front carries the photo, name,
-  // DOB, address, expiry. The back carries the magnetic stripe / 2D
-  // barcode the IRS validation rule scans against. Both required for
-  // a complete identity record.
+  // The DL itself is captured in TWO photos (front + back) — the front
+  // carries the photo + DOB + address, the back carries the magnetic
+  // stripe / 2D barcode the IRS scan-validation rule reads. But that
+  // split is INTERNAL to the per-slot upload page: the user sees ONE
+  // "Driver's License" row in the overview, then on the focused page
+  // is walked through Step 1 → Step 2.
+  //
+  // Documents persisted from that flow carry slot_id = 'identity-dl-front'
+  // or 'identity-dl-back' so the finalize worker can apply the
+  // DriversLicenseFront / DriversLicenseBack filename substitution.
+  // The expected-slot list keeps a single 'identity-dl' so the overview
+  // shows one row.
   const primaryName = state.personal?.fullName?.trim() || null;
   docs.push({
-    id: 'identity-dl-front',
+    id: 'identity-dl',
     kind: 'drivers_license',
     title: "Driver's License",
-    subtitle: 'Front side',
+    subtitle: 'Front and back of your card',
     required: true,
     forPerson: primaryName ?? undefined,
-    context: 'Always — primary taxpayer identity verification (front)',
-  });
-  docs.push({
-    id: 'identity-dl-back',
-    kind: 'drivers_license',
-    title: "Driver's License",
-    subtitle: 'Back side',
-    required: true,
-    forPerson: primaryName ?? undefined,
-    context: 'Always — primary taxpayer identity verification (back)',
+    context: 'Always — primary taxpayer identity verification',
   });
   docs.push({
     id: 'identity-ssn',
@@ -125,22 +124,13 @@ export function requiredDocsFor(state: IntakeState): ExpectedDoc[] {
   if (state.filing?.status === 'mfj') {
     const spouseName = state.spouse?.fullName ?? 'your spouse';
     docs.push({
-      id: 'identity-spouse-dl-front',
+      id: 'identity-spouse-dl',
       kind: 'drivers_license',
       title: "Spouse's Driver's License",
-      subtitle: 'Front side',
+      subtitle: 'Front and back of the card',
       required: true,
       forPerson: spouseName,
-      context: 'Filing status MFJ — spouse identity verification (front)',
-    });
-    docs.push({
-      id: 'identity-spouse-dl-back',
-      kind: 'drivers_license',
-      title: "Spouse's Driver's License",
-      subtitle: 'Back side',
-      required: true,
-      forPerson: spouseName,
-      context: 'Filing status MFJ — spouse identity verification (back)',
+      context: 'Filing status MFJ — spouse identity verification',
     });
     docs.push({
       id: 'identity-spouse-ssn',

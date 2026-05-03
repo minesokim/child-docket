@@ -188,34 +188,22 @@ export function DocsOverviewClient({
           {requiredSlots.length > 0 && (
             <SectionHeader t={t} label="Required" />
           )}
-          <div>
-            {requiredSlots.map((s, i) => (
-              <SlotRow
-                key={s.slot.id}
-                t={t}
-                slot={s.slot}
-                doc={s.doc}
-                isLast={i === requiredSlots.length - 1}
-              />
+          <Stack gap={6}>
+            {requiredSlots.map((s) => (
+              <SlotRow key={s.slot.id} t={t} slot={s.slot} doc={s.doc} />
             ))}
-          </div>
+          </Stack>
 
           {recommendedSlots.length > 0 && (
             <>
-              <div style={{ marginTop: 28 }}>
+              <div style={{ marginTop: 24 }}>
                 <SectionHeader t={t} label="Recommended" />
               </div>
-              <div>
-                {recommendedSlots.map((s, i) => (
-                  <SlotRow
-                    key={s.slot.id}
-                    t={t}
-                    slot={s.slot}
-                    doc={s.doc}
-                    isLast={i === recommendedSlots.length - 1}
-                  />
+              <Stack gap={6}>
+                {recommendedSlots.map((s) => (
+                  <SlotRow key={s.slot.id} t={t} slot={s.slot} doc={s.doc} />
                 ))}
-              </div>
+              </Stack>
             </>
           )}
 
@@ -354,12 +342,10 @@ function SlotRow({
   t,
   slot,
   doc,
-  isLast,
 }: {
   t: Theme;
   slot: ExpectedDoc;
   doc: DocumentRow | null;
-  isLast: boolean;
 }) {
   const phase = doc?.parsePhase as DocPhase | undefined;
   const friendly =
@@ -374,24 +360,26 @@ function SlotRow({
     >
       <div
         style={{
-          padding: '18px 4px 18px 0',
+          background: '#fffefc',
+          borderRadius: 10,
+          padding: '14px 14px',
           display: 'flex',
           alignItems: 'center',
           gap: 14,
           cursor: 'pointer',
-          // Hairline divider between rows. Last row in a section drops
-          // the divider so the next section header carries the rhythm.
-          borderBottom: isLast ? 'none' : `1px solid ${t.borderSoft}`,
+          transition: 'background 160ms',
+          border: `1px solid ${t.borderSoft}`,
         }}
       >
+        <StatusIndicator t={t} phase={phase} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontFamily: t.sans,
-              fontSize: 15,
+              fontSize: 14.5,
               fontWeight: 500,
               color: t.ink,
-              letterSpacing: -0.15,
+              letterSpacing: -0.1,
               lineHeight: 1.3,
             }}
           >
@@ -400,21 +388,26 @@ function SlotRow({
           <div
             style={{
               fontFamily: t.sans,
-              fontSize: 13,
+              fontSize: 12.5,
               color: t.muted,
-              marginTop: 3,
-              lineHeight: 1.4,
+              marginTop: 2,
+              lineHeight: 1.35,
             }}
           >
             <SlotSubtitle slot={slot} doc={doc} friendly={friendly} />
           </div>
         </div>
-        {/* Single right-side anchor: status indicator replaces the
-            chevron entirely. Empty rows get a quiet outlined circle;
-            done rows get a sage-tinted check. The shape stays
-            consistent across states so the column reads like a
-            single column of beats, not a column of competing icons. */}
-        <StatusIndicator t={t} phase={phase} />
+        <div style={{ flexShrink: 0, color: t.muted }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M5 3l4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
       </div>
     </Link>
   );
@@ -430,6 +423,16 @@ function SlotSubtitle({
   friendly: string | null;
 }) {
   if (!doc) return <>{slot.subtitle}</>;
+
+  // Partial-DL signal — combineDlSides returns a synthetic doc with
+  // parsePhase='classifying' for the "front saved, back next" case.
+  // Detect via slotId pattern (front-only or back-only verified) and
+  // surface a helpful prompt instead of the generic "Reading…".
+  const isDl = slot.kind === 'drivers_license';
+  if (isDl && doc.slotId?.endsWith('-front') && doc.parsePhase === 'classifying') {
+    return <span style={{ color: '#a13d2c' }}>Front saved · upload back next</span>;
+  }
+
   switch (doc.parsePhase) {
     case 'uploaded':
     case 'classifying':
@@ -443,9 +446,8 @@ function SlotSubtitle({
       // For ID docs (DL, SSN), the friendlyDescription is the user's
       // own name — echoing it back is redundant and reads as
       // self-congratulating. Keep the original slot subtitle ("Front
-      // side", "For Antonio") instead.
-      const isIdDoc = slot.kind === 'drivers_license' || slot.kind === 'ssn_card';
-      if (isIdDoc) return <>{slot.subtitle}</>;
+      // and back of your card", "For Antonio") instead.
+      if (isDl || slot.kind === 'ssn_card') return <>{slot.subtitle}</>;
       return <>{friendly ?? slot.subtitle}</>;
     }
     case 'failed':
@@ -603,8 +605,21 @@ function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }
 }
 
 // ────────────────────────────────────────────────────────────────
-// Slot matching — pure function. Walks the docs list in order and
-// assigns each classified upload to the first unfilled matching slot.
+// Slot matching.
+//
+// Two paths:
+//
+// 1. DL slots (kind = drivers_license). Special-cased because the
+//    overview shows ONE row but the DB stores TWO docs per DL — one
+//    with slot_id `<slot.id>-front` and one with `<slot.id>-back`.
+//    We synthesize a single representative DocumentRow whose
+//    parsePhase reflects the most-pending side, so the row's status
+//    indicator shows the right state (parsed → verify, classifying →
+//    spinner, both accepted → final, etc.).
+//
+// 2. All other slots. Direct slot_id match preferred; kind-based
+//    matchUploadToSlot fallback for legacy rows that lack a slot_id.
+//
 // Unmatched uploads are dropped (intentionally hidden per Q1b).
 // ────────────────────────────────────────────────────────────────
 function useMatchedSlots(
@@ -614,22 +629,109 @@ function useMatchedSlots(
   return React.useMemo(() => {
     const filled = new Set<string>();
     const slotMap = new Map<string, DocumentRow>();
+
+    // Pass 1 — direct slot_id matches for non-DL slots.
     for (const d of docs) {
+      if (!d.slotId) continue;
+      // Skip DL side rows here; we combine them in pass 2.
+      if (/-(front|back)$/.test(d.slotId)) continue;
+      if (slotMap.has(d.slotId)) continue;
+      slotMap.set(d.slotId, d);
+      filled.add(d.slotId);
+    }
+
+    // Pass 2 — DL slot synthesis.
+    for (const slot of expected) {
+      if (slot.kind !== 'drivers_license') continue;
+      const front = docs.find((d) => d.slotId === `${slot.id}-front`) ?? null;
+      const back = docs.find((d) => d.slotId === `${slot.id}-back`) ?? null;
+      const combined = combineDlSides(slot, front, back);
+      if (combined) {
+        slotMap.set(slot.id, combined);
+        filled.add(slot.id);
+      }
+    }
+
+    // Pass 3 — kind-based fallback for legacy rows lacking slot_id.
+    for (const d of docs) {
+      if (d.slotId) continue;
       const kind = (d.classification?.docKind ?? null) as ExpectedDocKind | null;
       if (!kind) continue;
-      const slotId = matchUploadToSlot({
+      const matchedSlotId = matchUploadToSlot({
         uploadKind: kind,
         expected,
         filledSlotIds: filled,
       });
-      if (slotId) {
-        slotMap.set(slotId, d);
-        filled.add(slotId);
+      if (matchedSlotId) {
+        slotMap.set(matchedSlotId, d);
+        filled.add(matchedSlotId);
       }
     }
+
     return expected.map((slot) => ({
       slot,
       doc: slotMap.get(slot.id) ?? null,
     }));
   }, [expected, docs]);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Combine front + back DL docs into a single representative
+// DocumentRow for the overview slot row.
+//
+// Phase precedence (worst-first wins so the indicator surfaces the
+// state that wants the user's attention):
+//   failed > parsed > classifying/uploaded > finalizing > accepted >
+//   final
+//
+// Special "partial" case: front accepted+ but back missing → return
+// a synthetic doc with phase='uploaded' (treated as in-flight by the
+// indicator), so the row reads "Front saved, back next" via the
+// subtitle. We DON'T mark final until both sides are at least
+// 'accepted'.
+// ────────────────────────────────────────────────────────────────
+function combineDlSides(
+  slot: ExpectedDoc,
+  front: DocumentRow | null,
+  back: DocumentRow | null,
+): DocumentRow | null {
+  if (!front && !back) return null;
+
+  const VERIFIED: ReadonlySet<string> = new Set(['accepted', 'finalizing', 'final']);
+
+  if (front?.parsePhase === 'failed') return front;
+  if (back?.parsePhase === 'failed') return back;
+  if (front?.parsePhase === 'parsed') return front;
+  if (back?.parsePhase === 'parsed') return back;
+  if (front?.parsePhase === 'classifying' || front?.parsePhase === 'uploaded') return front;
+  if (back?.parsePhase === 'classifying' || back?.parsePhase === 'uploaded') return back;
+
+  const frontVerified = !!front && VERIFIED.has(front.parsePhase);
+  const backVerified = !!back && VERIFIED.has(back.parsePhase);
+
+  // Both verified — slot is effectively done. Pick whichever is at the
+  // most-finished phase to surface the cleanest indicator state.
+  if (frontVerified && backVerified) {
+    if (front?.parsePhase === 'final' || back?.parsePhase === 'final') {
+      return back?.parsePhase === 'final' ? back : front;
+    }
+    return back ?? front;
+  }
+
+  // One side verified, the other missing — slot needs more work.
+  // Synthesize a placeholder doc so the row reads "1 of 2 saved" via
+  // the subtitle (see SlotSubtitle), with an in-progress indicator.
+  if (frontVerified || backVerified) {
+    const known = frontVerified ? front! : back!;
+    return {
+      ...known,
+      parsePhase: 'classifying',
+      // Tag in classification so the subtitle knows which side is the
+      // hold-up. We piggyback on the existing shape rather than adding
+      // a new field — caller introspects slotId via the underlying doc.
+    } satisfies DocumentRow;
+  }
+
+  // Partial unverified state (e.g., front uploaded, back missing).
+  return front ?? back;
 }

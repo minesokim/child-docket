@@ -56,6 +56,17 @@ import { useDocPoll, type DocPhase } from '../use-doc-poll';
 
 type Phase = DocPhase | 'uploading' | 'idle';
 
+// Driver's-license sequential-flow context. The per-slot page handles
+// front then back inside a single URL; the server picks which side is
+// active and passes effectiveSlotId so confirmUpload writes a
+// side-specific slot_id on the documents row.
+type DlContext = {
+  step: 'front' | 'back' | 'done';
+  effectiveSlotId: string;
+  frontFilename: string | null;
+  backFilename: string | null;
+};
+
 type LocalState = {
   documentId: string | null;
   filename: string;
@@ -92,13 +103,31 @@ function fromInitialDoc(doc: DocumentRow | null): LocalState {
 export function DocSlotClient({
   slot,
   initialDoc,
+  dl,
 }: {
   slot: ExpectedDoc;
   initialDoc: DocumentRow | null;
+  /**
+   * Driver's-license context. Provided by the server when slot.kind
+   * === 'drivers_license'. Drives the sequential Step 1 (front) → Step 2
+   * (back) → done flow inside this single page.
+   */
+  dl?: DlContext;
 }) {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
+  // Re-key state on dl.step so when the server transitions us from
+  // front → back, we get a fresh clean state machine for the next side
+  // (no stale documentId, no stale classification).
   const [state, setState] = React.useState<LocalState>(() => fromInitialDoc(initialDoc));
+  const stepKey = dl?.step ?? null;
+  const lastStepKeyRef = React.useRef(stepKey);
+  React.useEffect(() => {
+    if (lastStepKeyRef.current !== stepKey) {
+      lastStepKeyRef.current = stepKey;
+      setState(fromInitialDoc(initialDoc));
+    }
+  }, [stepKey, initialDoc]);
 
   // Poll while non-terminal.
   const targets = React.useMemo(() => {
@@ -215,10 +244,11 @@ export function DocSlotClient({
         filename: file.name,
         mimeType: file.type || 'application/octet-stream',
         sizeBytes: file.size,
-        // Bind the upload to this slot. Drives slot-aware filename
-        // composition in finalize-document and direct slot lookups
-        // on the docs overview (no kind-matching guesswork).
-        slotId: slot.id,
+        // Bind the upload to this slot. For DL we use the side-specific
+        // effective slot id (`<slot>-front` / `<slot>-back`) so the
+        // finalize worker can apply DriversLicenseFront / Back filename
+        // substitution and the server can compute the next active step.
+        slotId: dl?.effectiveSlotId ?? slot.id,
       });
     } catch (err) {
       console.error('[onFileChosen] confirmUpload threw:', err);
@@ -244,6 +274,11 @@ export function DocSlotClient({
 
   // ─── Accept verification ───
   // Filename composition is fully server-owned now — no override.
+  // For DL slots, after the front is accepted we DON'T navigate back
+  // to the overview — we let the server recompute dl.step and surface
+  // Step 2 (back) on the same page. Once both sides are accepted the
+  // server returns dl.step = 'done' and the user taps "Back to
+  // documents" themselves from the done state.
   const onAccept = async () => {
     if (!state.documentId) return;
     setState((prev) => ({ ...prev, phase: 'accepted' }));
@@ -252,6 +287,14 @@ export function DocSlotClient({
     });
     if (!result.ok) {
       setState((prev) => ({ ...prev, phase: 'parsed', errorMessage: result.error }));
+      return;
+    }
+    if (dl) {
+      // Stay on the page; let the server recompute the active step.
+      // router.refresh re-runs the server component which now sees the
+      // accepted front doc and surfaces dl.step = 'back'. The state
+      // machine re-keys via the stepKey effect.
+      router.refresh();
       return;
     }
     router.push('/docs');
@@ -292,7 +335,7 @@ export function DocSlotClient({
           <Stack gap={6}>
             <H1 t={t}>{slot.title}</H1>
             <Body t={t} size={14}>
-              {slot.subtitle}
+              {dlSubtitle(slot, dl)}
             </Body>
           </Stack>
         </div>
@@ -302,9 +345,11 @@ export function DocSlotClient({
             t={t}
             slot={slot}
             state={state}
+            dl={dl}
             onFileChosen={onFileChosen}
             onAccept={onAccept}
             onRetake={onRetake}
+            onBack={onBack}
           />
         </div>
 
@@ -357,17 +402,94 @@ function PhaseBlock({
   t,
   slot,
   state,
+  dl,
   onFileChosen,
   onAccept,
   onRetake,
+  onBack,
 }: {
   t: Theme;
   slot: ExpectedDoc;
   state: LocalState;
+  dl?: DlContext;
   onFileChosen: (file: File) => void;
   onAccept: () => void;
   onRetake: () => void;
+  onBack: () => void;
 }) {
+  // ─── DL: both sides done ───
+  // Special branch — no upload state machine, just acknowledgement.
+  // Reached when the user navigates to /docs/identity-dl after both
+  // front + back are already accepted. The status indicator on the
+  // overview row will show the green check; this page just confirms.
+  if (dl && dl.step === 'done') {
+    return (
+      <Stack gap={20}>
+        <div
+          style={{
+            padding: '24px 18px',
+            background: t.ease.keylimeWash,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: '#e7efde',
+              color: '#5b7a4f',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M3.5 7l2.5 2.5 5-5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: t.serif,
+                fontSize: 17,
+                color: t.ink,
+                letterSpacing: -0.2,
+              }}
+            >
+              Both sides saved
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: t.muted,
+                marginTop: 3,
+                lineHeight: 1.4,
+                fontFamily: t.serif,
+                fontStyle: 'italic',
+              }}
+            >
+              Front and back of your driver&apos;s license.
+            </div>
+          </div>
+        </div>
+        <Button t={t} onClick={onBack} style={{ width: '100%' }}>
+          Back to documents
+        </Button>
+      </Stack>
+    );
+  }
+
   // ─── Empty / idle ───
   if (state.phase === 'idle') {
     return (
@@ -447,6 +569,7 @@ function PhaseBlock({
       <VerificationCard
         t={t}
         slot={slot}
+        dl={dl}
         documentId={state.documentId}
         mimeType={inferMimeType(state.filename)}
         classification={state.classification}
@@ -596,6 +719,7 @@ function PhaseBlock({
 function VerificationCard({
   t,
   slot,
+  dl,
   documentId,
   mimeType,
   classification,
@@ -604,6 +728,7 @@ function VerificationCard({
 }: {
   t: Theme;
   slot: ExpectedDoc;
+  dl?: DlContext;
   documentId: string;
   mimeType: string;
   classification: NonNullable<DocumentRow['classification']>;
@@ -637,7 +762,7 @@ function VerificationCard({
             letterSpacing: -0.2,
           }}
         >
-          {friendlyHeadlineFor(slot, classification.docKind, friendly)}
+          {friendlyHeadlineFor(slot, dl, classification.docKind, friendly)}
         </div>
       </div>
 
@@ -1342,14 +1467,17 @@ function titleCase(input: string): string {
 
 function friendlyHeadlineFor(
   slot: ExpectedDoc,
+  dl: DlContext | undefined,
   docKind: string,
   friendly: string | null,
 ): string {
   // Driver's license: "A California driver's license, expires Nov 26, 2029."
   // is overkill on a small screen — keep it short and let the field rows
-  // carry the detail.
+  // carry the detail. Side comes from the dl context, not slot.subtitle
+  // (the overview slot's subtitle is "Front and back of your card", not
+  // a per-step prompt).
   if (docKind === 'drivers_license') {
-    const side = slot.subtitle?.toLowerCase().includes('back') ? 'back' : 'front';
+    const side = dl?.step === 'back' ? 'back' : 'front';
     return `Looks like the ${side} of a driver's license.`;
   }
 
@@ -1406,6 +1534,16 @@ function readingLabel(slot: ExpectedDoc): string {
     default:
       return 'document';
   }
+}
+
+// Page-header subtitle helper. For DL slots, surfaces the active step
+// (e.g., "Front side · Step 1 of 2"). Other slots get the slot's own
+// subtitle as authored in required-docs.ts.
+function dlSubtitle(slot: ExpectedDoc, dl: DlContext | undefined): string {
+  if (!dl) return slot.subtitle;
+  if (dl.step === 'front') return 'Front side · Step 1 of 2';
+  if (dl.step === 'back') return 'Back side · Step 2 of 2';
+  return 'Both sides captured';
 }
 
 function inferMimeType(filename: string): string {

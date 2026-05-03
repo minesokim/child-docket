@@ -54,26 +54,78 @@ export default async function DocSlotPage({
   // Strategy:
   //   1. Direct slot_id match — anything uploaded from a focused
   //      per-slot page since migration 0017 carries slot_id on the row.
-  //      Most-recent-first wins (a re-upload supersedes the old one).
   //   2. Kind-based matchUploadToSlot fallback — for legacy rows with
   //      slot_id = NULL (uploaded before 0017, or via the future
-  //      "Other" surface). Walk in upload order, fill slots greedily.
+  //      "Other" surface).
+  //
+  // DL slots are special: the overview slot is `identity-dl` (or
+  // `identity-spouse-dl`), but uploads carry side-specific slot_ids
+  // `<slot.id>-front` and `<slot.id>-back`. The per-slot page walks
+  // the user through Step 1 (front) → Step 2 (back) and we compute
+  // which side is active from the DB state.
   const docList = await listDocuments();
   const allDocs = docList.ok ? docList.documents : [];
 
-  // Pre-claim: rows with slot_id set go straight to that slot.
+  // ─── DL slot: front-then-back sequential flow ───
+  if (slot.kind === 'drivers_license') {
+    const frontSlotId = `${slot.id}-front`;
+    const backSlotId = `${slot.id}-back`;
+
+    // Most recent doc per side (in case of retakes).
+    const frontDoc = allDocs.find((d) => d.slotId === frontSlotId) ?? null;
+    const backDoc = allDocs.find((d) => d.slotId === backSlotId) ?? null;
+
+    // A side is "done" once the user has accepted its classification.
+    // We don't gate on full finalization (final phase) because the
+    // user shouldn't have to wait for the binarize+PDF pipeline before
+    // moving to the next side.
+    const VERIFIED: ReadonlySet<string> = new Set(['accepted', 'finalizing', 'final']);
+    const frontDone = !!frontDoc && VERIFIED.has(frontDoc.parsePhase);
+    const backDone = !!backDoc && VERIFIED.has(backDoc.parsePhase);
+
+    let dlStep: 'front' | 'back' | 'done';
+    let activeDoc: typeof frontDoc;
+    let effectiveSlotId: string;
+    if (!frontDone) {
+      dlStep = 'front';
+      activeDoc = frontDoc;
+      effectiveSlotId = frontSlotId;
+    } else if (!backDone) {
+      dlStep = 'back';
+      activeDoc = backDoc;
+      effectiveSlotId = backSlotId;
+    } else {
+      dlStep = 'done';
+      activeDoc = backDoc;
+      effectiveSlotId = backSlotId;
+    }
+
+    return (
+      <DocSlotClient
+        slot={slot}
+        initialDoc={activeDoc}
+        dl={{
+          step: dlStep,
+          effectiveSlotId,
+          frontFilename: frontDoc?.finalFilename ?? null,
+          backFilename: backDoc?.finalFilename ?? null,
+        }}
+      />
+    );
+  }
+
+  // ─── Non-DL slots: the original lookup strategy ───
   const filledSlotIds = new Set<string>();
   let matchedDoc = null;
   for (const d of allDocs) {
     if (!d.slotId) continue;
-    if (filledSlotIds.has(d.slotId)) continue; // older duplicate
+    if (filledSlotIds.has(d.slotId)) continue;
     filledSlotIds.add(d.slotId);
     if (d.slotId === slot.id) {
       matchedDoc = d;
     }
   }
 
-  // Fallback: kind-based fill for slot_id-less rows.
   if (!matchedDoc) {
     for (const d of allDocs) {
       if (d.slotId) continue;
