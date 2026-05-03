@@ -325,21 +325,13 @@ function SuccessCard({
     }
   };
 
-  const share = async () => {
-    if (typeof navigator.share !== 'function') {
-      copy(message, 'message');
-      return;
-    }
-    try {
-      await navigator.share({
-        title: 'Your tax intake portal',
-        text: message,
-        url,
-      });
-    } catch {
-      // User cancelled the share sheet — no-op.
-    }
-  };
+  // Send via SMS (Twilio) — not yet wired. The button shape stays
+  // in the UI so the eventual flow is obvious; clicking right now
+  // just shows the "wired soon" hint. When Twilio lands, this
+  // becomes a server action call to /api/sms/send-invite that POSTs
+  // to Twilio's REST API with the firm's tenant-scoped credentials
+  // (kept in the per-tenant credential vault, not the global env).
+  const SMS_ENABLED = false;
 
   return (
     <div
@@ -473,7 +465,7 @@ function SuccessCard({
         >
           {message}
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
           <button
             onClick={() => copy(message, 'message')}
             style={{
@@ -490,20 +482,56 @@ function SuccessCard({
             {messageCopied ? 'Copied' : 'Copy message'}
           </button>
           <button
-            onClick={share}
+            type="button"
+            disabled={!SMS_ENABLED}
+            title={
+              SMS_ENABLED
+                ? 'Send the invite SMS via Twilio'
+                : 'Twilio integration coming soon — use Copy message for now'
+            }
             style={{
               padding: '8px 16px',
               background: 'transparent',
               border: `1px solid ${t.border}`,
               borderRadius: 8,
               fontSize: 13,
-              color: t.inkSoft,
+              color: t.muted,
               fontFamily: t.sans,
-              cursor: 'pointer',
+              cursor: SMS_ENABLED ? 'pointer' : 'not-allowed',
+              opacity: SMS_ENABLED ? 1 : 0.55,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
-            Share…
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 4.5C2 3.67 2.67 3 3.5 3h7c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5H6l-3 2v-2H3.5c-.83 0-1.5-.67-1.5-1.5v-5z" />
+            </svg>
+            Send via SMS
           </button>
+          {!SMS_ENABLED && (
+            <span
+              style={{
+                fontFamily: t.mono,
+                fontSize: 10,
+                color: t.muted,
+                letterSpacing: 0.3,
+                marginLeft: 2,
+              }}
+            >
+              Coming soon
+            </span>
+          )}
         </div>
       </div>
 
