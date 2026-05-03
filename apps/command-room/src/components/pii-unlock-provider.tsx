@@ -62,7 +62,18 @@ export function PIIUnlockProvider({
   }, [clearLockTimers]);
 
   const unlock = React.useCallback(async (): Promise<UnlockClientPIIResult> => {
-    const result = await unlockClientPII(clientId);
+    // Defensive try/catch: a server action that rejects (vs returning
+    // an error result) would leave the consumer's UI stuck in a
+    // submitting state forever. Convert any throw into a synthetic
+    // error result so the consumer always gets something to show.
+    let result: UnlockClientPIIResult;
+    try {
+      result = await unlockClientPII(clientId);
+    } catch (err) {
+      console.error('[PIIUnlockProvider] unlockClientPII threw:', err);
+      return { ok: false, error: 'Unlock request failed — check the server logs' };
+    }
+
     if (!result.ok) return result;
 
     const map = new Map<string, string>(Object.entries(result.plaintext));
@@ -84,7 +95,7 @@ export function PIIUnlockProvider({
     }, PII_UNLOCK_DURATION_MS);
 
     tickIntervalRef.current = setInterval(() => {
-      setRemainingMs((prev) => {
+      setRemainingMs(() => {
         const next = result.expiresAt - Date.now();
         return next > 0 ? next : 0;
       });

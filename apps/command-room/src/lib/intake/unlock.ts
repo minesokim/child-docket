@@ -54,29 +54,32 @@ export type UnlockClientPIIResult =
   | { ok: false; error: string };
 
 export async function unlockClientPII(clientId: string): Promise<UnlockClientPIIResult> {
-  // 1. Auth + role gate.
-  const user = await getCurrentDocketUser();
-  if (!user) return { ok: false, error: 'Not signed in' };
-
+  // Outer try wraps the entire action so NOTHING throws to the client.
+  // The button + provider rely on the action returning a result object
+  // either way; an exception leaves the UI stuck in 'Unlocking…'.
   try {
-    assertRole(user, ['firm_owner', 'preparer', 'reviewer']);
-  } catch {
-    return { ok: false, error: 'Role not authorized to unlock' };
-  }
+    // 1. Auth + role gate.
+    const user = await getCurrentDocketUser();
+    if (!user) return { ok: false, error: 'Not signed in' };
 
-  // 2. Rate limit. Tighter than per-field reveal — each unlock is
-  // ~6 fields. 6/min still lets a preparer move fast between clients.
-  const limit = consumeRateToken(`pii-unlock:${user.clerkUserId}`, 6, 60_000);
-  if (!limit.allowed) {
-    return {
-      ok: false,
-      error: `Too many unlock requests. Try again in ${Math.ceil(limit.retryAfterMs / 1000)}s.`,
-    };
-  }
+    try {
+      assertRole(user, ['firm_owner', 'preparer', 'reviewer']);
+    } catch {
+      return { ok: false, error: 'Role not authorized to unlock' };
+    }
 
-  const startedAt = Date.now();
+    // 2. Rate limit. Tighter than per-field reveal — each unlock is
+    // ~6 fields. 6/min still lets a preparer move fast between clients.
+    const limit = consumeRateToken(`pii-unlock:${user.clerkUserId}`, 6, 60_000);
+    if (!limit.allowed) {
+      return {
+        ok: false,
+        error: `Too many unlock requests. Try again in ${Math.ceil(limit.retryAfterMs / 1000)}s.`,
+      };
+    }
 
-  try {
+    const startedAt = Date.now();
+
     return await withTenant(asTenantId(user.tenantId), async (db) => {
       const dek = await getTenantDek(db, asTenantId(user.tenantId));
 
@@ -149,6 +152,11 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
       return { ok: true, plaintext, expiresAt };
     });
   } catch (error) {
+    // Console.error always shows up in Vercel function logs even when
+    // Sentry's DSN isn't reaching anywhere. Real error (with message
+    // + stack) lands here; the client sees a generic message so we
+    // don't leak internals.
+    console.error('[unlockClientPII] failed:', error);
     Sentry.captureException(error, {
       tags: { component: 'command-room-pii-unlock' },
     });

@@ -24,11 +24,22 @@ export function PIIUnlockButton({ t }: { t: Theme }) {
     if (submitting || isUnlocked) return;
     setSubmitting(true);
     setError(null);
-    const result = await unlock();
-    setSubmitting(false);
-    if (!result.ok) {
-      setError(result.error);
+    try {
+      const result = await unlock();
+      if (!result.ok) {
+        setError(result.error);
+        setTimeout(() => setError(null), 4_000);
+      }
+    } catch (err) {
+      // Provider already wraps the action in try/catch and returns a
+      // synthetic error on throw, so this branch is defensive belt-
+      // and-suspenders. Both layers ensure submitting state always
+      // resets via the finally clause.
+      console.error('[PIIUnlockButton] unlock threw:', err);
+      setError('Unlock failed unexpectedly');
       setTimeout(() => setError(null), 4_000);
+    } finally {
+      setSubmitting(false);
     }
   };
 
