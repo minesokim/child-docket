@@ -753,15 +753,19 @@ The client popup has its own billing tab. **Don't add BillingCard to popup overv
 When loading this project cold:
 
 1. **Read this CLAUDE.md** (you are here).
-2. **Strategic detail:** [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC-BRIEF.md) — the full Desktop brief mirrored into the repo.
-3. **The journey, not just the destination:** [`docs/DECISION-JOURNEY.md`](docs/DECISION-JOURNEY.md) — chronological narrative of how we got here, what we considered, what we rejected, when to revisit each lock-in.
-4. **User's verbatim framings:** [`docs/SLICES.md`](docs/SLICES.md) — the actual passages the user wrote at each decision point. Preserved because the framings ARE the product. When in doubt about voice, re-read.
-5. **Persona:** [`docs/PERSONA.md`](docs/PERSONA.md) — Antonio at Vazant.
-6. **Memory mirrors:** [`.claude/memory/`](.claude/memory/) — anchored copies of the project memory files.
-7. **Cost rules:** [`COSTS.md`](COSTS.md) — $50/mo discipline.
-8. **Design source:** `C:\Users\minse\Downloads\docket-portal-design\` — the 36-screen prototype we port from.
-9. **Verify gstack:** `test -d ~/.claude/skills/gstack/bin && echo OK`
-10. **Confirm with David:** any new slices to add since last session? Any decisions reversed?
+2. **Then read the most recent session handoff** in `docs/SESSION-HANDOFF-*.md`
+   — the latest one captures what's actually in the codebase right now (CLAUDE.md
+   is partially aspirational; the audit reports + recent shipped work live in the
+   handoff doc). When CLAUDE.md and the handoff disagree, the handoff wins.
+3. **Strategic detail:** [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC-BRIEF.md) — the full Desktop brief mirrored into the repo.
+4. **The journey, not just the destination:** [`docs/DECISION-JOURNEY.md`](docs/DECISION-JOURNEY.md) — chronological narrative of how we got here, what we considered, what we rejected, when to revisit each lock-in.
+5. **User's verbatim framings:** [`docs/SLICES.md`](docs/SLICES.md) — the actual passages the user wrote at each decision point. Preserved because the framings ARE the product. When in doubt about voice, re-read.
+6. **Persona:** [`docs/PERSONA.md`](docs/PERSONA.md) — Antonio at Vazant.
+7. **Memory mirrors:** [`.claude/memory/`](.claude/memory/) — anchored copies of the project memory files.
+8. **Cost rules:** [`COSTS.md`](COSTS.md) — $50/mo discipline.
+9. **Design source:** `C:\Users\minse\Downloads\docket-portal-design\` — the 36-screen prototype we port from.
+10. **Verify gstack:** `test -d ~/.claude/skills/gstack/bin && echo OK`
+11. **Confirm with David:** any new slices to add since last session? Any decisions reversed?
 
 ---
 
