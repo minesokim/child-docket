@@ -4,7 +4,13 @@
 // labeled sections so Antonio can see what the client has filled in
 // without having to walk the same 13 screens the client did. Sensitive
 // values (SSN/EIN/bank) arrive masked from the server-side
-// maskSensitiveFields call — this component never sees plaintext.
+// maskSensitiveFields call — this component never sees plaintext by
+// default. Plaintext access goes through the per-session unlock flow:
+// each masked surface renders a <MaskedPII> that consumes the
+// PIIUnlockProvider context. One unlock click in the page header flips
+// every masked value to plaintext for 15 minutes (auto-locks). Role-gated
+// (firm_owner | preparer | reviewer), rate-limited (6 unlocks/min/user),
+// audit-logged ONE row per unlock.
 //
 // Each section renders ONLY when there's data to show. A blank intake
 // renders just the status pill ("not started"). A half-finished one
@@ -12,6 +18,7 @@
 
 import type { Theme } from '@docket/ui';
 import type { IntakeState } from '@docket/shared';
+import { MaskedPII } from './masked-pii';
 
 type IntakeBundle = {
   taxYear: number;
@@ -163,14 +170,25 @@ export function IntakeSummary({ t, intake }: { t: Theme; intake: IntakeBundle | 
           {a.personal.ssn && (
             <div
               style={{
-                color: t.muted,
-                fontFamily: t.mono,
-                fontSize: 12,
                 marginTop: 2,
-                letterSpacing: 0.3,
+                fontSize: 12,
+                color: t.muted,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
-              SSN {a.personal.ssn}
+              <span
+                style={{
+                  fontFamily: t.mono,
+                  fontSize: 9.5,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                }}
+              >
+                SSN
+              </span>
+              <MaskedPII t={t} path="personal.ssn" masked={a.personal.ssn} />
             </div>
           )}
           {a.personal.occupation && (
@@ -228,14 +246,25 @@ export function IntakeSummary({ t, intake }: { t: Theme; intake: IntakeBundle | 
           {a.spouse.ssn && (
             <div
               style={{
-                color: t.muted,
-                fontFamily: t.mono,
-                fontSize: 12,
                 marginTop: 2,
-                letterSpacing: 0.3,
+                fontSize: 12,
+                color: t.muted,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
-              SSN {a.spouse.ssn}
+              <span
+                style={{
+                  fontFamily: t.mono,
+                  fontSize: 9.5,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                }}
+              >
+                SSN
+              </span>
+              <MaskedPII t={t} path="spouse.ssn" masked={a.spouse.ssn} />
             </div>
           )}
           {a.spouse.occupation && (
@@ -268,16 +297,8 @@ export function IntakeSummary({ t, intake }: { t: Theme; intake: IntakeBundle | 
                     </span>
                   )}
                   {d.ssn && (
-                    <span
-                      style={{
-                        color: t.muted,
-                        fontFamily: t.mono,
-                        fontSize: 11,
-                        marginLeft: 6,
-                        letterSpacing: 0.3,
-                      }}
-                    >
-                      {d.ssn}
+                    <span style={{ marginLeft: 6 }}>
+                      <MaskedPII t={t} path={`dependents.list.${i}.ssn`} masked={d.ssn} />
                     </span>
                   )}
                 </div>
@@ -325,14 +346,25 @@ export function IntakeSummary({ t, intake }: { t: Theme; intake: IntakeBundle | 
           {a.selfEmployment.ein && (
             <div
               style={{
-                color: t.muted,
-                fontFamily: t.mono,
-                fontSize: 12,
                 marginTop: 2,
-                letterSpacing: 0.3,
+                fontSize: 12,
+                color: t.muted,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
-              EIN {a.selfEmployment.ein}
+              <span
+                style={{
+                  fontFamily: t.mono,
+                  fontSize: 9.5,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                }}
+              >
+                EIN
+              </span>
+              <MaskedPII t={t} path="selfEmployment.ein" masked={a.selfEmployment.ein} />
             </div>
           )}
           <div
@@ -385,12 +417,52 @@ export function IntakeSummary({ t, intake }: { t: Theme; intake: IntakeBundle | 
       {a.refund?.preference && (
         <Field t={t} label="Refund">
           <div>{a.refund.preference}</div>
-          {(a.refund.bankName || a.refund.bankAccount) && (
-            <div style={{ color: t.muted, fontSize: 12.5, marginTop: 2 }}>
-              {a.refund.bankName && <span>{a.refund.bankName}</span>}
-              {a.refund.bankAccountType && <span> · {a.refund.bankAccountType}</span>}
+          {(a.refund.bankName || a.refund.bankAccount || a.refund.bankRouting) && (
+            <div
+              style={{
+                color: t.muted,
+                fontSize: 12.5,
+                marginTop: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+              }}
+            >
+              {a.refund.bankName && (
+                <div>
+                  {a.refund.bankName}
+                  {a.refund.bankAccountType && <span> · {a.refund.bankAccountType}</span>}
+                </div>
+              )}
+              {a.refund.bankRouting && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      fontFamily: t.mono,
+                      fontSize: 9.5,
+                      letterSpacing: 0.6,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Routing
+                  </span>
+                  <MaskedPII t={t} path="refund.bankRouting" masked={a.refund.bankRouting} />
+                </div>
+              )}
               {a.refund.bankAccount && (
-                <span style={{ fontFamily: t.mono, marginLeft: 6 }}>{a.refund.bankAccount}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      fontFamily: t.mono,
+                      fontSize: 9.5,
+                      letterSpacing: 0.6,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Account
+                  </span>
+                  <MaskedPII t={t} path="refund.bankAccount" masked={a.refund.bankAccount} />
+                </div>
               )}
             </div>
           )}

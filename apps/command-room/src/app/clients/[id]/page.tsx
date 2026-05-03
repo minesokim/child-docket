@@ -20,6 +20,8 @@ import { IntakeSummary } from '@/components/intake-summary';
 import { DocumentsSection } from '@/components/documents-section';
 import { SignaturesSection } from '@/components/signatures-section';
 import { DeleteClientButton } from '@/components/delete-client-button';
+import { PIIUnlockProvider } from '@/components/pii-unlock-provider';
+import { PIIUnlockButton } from '@/components/pii-unlock-button';
 import { hasRole } from '@/lib/require-role';
 import type { TenantId, IntakeState } from '@docket/shared';
 import { asTenantId, maskSensitiveFields } from '@docket/shared';
@@ -68,11 +70,13 @@ export default async function ClientDetailPage({ params }: PageProps) {
       .limit(50);
 
     // Intake responses — decrypt with tenant DEK, mask sensitive paths
-    // (SSN/EIN/bank). Antonio sees redacted values by default; the
-    // preparer-side reveal flow (gated by assertRole + audit-logged)
-    // lands as Day 6 work. For now the masked values let him see
-    // what the client filled in without exposing plaintext PII to
-    // every page render.
+    // (SSN/EIN/bank). Antonio sees masked values by default; the
+    // per-session unlock flow lives in lib/intake/unlock.ts. One click
+    // on the "Show SSN, EIN, bank" button unlocks all sensitive surfaces
+    // for 15 minutes, then auto-locks. ONE audit row per unlock (not
+    // per field viewed). Role-gated firm_owner | preparer | reviewer.
+    // PIIUnlockProvider holds the unlock state on the client; MaskedPII
+    // consumes the context to flip between masked + plaintext.
     const dek = await getTenantDek(db, asTenantId(user.tenantId));
     const [intakeRow] = await db
       .select()
@@ -215,6 +219,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </div>
         </header>
 
+        <PIIUnlockProvider clientId={client.id}>
         <div
           style={{
             display: 'grid',
@@ -225,7 +230,15 @@ export default async function ClientDetailPage({ params }: PageProps) {
         >
           {/* Left column — intake summary, documents, signatures, engagement, messages */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <Section t={t} label="Intake">
+            <Section
+              t={t}
+              label="Intake"
+              actions={
+                hasRole(user, ['firm_owner', 'preparer', 'reviewer']) && intake ? (
+                  <PIIUnlockButton t={t} />
+                ) : null
+              }
+            >
               <IntakeSummary t={t} intake={intake} />
             </Section>
 
@@ -391,6 +404,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
             </Section>
           </div>
         </div>
+        </PIIUnlockProvider>
 
         {/* Danger zone — delete client. firm_owner + admin only.
             CCPA right-to-delete path: cascades intake_responses,
@@ -434,33 +448,56 @@ export default async function ClientDetailPage({ params }: PageProps) {
   );
 }
 
-function Section({ t, label, count, children }: { t: ReturnType<typeof buildTheme>; label: string; count?: number; children: React.ReactNode }) {
+function Section({
+  t,
+  label,
+  count,
+  actions,
+  children,
+}: {
+  t: ReturnType<typeof buildTheme>;
+  label: string;
+  count?: number;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10.5,
-            color: t.muted,
-            letterSpacing: 0.8,
-            textTransform: 'uppercase',
-          }}
-        >
-          {label}
-        </span>
-        {count !== undefined && (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <span
             style={{
               fontFamily: t.mono,
               fontSize: 10.5,
-              color: t.rustInk,
-              letterSpacing: 0.4,
+              color: t.muted,
+              letterSpacing: 0.8,
+              textTransform: 'uppercase',
             }}
           >
-            {count}
+            {label}
           </span>
-        )}
+          {count !== undefined && (
+            <span
+              style={{
+                fontFamily: t.mono,
+                fontSize: 10.5,
+                color: t.rustInk,
+                letterSpacing: 0.4,
+              }}
+            >
+              {count}
+            </span>
+          )}
+        </div>
+        {actions ? <div>{actions}</div> : null}
       </div>
       {children}
     </div>
