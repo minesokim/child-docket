@@ -170,11 +170,22 @@ export async function getPresignedUploadUrl(opts: {
   const cfg = getR2Config();
   const ttl = opts.ttlSeconds ?? DEFAULT_UPLOAD_TTL_SEC;
 
+  // Do NOT pass ContentLength here even though the caller knows it.
+  // When ContentLength is on the PutObjectCommand, the SDK adds
+  // `content-length` to SignedHeaders. R2 then strictly validates the
+  // request's Content-Length header against the value signed into the
+  // URL — a 1-byte difference returns 403. Browser uploads can subtly
+  // differ from the size reported by File.size in some edge cases
+  // (transfer encoding, multipart boundaries, etc.). Skipping the
+  // ContentLength sign + relying on the browser to send the correct
+  // Content-Length naturally is the safer R2-compatible posture.
+  //
+  // Same with ContentType — letting the browser send it as a regular
+  // (unsigned) header. We still document Content-Type in the result
+  // headers so the client knows to send it; just not signed.
   const cmd = new PutObjectCommand({
     Bucket: cfg.bucket,
     Key: opts.storageKey,
-    ContentType: opts.mimeType,
-    ContentLength: opts.sizeBytes,
   });
 
   const url = await getSignedUrl(getClient(), cmd, { expiresIn: ttl });
