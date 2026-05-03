@@ -86,22 +86,36 @@ export function requiredDocsFor(state: IntakeState): ExpectedDoc[] {
   // Driver's License + SSN card for the primary taxpayer. Required for
   // filing — IRS Pub 1345 requires identity verification on remote
   // signing, and CA FTB has parallel requirements.
+  //
+  // DL is two slots (front + back). The front carries the photo, name,
+  // DOB, address, expiry. The back carries the magnetic stripe / 2D
+  // barcode the IRS validation rule scans against. Both required for
+  // a complete identity record.
+  const primaryName = state.personal?.fullName?.trim() || null;
   docs.push({
-    id: 'identity-dl',
+    id: 'identity-dl-front',
     kind: 'drivers_license',
     title: "Driver's License",
-    subtitle: state.personal?.fullName
-      ? `For ${state.personal.fullName}`
-      : 'For the primary taxpayer',
+    subtitle: 'Front side',
     required: true,
-    context: 'Always — primary taxpayer identity verification',
+    forPerson: primaryName ?? undefined,
+    context: 'Always — primary taxpayer identity verification (front)',
+  });
+  docs.push({
+    id: 'identity-dl-back',
+    kind: 'drivers_license',
+    title: "Driver's License",
+    subtitle: 'Back side',
+    required: true,
+    forPerson: primaryName ?? undefined,
+    context: 'Always — primary taxpayer identity verification (back)',
   });
   docs.push({
     id: 'identity-ssn',
     kind: 'ssn_card',
     title: 'Social Security Card',
-    subtitle: state.personal?.fullName
-      ? `For ${state.personal.fullName}`
+    subtitle: primaryName
+      ? `For ${primaryName}`
       : 'For the primary taxpayer',
     required: true,
     context: 'Always — primary taxpayer SSN verification',
@@ -111,13 +125,22 @@ export function requiredDocsFor(state: IntakeState): ExpectedDoc[] {
   if (state.filing?.status === 'mfj') {
     const spouseName = state.spouse?.fullName ?? 'your spouse';
     docs.push({
-      id: 'identity-spouse-dl',
+      id: 'identity-spouse-dl-front',
       kind: 'drivers_license',
       title: "Spouse's Driver's License",
-      subtitle: `For ${spouseName}`,
+      subtitle: 'Front side',
       required: true,
       forPerson: spouseName,
-      context: 'Filing status MFJ — spouse identity verification',
+      context: 'Filing status MFJ — spouse identity verification (front)',
+    });
+    docs.push({
+      id: 'identity-spouse-dl-back',
+      kind: 'drivers_license',
+      title: "Spouse's Driver's License",
+      subtitle: 'Back side',
+      required: true,
+      forPerson: spouseName,
+      context: 'Filing status MFJ — spouse identity verification (back)',
     });
     docs.push({
       id: 'identity-spouse-ssn',

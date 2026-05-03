@@ -5,20 +5,25 @@
 //
 // LAYOUT (top to bottom)
 //   - Back chevron → /docs
-//   - Doc title (Fraunces) + 1-line subtitle
-//   - Hero card (illustration / current state)
-//   - Antonio note (italic serif) — warm, doc-specific
-//   - Where to find (regular body) — practical hint
-//   - Action buttons:
-//       Empty       → [ Take a photo ] + [ Upload a file ]
+//   - Doc title (Fraunces) + subtitle (Front side / Back side / For Person)
+//   - PHASE-AWARE BLOCK:
+//       Empty       → hero illustration + Antonio note + where-to-find +
+//                       [Take a photo] + [Upload a file]
 //       Uploading   → progress bar
-//       Reading     → scanning animation
-//       Parsed      → verification UI (filename + extracted fields + Retake / Looks right)
-//       Final       → ✓ + filename + Replace link
-//       Failed      → error message + Try again button
+//       Reading     → scanning animation, "Reading your driver's license…"
+//       Parsed      → VERIFICATION CARD (Stripe Identity / TurboTax shape):
+//                     - actual photo of the upload (signed R2 GET)
+//                     - one-line friendly description (Fraunces italic)
+//                     - 4-6 humanized field rows with formatted values
+//                     - single primary "Yes, this looks right" CTA
+//                     - subtle "Retake photo" text link below
+//                     NO filename input — server fully owns the name.
+//       Final       → ✓ + Saved + tiny final filename (audit reassurance) +
+//                     "Replace this document" ghost
+//       Failed      → warm recovery + try-again actions
 //
-// On accept of a parsed doc, navigate back to /docs. The overview
-// will pick up the new state on its server-side render.
+// On accept, navigate to /docs. The overview re-renders with the new
+// state from the server-side fetch.
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -44,6 +49,7 @@ import {
   requestUploadUrl,
   confirmUpload,
   acceptDocClassification,
+  getDocumentViewUrl,
 } from '@/lib/docs/upload';
 import type { DocumentRow } from '@/lib/docs/list';
 import { useDocPoll, type DocPhase } from '../use-doc-poll';
@@ -93,14 +99,6 @@ export function DocSlotClient({
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
   const [state, setState] = React.useState<LocalState>(() => fromInitialDoc(initialDoc));
-  const [filenameEdit, setFilenameEdit] = React.useState<string>('');
-
-  // Initialize filename edit when classification arrives.
-  React.useEffect(() => {
-    if (state.phase === 'parsed' && state.classification?.suggestedFilename) {
-      setFilenameEdit(state.classification.suggestedFilename);
-    }
-  }, [state.phase, state.classification?.suggestedFilename]);
 
   // Poll while non-terminal.
   const targets = React.useMemo(() => {
@@ -217,6 +215,10 @@ export function DocSlotClient({
         filename: file.name,
         mimeType: file.type || 'application/octet-stream',
         sizeBytes: file.size,
+        // Bind the upload to this slot. Drives slot-aware filename
+        // composition in finalize-document and direct slot lookups
+        // on the docs overview (no kind-matching guesswork).
+        slotId: slot.id,
       });
     } catch (err) {
       console.error('[onFileChosen] confirmUpload threw:', err);
@@ -241,19 +243,17 @@ export function DocSlotClient({
   };
 
   // ─── Accept verification ───
+  // Filename composition is fully server-owned now — no override.
   const onAccept = async () => {
     if (!state.documentId) return;
     setState((prev) => ({ ...prev, phase: 'accepted' }));
     const result = await acceptDocClassification({
       documentId: state.documentId,
-      filenameOverride: filenameEdit.trim() || undefined,
     });
     if (!result.ok) {
       setState((prev) => ({ ...prev, phase: 'parsed', errorMessage: result.error }));
       return;
     }
-    // Navigate back to overview. The slot will show finalizing/final
-    // state from the server-side fetch on /docs.
     router.push('/docs');
     router.refresh();
   };
@@ -289,7 +289,7 @@ export function DocSlotClient({
         </div>
 
         <div style={{ padding: '20px 24px 8px' }}>
-          <Stack gap={8}>
+          <Stack gap={6}>
             <H1 t={t}>{slot.title}</H1>
             <Body t={t} size={14}>
               {slot.subtitle}
@@ -302,8 +302,6 @@ export function DocSlotClient({
             t={t}
             slot={slot}
             state={state}
-            filenameEdit={filenameEdit}
-            setFilenameEdit={setFilenameEdit}
             onFileChosen={onFileChosen}
             onAccept={onAccept}
             onRetake={onRetake}
@@ -359,8 +357,6 @@ function PhaseBlock({
   t,
   slot,
   state,
-  filenameEdit,
-  setFilenameEdit,
   onFileChosen,
   onAccept,
   onRetake,
@@ -368,8 +364,6 @@ function PhaseBlock({
   t: Theme;
   slot: ExpectedDoc;
   state: LocalState;
-  filenameEdit: string;
-  setFilenameEdit: (s: string) => void;
   onFileChosen: (file: File) => void;
   onAccept: () => void;
   onRetake: () => void;
@@ -441,161 +435,24 @@ function PhaseBlock({
             color: t.muted,
           }}
         >
-          Identifying the document and pulling out the values…
+          Reading your {readingLabel(slot)}…
         </div>
       </Stack>
     );
   }
 
-  // ─── Parsed: verification UI ───
-  if (state.phase === 'parsed' && state.classification) {
-    const fields = state.classification.extractedFields ?? {};
-    const fieldEntries = Object.entries(fields).slice(0, 6);
-    const friendly = friendlyDescriptionFor(
-      state.classification.docKind,
-      state.classification.extractedFields,
-    );
+  // ─── Parsed: verification UI (the redesigned editorial pattern) ───
+  if (state.phase === 'parsed' && state.classification && state.documentId) {
     return (
-      <Stack gap={16}>
-        <div
-          style={{
-            padding: '20px 18px',
-            background: t.ease.keylimeWash,
-            borderRadius: 12,
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              fontFamily: t.mono,
-              fontSize: 9.5,
-              color: t.rustInk,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-              marginBottom: 8,
-            }}
-          >
-            Read successfully
-          </div>
-          <div
-            style={{
-              fontFamily: t.serif,
-              fontSize: 18,
-              color: t.ink,
-              letterSpacing: -0.3,
-            }}
-          >
-            {friendly ?? state.classification.suggestedFilename}
-          </div>
-        </div>
-
-        <div>
-          <div
-            style={{
-              fontFamily: t.mono,
-              fontSize: 9.5,
-              color: t.muted,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            Filename
-          </div>
-          <input
-            type="text"
-            value={filenameEdit}
-            onChange={(e) => setFilenameEdit(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: `1px solid ${t.border}`,
-              borderRadius: 8,
-              fontSize: 13.5,
-              fontFamily: t.mono,
-              color: t.ink,
-              outline: 'none',
-              boxSizing: 'border-box',
-              background: '#fff',
-            }}
-          />
-        </div>
-
-        {fieldEntries.length > 0 && (
-          <div
-            style={{
-              background: t.bgElev,
-              border: `1px solid ${t.borderSoft}`,
-              borderRadius: 10,
-              padding: '14px 16px',
-            }}
-          >
-            <div
-              style={{
-                fontFamily: t.mono,
-                fontSize: 9.5,
-                color: t.rustInk,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-                marginBottom: 10,
-              }}
-            >
-              Detected
-            </div>
-            <Stack gap={8}>
-              {fieldEntries.map(([k, v]) => (
-                <Row key={k} justify="space-between" align="center">
-                  <span
-                    style={{
-                      fontFamily: t.mono,
-                      fontSize: 10.5,
-                      color: t.muted,
-                      letterSpacing: 0.4,
-                    }}
-                  >
-                    {humanizeKey(k).toUpperCase()}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: t.serif,
-                      fontSize: 13.5,
-                      color: t.ink,
-                      textAlign: 'right',
-                      marginLeft: 12,
-                    }}
-                  >
-                    {formatFieldValue(k, v)}
-                  </span>
-                </Row>
-              ))}
-            </Stack>
-          </div>
-        )}
-
-        {state.classification.legibility < 0.5 && state.classification.retakeHint && (
-          <div
-            style={{
-              padding: '12px 14px',
-              background: '#FDF1EA',
-              borderRadius: 10,
-              fontSize: 13,
-              color: '#6E2B0C',
-              lineHeight: 1.5,
-            }}
-          >
-            {state.classification.retakeHint}
-          </div>
-        )}
-
-        <Row gap={10}>
-          <Button t={t} variant="ghost" onClick={onRetake} style={{ flex: 1 }}>
-            Retake
-          </Button>
-          <Button t={t} onClick={onAccept} style={{ flex: 1 }}>
-            Looks right
-          </Button>
-        </Row>
-      </Stack>
+      <VerificationCard
+        t={t}
+        slot={slot}
+        documentId={state.documentId}
+        mimeType={inferMimeType(state.filename)}
+        classification={state.classification}
+        onAccept={onAccept}
+        onRetake={onRetake}
+      />
     );
   }
 
@@ -609,6 +466,9 @@ function PhaseBlock({
   }
 
   // ─── Final (already done) ───
+  // Calm "settled" treatment — sage-tinted disc with a medium-green
+  // check stroke. Matches the overview's status indicator language so
+  // moving between the two screens feels like the same product.
   if (state.phase === 'final') {
     return (
       <Stack gap={20}>
@@ -624,22 +484,22 @@ function PhaseBlock({
         >
           <div
             style={{
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
-              background: '#1f4621',
-              color: '#fff',
+              background: '#e7efde',
+              color: '#5b7a4f',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path
-                d="M5 9l3 3 6-6"
+                d="M3.5 7l2.5 2.5 5-5"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -650,7 +510,7 @@ function PhaseBlock({
               style={{
                 fontFamily: t.serif,
                 fontSize: 17,
-                color: t.rustInk,
+                color: t.ink,
                 letterSpacing: -0.2,
               }}
             >
@@ -658,10 +518,12 @@ function PhaseBlock({
             </div>
             <div
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 color: t.muted,
                 marginTop: 2,
                 wordBreak: 'break-all',
+                fontFamily: t.mono,
+                letterSpacing: 0.2,
               }}
             >
               {state.finalFilename ?? state.filename}
@@ -717,7 +579,320 @@ function PhaseBlock({
 }
 
 // ────────────────────────────────────────────────────────────────
-// Hero card — minimal editorial illustration of "a document."
+// Verification card — the redesigned parsed phase.
+//
+// Pattern reference: Stripe Identity, TurboTax W-2 import, Apple
+// Wallet "Add a card." Three-stack:
+//
+//   1. Document image preview (the source of truth — what you uploaded)
+//   2. One-line friendly description in Fraunces italic
+//   3. 4-6 humanized field rows with formatted values
+//
+// Plus a single primary CTA and a subtle retake link. No filename
+// input — server fully owns naming. No "READ SUCCESSFULLY" eyebrow
+// stack — the photo + description carry confidence.
+// ────────────────────────────────────────────────────────────────
+
+function VerificationCard({
+  t,
+  slot,
+  documentId,
+  mimeType,
+  classification,
+  onAccept,
+  onRetake,
+}: {
+  t: Theme;
+  slot: ExpectedDoc;
+  documentId: string;
+  mimeType: string;
+  classification: NonNullable<DocumentRow['classification']>;
+  onAccept: () => void;
+  onRetake: () => void;
+}) {
+  const fields = classification.extractedFields ?? {};
+  const fieldRows = renderableFields(fields).slice(0, 6);
+  const friendly = friendlyDescriptionFor(classification.docKind, fields);
+  const shouldShowRetakeWarning =
+    classification.legibility < 0.5 && classification.retakeHint;
+
+  return (
+    <Stack gap={20}>
+      {/* 1. Document image preview — the verification anchor. */}
+      <DocumentPreview
+        t={t}
+        documentId={documentId}
+        mimeType={mimeType}
+      />
+
+      {/* 2. One-line friendly description — calm confidence. */}
+      <div style={{ textAlign: 'center', padding: '0 4px' }}>
+        <div
+          style={{
+            fontFamily: t.serif,
+            fontStyle: 'italic',
+            fontSize: 17,
+            color: t.ink,
+            lineHeight: 1.4,
+            letterSpacing: -0.2,
+          }}
+        >
+          {friendlyHeadlineFor(slot, classification.docKind, friendly)}
+        </div>
+      </div>
+
+      {/* 3. Detected fields as quiet rows. No eyebrow, no card chrome. */}
+      {fieldRows.length > 0 && (
+        <div
+          style={{
+            padding: '4px 4px',
+          }}
+        >
+          <Stack gap={10}>
+            {fieldRows.map(({ key, label, value }) => (
+              <Row key={key} justify="space-between" align="center">
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: t.muted,
+                    letterSpacing: 0,
+                  }}
+                >
+                  {label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: t.serif,
+                    fontSize: 14.5,
+                    color: t.ink,
+                    textAlign: 'right',
+                    marginLeft: 12,
+                    letterSpacing: -0.1,
+                  }}
+                >
+                  {value}
+                </span>
+              </Row>
+            ))}
+          </Stack>
+        </div>
+      )}
+
+      {/* Soft warning if legibility is low. */}
+      {shouldShowRetakeWarning && (
+        <div
+          style={{
+            padding: '12px 14px',
+            background: '#FDF1EA',
+            borderRadius: 10,
+            fontSize: 13,
+            color: '#6E2B0C',
+            lineHeight: 1.5,
+          }}
+        >
+          {classification.retakeHint}
+        </div>
+      )}
+
+      {/* Primary CTA + subtle retake link. */}
+      <Stack gap={10}>
+        <Button t={t} onClick={onAccept} style={{ width: '100%' }}>
+          Yes, this looks right
+        </Button>
+        <button
+          type="button"
+          onClick={onRetake}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontFamily: t.serif,
+            fontStyle: 'italic',
+            fontSize: 14,
+            color: t.muted,
+            cursor: 'pointer',
+            padding: '4px 0',
+            textAlign: 'center',
+            width: '100%',
+          }}
+        >
+          Retake photo
+        </button>
+      </Stack>
+    </Stack>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// DocumentPreview — fetches a 5-min signed GET URL from the server
+// and renders the actual uploaded image (or a friendly PDF placeholder).
+//
+// PDFs render as a calm "PDF document" tile with the doc-hero look —
+// browsers can't reliably inline-preview PDFs in mobile viewports
+// inside React without an iframe, and an iframe inside the editorial
+// flow looks like a foreign element. The image-vs-PDF distinction
+// is decided by the original mime type (the user's upload).
+// ────────────────────────────────────────────────────────────────
+
+function DocumentPreview({
+  t,
+  documentId,
+  mimeType,
+}: {
+  t: Theme;
+  documentId: string;
+  mimeType: string;
+}) {
+  const [url, setUrl] = React.useState<string | null>(null);
+  const [errored, setErrored] = React.useState(false);
+  const isPdf = mimeType === 'application/pdf';
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (isPdf) return;
+    (async () => {
+      try {
+        const result = await getDocumentViewUrl({ documentId });
+        if (cancelled) return;
+        if (result.ok) setUrl(result.url);
+        else setErrored(true);
+      } catch {
+        if (!cancelled) setErrored(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [documentId, isPdf]);
+
+  // PDF — show a calm tile rather than try to inline-render.
+  if (isPdf) {
+    return (
+      <div
+        style={{
+          aspectRatio: '4 / 3',
+          borderRadius: 14,
+          background: t.ease.keylimeWash,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: t.mono,
+            fontSize: 9.5,
+            color: t.rustInk,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+          }}
+        >
+          PDF document
+        </div>
+        <div
+          style={{
+            fontFamily: t.serif,
+            fontSize: 14,
+            color: t.muted,
+            fontStyle: 'italic',
+          }}
+        >
+          You uploaded a PDF.
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state — same shell as the hero so the card doesn't reflow.
+  if (!url && !errored) {
+    return (
+      <div
+        style={{
+          aspectRatio: '4 / 3',
+          borderRadius: 14,
+          background: t.ease.keylimeWash,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: t.mono,
+            fontSize: 9.5,
+            color: t.muted,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+          }}
+        >
+          Loading preview…
+        </div>
+      </div>
+    );
+  }
+
+  // Error fallback — no preview, but don't block the user from accepting.
+  if (errored || !url) {
+    return (
+      <div
+        style={{
+          aspectRatio: '4 / 3',
+          borderRadius: 14,
+          background: t.ease.keylimeWash,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: t.serif,
+            fontStyle: 'italic',
+            fontSize: 14,
+            color: t.muted,
+          }}
+        >
+          Preview unavailable.
+        </div>
+      </div>
+    );
+  }
+
+  // Image preview. Soft drop shadow + rounded corners gives the
+  // "document on a desk" feel. Object-fit contain so phone-camera
+  // photos that are tighter than 4:3 don't crop the edges.
+  return (
+    <div
+      style={{
+        aspectRatio: '4 / 3',
+        borderRadius: 14,
+        background: t.ease.keylimeWash,
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt="Your uploaded document"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '100%',
+          objectFit: 'contain',
+          borderRadius: 6,
+          boxShadow: '0 6px 20px rgba(15, 62, 23, 0.12)',
+        }}
+      />
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// Hero card — used in idle / uploading / reading / saving states.
 // Doesn't try to be doc-specific; the page title + Antonio note
 // carry the specificity. Pulse animates during reading/saving.
 // ────────────────────────────────────────────────────────────────
@@ -892,7 +1067,7 @@ function FilePickerButton({
 }
 
 // ────────────────────────────────────────────────────────────────
-// Helpers.
+// PUT helper.
 // ────────────────────────────────────────────────────────────────
 
 // Hard cutoff for the browser PUT to R2. Without this, a hung network
@@ -952,33 +1127,144 @@ async function putWithProgress(
   });
 }
 
+// ────────────────────────────────────────────────────────────────
+// Field rendering — humanize keys + format values.
+//
+// The classifier emits programmer-shaped keys: "dob_iso", "fullName",
+// "expiry_iso", "ein_masked", "wages_cents", "federal_tax_cents".
+// Users see "Date of birth", "Name", "Expires", "EIN", "Wages",
+// "Federal tax withheld" — and dates as "Nov 26, 2001" instead of
+// "2001-11-26", states expanded, dollars rendered with a $ sign.
+//
+// Out-of-allowlist keys still surface (so the UI never silently drops
+// data) but with a humanized fallback derived from the key itself.
+// ────────────────────────────────────────────────────────────────
+
+const STATE_NAMES: Record<string, string> = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+  MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+  NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+  OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+  SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+  VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+  DC: 'Washington, DC',
+};
+
+const KEY_LABEL_OVERRIDES: Record<string, string> = {
+  fullName: 'Name',
+  full_name: 'Name',
+  firstName: 'First name',
+  lastName: 'Last name',
+  dob: 'Date of birth',
+  dob_iso: 'Date of birth',
+  dateOfBirth: 'Date of birth',
+  expiry: 'Expires',
+  expiry_iso: 'Expires',
+  expiryDate: 'Expires',
+  expirationDate: 'Expires',
+  ssn: 'SSN',
+  ssn_masked: 'SSN',
+  ein: 'EIN',
+  ein_masked: 'EIN',
+  state: 'State',
+  city: 'City',
+  zip: 'ZIP',
+  zipCode: 'ZIP',
+  postalCode: 'ZIP',
+  employer: 'Employer',
+  payer: 'Payer',
+  lender: 'Lender',
+  institution: 'Institution',
+  entityName: 'Entity',
+  taxYear: 'Tax year',
+  noticeType: 'Notice type',
+  marketplaceId: 'Marketplace',
+  statementPeriod: 'Period',
+  // Money keys — we render the number with a $ sign in formatValue.
+  wages_cents: 'Wages',
+  federal_tax_cents: 'Federal tax withheld',
+  state_tax_cents: 'State tax withheld',
+  social_security_wages_cents: 'Social Security wages',
+  medicare_wages_cents: 'Medicare wages',
+  rent_paid_cents: 'Rent paid',
+  interest_income_cents: 'Interest income',
+  ordinary_dividends_cents: 'Ordinary dividends',
+  qualified_dividends_cents: 'Qualified dividends',
+  gross_distribution_cents: 'Gross distribution',
+  taxable_amount_cents: 'Taxable amount',
+  mortgage_interest_cents: 'Mortgage interest',
+  scholarship_grants_cents: 'Scholarships',
+  qualified_expenses_cents: 'Qualified expenses',
+};
+
+// Keys to hide from the verification UI (already encoded in the
+// document title or carry no taxpayer signal). Examples: the AI
+// sometimes emits a `documentType` echo of the classification we
+// already display in the headline.
+const HIDDEN_KEYS = new Set<string>([
+  'documentType',
+  'docKind',
+  'pageNumber',
+  'page',
+]);
+
+type RenderableField = { key: string; label: string; value: string };
+
+function renderableFields(extracted: Record<string, unknown>): RenderableField[] {
+  const out: RenderableField[] = [];
+  for (const [k, v] of Object.entries(extracted)) {
+    if (v == null) continue;
+    if (HIDDEN_KEYS.has(k)) continue;
+    if (typeof v === 'string' && !v.trim()) continue;
+    if (typeof v === 'object') continue; // skip nested for now
+    const label = KEY_LABEL_OVERRIDES[k] ?? humanizeKey(k);
+    const value = formatValue(k, v);
+    if (!value) continue;
+    out.push({ key: k, label, value });
+  }
+  return out;
+}
+
 function humanizeKey(k: string): string {
-  return k
+  // Strip common suffixes that betray the schema (e.g., "_iso", "_cents", "_masked").
+  const stripped = k
+    .replace(/_iso$/, '')
+    .replace(/_cents$/, '')
+    .replace(/_masked$/, '');
+  const spaced = stripped
     .replace(/([A-Z])/g, ' $1')
     .replace(/_/g, ' ')
     .trim();
+  // Sentence case.
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
 }
 
-function formatFieldValue(k: string, v: unknown): string {
-  if (v == null) return '—';
+function formatValue(key: string, v: unknown): string {
+  const lowerKey = key.toLowerCase();
+
+  // Money — keys ending in _cents OR matching common money name patterns.
   if (typeof v === 'number') {
-    const lower = k.toLowerCase();
     if (
-      lower.includes('amount') ||
-      lower.includes('income') ||
-      lower.includes('wage') ||
-      lower.includes('tax') ||
-      lower.includes('balance') ||
-      lower.includes('value') ||
-      lower.includes('premium') ||
-      lower.includes('payment') ||
-      lower.includes('paid') ||
-      lower.includes('comp') ||
-      lower.includes('div') ||
-      lower.includes('int') ||
-      lower.includes('rent')
+      lowerKey.endsWith('_cents') ||
+      lowerKey.includes('amount') ||
+      lowerKey.includes('income') ||
+      lowerKey.includes('wage') ||
+      lowerKey.includes('tax') ||
+      lowerKey.includes('balance') ||
+      lowerKey.includes('value') ||
+      lowerKey.includes('premium') ||
+      lowerKey.includes('payment') ||
+      lowerKey.includes('paid') ||
+      lowerKey.includes('comp') ||
+      lowerKey.includes('div') ||
+      lowerKey.includes('int') ||
+      lowerKey.includes('rent')
     ) {
-      const dollars = v / 100;
+      const dollars = lowerKey.endsWith('_cents') ? v / 100 : v;
       return `$${dollars.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -986,6 +1272,148 @@ function formatFieldValue(k: string, v: unknown): string {
     }
     return String(v);
   }
-  if (typeof v === 'string') return v;
-  return JSON.stringify(v);
+
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+
+  if (typeof v !== 'string') return JSON.stringify(v);
+
+  const trimmed = v.trim();
+
+  // ISO date keys → "Nov 26, 2001"
+  if (
+    lowerKey.endsWith('_iso') ||
+    lowerKey.includes('date') ||
+    lowerKey.includes('dob') ||
+    lowerKey.includes('expiry') ||
+    lowerKey === 'expirationdate'
+  ) {
+    const formatted = formatIsoDate(trimmed);
+    if (formatted) return formatted;
+  }
+
+  // 2-letter state code → full state name.
+  if (lowerKey === 'state' && /^[A-Z]{2}$/.test(trimmed)) {
+    return STATE_NAMES[trimmed] ?? trimmed;
+  }
+
+  // Names: title-case if the AI gave us shouty all-caps ("KIM MINSEO" → "Kim Minseo").
+  if (
+    (lowerKey.includes('name') || lowerKey === 'employer' || lowerKey === 'payer' ||
+      lowerKey === 'lender' || lowerKey === 'institution' || lowerKey === 'entityname') &&
+    trimmed === trimmed.toUpperCase() &&
+    /[A-Z]/.test(trimmed)
+  ) {
+    return titleCase(trimmed);
+  }
+
+  return trimmed;
+}
+
+function formatIsoDate(input: string): string | null {
+  // Accept YYYY-MM-DD or full ISO timestamps.
+  const match = input.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || !month || !day) return null;
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  const monthName = months[month - 1];
+  if (!monthName) return null;
+  return `${monthName} ${day}, ${year}`;
+}
+
+function titleCase(input: string): string {
+  return input
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) =>
+      word.length > 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word,
+    )
+    .join(' ');
+}
+
+// ────────────────────────────────────────────────────────────────
+// Headline copy + assist.
+// ────────────────────────────────────────────────────────────────
+
+function friendlyHeadlineFor(
+  slot: ExpectedDoc,
+  docKind: string,
+  friendly: string | null,
+): string {
+  // Driver's license: "A California driver's license, expires Nov 26, 2029."
+  // is overkill on a small screen — keep it short and let the field rows
+  // carry the detail.
+  if (docKind === 'drivers_license') {
+    const side = slot.subtitle?.toLowerCase().includes('back') ? 'back' : 'front';
+    return `Looks like the ${side} of a driver's license.`;
+  }
+
+  if (docKind === 'ssn_card') {
+    return 'Looks like a Social Security card.';
+  }
+
+  // Otherwise prefer the existing friendly description ("From TikTok Inc"
+  // for a 1099, "From Riverside Unified" for a W-2). Fall back to a
+  // calm "We read your <kind>" line.
+  if (friendly) {
+    return `${friendly}.`;
+  }
+  return `We read your ${readingLabel(slot)}.`;
+}
+
+function readingLabel(slot: ExpectedDoc): string {
+  // For headlines + reading state. Lower-case "driver's license" reads
+  // more naturally than the title-cased page heading.
+  switch (slot.kind) {
+    case 'drivers_license':
+      return "driver's license";
+    case 'ssn_card':
+      return 'Social Security card';
+    case 'w2':
+      return 'W-2';
+    case '1099_nec':
+      return '1099-NEC';
+    case '1099_misc':
+      return '1099-MISC';
+    case '1099_int':
+      return '1099-INT';
+    case '1099_div':
+      return '1099-DIV';
+    case '1099_r':
+      return '1099-R';
+    case '1098_mortgage':
+      return 'mortgage statement';
+    case '1098_t':
+      return '1098-T';
+    case '1095_a':
+      return '1095-A';
+    case 'k1_1065':
+    case 'k1_1120s':
+      return 'K-1';
+    case 'bank_statement':
+      return 'bank statement';
+    case 'brokerage_statement':
+      return 'brokerage statement';
+    case 'prior_return':
+      return 'prior return';
+    case 'irs_notice':
+      return 'IRS notice';
+    default:
+      return 'document';
+  }
+}
+
+function inferMimeType(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
 }

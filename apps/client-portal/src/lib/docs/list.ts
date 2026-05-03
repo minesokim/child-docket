@@ -43,6 +43,8 @@ export type DocumentRow = {
   finalFilename: string | null;
   binarized: boolean;
   errorMessage: string | null;
+  /** Bound expected-doc slot id when set at upload time. NULL for "Other" uploads. */
+  slotId: string | null;
   createdAtIso: string;
 };
 
@@ -72,6 +74,7 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
           finalFilename: schema.documents.finalFilename,
           binarized: schema.documents.binarized,
           errorMessage: schema.documents.errorMessage,
+          slotId: schema.documents.slotId,
           createdAt: schema.documents.createdAt,
         })
         .from(schema.documents)
@@ -99,6 +102,7 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
         finalFilename: r.finalFilename,
         binarized: r.binarized ?? false,
         errorMessage: r.errorMessage,
+        slotId: r.slotId,
         createdAtIso: r.createdAt.toISOString(),
       }));
 

@@ -47,6 +47,7 @@ import { inngest } from '@docket/shared/inngest';
 import {
   buildStorageKey,
   getPresignedUploadUrl,
+  getPresignedDownloadUrl,
   statObject,
 } from '@docket/storage';
 import { getOrCreateClient } from '@/lib/intake/auth';
@@ -168,6 +169,13 @@ export async function confirmUpload(input: {
   filename: string;
   mimeType: string;
   sizeBytes: number;
+  /**
+   * Optional expected-doc slot id (e.g., 'identity-dl-front').
+   * Persisted on the documents row so the finalize worker can compose
+   * a slot-aware filename and the docs overview can look up which doc
+   * fills which slot without kind-based heuristics.
+   */
+  slotId?: string;
 }): Promise<ConfirmUploadResult> {
   console.log('[confirmUpload] start key=', input.storageKey);
 
@@ -215,6 +223,7 @@ export async function confirmUpload(input: {
           mimeType: input.mimeType,
           sizeBytes: stat.sizeBytes, // trust R2's reported size, not the client's
           parsePhase: 'uploaded',
+          slotId: input.slotId ?? null,
         })
         .returning({ id: schema.documents.id });
 
@@ -233,6 +242,7 @@ export async function confirmUpload(input: {
           originalFilename: input.filename,
           mimeType: input.mimeType,
           sizeBytes: stat.sizeBytes,
+          slotId: input.slotId ?? null,
         },
         toolOutput: { documentId: row.id },
         latencyMs: 0,
@@ -422,13 +432,6 @@ export type AcceptDocClassificationInput = {
   docKindOverride?: string;
   /** Override the AI-extracted fields. */
   extractedFieldsOverride?: Record<string, unknown>;
-  /**
-   * Override the AI's suggested filename. The finalize worker uses
-   * this when the user edited the filename in the verification card.
-   * resolveFinalFilename in @docket/document-processing handles
-   * sanitization + .pdf extension.
-   */
-  filenameOverride?: string;
 };
 
 export type AcceptDocClassificationResult =
@@ -453,11 +456,10 @@ export async function acceptDocClassification(
       if (input.extractedFieldsOverride) {
         update.aiExtracted = input.extractedFieldsOverride;
       }
-      if (input.filenameOverride) {
-        // Stash the user's filename edit on the row. The finalize
-        // worker reads this column and prefers it over the AI suggestion.
-        update.finalFilename = input.filenameOverride;
-      }
+      // Filename composition is fully server-owned: finalize-document
+      // reads slot_id + intake.personal.fullName + AI suggestion and
+      // builds the canonical PDF name. The user never sees or edits
+      // the filename.
 
       const updateResult = await db
         .update(schema.documents)
@@ -490,7 +492,6 @@ export async function acceptDocClassification(
           documentId: input.documentId,
           docKindOverride: input.docKindOverride ?? null,
           edited: input.extractedFieldsOverride != null,
-          filenameOverride: input.filenameOverride ?? null,
         },
         toolOutput: { ok: true },
         latencyMs: 0,
@@ -540,6 +541,67 @@ export async function acceptDocClassification(
         error instanceof Error
           ? `Accept failed: ${error.message}`
           : 'Accept failed',
+    };
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// 5. getDocumentViewUrl — short-lived signed GET URL for the original
+//    upload, so the verification UI can render the actual photo as
+//    the "did the AI read this right?" anchor.
+//
+// Tight RLS: only returns a URL when the documents row belongs to the
+// signed-in client. URL expires in 5 min — long enough to render and
+// re-render on a slow connection, short enough that a copy-pasted
+// link goes stale fast.
+// ────────────────────────────────────────────────────────────────
+
+export type GetDocumentViewUrlResult =
+  | { ok: true; url: string; expiresAt: number }
+  | { ok: false; error: string };
+
+export async function getDocumentViewUrl(input: {
+  documentId: string;
+}): Promise<GetDocumentViewUrlResult> {
+  try {
+    const client = await getOrCreateClient();
+    if (!client) return { ok: false, error: 'Not signed in' };
+
+    const storageKey = await withTenant(asTenantId(client.tenantId), async (db) => {
+      const [doc] = await db
+        .select({
+          storageKey: schema.documents.storageKey,
+        })
+        .from(schema.documents)
+        .where(
+          and(
+            eq(schema.documents.id, input.documentId),
+            eq(schema.documents.clientId, client.clientId),
+          ),
+        )
+        .limit(1);
+      return doc?.storageKey ?? null;
+    });
+
+    if (!storageKey) {
+      return { ok: false, error: 'Document not found' };
+    }
+
+    const presigned = await getPresignedDownloadUrl({
+      storageKey,
+      ttlSeconds: 5 * 60,
+    });
+
+    return { ok: true, url: presigned.url, expiresAt: presigned.expiresAt };
+  } catch (error) {
+    console.error('[getDocumentViewUrl] CAUGHT:', error);
+    Sentry.captureException(error, { tags: { component: 'client-portal-upload' } });
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? `View URL failed: ${error.message}`
+          : 'View URL failed',
     };
   }
 }

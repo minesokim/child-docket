@@ -73,14 +73,55 @@ describe('resolveFinalFilename', () => {
     ).toBe('2024_W-2_RiversideUnified.pdf');
   });
 
-  it('replaces the AI suggestion with the user edit', () => {
+  it('prepends a sanitized name prefix', () => {
     expect(
       resolveFinalFilename({
-        suggested: '2024_W-2_RiversideUnified.pdf',
-        userEdit: '2024_W-2_RiversideSchoolDistrict.pdf',
-        fallback: 'original.png',
+        suggested: 'DriversLicense_CA_2029exp.jpg',
+        namePrefix: 'Minseo_Kim',
+        fallback: 'orig.jpg',
       }),
-    ).toBe('2024_W-2_RiversideSchoolDistrict.pdf');
+    ).toBe('Minseo_Kim_DriversLicense_CA_2029exp.pdf');
+  });
+
+  it('substitutes DriversLicense → DriversLicenseFront for front slot', () => {
+    expect(
+      resolveFinalFilename({
+        suggested: 'DriversLicense_CA_2029exp.jpg',
+        namePrefix: 'Minseo_Kim',
+        dlSide: 'front',
+        fallback: 'orig.jpg',
+      }),
+    ).toBe('Minseo_Kim_DriversLicenseFront_CA_2029exp.pdf');
+  });
+
+  it('substitutes DriversLicense → DriversLicenseBack for back slot', () => {
+    expect(
+      resolveFinalFilename({
+        suggested: 'DriversLicense_CA_2029exp.jpg',
+        namePrefix: 'Minseo_Kim',
+        dlSide: 'back',
+        fallback: 'orig.jpg',
+      }),
+    ).toBe('Minseo_Kim_DriversLicenseBack_CA_2029exp.pdf');
+  });
+
+  it('skips DL substitution when no side is bound', () => {
+    expect(
+      resolveFinalFilename({
+        suggested: 'DriversLicense_CA_2029exp.jpg',
+        fallback: 'orig.jpg',
+      }),
+    ).toBe('DriversLicense_CA_2029exp.pdf');
+  });
+
+  it('idempotent: does not double-prefix DriversLicenseFront', () => {
+    expect(
+      resolveFinalFilename({
+        suggested: 'DriversLicenseFront_CA_2029exp.jpg',
+        dlSide: 'front',
+        fallback: 'orig.jpg',
+      }),
+    ).toBe('DriversLicenseFront_CA_2029exp.pdf');
   });
 
   it('forces .pdf extension on a non-pdf suggestion', () => {
@@ -143,7 +184,8 @@ describe('resolveFinalFilename', () => {
       suggested: long,
       fallback: 'original.png',
     });
-    expect(result.length).toBeLessThanOrEqual(85);
+    // FILENAME_MAX_LEN (100) + .pdf (4) = 104 max.
+    expect(result.length).toBeLessThanOrEqual(105);
     expect(result.endsWith('.pdf')).toBe(true);
   });
 });

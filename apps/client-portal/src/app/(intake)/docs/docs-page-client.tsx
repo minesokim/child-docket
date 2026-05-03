@@ -188,57 +188,53 @@ export function DocsOverviewClient({
           {requiredSlots.length > 0 && (
             <SectionHeader t={t} label="Required" />
           )}
-          <Stack gap={6}>
-            {requiredSlots.map((s) => (
-              <SlotRow key={s.slot.id} t={t} slot={s.slot} doc={s.doc} />
+          <div>
+            {requiredSlots.map((s, i) => (
+              <SlotRow
+                key={s.slot.id}
+                t={t}
+                slot={s.slot}
+                doc={s.doc}
+                isLast={i === requiredSlots.length - 1}
+              />
             ))}
-          </Stack>
+          </div>
 
           {recommendedSlots.length > 0 && (
             <>
-              <div style={{ marginTop: 24 }}>
+              <div style={{ marginTop: 28 }}>
                 <SectionHeader t={t} label="Recommended" />
               </div>
-              <Stack gap={6}>
-                {recommendedSlots.map((s) => (
-                  <SlotRow key={s.slot.id} t={t} slot={s.slot} doc={s.doc} />
+              <div>
+                {recommendedSlots.map((s, i) => (
+                  <SlotRow
+                    key={s.slot.id}
+                    t={t}
+                    slot={s.slot}
+                    doc={s.doc}
+                    isLast={i === recommendedSlots.length - 1}
+                  />
                 ))}
-              </Stack>
+              </div>
             </>
           )}
 
-          {/* Add another */}
-          <div style={{ marginTop: 28 }}>
+          {/* Add another — quiet text link, not a dashed CTA box.
+              The slot list above already says "here's what we need";
+              this is the escape hatch, not a primary action. */}
+          <div style={{ marginTop: 28, textAlign: 'center' }}>
             <Link
               href="/docs/add"
-              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+              style={{
+                textDecoration: 'none',
+                fontFamily: t.serif,
+                fontStyle: 'italic',
+                fontSize: 14,
+                color: t.muted,
+                letterSpacing: -0.1,
+              }}
             >
-              <div
-                style={{
-                  background: t.tintAccent,
-                  border: `1px dashed ${t.border}`,
-                  borderRadius: 12,
-                  padding: '16px 18px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  transition: 'background 200ms',
-                }}
-              >
-                <div style={{ fontFamily: t.serif, fontSize: 15, color: t.ink }}>
-                  Add another document
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: t.muted,
-                    marginTop: 3,
-                    fontStyle: 'italic',
-                    fontFamily: t.serif,
-                  }}
-                >
-                  Anything else you want me to see
-                </div>
-              </div>
+              + Send something else
             </Link>
           </div>
         </div>
@@ -358,10 +354,12 @@ function SlotRow({
   t,
   slot,
   doc,
+  isLast,
 }: {
   t: Theme;
   slot: ExpectedDoc;
   doc: DocumentRow | null;
+  isLast: boolean;
 }) {
   const phase = doc?.parsePhase as DocPhase | undefined;
   const friendly =
@@ -376,26 +374,24 @@ function SlotRow({
     >
       <div
         style={{
-          background: '#fffefc',
-          borderRadius: 10,
-          padding: '14px 14px',
+          padding: '18px 4px 18px 0',
           display: 'flex',
           alignItems: 'center',
           gap: 14,
           cursor: 'pointer',
-          transition: 'background 160ms',
-          border: `1px solid ${t.borderSoft}`,
+          // Hairline divider between rows. Last row in a section drops
+          // the divider so the next section header carries the rhythm.
+          borderBottom: isLast ? 'none' : `1px solid ${t.borderSoft}`,
         }}
       >
-        <StatusIndicator t={t} phase={phase} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontFamily: t.sans,
-              fontSize: 14.5,
+              fontSize: 15,
               fontWeight: 500,
               color: t.ink,
-              letterSpacing: -0.1,
+              letterSpacing: -0.15,
               lineHeight: 1.3,
             }}
           >
@@ -404,26 +400,21 @@ function SlotRow({
           <div
             style={{
               fontFamily: t.sans,
-              fontSize: 12.5,
+              fontSize: 13,
               color: t.muted,
-              marginTop: 2,
-              lineHeight: 1.35,
+              marginTop: 3,
+              lineHeight: 1.4,
             }}
           >
             <SlotSubtitle slot={slot} doc={doc} friendly={friendly} />
           </div>
         </div>
-        <div style={{ flexShrink: 0, color: t.muted }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path
-              d="M5 3l4 4-4 4"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
+        {/* Single right-side anchor: status indicator replaces the
+            chevron entirely. Empty rows get a quiet outlined circle;
+            done rows get a sage-tinted check. The shape stays
+            consistent across states so the column reads like a
+            single column of beats, not a column of competing icons. */}
+        <StatusIndicator t={t} phase={phase} />
       </div>
     </Link>
   );
@@ -444,12 +435,19 @@ function SlotSubtitle({
     case 'classifying':
       return <>Reading…</>;
     case 'parsed':
-      return <span style={{ color: '#a13d2c' }}>Looks right? Verify →</span>;
+      return <span style={{ color: '#a13d2c' }}>Tap to verify</span>;
     case 'accepted':
     case 'finalizing':
       return <>Saving…</>;
-    case 'final':
-      return <>{friendly ?? doc.finalFilename ?? slot.title}</>;
+    case 'final': {
+      // For ID docs (DL, SSN), the friendlyDescription is the user's
+      // own name — echoing it back is redundant and reads as
+      // self-congratulating. Keep the original slot subtitle ("Front
+      // side", "For Antonio") instead.
+      const isIdDoc = slot.kind === 'drivers_license' || slot.kind === 'ssn_card';
+      if (isIdDoc) return <>{slot.subtitle}</>;
+      return <>{friendly ?? slot.subtitle}</>;
+    }
     case 'failed':
       return (
         <span style={{ color: '#a13d2c' }}>
@@ -461,42 +459,64 @@ function SlotSubtitle({
   }
 }
 
+// Status indicator — lives on the RIGHT of every row. Same circular
+// footprint across states so the right column reads as a single
+// vertical rhythm, not a parade of competing icons.
+//
+// Color story (intentional restraint):
+//   empty   → 1px outline of borderSoft, no fill.
+//             Reads as "to do" without shouting.
+//   parsed  → tint background + rust ! glyph. The only state the user
+//             needs to act on; deserves a touch more presence.
+//   in-flight → calm spinner over a pale ring.
+//   final   → SAGE-tinted background (#e7efde, light keylime) + a
+//             medium-green check stroke (#5b7a4f). Deliberately not
+//             dark forest with white check — that's an "achievement
+//             unlocked!" badge. We want "settled, done."
+//   failed  → quiet rust dot.
+//
+// Footprint: 18px (was 22px). Smaller indicator, more breathing room.
 function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }) {
-  // Empty / not started.
+  const SIZE = 18;
+  const SAGE_FILL = '#e7efde';
+  const SAGE_STROKE = '#5b7a4f';
+
+  // Empty / not started — just a hairline outline circle.
   if (!phase) {
     return (
       <div
         style={{
-          width: 22,
-          height: 22,
+          width: SIZE,
+          height: SIZE,
           borderRadius: '50%',
-          border: `1.5px solid ${t.borderSoft}`,
+          border: `1px solid ${t.borderSoft}`,
           flexShrink: 0,
-          background: '#fff',
+          background: 'transparent',
         }}
       />
     );
   }
 
-  // Final = green check.
+  // Final = sage tint + medium-green check. Calm, not stark.
   if (phase === 'final') {
     return (
       <div
         style={{
-          width: 22,
-          height: 22,
+          width: SIZE,
+          height: SIZE,
           borderRadius: '50%',
-          background: '#1f4621',
-          color: '#fff',
+          background: SAGE_FILL,
+          color: SAGE_STROKE,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
+        aria-label="Done"
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
           <path
-            d="M3 6l2 2 4-4"
+            d="M3 6.2l2 2 4-4"
             stroke="currentColor"
             strokeWidth="1.8"
             strokeLinecap="round"
@@ -507,66 +527,70 @@ function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }
     );
   }
 
-  // Parsed = amber warn (action required).
+  // Parsed = soft amber tint with rust !. Action-required state.
   if (phase === 'parsed') {
     return (
       <div
         style={{
-          width: 22,
-          height: 22,
+          width: SIZE,
+          height: SIZE,
           borderRadius: '50%',
-          background: '#fff7e8',
-          border: `1.5px solid ${t.tintAccent}`,
+          background: '#fbeede',
           color: t.rust,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontFamily: 'serif',
-          fontSize: 13,
-          fontWeight: 700,
+          fontFamily: t.serif,
+          fontSize: 11,
+          fontWeight: 600,
+          lineHeight: 1,
         }}
+        aria-label="Awaiting verification"
       >
         !
       </div>
     );
   }
 
-  // Failed = red dot.
+  // Failed = rust dot.
   if (phase === 'failed') {
     return (
       <div
         style={{
-          width: 22,
-          height: 22,
+          width: SIZE,
+          height: SIZE,
           borderRadius: '50%',
-          background: t.rust,
-          color: '#fff',
+          background: '#f5dcd0',
+          color: t.rust,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 14,
+          fontSize: 11,
           fontWeight: 700,
+          lineHeight: 1,
         }}
+        aria-label="Failed"
       >
         ×
       </div>
     );
   }
 
-  // In-progress phases = spinner.
+  // In-progress = subtle spinner over a sage ring (done-but-thinking).
   return (
     <div
       style={{
-        width: 22,
-        height: 22,
+        width: SIZE,
+        height: SIZE,
         borderRadius: '50%',
-        border: `2px solid ${t.borderSoft}`,
-        borderTopColor: t.rust,
+        border: `1.5px solid ${t.borderSoft}`,
+        borderTopColor: SAGE_STROKE,
         flexShrink: 0,
-        animation: 'doc-status-spin 800ms linear infinite',
+        animation: 'doc-status-spin 900ms linear infinite',
       }}
+      aria-label="Processing"
     >
       <style>{`
         @keyframes doc-status-spin {

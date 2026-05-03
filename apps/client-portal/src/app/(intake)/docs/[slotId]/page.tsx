@@ -49,26 +49,46 @@ export default async function DocSlotPage({
     redirect('/docs');
   }
 
-  // Find the doc currently filling this slot, if any. Walk all docs
-  // in order + match each into the first unfilled slot of its kind.
-  // Whichever doc lands in `slot.id` is "ours."
+  // Find the doc currently filling this slot.
+  //
+  // Strategy:
+  //   1. Direct slot_id match — anything uploaded from a focused
+  //      per-slot page since migration 0017 carries slot_id on the row.
+  //      Most-recent-first wins (a re-upload supersedes the old one).
+  //   2. Kind-based matchUploadToSlot fallback — for legacy rows with
+  //      slot_id = NULL (uploaded before 0017, or via the future
+  //      "Other" surface). Walk in upload order, fill slots greedily.
   const docList = await listDocuments();
   const allDocs = docList.ok ? docList.documents : [];
 
+  // Pre-claim: rows with slot_id set go straight to that slot.
   const filledSlotIds = new Set<string>();
   let matchedDoc = null;
   for (const d of allDocs) {
-    const kind = (d.classification?.docKind ?? null) as ExpectedDocKind | null;
-    if (!kind) continue;
-    const matchedSlotId = matchUploadToSlot({
-      uploadKind: kind,
-      expected,
-      filledSlotIds,
-    });
-    if (matchedSlotId) {
-      filledSlotIds.add(matchedSlotId);
-      if (matchedSlotId === slot.id) {
-        matchedDoc = d;
+    if (!d.slotId) continue;
+    if (filledSlotIds.has(d.slotId)) continue; // older duplicate
+    filledSlotIds.add(d.slotId);
+    if (d.slotId === slot.id) {
+      matchedDoc = d;
+    }
+  }
+
+  // Fallback: kind-based fill for slot_id-less rows.
+  if (!matchedDoc) {
+    for (const d of allDocs) {
+      if (d.slotId) continue;
+      const kind = (d.classification?.docKind ?? null) as ExpectedDocKind | null;
+      if (!kind) continue;
+      const matchedSlotId = matchUploadToSlot({
+        uploadKind: kind,
+        expected,
+        filledSlotIds,
+      });
+      if (matchedSlotId) {
+        filledSlotIds.add(matchedSlotId);
+        if (matchedSlotId === slot.id) {
+          matchedDoc = d;
+        }
       }
     }
   }

@@ -310,12 +310,21 @@ export const documents = pgTable(
     finalizedAt: timestamp('finalized_at', { withTimezone: true }),
     /** Whether binarization was applied. False for ID docs + PDF inputs. */
     binarized: boolean('binarized').notNull().default(false),
+    /**
+     * Bound expected-doc slot id (e.g., 'identity-dl-front',
+     * 'income-w2', 'dependent-ssn-0'). NULL for "Other" uploads with
+     * no specific slot. Drives slot-aware filename composition in the
+     * finalize worker + direct slot lookups on the docs overview.
+     * See packages/shared/src/required-docs.ts for the slot id space.
+     */
+    slotId: text('slot_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tenantIdx: index('documents_tenant_idx').on(t.tenantId),
     clientIdx: index('documents_client_idx').on(t.tenantId, t.clientId),
     parsePhaseIdx: index('documents_parse_phase_idx').on(t.tenantId, t.parsePhase),
+    slotIdx: index('documents_slot_idx').on(t.tenantId, t.clientId, t.slotId),
   }),
 );
 

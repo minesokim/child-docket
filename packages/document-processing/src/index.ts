@@ -263,39 +263,94 @@ export async function wrapImageInPdf(
 
 // ────────────────────────────────────────────────────────────────
 // Filename resolution.
-// Take the AI's suggestedFilename + sanitize + ensure .pdf extension.
+//
+// The convention:   {NamePrefix}_{ProcessedAISuggestion}.pdf
+//
+//   NamePrefix              "Minseo_Kim" (sanitized intake.personal.fullName)
+//   ProcessedAISuggestion   the classifier's suggested filename, with
+//                           DL side substitution baked in:
+//                           DriversLicense → DriversLicenseFront / Back
+//                           when the bound slot tells us which side.
+//
+// Output is ALWAYS .pdf — finalize converts every input to PDF, so
+// the filename matches the actual MIME on disk.
+//
+// Examples:
+//   suggested="DriversLicense_CA_2029exp.jpg"
+//   namePrefix="Minseo_Kim", dlSide="front"
+//   →  Minseo_Kim_DriversLicenseFront_CA_2029exp.pdf
+//
+//   suggested="2024_W-2_RiversideUnified.pdf"
+//   namePrefix="Minseo_Kim"
+//   →  Minseo_Kim_2024_W-2_RiversideUnified.pdf
+//
+//   no namePrefix, no suggestion → fallback original + .pdf
 // ────────────────────────────────────────────────────────────────
 
 const FILENAME_SAFE_RE = /[^A-Za-z0-9._-]+/g;
-const FILENAME_MAX_LEN = 80;
+const FILENAME_MAX_LEN = 100;
 
 export function resolveFinalFilename(opts: {
   /** The classifier's suggested filename. */
   suggested: string;
-  /** Optional override from the user during verification. */
-  userEdit?: string;
-  /** Fallback if both are bad — use original filename + .pdf */
+  /**
+   * Sanitized name prefix from intake (e.g., "Minseo_Kim"). When
+   * present, prepended to the suggestion so each doc carries the
+   * taxpayer's name. Pass undefined to skip the prefix.
+   */
+  namePrefix?: string;
+  /**
+   * For driver's-license slots: which side of the card. The function
+   * rewrites "DriversLicense" → "DriversLicenseFront" or
+   * "DriversLicenseBack" inside the suggestion so the filename
+   * differentiates the two slots.
+   */
+  dlSide?: 'front' | 'back';
+  /** Fallback if the suggestion is empty — use original filename + .pdf */
   fallback: string;
 }): string {
-  const candidate = (opts.userEdit?.trim() || opts.suggested?.trim() || opts.fallback).trim();
-  // Strip any directory components first — defense vs. path traversal
-  // (e.g., `../../etc/secret.pdf` → `secret.pdf`).
-  const basename = candidate.split(/[\/\\]/).pop() ?? candidate;
-  const sanitized = basename.replace(FILENAME_SAFE_RE, '_').replace(/^_+|_+$/g, '');
-  const trimmed =
-    sanitized.length > FILENAME_MAX_LEN ? sanitized.slice(0, FILENAME_MAX_LEN) : sanitized;
-  if (!trimmed) return 'Document.pdf';
-  // Ensure .pdf extension. Strip whatever extension exists, append .pdf.
-  // Also strip trailing underscores from the stem (e.g., "final_.pdf"
-  // came from sanitizing "(final).pdf" and looks ugly).
-  const lastDot = trimmed.lastIndexOf('.');
+  // ─── Stage 1: pick the suggestion source + path-traversal guard ───
+  const rawCandidate = (opts.suggested?.trim() || opts.fallback).trim();
+  const basename = rawCandidate.split(/[\/\\]/).pop() ?? rawCandidate;
+
+  // ─── Stage 2: strip the existing extension off so we can rewrite it ───
+  const lastDot = basename.lastIndexOf('.');
   let stem: string;
-  if (lastDot > 0 && lastDot > trimmed.length - 6) {
-    stem = trimmed.slice(0, lastDot);
+  if (lastDot > 0 && lastDot > basename.length - 6) {
+    stem = basename.slice(0, lastDot);
   } else {
-    stem = trimmed;
+    stem = basename;
+  }
+
+  // ─── Stage 3: DL side substitution (BEFORE sanitization so the
+  //              token boundary is preserved) ───
+  if (opts.dlSide === 'front') {
+    stem = stem.replace(/DriversLicense(?!Front|Back)/gi, 'DriversLicenseFront');
+  } else if (opts.dlSide === 'back') {
+    stem = stem.replace(/DriversLicense(?!Front|Back)/gi, 'DriversLicenseBack');
+  }
+
+  // ─── Stage 4: sanitize the stem ───
+  stem = stem.replace(FILENAME_SAFE_RE, '_').replace(/^_+|_+$/g, '');
+
+  // ─── Stage 5: prepend the name prefix ───
+  if (opts.namePrefix && opts.namePrefix.trim()) {
+    const cleanPrefix = opts.namePrefix
+      .replace(FILENAME_SAFE_RE, '_')
+      .replace(/^_+|_+$/g, '');
+    if (cleanPrefix && stem) {
+      stem = `${cleanPrefix}_${stem}`;
+    } else if (cleanPrefix) {
+      stem = cleanPrefix;
+    }
+  }
+
+  // ─── Stage 6: length clamp + cleanup ───
+  if (stem.length > FILENAME_MAX_LEN) {
+    stem = stem.slice(0, FILENAME_MAX_LEN);
   }
   stem = stem.replace(/_+$/, '');
   if (!stem) return 'Document.pdf';
+
   return stem + '.pdf';
 }
