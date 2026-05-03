@@ -2,27 +2,26 @@
 
 // Documents panel for the per-client detail page.
 //
-// Lists every file the client has uploaded:
+// Lists every file the client has uploaded (filtered to non-merged
+// rows; DL front rows that got merged into the back's 2-page PDF
+// are hidden — the merged composite is what shows up here):
 //   - Filename: prefers finalFilename when the row has reached the
 //     'final' phase (i.e., the finalize-document worker ran the
-//     binarize/PDF/rename pipeline). Falls back to originalFilename
-//     when the row is still mid-pipeline.
-//   - Click-to-open opens a 5-min signed R2 GET URL in a new tab. By
-//     default it serves the FINAL processed PDF. A small "view raw"
-//     link below the row serves the original upload (debugging
-//     mismatches between AI classification and what's on the page).
+//     binarize/PDF pipeline). Falls back to originalFilename when
+//     mid-pipeline.
+//   - Click opens an in-page DocumentPreview overlay. NOT a new tab,
+//     NOT a download — the browser renders the PDF inline via iframe.
+//     Inside the overlay: toggle Processed ↔ Raw, explicit Download.
 //   - Per-row metadata: classification + confidence, file size,
-//     upload time, and a phase pill so Antonio can tell which docs
-//     are still mid-finalize.
+//     upload time, phase pill.
 //
-// Read in the parent Server Component via withTenant so RLS scopes
-// the query to Antonio's tenant. Click handlers route through the
-// 'use server' action `getCommandRoomDocumentViewUrl`, also tenant-
-// scoped + role-gated.
+// The preview overlay is mounted ONCE at the section level and
+// driven via a `previewTarget` state. Each row sets the target on
+// click; the overlay opens; click outside / ESC / X-button clears it.
 
 import * as React from 'react';
 import type { Theme } from '@docket/ui';
-import { getCommandRoomDocumentViewUrl } from '@/lib/clients/get-document-view-url';
+import { DocumentPreview, type PreviewTarget } from './document-preview';
 
 type DocumentRow = {
   id: string;
@@ -48,6 +47,8 @@ export function DocumentsSection({
   t: Theme;
   documents: DocumentRow[];
 }) {
+  const [previewTarget, setPreviewTarget] = React.useState<PreviewTarget | null>(null);
+
   if (documents.length === 0) {
     return (
       <div
@@ -67,25 +68,45 @@ export function DocumentsSection({
   }
 
   return (
-    <div
-      style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 14,
-        padding: '14px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-      }}
-    >
-      {documents.map((doc) => (
-        <DocumentItem key={doc.id} t={t} doc={doc} />
-      ))}
-    </div>
+    <>
+      <div
+        style={{
+          background: t.card,
+          border: `1px solid ${t.border}`,
+          borderRadius: 14,
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+        }}
+      >
+        {documents.map((doc) => (
+          <DocumentItem
+            key={doc.id}
+            t={t}
+            doc={doc}
+            onPreview={setPreviewTarget}
+          />
+        ))}
+      </div>
+      <DocumentPreview
+        t={t}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
+    </>
   );
 }
 
-function DocumentItem({ t, doc }: { t: Theme; doc: DocumentRow }) {
+function DocumentItem({
+  t,
+  doc,
+  onPreview,
+}: {
+  t: Theme;
+  doc: DocumentRow;
+  onPreview: (target: PreviewTarget) => void;
+}) {
   const isFinal = doc.parsePhase === 'final' && !!doc.finalStorageKey;
   const displayName = isFinal && doc.finalFilename
     ? doc.finalFilename
@@ -94,28 +115,12 @@ function DocumentItem({ t, doc }: { t: Theme; doc: DocumentRow }) {
     ? doc.finalSizeBytes
     : doc.sizeBytes;
 
-  const [opening, setOpening] = React.useState<'final' | 'original' | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const open = async (mode: 'auto' | 'original') => {
-    setOpening(mode === 'original' ? 'original' : 'final');
-    setError(null);
-    try {
-      const result = await getCommandRoomDocumentViewUrl({
-        documentId: doc.id,
-        mode,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      // Open in a new tab. Browsers render PDFs inline; images render too.
-      window.open(result.url, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not open');
-    } finally {
-      setOpening(null);
-    }
+  const handleOpen = () => {
+    onPreview({
+      documentId: doc.id,
+      source: 'auto',
+      headerFilename: displayName,
+    });
   };
 
   return (
@@ -132,14 +137,13 @@ function DocumentItem({ t, doc }: { t: Theme; doc: DocumentRow }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <button
           type="button"
-          onClick={() => open('auto')}
-          disabled={opening !== null}
+          onClick={handleOpen}
           style={{
             background: 'transparent',
             border: 'none',
             padding: 0,
             margin: 0,
-            cursor: opening !== null ? 'wait' : 'pointer',
+            cursor: 'pointer',
             fontSize: 14,
             color: t.ink,
             textAlign: 'left',
@@ -154,9 +158,9 @@ function DocumentItem({ t, doc }: { t: Theme; doc: DocumentRow }) {
             fontFamily: isFinal ? t.mono : t.sans,
             letterSpacing: isFinal ? 0.2 : 0,
           }}
-          title={isFinal ? 'Open processed PDF' : 'Open original upload'}
+          title="Preview document"
         >
-          {opening === 'final' ? 'Opening…' : displayName}
+          {displayName}
         </button>
         <div
           style={{
@@ -191,50 +195,12 @@ function DocumentItem({ t, doc }: { t: Theme; doc: DocumentRow }) {
                 opacity: 0.85,
                 letterSpacing: 0.5,
               }}
-              title="Tax-doc binarization (1-bit B&W) was applied"
+              title="Otsu-binarized 1-bit B&W"
             >
               binarized
             </span>
           )}
-          {isFinal && !doc.binarized && (
-            <span
-              style={{
-                opacity: 0.6,
-                letterSpacing: 0.5,
-              }}
-              title="ID doc — color preserved (no binarization)"
-            >
-              color preserved
-            </span>
-          )}
-          {isFinal && (
-            <button
-              type="button"
-              onClick={() => open('original')}
-              disabled={opening !== null}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                cursor: opening !== null ? 'wait' : 'pointer',
-                color: t.muted,
-                opacity: 0.7,
-                fontFamily: t.mono,
-                fontSize: 10.5,
-                letterSpacing: 0.4,
-                textDecoration: 'underline',
-                textUnderlineOffset: 2,
-              }}
-              title="Open the raw upload"
-            >
-              {opening === 'original' ? 'opening…' : 'view raw'}
-            </button>
-          )}
         </div>
-        {error && (
-          <div style={{ fontSize: 11, color: t.rust, marginTop: 4 }}>{error}</div>
-        )}
       </div>
       <div style={{ textAlign: 'right' }}>
         <ParsePhasePill t={t} phase={doc.parsePhase} />

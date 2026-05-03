@@ -218,24 +218,39 @@ export type PresignedDownloadResult = {
  * Generate a presigned GET URL for serving a document back to a user.
  * Returns a short-lived URL the browser can fetch directly. The server
  * never proxies file bytes — keeps Vercel functions out of the data path.
+ *
+ * The Content-Disposition header drives browser behavior:
+ *   - `inline` (default): the browser RENDERS the file in place. PDFs
+ *     show in the iframe / new-tab viewer; images render as `<img>`.
+ *   - `attachment`: the browser DOWNLOADS the file with the suggested
+ *     filename. Used by explicit "Download" buttons.
+ *
+ * Pass `disposition: 'attachment'` + `downloadFilename` to force
+ * download. Otherwise leave both undefined and the URL inlines.
  */
 export async function getPresignedDownloadUrl(opts: {
   storageKey: string;
   ttlSeconds?: number;
-  /** If set, browser sees this as the suggested filename on download. */
+  /** 'inline' (default) renders in browser; 'attachment' triggers download. */
+  disposition?: 'inline' | 'attachment';
+  /** Suggested filename when disposition === 'attachment'. Ignored otherwise. */
   downloadFilename?: string;
 }): Promise<PresignedDownloadResult> {
   const cfg = getR2Config();
   const ttl = opts.ttlSeconds ?? DEFAULT_DOWNLOAD_TTL_SEC;
 
+  let contentDisposition: string | undefined;
+  if (opts.disposition === 'attachment') {
+    const safe = opts.downloadFilename
+      ? sanitizeFilename(opts.downloadFilename)
+      : 'document';
+    contentDisposition = `attachment; filename="${safe}"`;
+  }
+
   const cmd = new GetObjectCommand({
     Bucket: cfg.bucket,
     Key: opts.storageKey,
-    ...(opts.downloadFilename
-      ? {
-          ResponseContentDisposition: `attachment; filename="${sanitizeFilename(opts.downloadFilename)}"`,
-        }
-      : {}),
+    ...(contentDisposition ? { ResponseContentDisposition: contentDisposition } : {}),
   });
 
   const url = await getSignedUrl(getClient(), cmd, { expiresIn: ttl });

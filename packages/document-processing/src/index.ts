@@ -9,27 +9,24 @@
 // streaming-friendly. Used for grayscale + auto-contrast + Otsu threshold.
 //
 // PDF-LIB — pure-JS PDF builder. No native deps. Used for wrapping the
-// binarized raster in a single-page PDF (or copying a clean PDF input).
+// binarized raster in a single- or multi-page PDF (or copying a clean
+// PDF input).
 //
 // CONVENTIONS
 //   - Final output is always a PDF, regardless of input format.
-//   - Tax docs (W-2, 1099-*, 1098-*, 1095-*, K-1, statements) get
-//     binarized → 1-bit B&W. Standard "scanner output" look.
-//   - ID docs (drivers_license, ssn_card) skip binarization — face
-//     photos + holograms need color. Still wrapped in PDF.
+//   - All image inputs are binarized → 1-bit B&W "scanner output" look,
+//     including IDs. The face-photo on a DL becomes a high-contrast
+//     thumbnail, but the practitioner-relevant data (DL number, name,
+//     DOB, expiry, barcode pattern) is sharper than the original phone
+//     camera shot. Color preservation is available via the "view raw"
+//     download in command-room when the original photo is needed.
 //   - PDF inputs are pass-through copies. Don't degrade clean inputs.
+//   - Multi-page support (processMultiPage) handles DL front+back
+//     merging — the two raw images get binarized independently, then
+//     embedded as page 1 and page 2 of the same PDF.
 
 import sharp from 'sharp';
 import { PDFDocument, PageSizes } from 'pdf-lib';
-
-// Doc kinds that should NOT be binarized — IDs need color visibility
-// (face photos, holograms, photo-coded fields). Mirror of the keys in
-// services/workers/agents/doc-classifier.ts; kept as a string array
-// here so this package stays decoupled from the agent module.
-const SKIP_BINARIZATION_KINDS: ReadonlySet<string> = new Set([
-  'drivers_license',
-  'ssn_card',
-]);
 
 export type ProcessOptions = {
   /** Raw bytes from R2 — original upload. */
@@ -54,9 +51,9 @@ export type ProcessResult = {
  * buffer ready to upload to R2 at the document's final_storage_key.
  *
  * Branching:
- *   - PDF input  → pass-through (no re-encoding). Don't degrade clean inputs.
- *   - ID kind    → grayscale + light contrast + PDF. Color-preserving lite.
- *   - Tax kind   → grayscale + normalize + Otsu binarize → 1-bit PDF.
+ *   - PDF input → pass-through (no re-encoding). Don't degrade clean inputs.
+ *   - Image (any kind, including IDs) → grayscale + normalize + Otsu
+ *     binarize → 1-bit PDF.
  */
 export async function processDocument(opts: ProcessOptions): Promise<ProcessResult> {
   // PDF input — pass through. The user uploaded a clean PDF (downloaded
@@ -70,19 +67,54 @@ export async function processDocument(opts: ProcessOptions): Promise<ProcessResu
     };
   }
 
-  // ID documents — preserve color. Just convert to PDF for consistency.
-  if (SKIP_BINARIZATION_KINDS.has(opts.docKind)) {
-    const pdfBytes = await wrapImageInPdf(opts.input, opts.inputMimeType, false);
-    return {
-      pdf: pdfBytes,
-      sizeBytes: pdfBytes.length,
-      binarized: false,
-    };
-  }
-
-  // Tax-doc default: grayscale + normalize + Otsu binarize.
+  // All image inputs (W-2s, 1099s, IDs, statements, receipts) →
+  // grayscale + normalize + Otsu binarize. Single-page PDF.
   const binarizedPng = await binarize(opts.input);
   const pdfBytes = await wrapImageInPdf(binarizedPng, 'image/png', true);
+  return {
+    pdf: pdfBytes,
+    sizeBytes: pdfBytes.length,
+    binarized: true,
+  };
+}
+
+// ────────────────────────────────────────────────────────────────
+// Multi-page composite. Today's caller: DL front + back merged
+// into a single 2-page PDF.
+//
+// Each page's raw bytes get binarized independently (so a phone
+// photo of the front and a phone photo of the back both go through
+// the full grayscale → normalize → Otsu pipeline before being
+// embedded as a PDF page). PDF inputs aren't supported here —
+// callers pass image buffers, period.
+// ────────────────────────────────────────────────────────────────
+
+export type ProcessMultiPageInput = {
+  /** Raw bytes for this page. */
+  input: Buffer;
+  /** image/png | image/jpeg | image/webp | image/gif. PDF NOT supported. */
+  inputMimeType: string;
+};
+
+export async function processMultiPage(opts: {
+  pages: ProcessMultiPageInput[];
+}): Promise<ProcessResult> {
+  if (opts.pages.length === 0) {
+    throw new Error('processMultiPage: at least one page required');
+  }
+  // Binarize each page independently — phone shots vary in lighting
+  // page-to-page, so a single Otsu threshold across all pages would
+  // wash out one or the other.
+  const binarizedPages: Buffer[] = [];
+  for (const page of opts.pages) {
+    if (page.inputMimeType === 'application/pdf') {
+      throw new Error('processMultiPage does not accept PDF inputs');
+    }
+    binarizedPages.push(await binarize(page.input));
+  }
+  const pdfBytes = await wrapImagesInPdf(
+    binarizedPages.map((bytes) => ({ bytes, mimeType: 'image/png' })),
+  );
   return {
     pdf: pdfBytes,
     sizeBytes: pdfBytes.length,
@@ -262,6 +294,42 @@ export async function wrapImageInPdf(
 }
 
 // ────────────────────────────────────────────────────────────────
+// Multi-page wrap. Each entry becomes one PDF page, scaled to fit
+// 8.5x11 letter with a 0.5" margin. Same per-page math as the
+// single-page version (wrapImageInPdf), just iterated.
+// ────────────────────────────────────────────────────────────────
+export async function wrapImagesInPdf(
+  pages: Array<{ bytes: Buffer; mimeType: string }>,
+): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const [pageW, pageH] = PageSizes.Letter;
+
+  for (const page of pages) {
+    let embeddedImage;
+    if (page.mimeType === 'image/png') {
+      embeddedImage = await pdfDoc.embedPng(page.bytes);
+    } else if (page.mimeType === 'image/jpeg') {
+      embeddedImage = await pdfDoc.embedJpg(page.bytes);
+    } else {
+      const jpegBytes = await sharp(page.bytes).jpeg({ quality: 92 }).toBuffer();
+      embeddedImage = await pdfDoc.embedJpg(jpegBytes);
+    }
+
+    const pdfPage = pdfDoc.addPage([pageW, pageH]);
+    const imgDims = embeddedImage.scaleToFit(pageW - 36, pageH - 36);
+    pdfPage.drawImage(embeddedImage, {
+      x: (pageW - imgDims.width) / 2,
+      y: (pageH - imgDims.height) / 2,
+      width: imgDims.width,
+      height: imgDims.height,
+    });
+  }
+
+  const bytes = await pdfDoc.save();
+  return Buffer.from(bytes);
+}
+
+// ────────────────────────────────────────────────────────────────
 // Filename resolution.
 //
 // The convention:   {NamePrefix}_{ProcessedAISuggestion}.pdf
@@ -300,12 +368,14 @@ export function resolveFinalFilename(opts: {
    */
   namePrefix?: string;
   /**
-   * For driver's-license slots: which side of the card. The function
-   * rewrites "DriversLicense" → "DriversLicenseFront" or
-   * "DriversLicenseBack" inside the suggestion so the filename
-   * differentiates the two slots.
+   * For driver's-license slots: which side of the card.
+   *   'front' → "DriversLicense" → "DriversLicenseFront"
+   *   'back'  → "DriversLicense" → "DriversLicenseBack"
+   *   'merged' → strip any existing Front/Back suffix; the filename
+   *              becomes the un-sided form (used when front + back
+   *              are merged into one 2-page PDF).
    */
-  dlSide?: 'front' | 'back';
+  dlSide?: 'front' | 'back' | 'merged';
   /** Fallback if the suggestion is empty — use original filename + .pdf */
   fallback: string;
 }): string {
@@ -328,6 +398,10 @@ export function resolveFinalFilename(opts: {
     stem = stem.replace(/DriversLicense(?!Front|Back)/gi, 'DriversLicenseFront');
   } else if (opts.dlSide === 'back') {
     stem = stem.replace(/DriversLicense(?!Front|Back)/gi, 'DriversLicenseBack');
+  } else if (opts.dlSide === 'merged') {
+    // Strip any Front/Back qualifier — the merged 2-page PDF stands
+    // for the whole DL, not a side.
+    stem = stem.replace(/DriversLicense(Front|Back)/gi, 'DriversLicense');
   }
 
   // ─── Stage 4: sanitize the stem ───

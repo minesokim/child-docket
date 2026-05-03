@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
 import { decryptTree, getTenantDek } from '@docket/db';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { requireRole } from '@/lib/require-role';
 import { AppShell } from '@/components/app-shell';
 import { IntakeSummary } from '@/components/intake-summary';
@@ -107,10 +107,20 @@ export default async function ClientDetailPage({ params }: PageProps) {
       };
     }
 
+    // Filter out rows that have been merged into a composite (today:
+    // DL front merged into back's 2-page PDF). Those rows still hold
+    // their raw upload for "view raw" debug, but they shouldn't show
+    // up as standalone entries in the listing — the composite row is
+    // what Antonio cares about.
     const documents = await db
       .select()
       .from(schema.documents)
-      .where(eq(schema.documents.clientId, id))
+      .where(
+        and(
+          eq(schema.documents.clientId, id),
+          isNull(schema.documents.mergedIntoDocumentId),
+        ),
+      )
       .orderBy(desc(schema.documents.createdAt));
 
     const signatures = await db

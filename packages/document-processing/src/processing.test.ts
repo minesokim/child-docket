@@ -124,6 +124,28 @@ describe('resolveFinalFilename', () => {
     ).toBe('DriversLicenseFront_CA_2029exp.pdf');
   });
 
+  it("'merged' DL side strips Front qualifier from suggestion", () => {
+    expect(
+      resolveFinalFilename({
+        suggested: 'DriversLicenseFront_CA_2029exp.jpg',
+        namePrefix: 'Minseo_Kim',
+        dlSide: 'merged',
+        fallback: 'orig.jpg',
+      }),
+    ).toBe('Minseo_Kim_DriversLicense_CA_2029exp.pdf');
+  });
+
+  it("'merged' DL side strips Back qualifier from suggestion", () => {
+    expect(
+      resolveFinalFilename({
+        suggested: 'DriversLicenseBack_CA_2029exp.jpg',
+        namePrefix: 'Minseo_Kim',
+        dlSide: 'merged',
+        fallback: 'orig.jpg',
+      }),
+    ).toBe('Minseo_Kim_DriversLicense_CA_2029exp.pdf');
+  });
+
   it('forces .pdf extension on a non-pdf suggestion', () => {
     expect(
       resolveFinalFilename({

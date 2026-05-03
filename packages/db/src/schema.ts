@@ -318,6 +318,14 @@ export const documents = pgTable(
      * See packages/shared/src/required-docs.ts for the slot id space.
      */
     slotId: text('slot_id'),
+    /**
+     * When set, this row was consumed into a multi-page composite
+     * (DL front merged into the back's 2-page PDF). The composite
+     * row carries the merged final_storage_key + final_filename;
+     * this row's raw upload still exists for "view raw" but is
+     * hidden from doc listings.
+     */
+    mergedIntoDocumentId: uuid('merged_into_document_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
@@ -325,6 +333,7 @@ export const documents = pgTable(
     clientIdx: index('documents_client_idx').on(t.tenantId, t.clientId),
     parsePhaseIdx: index('documents_parse_phase_idx').on(t.tenantId, t.parsePhase),
     slotIdx: index('documents_slot_idx').on(t.tenantId, t.clientId, t.slotId),
+    mergedIntoIdx: index('documents_merged_into_idx').on(t.mergedIntoDocumentId),
   }),
 );
 
