@@ -391,21 +391,23 @@ function SlotRow({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontFamily: t.serif,
-              fontSize: 15.5,
+              fontFamily: t.sans,
+              fontSize: 14.5,
+              fontWeight: 500,
               color: t.ink,
-              letterSpacing: -0.2,
-              lineHeight: 1.25,
+              letterSpacing: -0.1,
+              lineHeight: 1.3,
             }}
           >
             {slot.title}
           </div>
           <div
             style={{
+              fontFamily: t.sans,
               fontSize: 12.5,
               color: t.muted,
               marginTop: 2,
-              lineHeight: 1.3,
+              lineHeight: 1.35,
             }}
           >
             <SlotSubtitle slot={slot} doc={doc} friendly={friendly} />

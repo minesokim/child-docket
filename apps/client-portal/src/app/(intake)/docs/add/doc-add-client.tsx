@@ -46,11 +46,24 @@ export function DocAddClient() {
 
   const onFileChosen = async (file: File) => {
     setState({ phase: 'uploading', uploadProgress: 0, errorMessage: null });
-    const preflight = await requestUploadUrl({
-      filename: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      sizeBytes: file.size,
-    });
+
+    let preflight;
+    try {
+      preflight = await requestUploadUrl({
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      });
+    } catch (err) {
+      console.error('[onFileChosen] requestUploadUrl threw:', err);
+      setState({
+        phase: 'failed',
+        uploadProgress: 0,
+        errorMessage:
+          'Could not start the upload. Check your connection and try again.',
+      });
+      return;
+    }
     if (!preflight.ok) {
       setState({ phase: 'failed', uploadProgress: 0, errorMessage: preflight.error });
       return;
@@ -65,12 +78,24 @@ export function DocAddClient() {
       setState({ phase: 'failed', uploadProgress: 0, errorMessage: putOk.error });
       return;
     }
-    const confirmed = await confirmUpload({
-      storageKey: preflight.storageKey,
-      filename: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      sizeBytes: file.size,
-    });
+    let confirmed;
+    try {
+      confirmed = await confirmUpload({
+        storageKey: preflight.storageKey,
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      });
+    } catch (err) {
+      console.error('[onFileChosen] confirmUpload threw:', err);
+      setState({
+        phase: 'failed',
+        uploadProgress: 0,
+        errorMessage:
+          'Upload finished but we could not register it. Try again in a moment.',
+      });
+      return;
+    }
     if (!confirmed.ok) {
       setState({ phase: 'failed', uploadProgress: 0, errorMessage: confirmed.error });
       return;
@@ -370,6 +395,10 @@ function FilePickerButton({
   );
 }
 
+// Hard cutoff for the browser PUT to R2. See doc-slot-client.tsx for
+// rationale — same value, same diagnostic shape.
+const PUT_TIMEOUT_MS = 90_000;
+
 async function putWithProgress(
   url: string,
   headers: Record<string, string>,
@@ -379,6 +408,7 @@ async function putWithProgress(
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
+    xhr.timeout = PUT_TIMEOUT_MS;
     for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
@@ -388,12 +418,25 @@ async function putWithProgress(
         onProgress(100);
         resolve({ ok: true });
       } else {
-        resolve({ ok: false, error: `Upload failed (${xhr.status}). Tap to retry.` });
+        console.error('[putWithProgress] PUT failed status=', xhr.status, 'body=', xhr.responseText);
+        resolve({
+          ok: false,
+          error: `Upload failed (${xhr.status}). If this keeps happening, the storage isn't set up.`,
+        });
       }
     };
-    xhr.onerror = () =>
-      resolve({ ok: false, error: 'Upload failed — network error.' });
-    xhr.ontimeout = () => resolve({ ok: false, error: 'Upload timed out.' });
+    xhr.onerror = () => {
+      console.error('[putWithProgress] PUT network error — likely CORS, DNS, or offline.');
+      resolve({
+        ok: false,
+        error:
+          'Upload failed — network error. The storage CORS may not be configured.',
+      });
+    };
+    xhr.ontimeout = () => {
+      console.error('[putWithProgress] PUT timed out after', PUT_TIMEOUT_MS, 'ms');
+      resolve({ ok: false, error: 'Upload timed out. Check your connection.' });
+    };
     xhr.send(file);
   });
 }

@@ -162,6 +162,9 @@ export function DocSlotClient({
   );
 
   // ─── Upload flow ───
+  // Each server action is try/catch'd so a 504 / network drop surfaces
+  // a real failure state instead of leaving the UI spinning. The
+  // browser-PUT step has its own xhr.timeout in putWithProgress.
   const onFileChosen = async (file: File) => {
     setState((prev) => ({
       ...prev,
@@ -174,11 +177,23 @@ export function DocSlotClient({
       errorMessage: null,
     }));
 
-    const preflight = await requestUploadUrl({
-      filename: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      sizeBytes: file.size,
-    });
+    let preflight;
+    try {
+      preflight = await requestUploadUrl({
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      });
+    } catch (err) {
+      console.error('[onFileChosen] requestUploadUrl threw:', err);
+      setState((prev) => ({
+        ...prev,
+        phase: 'failed',
+        errorMessage:
+          'Could not start the upload. Check your connection and try again.',
+      }));
+      return;
+    }
     if (!preflight.ok) {
       setState((prev) => ({ ...prev, phase: 'failed', errorMessage: preflight.error }));
       return;
@@ -195,12 +210,24 @@ export function DocSlotClient({
       return;
     }
 
-    const confirmed = await confirmUpload({
-      storageKey: preflight.storageKey,
-      filename: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      sizeBytes: file.size,
-    });
+    let confirmed;
+    try {
+      confirmed = await confirmUpload({
+        storageKey: preflight.storageKey,
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      });
+    } catch (err) {
+      console.error('[onFileChosen] confirmUpload threw:', err);
+      setState((prev) => ({
+        ...prev,
+        phase: 'failed',
+        errorMessage:
+          'Upload finished but we could not register it. Try again in a moment.',
+      }));
+      return;
+    }
     if (!confirmed.ok) {
       setState((prev) => ({ ...prev, phase: 'failed', errorMessage: confirmed.error }));
       return;
@@ -868,6 +895,14 @@ function FilePickerButton({
 // Helpers.
 // ────────────────────────────────────────────────────────────────
 
+// Hard cutoff for the browser PUT to R2. Without this, a hung network
+// connection (R2 endpoint unreachable, CORS preflight stalled, ISP
+// problem) leaves the upload spinning forever — there's no XHR-level
+// default timeout. 90s is generous enough for a 25MB file on a slow
+// mobile connection (~280 KB/s), tight enough that real failures
+// surface within a couple minutes instead of indefinitely.
+const PUT_TIMEOUT_MS = 90_000;
+
 async function putWithProgress(
   url: string,
   headers: Record<string, string>,
@@ -877,6 +912,7 @@ async function putWithProgress(
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
+    xhr.timeout = PUT_TIMEOUT_MS;
     for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
@@ -886,15 +922,32 @@ async function putWithProgress(
         onProgress(100);
         resolve({ ok: true });
       } else {
+        // Surface the response body when present — R2 error responses
+        // often include a useful XML message ("AccessDenied", "NoSuchBucket",
+        // etc.) that points at the misconfiguration immediately.
+        console.error('[putWithProgress] PUT failed status=', xhr.status, 'body=', xhr.responseText);
         resolve({
           ok: false,
-          error: `Upload failed (${xhr.status}). Tap to retry.`,
+          error: `Upload failed (${xhr.status}). Tap to retry. If this keeps happening, the storage isn't set up — let your preparer know.`,
         });
       }
     };
-    xhr.onerror = () =>
-      resolve({ ok: false, error: 'Upload failed — network error.' });
-    xhr.ontimeout = () => resolve({ ok: false, error: 'Upload timed out.' });
+    xhr.onerror = () => {
+      console.error('[putWithProgress] PUT network error — likely CORS, DNS, or offline.');
+      resolve({
+        ok: false,
+        error:
+          'Upload failed — network error. This usually means the storage CORS isn\'t configured. Let your preparer know.',
+      });
+    };
+    xhr.ontimeout = () => {
+      console.error('[putWithProgress] PUT timed out after', PUT_TIMEOUT_MS, 'ms');
+      resolve({
+        ok: false,
+        error:
+          'Upload timed out. Check your connection and try again.',
+      });
+    };
     xhr.send(file);
   });
 }
