@@ -72,6 +72,20 @@ function getClient(): S3Client {
       accessKeyId: cfg.accessKeyId,
       secretAccessKey: cfg.secretAccessKey,
     },
+    // ─── Path-style bucket addressing for R2 presigned URLs ───
+    // R2 supports both virtual-hosted-style (bucket.host/key) and
+    // path-style (host/bucket/key) for direct API calls. But for
+    // PRESIGNED URLs specifically, virtual-hosted produces signatures
+    // R2 rejects with 403 — the canonical-URI computation differs
+    // between the SDK's signer and R2's validator. Path-style works
+    // identically for both. Direct SDK calls happen to auto-fall-back
+    // to path-style for R2's endpoint pattern, which is why direct
+    // PUTs work even with forcePathStyle: false. Setting it true
+    // makes presigned URLs use path-style too. The diagnostic script
+    // (scripts/test-r2.ts) confirmed credentials are valid; the only
+    // failing path was the browser's PUT to a virtual-hosted
+    // presigned URL.
+    forcePathStyle: true,
     // ─── Checksum compatibility with R2 ───
     // Starting in @aws-sdk/client-s3 v3.726+, "flexible checksums" are
     // ON by default. The SDK bakes a placeholder x-amz-checksum-crc32
