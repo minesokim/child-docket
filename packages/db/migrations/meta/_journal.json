@@ -92,6 +92,13 @@
       "when": 1777840000000,
       "tag": "0012_actions_allow_fk_cascade_null",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777850000000,
+      "tag": "0013_tenant_credentials",
+      "breakpoints": true
     }
   ]
 }

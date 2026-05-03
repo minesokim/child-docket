@@ -529,6 +529,50 @@ export const intakeResponses = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// Tenant credentials — per-firm secrets vault.
+//
+// One row per (tenant, integration kind). Each row's `data` column is
+// an EncryptedMarker ({__enc: base64}) encrypted with that tenant's
+// DEK — same key that protects SSN/EIN/bank in intake_responses.
+//
+// Why per-tenant + DEK-encrypted (not env vars)?
+//   - Vercel env vars are global per deploy. Per-firm secrets in env
+//     would force a snowflake-per-customer pattern (CLAUDE.md §16).
+//   - DEK encryption means even cross-tenant DB access can't decrypt
+//     another firm's secrets at the crypto layer.
+//
+// The same table holds Twilio + Square + DocuSign + Gmail going
+// forward; the `kind` column discriminates. Helpers in
+// packages/db/src/tenant-credentials.ts encrypt/decrypt + validate
+// the per-kind shape on read.
+// ────────────────────────────────────────────────────────────────
+export const tenantCredentials = pgTable(
+  'tenant_credentials',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+    // Free-text discriminator. App-side validation enforces the
+    // known set ('twilio' | 'square' | 'docusign' | 'gmail' | ...).
+    // Free-text on purpose so we don't need a migration to add the
+    // next integration.
+    kind: text('kind').notNull(),
+    // EncryptedMarker shape: {__enc: <base64-iv-tag-ciphertext>}.
+    // Decrypts to a JSON object whose shape varies per kind. See
+    // tenant-credentials.ts for the per-kind shapes.
+    data: jsonb('data').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    // Independent of updatedAt — metadata-only writes shouldn't reset
+    // the rotation clock. Set explicitly when secrets actually change.
+    rotatedAt: timestamp('rotated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('tenant_credentials_tenant_idx').on(t.tenantId),
+    tenantKindUniq: uniqueIndex('tenant_credentials_tenant_kind_uniq').on(t.tenantId, t.kind),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────
 // Notice responses — IRS notices and the drafted/sent responses.
 // Powers the irs_notice issue type. Antonio uploads a notice or it arrives via
 // IRS Solutions API (when key lands); AI classifies + drafts response.

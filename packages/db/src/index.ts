@@ -38,3 +38,17 @@ export {
   invalidateTenantDek,
   clearDekCache,
 } from './dek-cache.js';
+
+// Per-tenant credential vault — Twilio / Square / DocuSign / Gmail
+// secrets, encrypted with the tenant's DEK. See tenant-credentials.ts
+// for the per-kind shapes + threat model.
+export {
+  getTenantCredential,
+  setTenantCredential,
+  deleteTenantCredential,
+  type CredentialKind,
+  type TwilioCredentials,
+  type SquareCredentials,
+  type DocusignCredentials,
+  type GmailCredentials,
+} from './tenant-credentials.js';

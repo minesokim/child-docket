@@ -10,6 +10,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { buildTheme } from '@docket/ui';
 import { createClient } from '@/lib/clients/create';
+import { sendInviteSms } from '@/lib/clients/send-invite-sms';
 
 const COUNTRIES: Array<{ code: string; name: string; dial: string; flag: string }> = [
   { code: 'US', name: 'United States', dial: '+1', flag: '🇺🇸' },
@@ -325,13 +326,41 @@ function SuccessCard({
     }
   };
 
-  // Send via SMS (Twilio) — not yet wired. The button shape stays
-  // in the UI so the eventual flow is obvious; clicking right now
-  // just shows the "wired soon" hint. When Twilio lands, this
-  // becomes a server action call to /api/sms/send-invite that POSTs
-  // to Twilio's REST API with the firm's tenant-scoped credentials
-  // (kept in the per-tenant credential vault, not the global env).
-  const SMS_ENABLED = false;
+  // Send via SMS (Twilio) — wired against the per-tenant credential
+  // vault. Server action authenticates, loads the firm's Twilio
+  // creds (encrypted with tenant DEK), POSTs to Twilio Messages
+  // API, audit-logs the send. Per-firm sender number means each
+  // firm's clients see SMS from that firm's verified number, not a
+  // shared Docket number.
+  type SmsState =
+    | { kind: 'idle' }
+    | { kind: 'sending' }
+    | { kind: 'sent'; sid: string; toMasked: string }
+    | { kind: 'error'; message: string };
+  const [smsState, setSmsState] = React.useState<SmsState>({ kind: 'idle' });
+
+  const onSendSms = async () => {
+    if (smsState.kind === 'sending' || smsState.kind === 'sent') return;
+    setSmsState({ kind: 'sending' });
+    const result = await sendInviteSms(success.clientId);
+    if (!result.ok) {
+      setSmsState({ kind: 'error', message: result.error });
+      // Auto-clear error after a beat so the user can retry.
+      setTimeout(() => {
+        setSmsState((s) => (s.kind === 'error' ? { kind: 'idle' } : s));
+      }, 6_000);
+      return;
+    }
+    setSmsState({ kind: 'sent', sid: result.sid, toMasked: result.toMasked });
+  };
+
+  const sendDisabled = smsState.kind === 'sending' || smsState.kind === 'sent';
+  const sendLabel =
+    smsState.kind === 'sending'
+      ? 'Sending…'
+      : smsState.kind === 'sent'
+        ? 'Sent ✓'
+        : 'Send via SMS';
 
   return (
     <div
@@ -483,25 +512,27 @@ function SuccessCard({
           </button>
           <button
             type="button"
-            disabled={!SMS_ENABLED}
+            onClick={onSendSms}
+            disabled={sendDisabled}
             title={
-              SMS_ENABLED
-                ? 'Send the invite SMS via Twilio'
-                : 'Twilio integration coming soon — use Copy message for now'
+              smsState.kind === 'sent'
+                ? `Twilio SID: ${smsState.sid}`
+                : 'Send the invite SMS via Twilio'
             }
             style={{
               padding: '8px 16px',
-              background: 'transparent',
-              border: `1px solid ${t.border}`,
+              background: smsState.kind === 'sent' ? '#1f4621' : 'transparent',
+              border: `1px solid ${smsState.kind === 'sent' ? '#1f4621' : t.border}`,
               borderRadius: 8,
               fontSize: 13,
-              color: t.muted,
+              color: smsState.kind === 'sent' ? '#fff' : t.ink,
               fontFamily: t.sans,
-              cursor: SMS_ENABLED ? 'pointer' : 'not-allowed',
-              opacity: SMS_ENABLED ? 1 : 0.55,
+              cursor: sendDisabled ? 'not-allowed' : 'pointer',
+              opacity: smsState.kind === 'sending' ? 0.7 : 1,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              transition: 'background 120ms, color 120ms',
             }}
           >
             <svg
@@ -517,19 +548,34 @@ function SuccessCard({
             >
               <path d="M2 4.5C2 3.67 2.67 3 3.5 3h7c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5H6l-3 2v-2H3.5c-.83 0-1.5-.67-1.5-1.5v-5z" />
             </svg>
-            Send via SMS
+            {sendLabel}
           </button>
-          {!SMS_ENABLED && (
+          {smsState.kind === 'sent' && (
             <span
               style={{
                 fontFamily: t.mono,
-                fontSize: 10,
+                fontSize: 10.5,
                 color: t.muted,
                 letterSpacing: 0.3,
                 marginLeft: 2,
               }}
+              title={`Twilio SID: ${smsState.sid}`}
             >
-              Coming soon
+              {smsState.toMasked}
+            </span>
+          )}
+          {smsState.kind === 'error' && (
+            <span
+              style={{
+                fontFamily: t.sans,
+                fontSize: 12,
+                color: t.rust,
+                marginLeft: 2,
+                maxWidth: 320,
+                lineHeight: 1.4,
+              }}
+            >
+              {smsState.message}
             </span>
           )}
         </div>
