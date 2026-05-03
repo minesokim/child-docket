@@ -244,19 +244,36 @@ export async function confirmUpload(input: {
 
     // Fire the Inngest event for classification. Outside the
     // transaction so a transient Inngest error doesn't roll back the
-    // documents row — re-firing the classify event from a CRON
-    // sweep is easy.
-    await inngest.send({
-      name: 'document/uploaded',
-      data: {
-        tenantId: asTenantId(client.tenantId),
-        clientId: asClientId(client.clientId),
-        documentId,
-        storageKey: input.storageKey,
-        originalFilename: input.filename,
-        mimeType: input.mimeType,
-      },
-    });
+    // documents row — and wrapped in try/catch so a missing
+    // INNGEST_EVENT_KEY doesn't fail the whole upload. The bytes are
+    // safely in R2 + the documents row is committed; if the event
+    // didn't send, we log + report to Sentry so a sweep job can
+    // re-fire later. From the user's perspective the upload still
+    // succeeded; the doc just stays at parse_phase='uploaded' until
+    // the worker eventually runs.
+    try {
+      await inngest.send({
+        name: 'document/uploaded',
+        data: {
+          tenantId: asTenantId(client.tenantId),
+          clientId: asClientId(client.clientId),
+          documentId,
+          storageKey: input.storageKey,
+          originalFilename: input.filename,
+          mimeType: input.mimeType,
+        },
+      });
+    } catch (eventErr) {
+      const msg = eventErr instanceof Error ? eventErr.message : String(eventErr);
+      console.error('[confirmUpload] inngest.send failed:', msg);
+      Sentry.captureException(eventErr, {
+        tags: { component: 'client-portal-upload', stage: 'inngest-send' },
+        extra: { documentId, storageKey: input.storageKey },
+      });
+      // Don't fail the upload — bytes + row are good. Worker will
+      // eventually re-process from a sweep, OR this just stays in
+      // 'uploaded' phase until Inngest is configured.
+    }
 
     console.log('[confirmUpload] documentId=', documentId);
     return { ok: true, documentId };
@@ -488,16 +505,30 @@ export async function acceptDocClassification(
     // Fire the finalize event OUTSIDE the transaction. The finalize
     // worker is responsible for running the binarize + PDF + rename
     // pipeline and updating the row to parse_phase='final'. If this
-    // event-send fails, the row stays at 'accepted' and a sweep job
-    // (later workstream) can replay events.
-    await inngest.send({
-      name: 'document/accepted',
-      data: {
-        tenantId: asTenantId(client.tenantId),
-        clientId: asClientId(client.clientId),
-        documentId: input.documentId,
-      },
-    });
+    // event-send fails, the row stays at 'accepted' (will not advance
+    // to 'final' without the worker running). Wrapped in try/catch
+    // so a missing INNGEST_EVENT_KEY doesn't fail the whole accept
+    // — the user-visible action of "I confirmed this classification"
+    // already succeeded at the DB level.
+    try {
+      await inngest.send({
+        name: 'document/accepted',
+        data: {
+          tenantId: asTenantId(client.tenantId),
+          clientId: asClientId(client.clientId),
+          documentId: input.documentId,
+        },
+      });
+    } catch (eventErr) {
+      const msg = eventErr instanceof Error ? eventErr.message : String(eventErr);
+      console.error('[acceptDocClassification] inngest.send failed:', msg);
+      Sentry.captureException(eventErr, {
+        tags: { component: 'client-portal-upload', stage: 'inngest-accept-send' },
+        extra: { documentId: input.documentId },
+      });
+      // Don't fail the accept. Doc stays at 'accepted' until Inngest
+      // runs the finalize worker; a sweep job can replay later.
+    }
 
     return { ok: true };
   } catch (error) {
