@@ -44,7 +44,7 @@ Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__*
 | Memory architecture (stolen from Practiq) | **"Memory scoped to the client."** Every action, doc, message lives on the client record — not in a chat thread. The practice ledger enforces this. |
 | Codename | Docket (final brand TBD; repo named `child-docket` to mark this as the consulting/services flywheel that becomes the platform) |
 | Founder | David Kim (legal: Minseo Kim) — `minseodavid@gmail.com` |
-| Stage | v0 scaffold complete (Apr 30, 2026). **Hard ship date: May 15, 2026** for child-product demo (15 days). Pre-revenue. Forward-deployed build for first design partner. |
+| Stage | Production OS build in flight (post-CEO-review 5/2/2026). Two apps deployed; 12 migrations applied; phone-OTP auth + RLS + per-tenant DEK encryption + multi-role + audit trail all live. **v1 launch: 7/30/2026 (12 weeks).** Antonio down-market sub-milestone: 5/30/2026 (4 weeks). Pre-revenue. Forward-deployed build for Antonio + mid-market partner #2. |
 | Repo | `C:\Users\minse\projects\docket\` (local) ↔ [github.com/minesokim/child-docket](https://github.com/minesokim/child-docket) (private) |
 | Distribution unlock | Antonio's mentor commands 1000s+ tax preparers. Get her a Docket walk-through before 5/15 demo. |
 
@@ -123,21 +123,20 @@ Single pane that shows **today** and lets the preparer act on it.
 **Mediated by AI, gated by Antonio.** The taxpayer never interacts with an autonomous AI. Every AI action is preparer-approved.
 
 Two surfaces inside the portal:
-1. **Intake (31 screens, 13-step flow)** — Login → SMS OTP → Welcome → Tutorial → Service path → Personal → State + prior year → Filing status → Spouse → Dependents → Income → Rental/SE detail → Tax questions → Deductions → Life events → Refund pref → Document upload (4 phases: empty → AI scanning → retake prompt → AI parsed → saved) → Engagement letter → §7216 consent → Schedule appt → $50 deposit → Done
-2. **Returning portal (5 tabs)** — Home · Docs · Messages · Signatures (with 8879 sign flow) · Profile, plus an AskAntonioChat overlay
+1. **Intake (38 routes, 25-step declarative flow)** — Login → SMS OTP → Welcome → Quick-start (name/DOB/email) → Tutorial → Service path → Personal → State → Filing status → Spouse → Dependents (count + per-dep detail) → Income (incl. self-employment, rental detail) → Tax questions → Deductions → Life events → Refund pref → Document upload (4 phases: empty → AI scanning → retake prompt → AI parsed → saved) → Engagement letter → §7216 consent → Schedule appt → $50 deposit → Done. Single source of truth: `apps/client-portal/src/lib/intake-flow.ts` — 25 steps with `isApplicable()`, `isComplete()`, `next()` per step. Continue button gated by `canAdvanceFromStep` per step (with `STEPS_WITHOUT_GATE = ['docs']` exemption).
+2. **Returning portal (5 tabs)** — Home · Docs · Messages · Signatures (with 8879 sign flow) · Profile, plus an AskAntonioChat overlay. **Reality:** layout exists; the five tab pages are placeholders pending production data flows.
 
-Bilingual support as configuration (Spanish, Mandarin, Vietnamese, Tagalog) — not a separate product.
+Bilingual support as configuration (Spanish, Mandarin, Vietnamese, Tagalog) — not a separate product. Not yet implemented; English-only for first cohort.
 
-### Design source files (already authored)
-Location: `C:\Users\minse\Downloads\docket-portal-design\`
+### Design source files (legacy, mostly historical)
+Original location: `C:\Users\minse\Downloads\docket-portal-design\`
 
-- `Docket Client Portal - Standalone.html` — full standalone prototype (2.6MB)
-- `components/*.jsx` — 23 React components covering all 36 screens
-- `components/tokens.jsx` — design tokens (Fraunces, DM Sans, oklch greens, editorial/minimal/magazine)
-- `components/app-shell.jsx` — top-level routing + PhoneShell + canvas overview
-- `assets/antonio.webp` — Antonio's headshot for AvatarSlot
+- `Docket Client Portal - Standalone.html` — original standalone prototype (2.6MB)
+- `components/*.jsx` — 23 React components, ported into `packages/ui/src/components/`
+- `components/tokens.jsx` — ported into `packages/ui/src/tokens.ts` and `packages/ui/src/styles.css`
+- `assets/antonio.webp` — Antonio's headshot for AvatarSlot, lives in `apps/client-portal/public/antonio.webp` today
 
-Tokens already ported to `packages/ui/src/tokens.ts` and `packages/ui/src/styles.css`. Components ported into `packages/ui/` in subsequent commits.
+The repo is now the source of truth for design. The Downloads folder is preserved for historical reference only; do not edit it.
 
 ---
 
@@ -153,9 +152,14 @@ The product is **practice management surface + agentic engine** built as four la
 │  IRS + CA FTB + CDTFA + EDD primary sources           │
 │  Internal playbooks (the real moat)                   │
 ├─ 2. Orchestration layer ──────────────────────────────┤
-│  Claude Agent SDK substrate                           │
-│  + Docket layer (multi-tenant, audit trail,           │
-│    trust escalation, agent fleet, skill registry)     │
+│  Today: Direct Anthropic SDK + thin Docket wrapper    │
+│  (cost telemetry, prompt caching, audit hook,         │
+│   model tiering). 109 LOC in services/orchestrator.   │
+│  Tomorrow: migrate to Claude Agent SDK once MCP       │
+│   gateway lands. Dependency already installed.        │
+│  Multi-tenant + RLS + audit trail are real today.     │
+│  Trust escalation, agent fleet routing, skill         │
+│  registry are paper specs (NOT built yet).            │
 ├─ 3. Rules layer ──────────────────────────────────────┤
 │  Deterministic calculators OUTSIDE the LLM            │
 │  Tax math, threshold/phaseout logic, form mappings    │
@@ -179,7 +183,8 @@ The product is **practice management surface + agentic engine** built as four la
 | Layer | Choice | Why |
 |---|---|---|
 | Language | **TypeScript end-to-end** | Frontend-backend cohesion. SDK is TS-first. Inngest is TS-native. Single language across the team. Python rejected (junior dev's instinct) because we're B2B SaaS-with-Claude, not ML-first. |
-| Substrate | **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) | MCP-native, deepest tool integration, lifecycle hooks, same tech FluentOS uses. |
+| Substrate (today) | **Direct `@anthropic-ai/sdk`** wrapped in `services/orchestrator/runDocketAgent` | 109 LOC. Cost telemetry + prompt caching + audit hook + model tiering. Used by `services/workers` agents (triage-classifier, inbox-drafter). |
+| Substrate (next) | **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) | Already a dependency, not yet imported. Migrate once `mcp-gateway` exists and we want MCP-native tool routing + lifecycle hooks. |
 | Inference | **Direct Anthropic API + ZDR** for v0 | Bedrock as per-tenant flag for compliance customers later. Orchestrator is provider-agnostic. |
 | Model tiering | **Haiku 4.5 for extract/classify, Sonnet 4.6 for most agent runs, Opus 4.7 only for hard reasoning** | 4×–10× cost reduction vs Opus-everywhere. Haiku is the dev default. |
 | Caching | **Prompt caching aggressive** on system prompts, knowledge bundles, playbooks | 80–90% cost drop on repeated calls. Wired into orchestrator from day 1. |
@@ -274,34 +279,52 @@ The core product differentiator. Competitors show dashboards you read. Docket sh
 
 ## 9. Agent fleet
 
-### v0 (12-week build)
-| Agent | Trigger | Inputs | Output | MCP tools used |
-|---|---|---|---|---|
-| **Morning Brief** | Cron 6am tenant TZ | Ledger state, OLT return states, IRS Solutions notices, Gmail unread, Xero AR | Structured brief: deadlines, e-file rejects, stuck pickups, position risks, churn signals | ledger · olt · irs-solutions · gmail · xero · knowledge |
-| **Inbox Drafter** | New message in any channel | Message, client context, return state, prior threads, playbooks | Drafted reply (English or Spanish), confidence score, citations | gmail · ledger · portal · knowledge |
-| **OLT Prep Handoff** *(or Notice Triage — chosen week 1 by Antonio)* | Preparer-invoked or doc-complete trigger | Workpapers, prior-year return, intake form, client facts | Return prefilled in OLT (browser automation), workpaper trail, flagged judgment items | olt · ledger · documents · knowledge |
+### Actually built and tested (as of 5/2/2026)
+Both live in `services/workers/src/agents/`. Both call `runDocketAgent` for cost telemetry + audit hook. Both have unit tests under `services/workers/src/test/`.
 
-### v1+ (post-Foundation)
-- **Document Triage** — classifies + extracts + matches uploads to client (powers the 4-phase doc upload UX)
-- **Notice Response** — IRS notice triage, drafted CP2000/etc. response with cited authority
-- **Practice Pattern** — margin/friction/scope-creep across the book ("fire the bad client" therapist)
-- **Promise Keeper** — every commitment in any channel becomes a timestamped, searchable receipt
-- **Outcome Prediction** — Blue J-style position-level audit/controversy risk modeling
-- **Phone Agent** — voicemail transcribe → summarize → draft → send
+| Agent | Model | Status | Notes |
+|---|---|---|---|
+| **Triage Classifier** | Haiku 4.5 | ✅ Built + tested | Classifies an inbound signal (Gmail message, doc upload, etc.) into one of 11 `issue_type` enum values with confidence + reasoning. JSON-schema-validated output. 258 LOC. |
+| **Inbox Drafter** | Sonnet 4.6 | ✅ Built + tested | Drafts a reply in Antonio's voice (bilingual, channel-aware) with confidence + reasoning. 209 LOC, 140-line system prompt. |
 
-### Each agent has a strict contract
-- System prompt + scoped toolset + trust-level config + playbook bundle
-- Audit-trail hook on every tool call (who/what/when/citation)
-- Trust gate before any external action
-- Cost telemetry tagged with tenant + agent + action class
+### Inngest functions (paper plumbing)
+Two functions are registered in `services/workers/src/functions/` but the integration points are stubbed (8× `TODO(week-1)` markers). They will not fire usefully until the Gmail OAuth path + tenants/integrations table queries land.
+
+- `gmail-poll.ts` — cron every 10 min, **feature-flagged OFF**. Real `tenants` query stubbed.
+- `classify-gmail-message.ts` — event-driven. Real Gmail fetch + client matching + issue persistence + draft persistence all stubbed.
+
+### Designed but NOT built
+| Agent | Status | Why deferred |
+|---|---|---|
+| **Morning Brief** | Paper spec only | Needs `ledger`, `knowledge`, `xero` MCP servers (none built); Gmail integration not flowing yet |
+| **OLT Prep Handoff** *(or Notice Triage — Antonio's choice week 1)* | Paper spec only | Needs `olt` browser automation MCP server (not built; M2+ per build order) |
+| **Document Triage** | Paper spec only | Needs `documents` MCP server + Cloudflare R2 + Haiku vision pipeline (per `docs/DOCS-CAPTURE-PIPELINE.md`) |
+| **Notice Response** | Paper spec only | Needs `irs-solutions` MCP + knowledge graph |
+| **Practice Pattern, Promise Keeper, Outcome Prediction, Phone Agent** | Paper spec only | v1+, post-5/15 |
+
+### Agent contract — what's enforced today
+- System prompt + scoped model tier (Haiku/Sonnet/Opus): ✅ in `runDocketAgent`
+- Cost telemetry tagged with tenant + agent + action class: ✅ via `onAction` hook
+- Audit-trail hook on every call: ✅ at orchestrator level (caller wires it to the `actions` table)
+- Trust gate before external action: ❌ not built (placeholder field on tenant; no enforcement code yet)
+- Per-agent playbook bundle: ❌ not built (`packages/playbooks/` doesn't exist)
 
 ---
 
 ## 10. MCP server roster
 
+> **Reality check (5/2/2026):** `mcp-servers/` directory exists but is **empty**.
+> Zero MCP servers have been built. The orchestrator does not currently route
+> through MCP — agents talk to `runDocketAgent` directly and DB writes go through
+> Drizzle. The `mcp-gateway` service in CLAUDE.md's earlier draft does not exist.
+>
+> The roster below is the planned build order for **post-5/15** once we migrate
+> the orchestrator to Claude Agent SDK. Until then, agents do their work in
+> straight TypeScript against the DB and Anthropic API.
+
 **Build effort estimates in parens.** Each independently deployable.
 
-### v0 servers (build in this order)
+### v0 servers (build in this order — POST-5/15)
 
 | # | Server | Type | Tools | Effort |
 |---|---|---|---|---|
@@ -342,8 +365,16 @@ The core product differentiator. Competitors show dashboards you read. Docket sh
 - Density: comfortable / cozy
 - Radius: 14px / 20px (lg)
 
-### Primitives ported from designer's `tokens.jsx`
-`Screen`, `Stack`, `Row`, `Card`, `Button`, `Eyebrow`, `H1`, `H2`, `Body`, `ProgressBar`, `Placeholder`, `AvatarSlot`. All inline-style based for design fidelity.
+### Primitives in `packages/ui/src/components/`
+Layout: `Screen`, `Stack`, `Row`. Text: `Eyebrow`, `H1`, `H2`, `Body`. Buttons: `Button`, `BackButton`, `IntakeBackButton`. Indicators: `ProgressBar`, `Placeholder`, `TrustPill`. Media: `AvatarSlot`, `VideoPlaceholder`. Cards: `Card`, `ToggleCard`, `RadioRowCard`, `DependentCountCard`. Fields: `FieldLabel`, `TextField`, `SSNField`, `EncryptedTextField`. Antonio: `AskAntonioBar`, `AskAntonioChat`, `AntonioNote`. Frame: `SignOutProvider`, `IntakeRouteFrame`, `IntakeHeader`, `BottomBar`, `IntakeBottomBar`, `Footer`. Icons: `IncomeIcon`, `HandCheckmark`, `Wordmark`. Signature: `LegalDoc`, `SignaturePad`. Portal: `PortalTabBar`. All inline-style based for design fidelity.
+
+### Cross-package context (firm-owner display)
+- `TenantDisplayProvider` from `@docket/ui` wraps each (intake) / (portal) layout server-side after `resolveClient()` resolves tenant + firm-owner.
+- Components consume via `useFirmOwner()` / `useTenantName()` / `initialsOf()` instead of hardcoded strings.
+- A handful of pages still hardcode "Vazant Consulting" / "Antonio Vazquez" — see `Section 18 → Known stubs and mocks`. Marked TODO(multi-firm); not load-bearing until tenant #2.
+
+### Solar icons — known liability
+`packages/ui/src/icons/solar.tsx` is **7,848 lines** in a single file. Blocks tree-shaking. Audit flagged AMBER. ~30 min one-shot transform via the existing generator script when convenient.
 
 ### Inline styles vs Tailwind
 - **Design-locked components (intake, portal):** preserve inline styles exactly as the designer authored them. Zero design drift.
@@ -351,7 +382,7 @@ The core product differentiator. Competitors show dashboards you read. Docket sh
 - Both can coexist in the same app.
 
 ### Auth styling note
-The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consulting, avatar in `assets/antonio.webp`).
+The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consulting). Avatar in `apps/client-portal/public/antonio.webp` is the static fallback; live `users.avatar_url` (Clerk `imageUrl`, lazy-backfilled) is preferred when present.
 
 ---
 
@@ -373,7 +404,9 @@ The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consul
 - Plain-English explainers in client portal sourced from official forms/instructions/pubs
 - Same answer, different reading level
 
-### Schema (in `packages/db/src/schema.ts` and to expand in `tax-graph` package)
+### Schema (designed; NOT YET implemented)
+The current `packages/db/src/schema.ts` covers operational tables (tenants, users, clients, intake, documents, signatures, messages, engagements, issues, actions, etc.). The knowledge ontology below is a v1+ design — the planned `packages/tax-graph` package does NOT exist yet, and `content/authority/` + `content/strategy-library/` are empty directories.
+
 - `Authority` — source, citation, jurisdiction, date issued, effective date, superseded date
 - `TaxConcept` — residency, sourcing, basis, nexus, reasonable comp, QBI, PTET, etc.
 - `WorkflowObject` — return type, form, schedule, notice, election, deadline
@@ -382,7 +415,7 @@ The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consul
 - `PlanningStrategy` — strategy name, prerequisites, risks, expected savings, documentation requirements
 
 ### Versioning
-**Effective-date versioning on every authority chunk from day 1. No exceptions.**
+**Effective-date versioning on every authority chunk from day 1. No exceptions.** When the knowledge layer ships, this is non-negotiable.
 
 ---
 
@@ -420,75 +453,133 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 | **No Claude Code CLI subscription as production inference** | Against ToS, can't multi-tenant, no SLA. Dev tool only. |
 | **No Python backend** | TS end-to-end. Junior dev's instinct rejected. |
 | **No AWS Bedrock from day 1** | Defer until first compliance customer asks. Direct Anthropic + ZDR is v0 default. |
+| **No Big 4 / top-100 firm pivot for 18-24 months** | Decided 5/2/2026 CEO review. Fortress market with $235M+ funded competitors holding 2-year head starts. Brand maturity gap that 12 weeks of building cannot close. 18-month sales cycles. Bootstrap option dies. Mid+down lane is the structurally open one. |
+| **No F500 in-house tax department pivot for 18-24 months** | Same compliance + ERP integration timelines as Big 4 without the partner-network distribution upside. Underexplored but not by accident. |
+
+### Segment posture (decided 5/2/2026 CEO review)
+
+- **v1 (7/30):** Mid-market and down-market only.
+  - **Down-market** = solo EAs, storefront tax shops, 1-10 staff firms (Antonio's segment). Zero AI-native competitors here.
+  - **Mid-market** = 20-100 staff regional firms. Only PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI here. AI-native players are economically forced up-market by their funding rounds.
+- **v1.5 door open:** Tax franchise networks (Liberty Tax, Jackson Hewitt, JTH-aligned, smaller franchise networks). Storefront workflow is identical to the current mid+down product. Corporate licensee model = single deal could yield $1-5M ARR. Activate once mid-market reference customer is in hand to point at.
+- **NOT pursuing for 18-24 months:** Big 4 / top-100 firms. F500 in-house tax departments. See §14 NOs above for reasoning.
+- **Architecture posture:** Five-layer + RLS + per-tenant DEK + audit-trail + governance is enterprise-compatible by accident-of-good-decisions. No special enterprise-readiness work needed in v1. Door stays open for later segments without rework.
 
 ---
 
-## 15. Build order — production rebuild for Antonio's first cohort by 5/15
+## 15. Build order — Docket OS v1 by 7/30 (Antonio sub-milestone 5/30)
 
-> **Status flip (May 1, 2026):** Demo client portal is shipped + live on Vercel
-> at `docket-client-portal.vercel.app`. 38 routes walking. Now building the
-> ACTUAL production app. Antonio's real clients will type real SSNs and submit
-> real returns through it. No more "v0 magic" — every shortcut becomes real.
+> **CEO review 5/2/2026:** Original 5/15 plan was production scaffolding for
+> down-market only. Real goal is the tax-native OS for mid-market AND
+> down-market: 5 layers (Knowledge, Data, Agent, Orchestration, Governance),
+> 10 specialized agents, 3 audiences (preparer, manager/partner, client),
+> citations + confidence + audit on every output. Mode: SCOPE EXPANSION.
+>
+> Four expansions accepted on top of the original baseline: bilateral
+> year-round client portal (D3), tax-law diff agent as 10th specialist (D4),
+> manager mission-control with capacity planning + exception monitoring +
+> advisory surface (D5), IRS-facing control plane via IRS Solutions API +
+> 2848/transcripts/CAF/e-file (D6). Total scope = ~70 calendar days of work
+> with CC compression. Timeline extended from 5/15 to **7/30** (12 weeks)
+> with 19 days of buffer.
+>
+> Full plan + scope decisions + risks + success criteria:
+> [`~/.gstack/projects/minesokim-child-docket/ceo-plans/2026-05-02-docket-os-v1.md`](file:///C:/Users/minse/.gstack/projects/minesokim-child-docket/ceo-plans/2026-05-02-docket-os-v1.md).
 
 ### Demo state (preserved as the marketing surface)
 - `apps/client-portal` — 38-route walk-through. sessionStorage forms, mocked
-  AI, hardcoded everything. Stays live for pitch / Loom / Antonio walkthrough.
+  AI, hardcoded everything. Stays live at `docket-client-portal.vercel.app`
+  for pitch / Loom / Antonio walkthrough.
 
-### Production rebuild — phased so Antonio gets value early
+### v1 production phased plan — 12 weeks, 6 phases
 
-**Days 1–3 — Antonio's admin layer (Command Room MVP)**
-- Clerk app (Google sign-in only for Antonio)
-- New schema: `users`, `clients`, `messages` tables linked to Clerk userIds
-- Seed Antonio's user + tenant + 10 mock clients into Neon
-- `apps/command-room/` v0 pages: client list + per-client view + message thread
-- Antonio signs in, sees something real
-- ✅ Day 3: Antonio can log into a real admin dashboard
+**Phase 1 (Weeks 1–2, 5/2 → 5/16) — Foundation + Antonio Production Essentials**
+- Preparer-side SSN/EIN reveal flow on command-room (highest-leverage gap)
+- Twilio "Send via SMS" for client invites (per-tenant credentials)
+- Knowledge layer schema in DB + ingestion infrastructure scaffolded
+- `packages/tax-graph` package created (Authority, TaxConcept, WorkflowObject, FactPattern, DecisionRule, PlanningStrategy)
+- Citation rendering scaffolding in agent output
+- Trust gate scaffolding (per-tenant × agent × action-class)
+- Docs pipeline started: Cloudflare R2 bucket + presigned URL helper
+- Continue down-market production essentials (rate limiting, auth refactor)
+- Sidebar dead links resolved (placeholder routes for /messages, /documents, /settings)
 
-**Days 4–7 — Client auth + persistent intake**
-- Clerk phone-OTP strategy enabled (Twilio for SMS delivery)
-- Real `/login` → `/otp` → real session in `apps/client-portal`
-- All intake forms migrated: `usePortalState` (sessionStorage) → Server Actions
-  → Postgres writes via `withTenant()` (RLS-bound to client's tenant)
-- Field-level encryption for SSN / EIN / bank account numbers (libsodium or pgcrypto)
-- Resume mid-flow on any device
-- ✅ Day 7: real client signs up, walks intake, data persists; Antonio sees the row
-
-**Days 8–10 — Docs pipeline (per `docs/DOCS-CAPTURE-PIPELINE.md`)**
-- Cloudflare R2 bucket + presigned URL helper
-- Inngest job: image → Haiku 4.5 vision (legibility + classification + filename JSON)
-  → pdf-lib wrap → R2 upload → `documents` row with `awaiting_review` status
-- `/docs` page swaps mocked `setTimeout` for real fetch
-- Command Room shows uploaded docs queued for Antonio's review (filename approve/edit)
-- ✅ Day 10: real docs flowing through real AI
-
-**Days 11–12 — Real messages + notifications**
-- `messages` table with channel kind (sms / email / portal)
-- Inbox Drafter wired to inbound client message → drafts queued in Command Room
-- "Send as Antonio" approval flow (Sonnet generates, Antonio approves, sent via Twilio/Gmail)
-- Email + SMS notifications for status changes
-- ✅ Day 12: bidirectional real messaging working end-to-end
-
-**Days 8–9 — Square deposit + hardening (rate limiting, refactor auth pages)**
+**Phase 2 (Weeks 3–4, 5/16 → 5/30) — Antonio Production Sub-Milestone**
+- Real bidirectional messages (Twilio SMS + Gmail email + portal chat, channel-aware via Inbox Drafter)
 - Square Checkout API integration (per-client payment links, webhook for paid status)
-- Rate limiting (Upstash) on Twilio + Square + KBA hot routes
-- Auth pages refactored — extract phone formatter / country picker / error mapper
-- ✅ Day 9: Real $50 deposit collected via Antonio's Square account, mid-flow
+- DocuSign embedded signing for Form 8879 with LexisNexis KBA (NIST IAL2)
+- IRS Pub 17 + FTB residency manual ingested with effective-date versioning
+- AAD on AES-GCM bound to (tenant_id, client_id, path)
+- KEK rotation procedure documented + master-KEK fallback removed
+- Webhook signature verification helper (shared across Square / DocuSign / Twilio / Inngest)
+- Sentry signup + DSN configured
+- **✅ Sub-milestone 5/30: Antonio's full 200+ client base operational on production-grade substrate**
 
-**Day 13 — DocuSign + KBA wiring + hardening Phase 2**
-- DocuSign embedded signing API for 8879 (white-label, KBA via DocuSign's LexisNexis path)
-- Per-tenant encryption keys (HKDF DEK from master key + tenant_id)
-- E2E intake flow tests (Bun + Playwright)
-- Audit log review — every Server Action writes to actions table
-- ✅ Day 13: Real 8879 signed with KBA in sandbox; per-tenant DEKs in place
+**Phase 3 (Weeks 5–6, 5/30 → 6/13) — Agent Fleet Build-Out**
+- Wire intake agent (intake completeness scoring, missing-data prompts)
+- Wire doc classification agent (4-phase doc upload pipeline driver)
+- Wire missing information agent (cross-doc validation, gap detection)
+- Wire planning agent (year-round scenarios, QBI/PTET/entity-choice modeling)
+- Wire return drafting agent (workpaper assembly, position drafting, multi-state flagging)
+- Wire review agent (junior-staff drafting + senior-prep flagging)
+- Wire notice response agent (CP2000/CP504/LT11 triage + drafted response)
+- Tax-law diff agent (10th, D4) bones — IRS/FTB monitoring, position-level affected-return surface
+- Trust gate enforcement live across all 10 agents
+- Confidence scoring + citation rendering on every agent output
 
-**Days 14–15 — Onboard Antonio's full client base**
-- **NOT** a friends-and-family pilot. Production-grade from day 1.
-- Target: scale to Antonio's 200+ existing client roster on this platform
-  for the next tax season.
-- Pitch deck (5–10 slides), Loom demo
-- Quality bar: every UX decision should hold up at 300+ clients across
-  multiple firms, not "good enough for friends to test"
-- ✅ Day 15: production app shipped, ready to handle Antonio's full book
+**Phase 4 (Weeks 7–8, 6/13 → 6/27) — Orchestration + Manager Mission-Control (D5)**
+- Event-driven task routing on Inngest substrate
+- Dependency graph (return → workpaper → source doc → intake response)
+- SLA tracking (engagement deadlines, review SLAs, response-time SLAs per channel)
+- Capacity planning (per-staff-member load, projected throughput, bottleneck detection)
+- Workload-aware prioritization (high-confidence cases auto-routed to accelerated prep, position-risk cases to senior reviewers)
+- Manager mission-control surface: portfolio view, exception monitoring, margin leakage analytics, advisory-opportunity surface
+- Reallocation + escalation flows
+- Mid-market partner #2 identification + initial pitching begins
+
+**Phase 5 (Weeks 9–10, 6/27 → 7/11) — Year-Round Portal (D3) + IRS-Facing Layer (D6, DESCOPED)**
+- Bilateral year-round portal: AskAntonioChat as persistent surface, year-round tax position summary, planning prompts proactive in Q4, document collection rolling
+- 2848 / 8821 e-signing in portal (DocuSign + LexisNexis KBA, NIST IAL2)
+- 2848 / 8821 **filing to IRS via Tax Pro Account browser automation** (the official IRS web portal; 2-5 day CAF posting)
+- CAF state visualization (read-only, scraped from Tax Pro Account business-firm view per Feb 9, 2026 expansion)
+- Notice triage agent on **uploaded** notices (PDF/image upload by client or Antonio; no live-feed dependency)
+- Notice response drafting with cited authority (firm-approved before send)
+- Tax-software orchestration for e-file (browser automation against OLT for Antonio + ProConnect/UltraTax for partner #2)
+- Per-client encrypted IRS credentials in `tenant_credentials` table
+
+> **D6 was descoped 5/2/2026 after IRS API research** (full findings in CEO plan).
+> Original D6 included programmatic transcript pulls + direct MeF + live IRS Solutions API.
+> Reasons for descope:
+> - IRS Transcripts API is invitation-only partner program (Canopy is in; no public path; 12-24 month relationship horizon)
+> - Legacy third-party transcript scraping is being shut down (May 23 deadline)
+> - e-Services APIs require a user session (breaks autonomous overnight-pull pattern)
+> - Bridge providers (TaxStatus, Compliancely) are sales-led pricing with dual-8821 consent conflict + 20-85% margin compression on v1 partners
+> - IRS cybersecurity bar (FIPS 140-3, Pub 1075, NIST SP 800-53, PCI DSS-derived practices) is multi-month work; not in v1 scope
+>
+> **Deferred to v1.5:** programmatic transcript API (path C bridge or direct IRS partner program), EFIN + Software Developer authorization, direct MeF, live IRS Solutions API at depth, full IRS partner program application.
+>
+> **Net impact:** D6 reversibility 1/5 → 3/5; v1 risk register goes from 5 critical risks to 2 critical (compliance liability on filed forms + agent-prompt-error remain critical). Mid-market partner #2 onboarding no longer blocked on IRS Solutions API access.
+
+**Phase 6 (Weeks 11–12, 7/11 → 7/30) — Partner #2 Onboarding + Hardening + Launch**
+- Mid-market partner #2 (regional firm, 20-100 staff) onboarded with full v1 OS
+- Both partners running on multi-tenant substrate (no snowflakes per §16)
+- E2E tests (Bun + Playwright) across intake → docs → messaging → e-sign → onboarding
+- Audit-trail review on every server action
+- Approval policy enforcement (filing authority, signed advice, material positions)
+- Evidence trail UI
+- Retention policy (7-year tax-document retention default, configurable per tenant)
+- Pitch deck (5–10 slides), Loom demo, marketing surface
+- **✅ v1 launch 7/30**
+
+### Top 5 risks (from CEO plan, post-D6-descope)
+
+1. **Compliance liability on filed forms** — incorrect 2848 filing or missed notice deadline causes legal exposure (sanctions + malpractice). Defense: agent prompt construction is unit-tested + integration-tested + run through eval suite before production; 2848 filings always require human approval (trust gate locked at level 1 for `file` action class); audit trail captures every filed form with the prompt + reasoning that drove it.
+2. **Agent prompt error sends wrong filing for wrong client** — single bug in prompt construction could file fake 2848 to IRS for wrong client. Defense: structured prompt construction with client_id binding at every layer; pre-flight verification that the form data matches the client_id before any submit action; mandatory human approval before any IRS-facing submit.
+3. **Knowledge layer ingestion brittleness** — start with hand-curated subset (Pub 17 + FTB residency) before automated ingestion; spot-check citations manually before agent output reaches users.
+4. **Mid-market partner #2 acquisition timing** — start partner identification Phase 4; warm intros via Antonio's mentor network; pre-build partner-onboarding playbook so engagement-to-production cycle is <2 weeks.
+5. **Cathedral-mode scope creep** — explicit no-more-expansions rule for v1 once 5/30 sub-milestone hits. New ideas go to TODOs.md. Schedule "expansion appetite check" at 6/13 and 7/11.
+
+(Risks previously in this list — IRS Solutions API access timing, trust gate calibration on D4 — were either resolved by the D6 descope or absorbed into the must-build list in the CEO plan tactical decisions section.)
 
 ### Status of the original 5/15 DEFERS list (revised for production)
 
@@ -540,7 +631,8 @@ Port the design while the orchestrator is being built in parallel.
   - Bring `tokens.jsx` into `packages/ui/` (already done) + the design primitives
 
 ### Phase 2 (Weeks 4–6) — Orchestrator + first MCP servers + Morning Brief
-- `services/orchestrator` wrapping Claude Agent SDK ✅
+- `services/orchestrator` wrapping direct Anthropic SDK with cost telemetry + audit hook + caching ✅
+  (migration to Claude Agent SDK deferred until MCP gateway is the substrate)
 - MCP gateway with tenant scoping
 - `ledger` and `knowledge` MCP servers
 - Trust escalation gate (level 1 only — every action approved)
@@ -624,36 +716,64 @@ The well-funded AI-native competitors ($235M+ combined) are economically forced 
 
 ## 18. Repo structure & conventions
 
+### Actual structure (5/2/2026)
+
 ```
 docket/
 ├── apps/
-│   ├── client-portal/        # Next.js — port from design ZIP first
-│   ├── command-room/         # Next.js — preparer surface
-│   └── admin/                # later
+│   ├── client-portal/        # Next.js 15, port 3001. 38 routes shipped.
+│   └── command-room/         # Next.js 15, port 3000. 4 working routes
+│                             #   (sign-in, /clients, /clients/new, /clients/[id]).
+│                             #   /messages /documents /settings = sidebar links → 404.
+│                             # NO admin/ app — command-room subsumes it.
 ├── services/
-│   ├── orchestrator/         # Claude Agent SDK + Docket layer
-│   ├── mcp-gateway/          # tool registry + tenant scoping
-│   ├── browser-workers/      # Playwright runners (week 7+)
-│   └── ingestion/            # tax-knowledge crawlers (week 5+)
-├── mcp-servers/
-│   ├── ledger/  knowledge/  gmail/  xero/  portal/  documents/
-│   └── olt/  irs-solutions/  (week 7+)
+│   ├── orchestrator/         # 109 LOC. Direct @anthropic-ai/sdk wrapper:
+│   │                         #   cost telemetry, prompt caching, audit hook,
+│   │                         #   model tiering. NO MCP routing yet.
+│   └── workers/              # Inngest jobs. 2 built agents
+│                             #   (triage-classifier, inbox-drafter) +
+│                             #   2 Inngest functions (gmail-poll,
+│                             #   classify-gmail-message — 8× TODO(week-1)
+│                             #   stubs for Gmail/DB plumbing).
+│   #                           NO mcp-gateway/, browser-workers/, ingestion/ yet.
+├── mcp-servers/              # EMPTY — directory exists, zero servers built.
+│                             # Build order is paper spec. Defer post-5/15.
 ├── packages/
-│   ├── ui/                   # tokens + design primitives
-│   ├── db/                   # Drizzle schema + migrations
-│   ├── tax-graph/            # ontology types
-│   ├── agents/               # agent definitions
-│   ├── playbooks/            # versioned markdown
-│   └── shared/               # types, errors, utils
+│   ├── db/                   # Drizzle schema (13 tables, 8 enums) +
+│   │                         #   12 migrations (0000–0012) + RLS policies +
+│   │                         #   encryption (master KEK + per-tenant DEK
+│   │                         #   AES-256-GCM, in-process LRU cache) + seed
+│   │                         #   (tenant + DEK + 1 user; NO mock clients).
+│   ├── shared/               # IntakeState, intake-schemas (Zod), branded
+│   │                         #   types, role helpers, in-process rate limit,
+│   │                         #   masking (lives in intake.ts, NOT a separate
+│   │                         #   masking.ts), formatters, sentry scrubber,
+│   │                         #   tax-year. 7 test files, 112 tests pass.
+│   └── ui/                   # tokens.ts (editorial/minimal/magazine tones,
+│                             #   forest green oklch, Fraunces + DM Sans),
+│                             #   TenantDisplayProvider, 30+ design primitives,
+│                             #   intake-icons, services-catalog. Solar icon
+│                             #   set is one 7,848-line file (tree-shaking
+│                             #   liability flagged in audit).
+│   #                           NO tax-graph/, agents/, playbooks/ yet.
 ├── content/
-│   ├── authority/            # ingested IRS/FTB
-│   └── strategy-library/
+│   ├── authority/            # EMPTY — IRS/FTB ingestion deferred post-5/15
+│   └── strategy-library/     # EMPTY — internal playbooks deferred post-5/15
 ├── docs/
-│   ├── STRATEGIC-BRIEF.md    # full strategic synthesis
-│   └── PERSONA.md            # Antonio's reality
+│   ├── STRATEGIC-BRIEF.md      # full strategic synthesis
+│   ├── PERSONA.md              # Antonio's reality
+│   ├── ARCHITECTURE.md         # data model + RLS + encryption boundary
+│   ├── BACKUPS.md              # backup/restore plan
+│   ├── DECISION-JOURNEY.md     # how we got here
+│   ├── DESIGN-NOTICE-TRIAGE-V0.md
+│   ├── DOCS-CAPTURE-PIPELINE.md  # the 4-phase doc upload pipeline
+│   ├── HOSTING.md / HOSTING-RESEARCH.md
+│   ├── POST-5-15.md            # what's NOT in the demo cohort
+│   ├── SLICES.md               # founder's verbatim framings
+│   └── SESSION-HANDOFF-*.md    # per-session deltas (latest wins)
 ├── .claude/
-│   ├── memory/               # mirrors of project memory anchors
-│   ├── hooks/                # gstack enforcement
+│   ├── memory/               # 11 .md files mirroring user-level memory
+│   ├── hooks/                # check-gstack.sh
 │   └── settings.json
 ├── COSTS.md                  # cost discipline rules
 ├── README.md
@@ -661,19 +781,49 @@ docket/
 ```
 
 ### Conventions
-- `@docket/*` workspace package names
-- Inline styles preserved for design-locked components
-- All branded types from `@docket/shared` (TenantId, ClientId, AgentId, etc.)
-- Every API call goes through the orchestrator (`runDocketAgent`) — telemetry on every call
-- Drizzle schema is the source of truth for DB; migrations in `packages/db/migrations/`
-- Multi-tenant isolation via Postgres RLS; orchestrator sets `app.current_tenant_id` per request
-- Audit trail (`actions` table) on every tool call. No exceptions.
-- All env vars in `.env.local` (gitignored). `.env.example` documents required keys.
+- `@docket/*` workspace package names (`@docket/db`, `@docket/shared`, `@docket/ui`, `@docket/client-portal`, `@docket/command-room`, `@docket/orchestrator`, `@docket/workers`).
+- Inline styles preserved for design-locked components (intake, portal). Tailwind v4 utility classes for new command-room layouts only.
+- All branded types from `@docket/shared`.
+- Drizzle schema in `packages/db/src/schema.ts` is the source of truth. Migrations in `packages/db/migrations/`.
+- Multi-tenant isolation via Postgres RLS (`ENABLE + FORCE`). App reads/writes wrap in `withTenant(tenantId, async (db) => ...)` which `SET LOCAL app.current_tenant_id` for the transaction.
+- `getAdminDb()` BYPASSES RLS — used ONLY in `apps/client-portal/src/lib/intake/auth.ts` (phone → tenant chicken-and-egg) and `apps/command-room/src/lib/current-user.ts` (Clerk session → user/tenant). Don't add a third caller without a SECURITY.md justification.
+- Audit trail (`actions` table) on every tool call + every state-changing server action. INSERT-only via trigger, with one exception (migration 0012: FK-cascade SET NULL on `client_id`).
+- All env vars in `.env.local` (gitignored, never committed). `.env.example` documents required keys.
 
-### Verified working
+### Cross-package context pattern (firm-owner display)
+1. Layout (`(intake)/layout.tsx`, `portal/layout.tsx`) calls `resolveClient()` server-side.
+2. Wraps children in `<TenantDisplayProvider tenantName={...} firmOwner={...}>` (from `@docket/ui`).
+3. Components consume via `useFirmOwner()` / `useTenantName()` / `initialsOf()`.
+4. Avoids prop-drilling firm-owner data through 27+ pages.
+
+### Verified working (5/2/2026)
 - `pnpm install` clean
-- Both Next.js apps build (105 kB first-load JS, 137 B per route)
-- Hello-world Claude SDK verified: Sonnet 4.6, $0.0005, 1.8s latency
+- Both Next.js apps deployed to Vercel and serving real traffic:
+  - `apps/client-portal` → `https://docket-portal.vercel.app` (production rebuild)
+  - `apps/client-portal` legacy demo → `https://docket-client-portal.vercel.app` (mocks; do NOT point real flows here — kept alive for marketing/Loom)
+  - `apps/command-room` → Vercel host configured this session; check Vercel dashboard
+- 12 migrations applied against Neon dev branch. Database state post-`0012_actions_allow_fk_cascade_null.sql`.
+- 112 tests pass: `cd packages/shared && bun test src` (the `pnpm test` glob doesn't expand on Windows; run from package dir).
+- Hello-world Claude SDK verified: Sonnet 4.6, $0.0005, 1.8s latency. Haiku 4.5 verified: $0.0001 per Priya doc-mismatch classification, <1s.
+- Both agents (triage-classifier, inbox-drafter) call `runDocketAgent` cleanly with cost telemetry and audit hooks firing.
+- Phone-OTP auth works end-to-end against Clerk + Twilio. Phone-binding gate redirects unbound phones to `/no-access`.
+- 28 intake pages persist field writes via `useIntakeField` → `saveIntakeField` server action → Postgres (encrypted for SSN/EIN/bank, RLS-scoped per tenant).
+
+### Known stubs and mocks (must not be claimed as "done")
+- **Form 8879 mock route** at `/portal/sign-8879` — gated behind `NEXT_PUBLIC_ENABLE_MOCK_8879=true`. Hard-disabled in prod by default. Real DocuSign + LexisNexis KBA path is Day 13 of build order.
+- **Stripe placeholder copy** still on `/deposit` page despite `STRIPE_*` env vars being dropped. Square Checkout integration is Day 8–9.
+- **Twilio "Send via SMS"** button on `/clients/new` — currently greyed out with "Coming soon" hint. Per-tenant Twilio creds + server action not built.
+- **Preparer-side SSN/EIN reveal** — masked-only on command-room today. Mirror of `client-portal/src/lib/intake/reveal.ts` not yet built; gated read by `firm_owner | preparer | reviewer` is the planned shape.
+- **Sidebar dead links** in command-room: `/messages`, `/documents`, `/settings` 404. Need at least placeholder routes.
+- **Trust escalation gate** — placeholder enum on tenant; no enforcement code.
+- **MCP gateway** — does not exist (orchestrator is pre-MCP).
+- **`tenants.clerk_org_id` is NULL** in dev — Antonio hasn't created the Clerk Organization yet, so the email-claim fallback path in `current-user.ts` is the active one.
+- **Hardcoded "Vazant Consulting" / "Antonio Vazquez" copy** in `apps/client-portal/src/app/(intake)/welcome/content.tsx`, `apps/client-portal/src/app/page.tsx`, `apps/client-portal/src/app/(intake)/deposit/page.tsx`, `apps/client-portal/src/app/portal/sign-8879/page.tsx` (mock only). Marked with TODO(multi-firm). Not load-bearing until tenant #2.
+- **Trial fonts** in `public/fonts/trial/` (Suisse Int'l + FAIRE Octave). License forbids commercial use; trial expires 5/14/2026. License OR revert before that date.
+- **Sentry SDK installed**, no DSN set yet → `Sentry.captureException` is a no-op. Founder will sign up before real client onboards.
+- **Rate limiter is in-process** (per-Vercel-lambda Map). Upstash Redis swap is Day 9.
+- **Webhook signature verification helper** not built — needed before Square / DocuSign / Twilio / Inngest webhooks land.
+- **AAD on AES-GCM** not bound to `(tenant_id, client_id, path)`. Master-KEK fallback path in `encryption.ts:194-215` is still live; run `pnpm --filter @docket/db reencrypt-legacy --dry-run` before any real client onboards.
 
 ---
 
@@ -750,22 +900,28 @@ The client popup has its own billing tab. **Don't add BillingCard to popup overv
 
 ## 22. Boot-up pointers
 
-When loading this project cold:
+When loading this project cold, in this order:
 
-1. **Read this CLAUDE.md** (you are here).
-2. **Then read the most recent session handoff** in `docs/SESSION-HANDOFF-*.md`
-   — the latest one captures what's actually in the codebase right now (CLAUDE.md
-   is partially aspirational; the audit reports + recent shipped work live in the
-   handoff doc). When CLAUDE.md and the handoff disagree, the handoff wins.
-3. **Strategic detail:** [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC-BRIEF.md) — the full Desktop brief mirrored into the repo.
-4. **The journey, not just the destination:** [`docs/DECISION-JOURNEY.md`](docs/DECISION-JOURNEY.md) — chronological narrative of how we got here, what we considered, what we rejected, when to revisit each lock-in.
-5. **User's verbatim framings:** [`docs/SLICES.md`](docs/SLICES.md) — the actual passages the user wrote at each decision point. Preserved because the framings ARE the product. When in doubt about voice, re-read.
-6. **Persona:** [`docs/PERSONA.md`](docs/PERSONA.md) — Antonio at Vazant.
-7. **Memory mirrors:** [`.claude/memory/`](.claude/memory/) — anchored copies of the project memory files.
-8. **Cost rules:** [`COSTS.md`](COSTS.md) — $50/mo discipline.
-9. **Design source:** `C:\Users\minse\Downloads\docket-portal-design\` — the 36-screen prototype we port from.
-10. **Verify gstack:** `test -d ~/.claude/skills/gstack/bin && echo OK`
-11. **Confirm with David:** any new slices to add since last session? Any decisions reversed?
+1. **Read this CLAUDE.md** (you are here). It now reflects reality as of 5/2/2026, not aspiration.
+2. **Then read the most recent session handoff** in `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas (what shipped, what's open, what the founder decided). When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in.
+3. **Verify the dev DB is caught up** before writing any code that touches schema:
+   ```bash
+   pnpm --filter @docket/db migrate
+   ```
+4. **Skim the live deployments** before assuming what works:
+   - Open `https://docket-portal.vercel.app/login` → should show login UI
+   - Open the command-room URL (in Vercel dashboard) → `/clients` should show the empty state
+5. **Strategic detail:** [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC-BRIEF.md) — full strategic synthesis.
+6. **The journey, not the destination:** [`docs/DECISION-JOURNEY.md`](docs/DECISION-JOURNEY.md) — chronological narrative of how we got here, what we considered, what we rejected, when to revisit each lock-in.
+7. **User's verbatim framings:** [`docs/SLICES.md`](docs/SLICES.md) — actual passages the user wrote at each decision point. The framings ARE the product. When in doubt about voice, re-read.
+8. **Persona:** [`docs/PERSONA.md`](docs/PERSONA.md) — Antonio at Vazant.
+9. **Architecture detail:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — data model, RLS, encryption boundary.
+10. **Doc-capture pipeline detail:** [`docs/DOCS-CAPTURE-PIPELINE.md`](docs/DOCS-CAPTURE-PIPELINE.md) — the 4-phase doc upload pipeline.
+11. **Memory mirrors:** [`.claude/memory/`](.claude/memory/) — anchored copies of project memory files.
+12. **Cost rules:** [`COSTS.md`](COSTS.md) — $50/mo discipline.
+13. **Design source (legacy):** `C:\Users\minse\Downloads\docket-portal-design\` — the 36-screen prototype we ported from. Mostly historical now; tokens + components live in `packages/ui/`.
+14. **Verify gstack:** `test -d ~/.claude/skills/gstack/bin && echo OK`
+15. **Confirm with David:** any decisions reversed since last session? Any new slices to capture?
 
 ---
 
@@ -810,4 +966,4 @@ The full strategic synthesis lives in [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC
 
 ---
 
-*Last updated: April 30, 2026. Boot up here.*
+*Last updated: May 2, 2026 — full reality-pass after the post-audit hardening session, then CEO review later that day shifted scope (5/15 demo path → 7/30 OS v1) and locked the segment posture (mid+down only, franchise networks v1.5 door open, Big 4/F500 deferred 18-24 months). Earlier drafts were partially aspirational; this version describes what's actually in the codebase plus the post-CEO-review forward plan. When a future session handoff disagrees with this doc, the handoff wins until a docs-pass folds it back in. CEO plan with full scope decisions, risks, and success criteria: `~/.gstack/projects/minesokim-child-docket/ceo-plans/2026-05-02-docket-os-v1.md`.*
