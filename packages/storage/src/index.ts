@@ -282,6 +282,28 @@ export async function deleteObject(opts: { storageKey: string }): Promise<void> 
   );
 }
 
+/**
+ * Server-side direct upload. Used by the finalize-document worker which
+ * processes a doc (binarize + PDF) and uploads the result to a new key.
+ * Browsers should NOT call this — they go through getPresignedUploadUrl.
+ */
+export async function putObject(opts: {
+  storageKey: string;
+  body: Buffer;
+  mimeType: string;
+}): Promise<void> {
+  const cfg = getR2Config();
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: cfg.bucket,
+      Key: opts.storageKey,
+      Body: opts.body,
+      ContentType: opts.mimeType,
+      ContentLength: opts.body.length,
+    }),
+  );
+}
+
 // ────────────────────────────────────────────────────────────────
 // Re-exports.
 // ────────────────────────────────────────────────────────────────

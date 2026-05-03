@@ -294,6 +294,14 @@ export type DocumentStatus =
       };
     }
   | { phase: 'accepted' }
+  | { phase: 'finalizing' }
+  | {
+      phase: 'final';
+      docKind: string;
+      finalFilename: string;
+      binarized: boolean;
+      extractedFields: Record<string, unknown>;
+    }
   | { phase: 'failed'; errorMessage: string }
   | { phase: 'not_found' };
 
@@ -314,6 +322,8 @@ export async function getDocumentStatus(
           aiExtracted: schema.documents.aiExtracted,
           aiSuggestedFilename: schema.documents.aiSuggestedFilename,
           aiRetakeHint: schema.documents.aiRetakeHint,
+          finalFilename: schema.documents.finalFilename,
+          binarized: schema.documents.binarized,
           errorMessage: schema.documents.errorMessage,
         })
         .from(schema.documents)
@@ -346,6 +356,16 @@ export async function getDocumentStatus(
           };
         case 'accepted':
           return { phase: 'accepted' };
+        case 'finalizing':
+          return { phase: 'finalizing' };
+        case 'final':
+          return {
+            phase: 'final',
+            docKind: doc.aiClassification ?? 'other',
+            finalFilename: doc.finalFilename ?? doc.aiSuggestedFilename ?? 'Document.pdf',
+            binarized: doc.binarized ?? false,
+            extractedFields: (doc.aiExtracted as Record<string, unknown>) ?? {},
+          };
         case 'failed':
           return {
             phase: 'failed',
@@ -379,10 +399,17 @@ export async function getDocumentStatus(
 
 export type AcceptDocClassificationInput = {
   documentId: string;
-  /** Override the AI's docKind. */
+  /** Override the AI's docKind (preparer/client knows better). */
   docKindOverride?: string;
   /** Override the AI-extracted fields. */
   extractedFieldsOverride?: Record<string, unknown>;
+  /**
+   * Override the AI's suggested filename. The finalize worker uses
+   * this when the user edited the filename in the verification card.
+   * resolveFinalFilename in @docket/document-processing handles
+   * sanitization + .pdf extension.
+   */
+  filenameOverride?: string;
 };
 
 export type AcceptDocClassificationResult =
@@ -396,7 +423,7 @@ export async function acceptDocClassification(
     const client = await getOrCreateClient();
     if (!client) return { ok: false, error: 'Not signed in' };
 
-    return await withTenant(asTenantId(client.tenantId), async (db) => {
+    const result = await withTenant(asTenantId(client.tenantId), async (db) => {
       const update: Record<string, unknown> = {
         parsePhase: 'accepted',
         acceptedAt: new Date(),
@@ -407,8 +434,13 @@ export async function acceptDocClassification(
       if (input.extractedFieldsOverride) {
         update.aiExtracted = input.extractedFieldsOverride;
       }
+      if (input.filenameOverride) {
+        // Stash the user's filename edit on the row. The finalize
+        // worker reads this column and prefers it over the AI suggestion.
+        update.finalFilename = input.filenameOverride;
+      }
 
-      const result = await db
+      const updateResult = await db
         .update(schema.documents)
         .set(update)
         .where(
@@ -420,9 +452,9 @@ export async function acceptDocClassification(
         )
         .returning({ id: schema.documents.id });
 
-      if (result.length === 0) {
+      if (updateResult.length === 0) {
         return {
-          ok: false,
+          ok: false as const,
           error: 'Document not found, or not in parsed state.',
         };
       }
@@ -439,14 +471,33 @@ export async function acceptDocClassification(
           documentId: input.documentId,
           docKindOverride: input.docKindOverride ?? null,
           edited: input.extractedFieldsOverride != null,
+          filenameOverride: input.filenameOverride ?? null,
         },
         toolOutput: { ok: true },
         latencyMs: 0,
         success: true,
       });
 
-      return { ok: true };
+      return { ok: true as const };
     });
+
+    if (!result.ok) return result;
+
+    // Fire the finalize event OUTSIDE the transaction. The finalize
+    // worker is responsible for running the binarize + PDF + rename
+    // pipeline and updating the row to parse_phase='final'. If this
+    // event-send fails, the row stays at 'accepted' and a sweep job
+    // (later workstream) can replay events.
+    await inngest.send({
+      name: 'document/accepted',
+      data: {
+        tenantId: asTenantId(client.tenantId),
+        clientId: asClientId(client.clientId),
+        documentId: input.documentId,
+      },
+    });
+
+    return { ok: true };
   } catch (error) {
     console.error('[acceptDocClassification] CAUGHT:', error);
     Sentry.captureException(error, { tags: { component: 'client-portal-upload' } });

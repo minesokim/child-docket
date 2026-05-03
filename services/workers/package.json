@@ -14,6 +14,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
     "@docket/db": "workspace:*",
+    "@docket/document-processing": "workspace:*",
     "@docket/orchestrator": "workspace:*",
     "@docket/shared": "workspace:*",
     "@docket/storage": "workspace:*",

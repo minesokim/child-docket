@@ -5,6 +5,7 @@ export { inngest } from './inngest-client.js';
 export { gmailPoll } from './functions/gmail-poll.js';
 export { classifyGmailMessage } from './functions/classify-gmail-message.js';
 export { classifyDocumentFn } from './functions/classify-document.js';
+export { finalizeDocumentFn } from './functions/finalize-document.js';
 
 // Re-export the agent factories for direct invocation in tests / scripts.
 export { classifySignal } from './agents/triage-classifier.js';
@@ -32,4 +33,10 @@ export type {
 import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';
 import { classifyDocumentFn } from './functions/classify-document.js';
-export const functions = [gmailPoll, classifyGmailMessage, classifyDocumentFn];
+import { finalizeDocumentFn } from './functions/finalize-document.js';
+export const functions = [
+  gmailPoll,
+  classifyGmailMessage,
+  classifyDocumentFn,
+  finalizeDocumentFn,
+];

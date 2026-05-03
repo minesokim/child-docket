@@ -261,8 +261,14 @@ export const clients = pgTable(
 //   uploaded     bytes in R2 + documents row exists + classify event fired
 //   classifying  Inngest worker picked up event, Haiku vision in flight
 //   parsed       classification complete, awaiting user verification
-//   accepted     user confirmed the classification (or edited it)
-//   failed       classification errored (Haiku failure / corrupt / illegible)
+//   accepted     user confirmed; finalize event fired
+//   finalizing   Inngest worker running binarize + PDF + rename + upload
+//   final        processing complete; final_storage_key populated
+//   failed       classification or finalization errored
+//
+// TWO STORAGE KEYS PER DOC
+//   storage_key       — original raw upload (preserved for audit)
+//   final_storage_key — processed PDF (what preparers see + send)
 export const documents = pgTable(
   'documents',
   {
@@ -289,9 +295,21 @@ export const documents = pgTable(
     aiClassifiedAt: timestamp('ai_classified_at', { withTimezone: true }),
     /** When the user accepted the classification (advances UX to "saved"). */
     acceptedAt: timestamp('accepted_at', { withTimezone: true }),
-    /** Latest error message if classification failed. */
+    /** Latest error message if classification or finalization failed. */
     errorMessage: text('error_message'),
     parsePhase: text('parse_phase').notNull().default('uploaded'),
+    /** Final processed PDF location in R2. NULL until finalize worker runs. */
+    finalStorageKey: text('final_storage_key'),
+    /** Final filename (e.g., "2024_W-2_RiversideUnified.pdf"). */
+    finalFilename: text('final_filename'),
+    /** Final PDF byte size. */
+    finalSizeBytes: integer('final_size_bytes'),
+    /** Final MIME — always 'application/pdf' once finalized. */
+    finalMimeType: text('final_mime_type'),
+    /** When the finalize pipeline completed. */
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    /** Whether binarization was applied. False for ID docs + PDF inputs. */
+    binarized: boolean('binarized').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

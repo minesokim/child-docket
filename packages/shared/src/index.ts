@@ -23,6 +23,11 @@ export * from './rate-limit.js';
 // the Zod schema would later reject.
 export * from './format.js';
 
+// Expected-documents derivation — given an IntakeState, returns the
+// list of documents the client should upload. Powers the docs-page
+// checklist + slot matching for AI-classified uploads.
+export * from './required-docs.js';
+
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.
 // ────────────────────────────────────────────────────────────────

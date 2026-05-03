@@ -41,6 +41,23 @@ type DocketEvents = {
       mimeType: string;
     };
   };
+  /**
+   * Triggered after the user accepts the AI classification. Picked up
+   * by finalize-document worker which:
+   *   - fetches the original from R2
+   *   - binarizes (Otsu threshold) for tax docs
+   *   - wraps in a single-page PDF
+   *   - renames per the suggested/edited filename
+   *   - uploads to a NEW R2 key (final_storage_key)
+   *   - updates documents row with final-side metadata
+   */
+  'document/accepted': {
+    data: {
+      tenantId: TenantId;
+      clientId: ClientId;
+      documentId: string;
+    };
+  };
   'issue/created': {
     data: {
       tenantId: TenantId;
