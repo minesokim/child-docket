@@ -256,6 +256,13 @@ export const clients = pgTable(
 );
 
 // Documents uploaded by clients.
+//
+// parse_phase transitions (app-controlled):
+//   uploaded     bytes in R2 + documents row exists + classify event fired
+//   classifying  Inngest worker picked up event, Haiku vision in flight
+//   parsed       classification complete, awaiting user verification
+//   accepted     user confirmed the classification (or edited it)
+//   failed       classification errored (Haiku failure / corrupt / illegible)
 export const documents = pgTable(
   'documents',
   {
@@ -266,15 +273,31 @@ export const documents = pgTable(
     originalFilename: text('original_filename').notNull(),
     mimeType: text('mime_type').notNull(),
     sizeBytes: integer('size_bytes').notNull(),
+    /** docKind from the doc-classifier agent (w2, 1099_nec, drivers_license, ...). */
     aiClassification: text('ai_classification'),
+    /** [0..1] classification confidence. */
     aiConfidence: real('ai_confidence'),
+    /** [0..1] image legibility — 1.0 perfect, <0.5 retake. */
+    aiLegibility: real('ai_legibility'),
+    /** Per-kind extracted fields (cents-as-int amounts). */
     aiExtracted: jsonb('ai_extracted'),
+    /** Suggested filename from the classifier ("2024_W-2_RiversideUnified.pdf"). */
+    aiSuggestedFilename: text('ai_suggested_filename'),
+    /** Plain-English retake hint when legibility < 0.5. */
+    aiRetakeHint: text('ai_retake_hint'),
+    /** When the classification finished (success or failure). */
+    aiClassifiedAt: timestamp('ai_classified_at', { withTimezone: true }),
+    /** When the user accepted the classification (advances UX to "saved"). */
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    /** Latest error message if classification failed. */
+    errorMessage: text('error_message'),
     parsePhase: text('parse_phase').notNull().default('uploaded'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tenantIdx: index('documents_tenant_idx').on(t.tenantId),
     clientIdx: index('documents_client_idx').on(t.tenantId, t.clientId),
+    parsePhaseIdx: index('documents_parse_phase_idx').on(t.tenantId, t.parsePhase),
   }),
 );
 

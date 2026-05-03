@@ -25,6 +25,22 @@ type DocketEvents = {
       storageKey: string;
     };
   };
+  /**
+   * Triggered after a client (or preparer) successfully uploads a
+   * document. Picked up by services/workers/functions/classify-document.ts
+   * which fetches the bytes, sends to Haiku vision, updates the
+   * documents row with the structured classification.
+   */
+  'document/uploaded': {
+    data: {
+      tenantId: TenantId;
+      clientId: ClientId;
+      documentId: string;
+      storageKey: string;
+      originalFilename: string;
+      mimeType: string;
+    };
+  };
   'issue/created': {
     data: {
       tenantId: TenantId;

@@ -4,6 +4,7 @@
 export { inngest } from './inngest-client.js';
 export { gmailPoll } from './functions/gmail-poll.js';
 export { classifyGmailMessage } from './functions/classify-gmail-message.js';
+export { classifyDocumentFn } from './functions/classify-document.js';
 
 // Re-export the agent factories for direct invocation in tests / scripts.
 export { classifySignal } from './agents/triage-classifier.js';
@@ -20,7 +21,15 @@ export type {
   DraftOutput,
 } from './agents/inbox-drafter.js';
 
+export { classifyDocument, DOC_KINDS } from './agents/doc-classifier.js';
+export type {
+  DocKind,
+  DocClassifierOutput,
+  ClassifyDocumentOptions,
+} from './agents/doc-classifier.js';
+
 // Function array for Inngest serve() handler — Next.js route uses this.
 import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';
-export const functions = [gmailPoll, classifyGmailMessage];
+import { classifyDocumentFn } from './functions/classify-document.js';
+export const functions = [gmailPoll, classifyGmailMessage, classifyDocumentFn];
