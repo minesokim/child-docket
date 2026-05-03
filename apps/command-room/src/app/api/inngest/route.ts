@@ -1,28 +1,65 @@
-// Inngest serve handler.
+// Inngest serve handler — lazy-loaded.
 //
-// Inngest's platform discovers + invokes worker functions by hitting
-// this endpoint. Three HTTP methods are exposed:
-//   - PUT  → app sync (Inngest pulls function definitions on deploy)
-//   - POST → function invocation (Inngest fires events at us)
-//   - GET  → health / metadata
+// The standard pattern is a top-level `import { serve, inngest,
+// functions }` + static export of GET/POST/PUT. That doesn't work
+// here because @docket/workers transitively imports
+// @docket/document-processing → sharp. Sharp's native binary is only
+// loaded at runtime in production (linux-x64), but Next.js's build-
+// time "collect page data" phase evaluates this route's imports
+// eagerly, hitting sharp before the binary is wired up. Result:
 //
-// The functions array comes from @docket/workers — that's where the
-// classify-document, finalize-document, and Gmail workers are defined.
-// The inngest client is the same singleton used to SEND events from
-// client-portal (lives in @docket/shared/inngest as a subpath export
-// to avoid pulling node:async_hooks into the client portal browser
-// bundle).
+//   Error: Could not load the "sharp" module using the linux-x64 runtime
+//   [Error: Failed to collect page data for /api/inngest]
 //
-// Auth model: Inngest's serve handler validates incoming POST signatures
-// against INNGEST_SIGNING_KEY (set on Vercel env vars by the Inngest
-// Vercel integration). Unauthenticated requests get rejected by the
-// SDK before reaching any function. This route does NOT need its own
-// auth gate.
+// `serverExternalPackages` in next.config tells webpack NOT to bundle
+// sharp, but Next still IMPORTS the module during page-data analysis,
+// which is what fails.
+//
+// Fix: dynamic-import the workers package + serve helper inside the
+// route handlers themselves. Build phase analyzes only the wrappers
+// (no sharp). At request time, the lazy imports resolve, sharp's
+// binary loads from node_modules, and the actual handler runs.
+//
+// Cached singleton — first request initializes; subsequent requests
+// reuse. No measurable cold-start penalty after the first invocation.
 
-import { serve } from 'inngest/next';
-import { inngest, functions } from '@docket/workers';
+import { type NextRequest } from 'next/server';
 
-export const { GET, POST, PUT } = serve({
-  client: inngest,
-  functions,
-});
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+type RouteHandlers = {
+  GET: (req: NextRequest) => Promise<Response>;
+  POST: (req: NextRequest) => Promise<Response>;
+  PUT: (req: NextRequest) => Promise<Response>;
+};
+
+let _handlers: RouteHandlers | null = null;
+
+async function getHandlers(): Promise<RouteHandlers> {
+  if (_handlers) return _handlers;
+  const [{ serve }, workers] = await Promise.all([
+    import('inngest/next'),
+    import('@docket/workers'),
+  ]);
+  _handlers = serve({
+    client: workers.inngest,
+    functions: workers.functions,
+  }) as unknown as RouteHandlers;
+  return _handlers;
+}
+
+export async function GET(req: NextRequest): Promise<Response> {
+  const h = await getHandlers();
+  return h.GET(req);
+}
+
+export async function POST(req: NextRequest): Promise<Response> {
+  const h = await getHandlers();
+  return h.POST(req);
+}
+
+export async function PUT(req: NextRequest): Promise<Response> {
+  const h = await getHandlers();
+  return h.PUT(req);
+}
