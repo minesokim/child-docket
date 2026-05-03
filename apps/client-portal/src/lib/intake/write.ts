@@ -120,7 +120,24 @@ export async function saveIntakeField(
         })
         .where(eq(schema.intakeResponses.id, existing.id));
 
-      // 7. Audit log. NOT best-effort - if the audit insert fails,
+      // 7. Side-effect: keep clients.full_name in sync with the
+      // taxpayer's self-reported legal name. Preparers create client
+      // rows with a placeholder name (the name they know the client
+      // by); when the client types their full legal name on /personal,
+      // we want the command-room client list and detail page header
+      // to reflect THAT — not the placeholder. Plain text, not
+      // encrypted (full_name is not in SENSITIVE_INTAKE_PATHS).
+      if (path === 'personal.fullName' && typeof validatedValue === 'string') {
+        const trimmed = validatedValue.trim();
+        if (trimmed.length > 0) {
+          await db
+            .update(schema.clients)
+            .set({ fullName: trimmed, updatedAt: new Date() })
+            .where(eq(schema.clients.id, authed.clientId));
+        }
+      }
+
+      // 8. Audit log. NOT best-effort - if the audit insert fails,
       // the whole transaction rolls back. SOC 2 / IRS Pub 1345
       // requirement: every state-changing write leaves a tamper-
       // evident audit trail. The path is recorded but the VALUE is
