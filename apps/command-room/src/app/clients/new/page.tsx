@@ -16,11 +16,10 @@ export default async function NewClientPage() {
 
   // Where the client portal lives. Set on the command-room Vercel
   // project as NEXT_PUBLIC_CLIENT_PORTAL_URL. Falls back to the
-  // public demo URL for local dev convenience — the share link
-  // still works, it just points at the wrong tenant if you're not
-  // on a real deploy.
+  // production rebuild host (docket-portal.vercel.app) — NOT the
+  // legacy demo client-portal which has hardcoded mock data.
   const clientPortalUrl =
-    process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ?? 'https://docket-client-portal.vercel.app';
+    process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ?? 'https://docket-portal.vercel.app';
 
   return (
     <AppShell

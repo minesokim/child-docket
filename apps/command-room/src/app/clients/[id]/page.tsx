@@ -19,6 +19,8 @@ import { AppShell } from '@/components/app-shell';
 import { IntakeSummary } from '@/components/intake-summary';
 import { DocumentsSection } from '@/components/documents-section';
 import { SignaturesSection } from '@/components/signatures-section';
+import { DeleteClientButton } from '@/components/delete-client-button';
+import { hasRole } from '@/lib/require-role';
 import type { TenantId, IntakeState } from '@docket/shared';
 import { asTenantId, maskSensitiveFields } from '@docket/shared';
 
@@ -389,6 +391,44 @@ export default async function ClientDetailPage({ params }: PageProps) {
             </Section>
           </div>
         </div>
+
+        {/* Danger zone — delete client. firm_owner + admin only.
+            CCPA right-to-delete path: cascades intake_responses,
+            documents, messages, signatures, engagements, issues;
+            actions audit history is preserved with client_id null. */}
+        {hasRole(user, ['firm_owner', 'admin']) && (
+          <div
+            style={{
+              marginTop: 48,
+              paddingTop: 24,
+              borderTop: `1px dashed ${t.borderSoft}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontFamily: t.mono,
+                  fontSize: 9.5,
+                  color: t.muted,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  marginBottom: 4,
+                }}
+              >
+                Danger zone
+              </div>
+              <div style={{ fontSize: 13, color: t.inkSoft, lineHeight: 1.4 }}>
+                Permanently delete this client and everything tied to them.
+                The audit log keeps the trail.
+              </div>
+            </div>
+            <DeleteClientButton clientId={client.id} clientName={client.fullName} />
+          </div>
+        )}
       </div>
     </AppShell>
   );
