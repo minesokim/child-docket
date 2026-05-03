@@ -126,7 +126,9 @@ export default function BusinessFormationPage() {
   const [description, setDescription] = useIntakeField<string>('business.activity', '');
   // Stored as free-form string ('llc'|'scorp'|...) - Antonio normalizes to
   // a canonical entity type during prep when filing forms (1065/1120/1120-S).
-  const [entity, setEntity] = useIntakeField<string>('business.entityType', 'llc');
+  const [entity, setEntity] = useIntakeField<string>('business.entityType', 'llc', {
+    persistDefault: true,
+  });
   const [formationState, setFormationState] = useIntakeField<string>(
     'business.formationState',
     '',

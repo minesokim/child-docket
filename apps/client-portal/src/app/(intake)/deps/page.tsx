@@ -84,7 +84,12 @@ function StepperButton({
 export default function DepsCountPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [count, setCount] = useIntakeField<number>('dependents.count', 0);
+  // Default = 0 (no dependents). persistDefault: true writes 0 on
+  // mount when the field is unset, so a user with zero dependents can
+  // hit Continue without first incrementing to 1 and back to 0.
+  const [count, setCount] = useIntakeField<number>('dependents.count', 0, {
+    persistDefault: true,
+  });
   // Filing status drives back-nav: /spouse when MFJ/MFS, else /filing.
   const [filingStatus] = useIntakeField<FilingStatus>('filing.status', 'single');
 

@@ -247,10 +247,38 @@ export function useSetIntakeField(): SetFieldFn {
  *
  * setValue is synchronous - local state updates instantly, server save
  * fires after typing stops. No await needed; errors are logged.
+ *
+ * ─── persistDefault option ───
+ *
+ * Pages that pre-select a default radio / counter / picker (e.g.,
+ * filing.status defaults to 'single', dependents.count defaults to 0,
+ * refund.preference defaults to 'direct_deposit') were silently broken
+ * before this option existed: the UI showed the default selected, but
+ * the underlying intake state stayed undefined, so the per-step
+ * isComplete gate (which reads the canonical state) refused to
+ * advance — even though the user had visually "answered" by accepting
+ * the default. The workaround was to click a different option then
+ * click the default again, which forced a setField call.
+ *
+ * With persistDefault: true, this hook writes the defaultValue to the
+ * canonical state on mount when the path is unset. The user "leaving
+ * the default selected" now registers as their actual answer, and the
+ * Continue gate advances immediately.
+ *
+ * Use this option ONLY when the default is genuinely the user's
+ * implicit answer (the most common choice). Don't use it for input
+ * placeholders ('') or ambiguous defaults — the persisted value is
+ * what we treat as the user's response, including in audit + agent
+ * eyes downstream.
+ *
+ *   useIntakeField('filing.status', 'single', { persistDefault: true })
+ *   useIntakeField('refund.preference', 'direct_deposit', { persistDefault: true })
+ *   useIntakeField('dependents.count', 0, { persistDefault: true })
  */
 export function useIntakeField<T>(
   path: string,
   defaultValue: T,
+  options?: { persistDefault?: boolean },
 ): readonly [T, (next: T) => void] {
   const { answers, setField } = useIntakeContext();
 
@@ -261,6 +289,21 @@ export function useIntakeField<T>(
     (next: T) => setField(path, next),
     [setField, path],
   );
+
+  // Persist the default once on mount when the canonical state has no
+  // value at this path. The check uses the value we computed at render
+  // time so we don't double-fire across re-renders. Once persisted,
+  // raw becomes defined and this branch is a no-op on subsequent
+  // mounts (e.g., user navigates away and comes back).
+  const shouldPersistDefault = options?.persistDefault === true && raw === undefined;
+  useEffect(() => {
+    if (shouldPersistDefault) {
+      setField(path, defaultValue);
+    }
+    // Intentionally only re-run when the persistability check flips —
+    // not on every defaultValue / path identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldPersistDefault]);
 
   return [value, setValue] as const;
 }

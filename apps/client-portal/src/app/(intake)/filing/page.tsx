@@ -32,7 +32,13 @@ const OPTIONS: Array<{ id: FilingStatus; label: string; hint: string }> = [
 export default function FilingPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
-  const [sel, setSel] = useIntakeField<FilingStatus>('filing.status', 'single');
+  // Default = 'single' (most common). persistDefault: true writes
+  // 'single' on mount when the field is unset, so a user who is
+  // single can hit Continue without first toggling to another option
+  // and back.
+  const [sel, setSel] = useIntakeField<FilingStatus>('filing.status', 'single', {
+    persistDefault: true,
+  });
 
   // Next step is computed from the central INTAKE_FLOW (see intake-flow.ts).
   // Filing branches: mfj/mfs → /spouse, else → /deps. Logic lives in one

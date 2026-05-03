@@ -30,7 +30,14 @@ export default function ServicesPathPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
 
-  const [path, setPathField] = useIntakeField<ServicePathId>('service.kind', 'personal');
+  // Default = 'personal' (most common path — individual 1040). With
+  // persistDefault: true, a user accepting the default can advance
+  // without re-clicking. Note: when service.kind === 'other', the
+  // gate also requires otherSub which has no default, so users who
+  // pick that branch still must explicitly choose.
+  const [path, setPathField] = useIntakeField<ServicePathId>('service.kind', 'personal', {
+    persistDefault: true,
+  });
   const [otherSub, setOtherSub] = useIntakeField<ServiceOtherSubKind | ''>(
     'service.otherSub',
     '',

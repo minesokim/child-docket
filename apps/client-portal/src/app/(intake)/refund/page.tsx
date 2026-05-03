@@ -24,7 +24,6 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
-import { useEffect } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
 import { formatDigits } from '@docket/shared';
@@ -41,15 +40,19 @@ export default function RefundPage() {
   const [accountNumber, setAccountNumber] = useIntakeField<string>('refund.bankAccount', '');
   const revealRouting = useFieldReveal('refund.bankRouting');
   const revealAccount = useFieldReveal('refund.bankAccount');
-  const [preference, setPreference] = useIntakeField<
-    'direct_deposit' | 'check' | 'apply_to_next_year'
-  >('refund.preference', 'direct_deposit');
 
-  // Always direct deposit (only option). Pin on mount.
-  useEffect(() => {
-    if (!preference) setPreference('direct_deposit');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Direct deposit is the only option (IRS retired paper checks
+  // 9/2025). persistDefault: true writes 'direct_deposit' on mount
+  // when the field is unset, so the per-step gate (`!!s.refund?.
+  // preference`) advances without requiring an explicit user click.
+  // Previously the default was visible-only — the user could fill
+  // every bank field and Continue would still refuse because
+  // refund.preference was never persisted.
+  useIntakeField<'direct_deposit' | 'check' | 'apply_to_next_year'>(
+    'refund.preference',
+    'direct_deposit',
+    { persistDefault: true },
+  );
 
   const handleNext = () => {
     const target = getNextStep('/refund', {});
