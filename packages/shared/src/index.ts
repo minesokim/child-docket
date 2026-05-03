@@ -28,11 +28,13 @@ export * from './format.js';
 // checklist + slot matching for AI-classified uploads.
 export * from './required-docs.js';
 
-// Inngest client + event-type definitions. Lives in shared (not
-// workers) so apps that only SEND events — client-portal's confirmUpload
-// + accept flows — can import the typed client without pulling in
-// workers' transitive deps (sharp, pdf-lib, Anthropic SDK).
-export * from './inngest-client.js';
+// Inngest client lives in shared but is NOT re-exported from the main
+// barrel — `inngest` internally imports `node:async_hooks` which
+// breaks browser bundles. Server code imports via the subpath:
+//
+//   import { inngest } from '@docket/shared/inngest'
+//
+// See packages/shared/package.json `exports['./inngest']`.
 
 // ────────────────────────────────────────────────────────────────
 // Branded types — prevent IDs from being mixed up at compile time.

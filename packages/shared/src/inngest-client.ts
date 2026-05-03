@@ -10,7 +10,15 @@
 // apps/command-room/src/app/api/inngest/route.ts.
 
 import { Inngest, EventSchemas } from 'inngest';
-import type { TenantId, ClientId } from './index.js';
+
+// Branded types are inlined here (rather than imported from ./index.js)
+// to avoid the circular: index.ts → re-exports inngest-client.ts →
+// imports types from index.ts. `import type` should erase at runtime
+// but Vercel's Next.js bundler is finicky about resolving this for
+// edge cases in module pre-bundling, so duplicating two type aliases
+// is the cheapest fix.
+type TenantId = string & { readonly __brand: 'TenantId' };
+type ClientId = string & { readonly __brand: 'ClientId' };
 
 // ────────────────────────────────────────────────────────────────
 // Event types — every event we send/receive is typed.

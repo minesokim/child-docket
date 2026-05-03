@@ -40,8 +40,10 @@ import {
   asTenantId,
   asClientId,
   consumeRateToken,
-  inngest,
 } from '@docket/shared';
+// Subpath import — inngest pulls in node:async_hooks which can't be
+// bundled for the browser. Subpath keeps it server-only.
+import { inngest } from '@docket/shared/inngest';
 import {
   buildStorageKey,
   getPresignedUploadUrl,
