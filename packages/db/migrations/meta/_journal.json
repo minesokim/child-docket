@@ -99,6 +99,13 @@
       "when": 1777850000000,
       "tag": "0013_tenant_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777860000000,
+      "tag": "0014_knowledge_layer_foundation",
+      "breakpoints": true
     }
   ]
 }

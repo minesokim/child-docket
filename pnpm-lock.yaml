@@ -142,6 +142,16 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/tax-graph:
+    dependencies:
+      '@docket/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/ui:
     dependencies:
       react:

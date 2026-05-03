@@ -10,7 +10,27 @@ import {
   index,
   uniqueIndex,
   real,
+  date,
+  customType,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+
+// Custom type helpers — Drizzle 0.45 doesn't have a built-in for these
+// shapes that's stable across versions, so we declare them locally.
+
+// int[] — Postgres native integer array. Used by authorities.applicable_tax_years.
+const intArray = customType<{ data: number[]; driverData: number[] }>({
+  dataType() {
+    return 'int[]';
+  },
+});
+
+// text[] — Postgres native text array. Used by authority_chunks.section_path.
+const textArray = customType<{ data: string[]; driverData: string[] }>({
+  dataType() {
+    return 'text[]';
+  },
+});
 
 // ──────────────────────────────────────────────────────────────
 // v0 schema. Multi-tenant via RLS on tenant_id (added in migration).
@@ -601,5 +621,132 @@ export const noticeResponses = pgTable(
     tenantIdx: index('notice_responses_tenant_idx').on(t.tenantId),
     clientIdx: index('notice_responses_client_idx').on(t.tenantId, t.clientId),
     issueIdx: index('notice_responses_issue_idx').on(t.tenantId, t.issueId),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────
+// KNOWLEDGE LAYER (CEO plan D14) — `authorities` is the unit of
+// citation. The IRC, Treas Regs, IRS Pubs, FTB pubs, firm playbooks
+// all live here.
+//
+// tenant_id IS NULL → global authority, every firm sees it
+// tenant_id NOT NULL → firm-internal (playbook / memo / template)
+//
+// Effective-date model: every authority has an effective_date and an
+// optional superseded_date + superseded_by_id. Retrieval queries filter
+// to authorities in effect on the relevant date so we never cite
+// outdated law.
+//
+// Per D12 retrieval architecture: chunk-level (~512 tokens) hybrid
+// search via BM25 (tsvector — already wired here) + cosine similarity
+// (Voyage embeddings — column added in a follow-up migration).
+// ────────────────────────────────────────────────────────────────
+export const authorityKindEnum = pgEnum('authority_kind', [
+  'irc',                // Internal Revenue Code section
+  'treas_reg',          // Treasury Regulation
+  'irs_pub',            // IRS Publication (Pub 17, Pub 535, ...)
+  'irs_form',           // IRS Form / Instructions
+  'irs_irm',            // Internal Revenue Manual
+  'irs_irb',            // Internal Revenue Bulletin
+  'irs_notice',         // IRS Notice
+  'irs_revrul',         // Revenue Ruling
+  'irs_revproc',        // Revenue Procedure
+  'tax_court',          // Tax Court opinion
+  'ca_ftb_pub',         // CA FTB publication
+  'ca_ftb_legal',       // CA FTB Legal Ruling
+  'ca_ftb_form',        // CA FTB Form / Instructions
+  'cdtfa',              // CA Dept of Tax & Fee Admin (sales/use)
+  'edd',                // CA Employment Development Dept (payroll)
+  'firm_playbook',      // Firm-internal playbook
+  'firm_memo',          // Firm-internal memo
+  'firm_template',      // Firm-internal template (engagement letter ...)
+]);
+
+export const authorityJurisdictionEnum = pgEnum('authority_jurisdiction', [
+  'federal',
+  'CA',
+  'firm',
+]);
+
+export const authorities = pgTable(
+  'authorities',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    // NULL for global authorities (IRS / FTB / etc.).
+    tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
+    kind: authorityKindEnum('kind').notNull(),
+    jurisdiction: authorityJurisdictionEnum('jurisdiction').notNull(),
+    /** Display-form citation: "IRS Pub 17 (2024)", "IRC §61(a)(1)", etc. */
+    citationLabel: text('citation_label').notNull(),
+    /** Full title for detail panels. */
+    title: text('title').notNull(),
+    /** Stable URL slug for routing inside Docket. Unique per scope. */
+    slug: text('slug').notNull(),
+    /** Canonical external URL (irs.gov, ftb.ca.gov, ...). NULL for firm authorities. */
+    externalUrl: text('external_url'),
+    /** Where we ingested from (URL or R2 key for archived PDFs). */
+    sourceUri: text('source_uri'),
+    /** When this authority TAKES effect. Required. */
+    effectiveDate: date('effective_date').notNull(),
+    /** When this authority was retired / replaced. NULL = still in effect. */
+    supersededDate: date('superseded_date'),
+    /** Replacement authority (Pub 17 (2024) supersedes Pub 17 (2023)). */
+    supersededById: uuid('superseded_by_id'),
+    /** Tax year(s) this authority applies to. [] = evergreen. */
+    applicableTaxYears: intArray('applicable_tax_years').notNull().default(sql`'{}'::int[]`),
+    /** Sha256 of normalized full text for change-detection on re-ingestion. */
+    contentHash: text('content_hash'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('authorities_tenant_idx').on(t.tenantId),
+    kindIdx: index('authorities_kind_idx').on(t.kind),
+    jurisdictionIdx: index('authorities_jurisdiction_idx').on(t.jurisdiction),
+    effectiveDateIdx: index('authorities_effective_date_idx').on(t.effectiveDate),
+  }),
+);
+
+export const authorityChunks = pgTable(
+  'authority_chunks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    authorityId: uuid('authority_id')
+      .notNull()
+      .references(() => authorities.id, { onDelete: 'cascade' }),
+    /**
+     * Mirror of authorities.tenant_id — set by BEFORE INSERT trigger.
+     * Drizzle inserts MUST omit this field; the trigger fills it from
+     * the parent. Application code never writes to it directly.
+     */
+    tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    /** Hierarchical breadcrumb: ["Part 2", "Chapter 5", "§5.1"]. */
+    sectionPath: textArray('section_path').notNull().default(sql`'{}'::text[]`),
+    /** Display-friendly anchor ("§5.1: Earned income"). */
+    heading: text('heading'),
+    /** The chunk text (~512 tokens). Stored verbatim. */
+    text: text('text').notNull(),
+    /** Char positions in the source for highlight rendering. */
+    charStart: integer('char_start'),
+    charEnd: integer('char_end'),
+    /** Sha256 of `text` for dedup + change-detection. */
+    contentHash: text('content_hash').notNull(),
+    /**
+     * Generated tsvector — populated by Postgres GENERATED ALWAYS AS.
+     * Drizzle-side, treat as read-only. Not in the insert shape.
+     * Embedding column (vector(1024) for voyage-3-lite) added in a
+     * follow-up migration when ingestion ships.
+     */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    authorityIdx: index('authority_chunks_authority_idx').on(t.authorityId),
+    authorityOrdinalUniq: uniqueIndex('authority_chunks_authority_ordinal_uniq').on(
+      t.authorityId,
+      t.ordinal,
+    ),
+    tenantIdx: index('authority_chunks_tenant_idx').on(t.tenantId),
   }),
 );

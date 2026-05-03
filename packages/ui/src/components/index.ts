@@ -17,6 +17,7 @@
 //   icons          IncomeIcon (+ IncomeIconKind), HandCheckmark, Wordmark
 //   signature      LegalDoc, SignaturePad
 //   portal         PortalTabBar (+ PortalTabId)
+//   citation       Citation, CitationList (+ CitationStatus, CitationProps)
 
 export * from './layout.js';
 export * from './text.js';
@@ -30,3 +31,4 @@ export * from './intake-frame.js';
 export * from './icons.js';
 export * from './signature.js';
 export * from './portal.js';
+export * from './citation.js';
