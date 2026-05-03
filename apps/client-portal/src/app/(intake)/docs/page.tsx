@@ -13,7 +13,7 @@ import { resolveClient } from '@/lib/intake/auth';
 import { getOrCreateIntakeAnswers } from '@/lib/intake/read';
 import { listDocuments } from '@/lib/docs/list';
 import { requiredDocsFor } from '@docket/shared';
-import { DocsPageClient } from './docs-page-client';
+import { DocsOverviewClient } from './docs-page-client';
 
 export default async function DocsPage() {
   const auth = await resolveClient();
@@ -27,7 +27,7 @@ export default async function DocsPage() {
   const initialDocs = docList.ok ? docList.documents : [];
 
   return (
-    <DocsPageClient
+    <DocsOverviewClient
       expected={expected}
       initialDocuments={initialDocs}
     />
