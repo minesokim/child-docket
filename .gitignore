@@ -34,8 +34,6 @@ pnpm-debug.log*
 coverage/
 .memsearch/
 
-.vercel
-
 # gstack runtime (security reports, incident postmortems, brain queues,
 # session timelines). Anything here is an internal developer artifact and
 # must not ship to the remote.
@@ -56,3 +54,5 @@ coverage/
 # The @font-face declarations in styles.css already chain to those free
 # fallbacks, so reverting is a single commit that removes the .woff2
 # files (or restores this gitignore line + force-pushes the cleanup).
+
+.vercel
