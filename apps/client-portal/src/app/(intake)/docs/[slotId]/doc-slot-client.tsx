@@ -33,6 +33,8 @@ import {
   Body,
   Button,
   buildTheme,
+  DriversLicenseBackSkeleton,
+  DriversLicenseFrontSkeleton,
   H1,
   IntakeBackButton,
   IntakeHeader,
@@ -40,7 +42,9 @@ import {
   Screen,
   Skeleton,
   SkeletonGroup,
+  SocialSecurityCardSkeleton,
   Stack,
+  TaxFormSkeleton,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import {
@@ -546,35 +550,14 @@ function PhaseBlock({
   }
 
   // ─── Reading (uploaded / classifying) ───
-  // Document-shaped SHIMMER skeleton — the AI-vision call takes a few
-  // seconds, and a paper-toned shimmering doc silhouette reads as
-  // "we're looking at it" instead of "we're loading something."
+  // Document-shaped skeleton — picks the silhouette that matches what
+  // we're reading. A DL-shaped skeleton while we're reading a DL, an
+  // SSN-card skeleton for an SSN, a titled tax-form skeleton for W-2 /
+  // 1099 / 1098 / 1095 / K-1 / statements / prior return.
   if (state.phase === 'uploaded' || state.phase === 'classifying') {
     return (
       <Stack gap={20}>
-        <SkeletonGroup
-          variant="shimmer"
-          panel
-          label={`Reading your ${readingLabel(slot)}`}
-          style={{
-            background: '#fdfcf7',
-            aspectRatio: '4 / 3',
-            borderRadius: 14,
-            padding: '28px 32px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            justifyContent: 'center',
-          }}
-        >
-          <Skeleton.Heading width="46%" />
-          <Skeleton.Line width="100%" />
-          <Skeleton.Line width="86%" />
-          <Skeleton.Line width="64%" />
-          <div style={{ height: 6 }} />
-          <Skeleton.Line width="100%" />
-          <Skeleton.Line width="50%" />
-        </SkeletonGroup>
+        <ReadingSkeleton slot={slot} dl={dl} />
         <div
           style={{
             textAlign: 'center',
@@ -1562,6 +1545,81 @@ function readingLabel(slot: ExpectedDoc): string {
       return 'IRS notice';
     default:
       return 'document';
+  }
+}
+
+// Per-slot reading-state skeleton dispatcher. Picks the document-
+// shaped skeleton that matches what's being read.
+//
+//   drivers_license + dl.step === 'back'  → DL back silhouette
+//   drivers_license (front or unset)      → DL front silhouette
+//   ssn_card                              → SSN-card silhouette
+//   tax docs (W-2, 1099-*, 1098-*, etc.)  → titled tax-form skeleton
+//
+// Wrapped in a centering flex container so the doc-card sits in the
+// hero area at its native aspect ratio, with breathing room above
+// + below if the parent column is taller than the document.
+function ReadingSkeleton({
+  slot,
+  dl,
+}: {
+  slot: ExpectedDoc;
+  dl: DlContext | undefined;
+}) {
+  let inner: React.ReactNode;
+  switch (slot.kind) {
+    case 'drivers_license':
+      inner = dl?.step === 'back'
+        ? <DriversLicenseBackSkeleton />
+        : <DriversLicenseFrontSkeleton />;
+      break;
+    case 'ssn_card':
+      inner = <SocialSecurityCardSkeleton />;
+      break;
+    default:
+      inner = (
+        <TaxFormSkeleton
+          title={slot.title}
+          subtitle={taxFormSubtitleFor(slot)}
+        />
+      );
+      break;
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 240,
+      }}
+    >
+      {inner}
+    </div>
+  );
+}
+
+// Subtitle for the tax-form skeleton header — the IRS-friendly long
+// name (lowercase) under the form code.
+function taxFormSubtitleFor(slot: ExpectedDoc): string | undefined {
+  switch (slot.kind) {
+    case 'w2':                  return 'Wage and Tax Statement';
+    case '1099_nec':            return 'Nonemployee Compensation';
+    case '1099_misc':           return 'Miscellaneous Information';
+    case '1099_int':            return 'Interest Income';
+    case '1099_div':            return 'Dividends and Distributions';
+    case '1099_r':              return 'Distributions From Retirement';
+    case '1098_mortgage':       return 'Mortgage Interest Statement';
+    case '1098_t':              return 'Tuition Statement';
+    case '1095_a':              return 'Health Insurance Marketplace';
+    case 'k1_1065':             return 'Partner’s Share of Income';
+    case 'k1_1120s':            return 'Shareholder’s Share of Income';
+    case 'bank_statement':      return 'Bank Statement';
+    case 'brokerage_statement': return 'Brokerage Statement';
+    case 'prior_return':        return 'Prior Year Return';
+    case 'irs_notice':          return 'IRS Notice';
+    default:                    return undefined;
   }
 }
 

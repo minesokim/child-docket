@@ -1,0 +1,676 @@
+/* ─────────────────────────────────────────────────────────────────
+ * DOCUMENT-SHAPED SKELETONS
+ *
+ * Ported from the design handoff prototype
+ * (`docs/design_handoff_skeleton_loaders/Skeleton Loaders.html`).
+ * Each document type — driver's license front/back, SSN card,
+ * generic tax form — has a faithful skeleton silhouette so the
+ * loading state reads as "we're reading your DL" instead of "we're
+ * loading something."
+ *
+ * Used by <DriversLicenseFrontSkeleton/>, <DriversLicenseBackSkeleton/>,
+ * <SocialSecurityCardSkeleton/>, and <TaxFormSkeleton/> in
+ * @docket/ui/components/skeleton-docs.
+ *
+ * Class naming follows the prototype verbatim — `.bar`, `.photo`,
+ * `.id-front`, `.ssn-banner` etc. There are no conflicts with the
+ * rest of the codebase (audited at port time). The shimmer engine
+ * is `.v-shimmer`, parallel to the `.skel-shimmer` primitive system.
+ * ───────────────────────────────────────────────────────────────── */
+
+:root {
+  --doc-paper:       #fdfaf3;
+  --doc-ink:         #1a1a1a;
+  --doc-ink-soft:    #5b5a55;
+  --doc-forest:      #294b34;
+  --doc-sage-50:     #e6efe1;
+  --doc-tan-50:      #f4e8d8;
+  --doc-tan-100:     #ecd9bf;
+  --doc-tan-200:     #e3c89f;
+  --doc-tan-shimmer: #f7eee0;
+  --doc-rule:        rgba(28, 40, 30, 0.08);
+}
+
+/* ── doc-card: green panel that frames each document skeleton ── */
+.doc-card {
+  background: var(--doc-sage-50);
+  border-radius: 14px;
+  padding: 24px 38px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.doc-page {
+  flex: 1;
+  background: var(--doc-paper);
+  box-shadow:
+    0 0 0 1px rgba(28, 40, 30, 0.04),
+    0 1px 0 rgba(28, 40, 30, 0.04);
+  padding: 26px 22px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Bar primitive (shape only; animation per-variant) ── */
+.doc-card .bar {
+  height: 9px;
+  border-radius: 3px;
+  background: var(--doc-tan-50);
+  position: relative;
+  overflow: hidden;
+}
+.doc-card .bar.heading {
+  height: 5px;
+  width: 38%;
+  background: var(--doc-forest);
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+.doc-card .bar.heading.titled {
+  height: auto;
+  min-height: 22px;
+  width: auto;
+  align-self: flex-start;
+  background: transparent !important;
+  background-image: none !important;
+  border-radius: 0;
+  overflow: visible;
+  margin-bottom: 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  color: var(--doc-ink);
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 1.1;
+  max-width: 100%;
+  animation: none !important;
+}
+.doc-card .bar.heading.titled .doc-title-sub {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--doc-ink-soft);
+  line-height: 1.2;
+}
+.doc-card .bar.w-92 { width: 92%; }
+.doc-card .bar.w-86 { width: 86%; background: var(--doc-tan-100); }
+.doc-card .bar.w-78 { width: 78%; }
+.doc-card .bar.w-64 { width: 64%; background: var(--doc-tan-100); }
+.doc-card .bar.w-50 { width: 50%; background: var(--doc-tan-200); }
+.doc-card .bar.w-40 { width: 40%; }
+
+/* ─── Shimmer engine (v-shimmer parent class) ─── */
+@keyframes docskel-sweep-x {
+  0%   { background-position: -180% 0; }
+  100% { background-position:  280% 0; }
+}
+@keyframes docskel-sweep-card {
+  0%   { transform: translateX(-60%) skewX(-14deg); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(160%)  skewX(-14deg); opacity: 0; }
+}
+
+.v-shimmer .bar {
+  background-image: linear-gradient(
+    100deg,
+    var(--doc-tan-50) 0%,
+    var(--doc-tan-50) 44%,
+    #f0e2cc 50%,
+    var(--doc-tan-50) 56%,
+    var(--doc-tan-50) 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-color: var(--doc-tan-50);
+  animation: docskel-sweep-x 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+.v-shimmer .bar.w-86,
+.v-shimmer .bar.w-64 {
+  background-image: linear-gradient(
+    100deg,
+    var(--doc-tan-100) 0%,
+    var(--doc-tan-100) 44%,
+    #e6d2b4 50%,
+    var(--doc-tan-100) 56%,
+    var(--doc-tan-100) 100%
+  );
+  background-color: var(--doc-tan-100);
+}
+.v-shimmer .bar.w-50 {
+  background-image: linear-gradient(
+    100deg,
+    var(--doc-tan-200) 0%,
+    var(--doc-tan-200) 44%,
+    #d8be93 50%,
+    var(--doc-tan-200) 56%,
+    var(--doc-tan-200) 100%
+  );
+  background-color: var(--doc-tan-200);
+}
+.v-shimmer .bar.heading {
+  background-image: linear-gradient(
+    100deg,
+    var(--doc-forest) 0%,
+    var(--doc-forest) 44%,
+    #345740 50%,
+    var(--doc-forest) 56%,
+    var(--doc-forest) 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-color: var(--doc-forest);
+  animation: docskel-sweep-x 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+/* Card-wide highlight crossing the whole green panel */
+.v-shimmer .doc-card::after {
+  content: "";
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  width: 18%;
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.28) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  pointer-events: none;
+  animation: docskel-sweep-card 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+/* Shared shimmer for solid placeholders inside docs */
+.v-shimmer .photo,
+.v-shimmer .seal,
+.v-shimmer .barcode,
+.v-shimmer .stripe,
+.v-shimmer .sigline,
+.v-shimmer .ssn-num,
+.v-shimmer .ssn-established,
+.v-shimmer .ssn-name {
+  background-image: linear-gradient(
+    100deg,
+    var(--doc-tan-50) 0%,
+    var(--doc-tan-50) 38%,
+    var(--doc-tan-shimmer) 50%,
+    var(--doc-tan-50) 62%,
+    var(--doc-tan-50) 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-color: var(--doc-tan-50);
+  animation: docskel-sweep-x 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+  border-radius: 3px;
+}
+.v-shimmer .stripe-dark,
+.v-shimmer .barcode {
+  background-image: linear-gradient(
+    100deg,
+    var(--doc-tan-200) 0%,
+    var(--doc-tan-200) 44%,
+    #d8be93 50%,
+    var(--doc-tan-200) 56%,
+    var(--doc-tan-200) 100%
+  );
+  background-color: var(--doc-tan-200);
+}
+.v-shimmer .id-back .stripe {
+  animation: none !important;
+  background-image: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * IDENTITY DOCUMENTS — Driver's License (front + back)
+ * ═══════════════════════════════════════════════════════════════ */
+.doc-card.id-card {
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 1.586 / 1;
+  padding: 14px 16px;
+  align-self: center;
+}
+.doc-card.id-card .id-page { flex: 1; }
+
+.id-front .photo {
+  position: relative;
+}
+.id-front .photo .silhouette {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  background: linear-gradient(180deg, #d6e7ec 0%, #f0e8d8 100%);
+  border-radius: inherit;
+}
+.id-front .photo .silhouette svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.55;
+  color: rgba(28, 40, 30, 0.42);
+}
+
+.id-page {
+  flex: 1;
+  background: var(--doc-paper);
+  box-shadow:
+    0 0 0 1px rgba(28, 40, 30, 0.04),
+    0 1px 0 rgba(28, 40, 30, 0.04);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.id-front {
+  padding: 8px 10px;
+  gap: 5px;
+}
+.id-front .id-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(28, 40, 30, 0.10);
+}
+.id-front .id-state {
+  height: 7px;
+  width: 36%;
+  border-radius: 1.5px;
+  background: var(--doc-ink);
+  opacity: 0.85;
+}
+.id-front .id-usa {
+  height: 3px;
+  width: 8px;
+  border-radius: 1px;
+  background: rgba(28, 40, 30, 0.4);
+  align-self: flex-start;
+  margin-top: 1px;
+}
+.id-front .id-doctype {
+  height: 4px;
+  width: 24%;
+  border-radius: 1.5px;
+  background: rgba(28, 40, 30, 0.5);
+  margin-left: 8px;
+}
+.id-front .id-emblem {
+  width: 14px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--doc-tan-200);
+  margin-left: auto;
+}
+.id-front .id-body {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+.id-front .id-photo-col {
+  width: 28%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.id-front .photo {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 0.5px rgba(28, 40, 30, 0.08);
+}
+.id-front .sigline {
+  height: 3px;
+  width: 80%;
+  border-radius: 1px;
+  margin-top: 1px;
+}
+.id-front .id-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.id-front .id-right-col {
+  width: 24%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+.id-front .mini-photo {
+  width: 60%;
+  aspect-ratio: 3 / 4;
+  border-radius: 1.5px;
+  margin-top: auto;
+  box-shadow: inset 0 0 0 0.5px rgba(28, 40, 30, 0.08);
+  opacity: 0.6;
+}
+
+.id-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.id-row .id-label {
+  height: 3px;
+  border-radius: 1px;
+  background: rgba(28, 40, 30, 0.30);
+  flex-shrink: 0;
+}
+.id-row .id-label.s { width: 10px; }
+.id-row .id-label.m { width: 14px; }
+.id-row .id-value {
+  height: 4px;
+  border-radius: 1px;
+}
+.id-row .id-value.long  { width: 70%; }
+.id-row .id-value.med   { width: 55%; }
+.id-row .id-value.short { width: 38%; }
+.id-row .id-value.tiny  { width: 22%; }
+
+.id-front .id-bottom-row {
+  display: flex;
+  gap: 6px;
+  padding-top: 3px;
+  margin-top: 1px;
+  border-top: 1px solid rgba(28, 40, 30, 0.06);
+}
+.id-front .id-bottom-row .id-row { flex: 1; }
+
+/* ── DL back ── */
+.id-back {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.id-back .top-barcode {
+  height: 5px;
+  margin: 5px 7px 3px;
+  border-radius: 1px;
+  background-color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 0.5px rgba(28, 40, 30, 0.15);
+}
+.id-back .top-barcode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #1a1a1a 0 1px,
+    transparent 1px 2px,
+    #1a1a1a 2px 3px,
+    transparent 3px 6px,
+    #1a1a1a 6px 7px,
+    transparent 7px 9px
+  );
+}
+.id-back .stripe {
+  height: 18px;
+  width: 100%;
+  background-color: #1a1a1a;
+  background-image: none !important;
+  margin: 0;
+  border-radius: 0;
+  animation: none !important;
+}
+.id-back .id-content {
+  flex: 1;
+  padding: 6px 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+.id-back .id-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.id-back .id-rows .bar { height: 3px; }
+.id-back .id-bottom {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  flex: 1;
+  margin-top: 3px;
+}
+.id-back .pdf417 {
+  width: 48%;
+  aspect-ratio: 3 / 1.3;
+  border-radius: 1.5px;
+  background-color: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(28, 40, 30, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+.id-back .pdf417::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(90deg, #111 0 1.5px, transparent 1.5px 3px, #111 3px 4px, transparent 4px 6px, #111 6px 7.5px, transparent 7.5px 9px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.0) 0 1.5px, rgba(255,255,255,0.95) 1.5px 2.5px);
+}
+.id-back .id-fineprint {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
+  padding-bottom: 2px;
+}
+.id-back .id-fineprint .bar { height: 2.5px; }
+
+/* ═══════════════════════════════════════════════════════════════
+ * SOCIAL SECURITY CARD
+ * ═══════════════════════════════════════════════════════════════ */
+.doc-card.ssn-card {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 240 / 158;
+  padding: 14px 18px;
+  background: var(--doc-sage-50);
+  align-self: center;
+}
+.ssn-page {
+  flex: 1;
+  background: #f1ece0;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 0 1px rgba(28, 40, 30, 0.05);
+}
+.ssn-banner {
+  height: 32%;
+  background: #1f3556;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ssn-banner .arched {
+  width: 70%;
+  height: 38%;
+  border-radius: 50% 50% 6px 6px / 70% 70% 6px 6px;
+  background-color: rgba(255, 255, 255, 0.55);
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.5) 38%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0.5) 62%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: docskel-sweep-x 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+.ssn-body {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 36px 10px;
+}
+.ssn-column {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 18px;
+  color: rgba(31, 53, 86, 0.55);
+  pointer-events: none;
+}
+.ssn-column.left  { left: 6px; }
+.ssn-column.right { right: 6px; transform: scaleX(-1); }
+.ssn-column svg { width: 100%; height: 100%; display: block; }
+.ssn-seal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(176, 84, 70, 0.35);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(176, 84, 70, 0.10) 0%, rgba(176, 84, 70, 0) 60%);
+}
+.ssn-seal::before,
+.ssn-seal::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px dashed rgba(176, 84, 70, 0.30);
+}
+.ssn-seal::after {
+  inset: 14px;
+  border-style: dotted;
+  opacity: 0.7;
+}
+.ssn-num {
+  position: relative;
+  z-index: 1;
+  height: 12px;
+  width: 38%;
+  border-radius: 2px;
+}
+.ssn-num::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0 30%,
+    rgba(28, 40, 30, 0.22) 30% 33%,
+    transparent 33% 53%,
+    rgba(28, 40, 30, 0.22) 53% 56%,
+    transparent 56% 100%
+  );
+  border-radius: inherit;
+}
+.ssn-established,
+.ssn-name {
+  position: relative;
+  z-index: 1;
+  height: 5px;
+  border-radius: 2px;
+}
+.ssn-established { width: 60%; }
+.ssn-name        { width: 28%; height: 8px; }
+.ssn-sigrow {
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 72px);
+  margin: 4px auto 8px;
+  border-top: 1px solid rgba(31, 53, 86, 0.4);
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+.ssn-sigrow .sigline {
+  height: 4px;
+  width: 30%;
+  border-radius: 2px;
+}
+
+/* Shared card sweep highlight for ID + SSN */
+.doc-card.id-card::after,
+.doc-card.ssn-card::after {
+  content: "";
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  width: 22%;
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  animation: docskel-sweep-card 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * TAX FORM (DocSkeleton with title) — used for W-2, 1099-*,
+ * 1098-*, 1095-*, K-1, statements, and prior returns.
+ * ═══════════════════════════════════════════════════════════════ */
+.doc-card.taxform {
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 8.5 / 11;
+  padding: 18px 22px;
+  align-self: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * REDUCED MOTION
+ * ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .v-shimmer .bar,
+  .v-shimmer .bar.heading,
+  .v-shimmer .photo,
+  .v-shimmer .seal,
+  .v-shimmer .barcode,
+  .v-shimmer .stripe,
+  .v-shimmer .sigline,
+  .v-shimmer .ssn-num,
+  .v-shimmer .ssn-established,
+  .v-shimmer .ssn-name,
+  .v-shimmer .doc-card::after,
+  .ssn-banner .arched {
+    animation: none !important;
+  }
+}

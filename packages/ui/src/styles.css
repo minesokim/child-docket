@@ -1,5 +1,10 @@
 /* Docket UI — global styles. Imported by both apps. */
 
+/* Document-shape skeletons (DL front/back, SSN, tax form, etc.).
+ * Lives in its own file for clarity — large block of CSS faithfully
+ * ported from the design handoff prototype. */
+@import './skeleton-docs.css';
+
 /* ────────────────────────────────────────────────────────────────
  * TRIAL FONTS — local-only evaluation
  *
