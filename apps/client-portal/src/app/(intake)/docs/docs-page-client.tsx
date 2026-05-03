@@ -63,6 +63,11 @@ import type { DocumentRow } from '@/lib/docs/list';
 const POLL_MS = 1500;
 const POLL_SLOW_MS = 3000;
 const POLL_SLOW_AFTER_MS = 30_000;
+// Hard cutoff. If a doc is still uploaded / classifying / accepted /
+// finalizing after this, something is wrong (Inngest worker not
+// running, R2 misconfigured, Haiku timing out, etc.). Surface a clear
+// error rather than spinning forever.
+const POLL_GIVE_UP_AFTER_MS = 90_000;
 
 type DocItemPhase =
   | 'uploading'
@@ -136,6 +141,33 @@ export function DocsPageClient({
 
       const poll = async () => {
         if (cancelled) return;
+
+        // Hard timeout — if we've been waiting too long, the worker
+        // probably isn't picking up the event. Mark this doc as failed
+        // so the user sees an actionable error instead of a perpetual
+        // spinner.
+        const elapsed = Date.now() - startTime;
+        if (elapsed > POLL_GIVE_UP_AFTER_MS) {
+          console.error(
+            '[poll] timeout — doc stuck after',
+            Math.round(elapsed / 1000),
+            's. Likely cause: Inngest worker not running or R2 / Haiku misconfigured.',
+          );
+          setDocs((prev) =>
+            prev.map((d) =>
+              d.key === key
+                ? {
+                    ...d,
+                    phase: 'failed',
+                    errorMessage:
+                      'Upload took too long. Check your connection and try again, or contact your preparer.',
+                  }
+                : d,
+            ),
+          );
+          return cleanup();
+        }
+
         try {
           const status = await getDocumentStatus(documentId);
           if (cancelled) return;
@@ -835,10 +867,10 @@ function FilePickerButton({
         ref={inputRef}
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
-        // capture="environment" gives mobile users a camera-first UX:
-        // iOS Safari + Android Chrome both honor this and open the rear
-        // camera directly. Desktops fall back to the file picker.
-        capture="environment"
+        // No `capture` attr — iOS Safari + Android Chrome show a native
+        // sheet ("Take Photo / Photo Library / Files") so the user
+        // chooses how to source the file. With capture="environment"
+        // they get camera-only, which traps users with a PDF on disk.
         style={{ display: 'none' }}
         onChange={(e) => {
           const file = e.target.files?.[0];

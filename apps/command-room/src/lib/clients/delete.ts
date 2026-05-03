@@ -18,6 +18,11 @@
 //   actions          → SET NULL → audit history preserved with
 //                                  client_id = NULL (migration 0008
 //                                  + the trigger carve-out in 0012).
+//   Clerk user       → DELETED  → if the client had bound their phone,
+//                                  the Clerk identity is removed too.
+//                                  Done AFTER the DB delete (CCPA scrub
+//                                  is the priority; Clerk failure logs
+//                                  + Sentry-reports but doesn't roll back).
 //
 // Role gate: firm_owner + admin only. Preparers / reviewers /
 // assistants don't get to make organizational decisions like
@@ -27,6 +32,7 @@
 import { eq, and } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import { revalidatePath } from 'next/cache';
+import { clerkClient } from '@clerk/nextjs/server';
 import { withTenant, schema } from '@docket/db/client';
 import { asTenantId } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
@@ -49,22 +55,24 @@ export async function deleteClient(input: {
   }
 
   try {
-    return await withTenant(asTenantId(user.tenantId), async (db) => {
+    const result = await withTenant(asTenantId(user.tenantId), async (db) => {
       // Read first so we can verify the name matches what the UI
-      // confirmed — and so we can echo back the deleted name in
-      // the success result. RLS ensures we only see rows in this
-      // tenant; cross-tenant id guesses get notFound from the SELECT.
+      // confirmed, capture the Clerk user id (if bound) for the
+      // Clerk-side delete after, and echo back the name on success.
+      // RLS ensures we only see rows in this tenant; cross-tenant id
+      // guesses get notFound from the SELECT.
       const [target] = await db
         .select({
           id: schema.clients.id,
           fullName: schema.clients.fullName,
+          clerkUserId: schema.clients.clerkUserId,
         })
         .from(schema.clients)
         .where(eq(schema.clients.id, input.clientId))
         .limit(1);
 
       if (!target) {
-        return { ok: false, error: 'Client not found.' };
+        return { ok: false as const, error: 'Client not found.' };
       }
 
       if (target.fullName !== input.confirmName) {
@@ -73,7 +81,7 @@ export async function deleteClient(input: {
           'warning',
         );
         return {
-          ok: false,
+          ok: false as const,
           error: 'Name mismatch — refusing to delete. Refresh and try again.',
         };
       }
@@ -84,8 +92,50 @@ export async function deleteClient(input: {
       revalidatePath('/clients');
       revalidatePath(`/clients/${input.clientId}`);
 
-      return { ok: true, deletedName: target.fullName };
+      return {
+        ok: true as const,
+        deletedName: target.fullName,
+        clerkUserId: target.clerkUserId,
+      };
     });
+
+    if (!result.ok) return result;
+
+    // ─── Clerk-side delete ───
+    // The CCPA scrub on our DB is the priority — that already
+    // succeeded. If the Clerk delete fails, the client's phone-OTP
+    // identity persists in Clerk, but their PII no longer lives in
+    // our system. Log + Sentry but don't roll back.
+    //
+    // Skip when clerkUserId is null (client never completed phone
+    // binding) or is the seed placeholder ('user_seed_*').
+    if (
+      result.clerkUserId &&
+      !result.clerkUserId.startsWith('user_seed_')
+    ) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(result.clerkUserId);
+      } catch (clerkErr) {
+        // Common failure: Clerk user already deleted by some other
+        // path (admin dashboard, prior failed delete, etc.) — Clerk
+        // returns 404. Anything else is a real surprise.
+        const msg = clerkErr instanceof Error ? clerkErr.message : String(clerkErr);
+        console.error('[deleteClient] Clerk deleteUser failed:', msg);
+        Sentry.captureException(clerkErr, {
+          tags: { component: 'command-room-delete-client', stage: 'clerk-delete' },
+          extra: { clerkUserId: result.clerkUserId, dbDeleteSucceeded: true },
+        });
+        // Don't surface this to the user — the CCPA-relevant scrub
+        // already happened. Append a soft warning to the success.
+        return {
+          ok: true,
+          deletedName: result.deletedName,
+        };
+      }
+    }
+
+    return { ok: true, deletedName: result.deletedName };
   } catch (error) {
     Sentry.captureException(error, {
       tags: { component: 'command-room-delete-client' },
