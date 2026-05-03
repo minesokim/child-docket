@@ -14,8 +14,10 @@
     "@docket/db": "workspace:*",
     "@docket/shared": "workspace:*",
     "@docket/ui": "workspace:*",
+    "@docket/workers": "workspace:*",
     "@sentry/nextjs": "^10.51.0",
     "drizzle-orm": "^0.45.2",
+    "inngest": "^3.27.4",
     "next": "15.5.15",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

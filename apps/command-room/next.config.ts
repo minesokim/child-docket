@@ -31,6 +31,22 @@ const SECURITY_HEADERS = [
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@docket/ui', '@docket/shared', '@docket/db'],
+  // sharp + pdf-lib must NOT be bundled by Next.js. Sharp ships native
+  // binaries that webpack can't include in the route bundle; serverless
+  // externals load them at runtime from node_modules instead. The
+  // @docket/* workspace packages that wrap them are also externalized
+  // so webpack doesn't recurse through and try to bundle anyway.
+  // Triggered by the /api/inngest route which serves the
+  // finalize-document worker (uses sharp for binarization + pdf-lib
+  // for PDF wrapping).
+  serverExternalPackages: [
+    'sharp',
+    'pdf-lib',
+    '@docket/document-processing',
+    '@docket/workers',
+    '@docket/orchestrator',
+    '@docket/storage',
+  ],
   // @docket/db uses ESM-style imports with .js extensions (Node strict ESM
   // requirement). Tell Next.js webpack to resolve .js to .ts so workspace
   // packages can be transpiled from source.
