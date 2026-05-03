@@ -40,8 +40,9 @@ import {
   IntakeHeader,
   Row,
   Screen,
-  Skeleton,
   SkeletonGroup,
+  SkeletonHeading,
+  SkeletonLine,
   SocialSecurityCardSkeleton,
   Stack,
   TaxFormSkeleton,
@@ -961,10 +962,10 @@ function DocumentPreview({
           justifyContent: 'center',
         }}
       >
-        <Skeleton.Heading width="42%" />
-        <Skeleton.Line width="100%" />
-        <Skeleton.Line width="86%" />
-        <Skeleton.Line width="64%" />
+        <SkeletonHeading width="42%" />
+        <SkeletonLine width="100%" />
+        <SkeletonLine width="86%" />
+        <SkeletonLine width="64%" />
       </SkeletonGroup>
     );
   }

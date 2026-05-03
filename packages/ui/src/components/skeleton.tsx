@@ -2,31 +2,30 @@
 
 // Skeleton loaders — three variants (shimmer / pulse / wave).
 //
-// CSS lives in packages/ui/src/styles.css. The component pattern
-// mirrors the design handoff in
-// `docs/design_handoff_skeleton_loaders/Skeleton.example.tsx`.
+// CSS lives in packages/ui/src/styles.css. Component pattern follows
+// the design handoff (`docs/design_handoff_skeleton_loaders/`).
+//
+// IMPORTANT — RSC compatibility note:
+//   Earlier this file exposed subcomponents via dot-notation
+//   (Skeleton.Line, Skeleton.Heading, etc.). That pattern breaks
+//   when a Server Component imports `Skeleton` from this 'use client'
+//   module: Next.js converts the export into an opaque client
+//   reference, and property access (`Skeleton.Line`) returns
+//   undefined on the proxy → React renders <undefined /> → "Element
+//   type is invalid" crash.
+//
+//   Fix: every primitive is exported as its OWN top-level named
+//   export (SkeletonLine, SkeletonHeading, SkeletonSmall,
+//   SkeletonCircle). Each is a separate client reference, accessible
+//   from both Server and Client Components without proxying through
+//   property access.
 //
 // USAGE
 //   <SkeletonGroup variant="shimmer" panel label="Loading article">
-//     <Skeleton.Heading width="72%" />
-//     <Skeleton.Line    width="100%" />
-//     <Skeleton.Line    width="94%"  />
+//     <SkeletonHeading width="72%" />
+//     <SkeletonLine width="100%" />
+//     <SkeletonLine width="94%" />
 //   </SkeletonGroup>
-//
-// VARIANTS
-//   shimmer — diagonal highlight sweep, premium feel. Best for dense
-//             documents, hero cards, single focal items.
-//   pulse   — uniform opacity breathing. Best for dashboards, cards,
-//             list rows, generic content.
-//   wave    — staggered top-to-bottom ripple. Best for long lists or
-//             multi-row tables, where the eye reads vertically.
-//
-// PANEL FLAG
-//   Add `panel` to the SkeletonGroup for a panel-wide effect:
-//     - shimmer: a soft white highlight that sweeps across the whole
-//       card, tying the bars together.
-//     - pulse: the card's background color also breathes between two
-//       cream tones in sync with the bars.
 
 import * as React from 'react';
 
@@ -86,46 +85,74 @@ export interface SkeletonProps {
   style?: React.CSSProperties;
 }
 
-function SkeletonBase({
+function makeStyle({
   width,
   height,
-  primary,
   index,
-  className = '',
   style,
-}: SkeletonProps) {
+}: SkeletonProps): React.CSSProperties {
   const computed: React.CSSProperties = { ...style };
   if (width !== undefined) computed.width = typeof width === 'number' ? `${width}px` : width;
   if (height !== undefined) computed.height = typeof height === 'number' ? `${height}px` : height;
   // Manual wave stagger: negative delay keeps the bar pre-rolled at t=0.
   if (index !== undefined) computed.animationDelay = `${-1.8 + index * 0.15}s`;
+  return computed;
+}
 
+/** Generic skeleton bar. Same as SkeletonLine, but uncommitted to a height. */
+export function Skeleton(props: SkeletonProps) {
   return (
     <div
-      className={`skel-bar ${className}`.trim()}
-      data-skel={primary ? 'primary' : undefined}
-      style={computed}
+      className={`skel-bar ${props.className ?? ''}`.trim()}
+      data-skel={props.primary ? 'primary' : undefined}
+      style={makeStyle(props)}
     />
   );
 }
 
-// Convenience subcomponents — match the canonical handoff API.
-const Line = (p: SkeletonProps) => <SkeletonBase height={12} {...p} />;
-const Heading = (p: SkeletonProps) => <SkeletonBase height={18} primary {...p} />;
-const Small = (p: SkeletonProps) => <SkeletonBase height={8} {...p} />;
-const Circle = ({ size = 40, ...p }: SkeletonProps & { size?: number }) => (
-  <SkeletonBase className="skel-circle" width={size} height={size} {...p} />
-);
+/** Body line (12px tall) — body copy placeholder. */
+export function SkeletonLine(props: SkeletonProps) {
+  return (
+    <div
+      className={`skel-bar ${props.className ?? ''}`.trim()}
+      data-skel={props.primary ? 'primary' : undefined}
+      style={makeStyle({ ...props, height: props.height ?? 12 })}
+    />
+  );
+}
 
-type SkeletonComponent = ((p: SkeletonProps) => React.ReactElement) & {
-  Line: typeof Line;
-  Heading: typeof Heading;
-  Small: typeof Small;
-  Circle: typeof Circle;
-};
+/** Heading bar (18px tall, primary depth) — title placeholder. */
+export function SkeletonHeading(props: SkeletonProps) {
+  return (
+    <div
+      className={`skel-bar ${props.className ?? ''}`.trim()}
+      data-skel="primary"
+      style={makeStyle({ ...props, height: props.height ?? 18 })}
+    />
+  );
+}
 
-export const Skeleton = SkeletonBase as SkeletonComponent;
-Skeleton.Line = Line;
-Skeleton.Heading = Heading;
-Skeleton.Small = Small;
-Skeleton.Circle = Circle;
+/** Small bar (8px tall) — subtitle / caption placeholder. */
+export function SkeletonSmall(props: SkeletonProps) {
+  return (
+    <div
+      className={`skel-bar ${props.className ?? ''}`.trim()}
+      data-skel={props.primary ? 'primary' : undefined}
+      style={makeStyle({ ...props, height: props.height ?? 8 })}
+    />
+  );
+}
+
+/** Circular avatar / icon placeholder. */
+export function SkeletonCircle({
+  size = 40,
+  ...props
+}: SkeletonProps & { size?: number }) {
+  return (
+    <div
+      className={`skel-circle ${props.className ?? ''}`.trim()}
+      data-skel={props.primary ? 'primary' : undefined}
+      style={makeStyle({ ...props, width: size, height: size })}
+    />
+  );
+}

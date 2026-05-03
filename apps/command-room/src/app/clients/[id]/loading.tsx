@@ -1,3 +1,5 @@
+'use client';
+
 // Next.js loading boundary for the per-client detail page.
 //
 // Renders while the page.tsx server component is fetching client +
@@ -15,8 +17,22 @@
 // page's shell remains painted. Hoisting AppShell to a layout is the
 // proper fix; this file just provides a useful skeleton in the
 // meantime.
+//
+// 'use client' marker — needed because React Server Components can't
+// safely consume client-bundled named exports from packages with
+// 'use client' at the file level. Marking this module as client makes
+// imports from @docket/ui resolve to the actual functions instead of
+// opaque client references that break property access.
 
-import { buildTheme, Skeleton, SkeletonGroup } from '@docket/ui';
+import {
+  buildTheme,
+  Skeleton,
+  SkeletonCircle,
+  SkeletonGroup,
+  SkeletonHeading,
+  SkeletonLine,
+  SkeletonSmall,
+} from '@docket/ui';
 
 export default function ClientDetailLoading() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
@@ -25,7 +41,7 @@ export default function ClientDetailLoading() {
       {/* Breadcrumb placeholder */}
       <div style={{ marginBottom: 16 }}>
         <SkeletonGroup variant="wave" label="Loading client">
-          <Skeleton.Small width={80} index={0} />
+          <SkeletonSmall width={80} index={0} />
         </SkeletonGroup>
       </div>
 
@@ -39,12 +55,12 @@ export default function ClientDetailLoading() {
         }}
       >
         <SkeletonGroup variant="wave" label="Loading">
-          <Skeleton.Circle size={56} index={0} />
+          <SkeletonCircle size={56} index={0} />
         </SkeletonGroup>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <SkeletonGroup variant="wave" label="Loading">
             <Skeleton width="42%" height={28} index={1} />
-            <Skeleton.Small width="56%" index={2} />
+            <SkeletonSmall width="56%" index={2} />
           </SkeletonGroup>
         </div>
       </header>
@@ -109,9 +125,9 @@ function SectionCardSkeleton({
           gap: 12,
         }}
       >
-        <Skeleton.Heading width="50%" index={0} />
+        <SkeletonHeading width="50%" index={0} />
         {Array.from({ length: rows }).map((_, i) => (
-          <Skeleton.Line
+          <SkeletonLine
             key={i}
             width={`${94 - (i % 4) * 9}%`}
             index={i + 1}

@@ -16,7 +16,7 @@
 
 import * as React from 'react';
 import type { Theme } from '@docket/ui';
-import { Skeleton, SkeletonGroup } from '@docket/ui';
+import { SkeletonGroup, SkeletonHeading, SkeletonLine } from '@docket/ui';
 import {
   getCommandRoomDocumentViewUrl,
   type GetDocumentViewUrlResult,
@@ -364,17 +364,17 @@ function DocumentSkeleton() {
         gap: 14,
       }}
     >
-      <Skeleton.Heading width="50%" />
-      <Skeleton.Line width="100%" />
-      <Skeleton.Line width="86%" />
-      <Skeleton.Line width="100%" />
-      <Skeleton.Line width="64%" />
+      <SkeletonHeading width="50%" />
+      <SkeletonLine width="100%" />
+      <SkeletonLine width="86%" />
+      <SkeletonLine width="100%" />
+      <SkeletonLine width="64%" />
       <div style={{ height: 8 }} />
-      <Skeleton.Heading width="32%" />
-      <Skeleton.Line width="100%" />
-      <Skeleton.Line width="86%" />
-      <Skeleton.Line width="100%" />
-      <Skeleton.Line width="50%" />
+      <SkeletonHeading width="32%" />
+      <SkeletonLine width="100%" />
+      <SkeletonLine width="86%" />
+      <SkeletonLine width="100%" />
+      <SkeletonLine width="50%" />
     </SkeletonGroup>
   );
 }
