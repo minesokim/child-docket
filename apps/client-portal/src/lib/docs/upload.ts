@@ -40,13 +40,13 @@ import {
   asTenantId,
   asClientId,
   consumeRateToken,
+  inngest,
 } from '@docket/shared';
 import {
   buildStorageKey,
   getPresignedUploadUrl,
   statObject,
 } from '@docket/storage';
-import { inngest } from '@docket/workers';
 import { getOrCreateClient } from '@/lib/intake/auth';
 
 // ────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "inngest": "^3.27.4",
     "zod": "^3.25.76"
   }
 }
