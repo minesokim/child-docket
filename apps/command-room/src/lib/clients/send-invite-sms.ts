@@ -73,8 +73,21 @@ function countryOf(e164: string): string {
   return 'US';
 }
 
-export async function sendInviteSms(clientId: string): Promise<SendInviteSmsResult> {
-  console.log('[sendInviteSms] start clientId=', clientId);
+export async function sendInviteSms(
+  clientId: string,
+  /**
+   * Optional custom body. When the preparer edits the SMS textarea on
+   * the success card, this is the rewritten string. When absent, the
+   * server falls back to the same templated body the UI shows by
+   * default (so the contract is "what you see is what gets sent").
+   *
+   * Length-bounded: 10..1500 chars. 1500 ~= 10 SMS segments — generous
+   * upper bound for follow-up reminders or longer firm-style messages.
+   * The 10-char floor catches accidental clears.
+   */
+  customBody?: string,
+): Promise<SendInviteSmsResult> {
+  console.log('[sendInviteSms] start clientId=', clientId, 'hasCustomBody=', customBody != null);
   const startedAt = Date.now();
 
   try {
@@ -130,13 +143,32 @@ export async function sendInviteSms(clientId: string): Promise<SendInviteSmsResu
         return { ok: false, error: 'Refusing to send: sender and recipient phone are identical.' };
       }
 
-      // 6. Build the message. Same template as the success card's
-      //    Copy-message block so what gets SMS'd matches the preview.
+      // 6. Build the message. If the caller passed a customBody (the
+      //    preparer edited the textarea), validate + use it. Otherwise
+      //    fall back to the same template the UI default-fills, so
+      //    "Send via SMS" without any edit still works.
       const country = countryOf(client.phone);
       const url = `${CLIENT_PORTAL_URL}/login?phone=${encodeURIComponent(client.phone)}&country=${country}`;
       const firstName = client.fullName.split(/\s+/)[0] ?? client.fullName;
       const senderFirstName = firstNameOf(user.name);
-      const body = `Hi ${firstName}, this is ${senderFirstName}. Your tax intake portal is ready. Sign in with this phone number (${client.phone}): ${url}`;
+      const defaultBody = `Hi ${firstName}, this is ${senderFirstName}. Your tax intake portal is ready. Sign in with this phone number (${client.phone}): ${url}`;
+
+      let body: string;
+      if (customBody != null) {
+        const trimmed = customBody.trim();
+        if (trimmed.length < 10) {
+          return { ok: false, error: 'Message is too short (minimum 10 characters).' };
+        }
+        if (trimmed.length > 1500) {
+          return {
+            ok: false,
+            error: `Message is too long (${trimmed.length} chars; max 1500).`,
+          };
+        }
+        body = trimmed;
+      } else {
+        body = defaultBody;
+      }
 
       // 7. POST to Twilio Messages API.
       // https://www.twilio.com/docs/messaging/api/message-resource#create-a-message-resource
@@ -182,7 +214,13 @@ export async function sendInviteSms(clientId: string): Promise<SendInviteSmsResu
           agentId: null,
           actionClass: 'send-external',
           toolName: 'sendInviteSms',
-          toolInput: { clientId, toMasked: maskPhone(client.phone), template: 'invite' },
+          toolInput: {
+            clientId,
+            toMasked: maskPhone(client.phone),
+            template: customBody != null ? 'custom' : 'invite-default',
+            bodyChars: body.length,
+            bodySegments: Math.max(1, Math.ceil(body.length / 160)),
+          },
           toolOutput: { ok: false, error: twilioMsg },
           latencyMs: Date.now() - startedAt,
           success: false,

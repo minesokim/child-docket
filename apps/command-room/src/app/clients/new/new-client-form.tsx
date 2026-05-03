@@ -304,7 +304,20 @@ function SuccessCard({
 }) {
   const url = `${clientPortalUrl}/login?phone=${encodeURIComponent(success.phone)}&country=${countryCode}`;
   const firstName = success.fullName.split(/\s+/)[0] ?? success.fullName;
-  const message = `Hi ${firstName}, this is ${firmOwnerFirstName}. Your tax intake portal is ready. Sign in with this phone number (${success.phone}): ${url}`;
+  const defaultMessage = `Hi ${firstName}, this is ${firmOwnerFirstName}. Your tax intake portal is ready. Sign in with this phone number (${success.phone}): ${url}`;
+
+  // Editable message body. Defaults to the templated invite; preparer
+  // can rewrite it freely (warm-up text, language switch, removing
+  // the URL for a follow-up reminder, etc.). The textarea value is
+  // what gets copied AND what gets sent — both paths use the same
+  // string so the preview matches the actual delivery.
+  const [customMessage, setCustomMessage] = React.useState(defaultMessage);
+  // SMS segment math (rough — Twilio's exact segmentation depends on
+  // GSM-7 vs UCS-2; this is a 160-char-per-segment approximation that
+  // matches the common case of plain Latin text).
+  const charCount = customMessage.length;
+  const segmentCount = Math.max(1, Math.ceil(charCount / 160));
+  const hasUrl = customMessage.includes(url);
 
   const [linkCopied, setLinkCopied] = React.useState(false);
   const [messageCopied, setMessageCopied] = React.useState(false);
@@ -342,7 +355,7 @@ function SuccessCard({
   const onSendSms = async () => {
     if (smsState.kind === 'sending' || smsState.kind === 'sent') return;
     setSmsState({ kind: 'sending' });
-    const result = await sendInviteSms(success.clientId);
+    const result = await sendInviteSms(success.clientId, customMessage);
     if (!result.ok) {
       setSmsState({ kind: 'error', message: result.error });
       // Auto-clear error after a beat so the user can retry.
@@ -466,37 +479,104 @@ function SuccessCard({
         </div>
       </div>
 
-      {/* SMS message block */}
+      {/* SMS message block — editable. Whatever the preparer types here
+          is what gets copied AND what gets sent via Twilio. */}
       <div>
         <div
           style={{
-            fontFamily: t.mono,
-            fontSize: 9.5,
-            color: t.muted,
-            letterSpacing: 0.8,
-            textTransform: 'uppercase',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
             marginBottom: 8,
           }}
         >
-          SMS / email message
+          <div
+            style={{
+              fontFamily: t.mono,
+              fontSize: 9.5,
+              color: t.muted,
+              letterSpacing: 0.8,
+              textTransform: 'uppercase',
+            }}
+          >
+            SMS / email message
+          </div>
+          {customMessage !== defaultMessage && (
+            <button
+              type="button"
+              onClick={() => setCustomMessage(defaultMessage)}
+              style={{
+                fontFamily: t.mono,
+                fontSize: 10,
+                color: t.muted,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                letterSpacing: 0.3,
+              }}
+            >
+              Reset to default
+            </button>
+          )}
         </div>
-        <div
+        <textarea
+          value={customMessage}
+          onChange={(e) => {
+            setCustomMessage(e.target.value);
+            // If the user edits after a successful send, drop the
+            // sent state so they can send the new version.
+            if (smsState.kind === 'sent' || smsState.kind === 'error') {
+              setSmsState({ kind: 'idle' });
+            }
+          }}
+          rows={5}
           style={{
+            width: '100%',
             background: t.bgElev,
             border: `1px solid ${t.borderSoft}`,
             borderRadius: 8,
             padding: '12px 14px',
             fontSize: 13.5,
+            fontFamily: t.sans,
             color: t.ink,
             lineHeight: 1.5,
-            whiteSpace: 'pre-wrap',
+            resize: 'vertical',
+            outline: 'none',
+            boxSizing: 'border-box',
+            minHeight: 100,
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = t.ink;
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = t.borderSoft;
+          }}
+        />
+        <div
+          style={{
+            marginTop: 6,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontFamily: t.mono,
+            fontSize: 10,
+            color: t.muted,
+            letterSpacing: 0.3,
           }}
         >
-          {message}
+          <span>
+            {charCount} chars · {segmentCount} {segmentCount === 1 ? 'segment' : 'segments'}
+          </span>
+          {!hasUrl && (
+            <span style={{ color: t.rust }} title="The sign-in link is missing — recipient won't be able to access the portal.">
+              ⚠ Sign-in link missing
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
           <button
-            onClick={() => copy(message, 'message')}
+            onClick={() => copy(customMessage, 'message')}
             style={{
               padding: '8px 16px',
               background: t.ink,
