@@ -11,11 +11,8 @@
 // the plaintext map; PIIUnlockButton reads/writes the unlock state.
 
 import * as React from 'react';
-import {
-  PII_UNLOCK_DURATION_MS,
-  unlockClientPII,
-  type UnlockClientPIIResult,
-} from '@/lib/intake/unlock';
+import { unlockClientPII, type UnlockClientPIIResult } from '@/lib/intake/unlock';
+import { PII_UNLOCK_DURATION_MS } from '@/lib/intake/unlock-config';
 
 export type PlaintextMap = ReadonlyMap<string, string>;
 
