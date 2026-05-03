@@ -143,7 +143,11 @@ export function DocumentPreview({
           background: t.bg,
           width: '100%',
           maxWidth: 1100,
-          maxHeight: '90vh',
+          // DEFINITE height (was maxHeight). Without a definite size,
+          // the modal shrink-wraps to the iframe's intrinsic content,
+          // which renders as a tiny strip — that was the squished bug.
+          // 90vh gives the iframe a proper canvas to fill.
+          height: '90vh',
           borderRadius: 14,
           display: 'flex',
           flexDirection: 'column',
@@ -277,13 +281,10 @@ export function DocumentPreview({
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
+            position: 'relative',
           }}
         >
-          {loading && !view && (
-            <div style={{ fontFamily: t.mono, fontSize: 11, color: '#cdd2c8', letterSpacing: 0.6 }}>
-              Loading preview…
-            </div>
-          )}
+          {loading && !view && <DocumentSkeleton />}
           {view && view.ok && <PreviewBody url={view.url} mimeType={view.mimeType} />}
           {view && !view.ok && (
             <div
@@ -334,6 +335,46 @@ function ToggleButton({
     >
       {label}
     </button>
+  );
+}
+
+// Document-shaped skeleton placeholder while the signed URL is
+// being minted + the iframe is loading. Uses the .skel-shimmer
+// effect from packages/ui/styles.css. Imitates the silhouette of
+// a single doc page (heading + lines) so the loading state reads
+// as "we're fetching your document" instead of an opaque spinner.
+function DocumentSkeleton() {
+  return (
+    <div
+      className="skel-shimmer skel-panel"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Loading document preview"
+      style={{
+        background: '#fdfcf7',
+        width: 'min(72%, 640px)',
+        aspectRatio: '8.5 / 11',
+        maxHeight: '88%',
+        borderRadius: 6,
+        boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+        padding: '36px 40px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}
+    >
+      <div className="skel-bar skel-h-heading skel-w-50" />
+      <div className="skel-bar skel-w-100" />
+      <div className="skel-bar skel-w-86" />
+      <div className="skel-bar skel-w-100" />
+      <div className="skel-bar skel-w-64" />
+      <div style={{ height: 8 }} />
+      <div className="skel-bar skel-h-heading skel-w-32" />
+      <div className="skel-bar skel-w-100" />
+      <div className="skel-bar skel-w-86" />
+      <div className="skel-bar skel-w-100" />
+      <div className="skel-bar skel-w-50" />
+    </div>
   );
 }
 

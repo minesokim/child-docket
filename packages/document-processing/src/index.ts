@@ -26,7 +26,7 @@
 //     embedded as page 1 and page 2 of the same PDF.
 
 import sharp from 'sharp';
-import { PDFDocument, PageSizes } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
 
 export type ProcessOptions = {
   /** Raw bytes from R2 — original upload. */
@@ -154,12 +154,6 @@ export async function binarize(input: Buffer): Promise<Buffer> {
     .normalise(); // sharp's normalize stretches contrast 0..255
 
   // Compute the Otsu threshold from the post-normalize histogram.
-  // We need the raw pixel buffer for this — sharp gives us a histogram
-  // via .stats() but doesn't expose Otsu directly. So:
-  //   - clone the pipeline
-  //   - get the raw pixel buffer
-  //   - compute Otsu manually
-  //   - apply threshold
   const { data: rawPixels, info } = await stage1
     .clone()
     .raw()
@@ -167,10 +161,17 @@ export async function binarize(input: Buffer): Promise<Buffer> {
 
   const otsuValue = computeOtsuThreshold(rawPixels, info.width, info.height);
 
-  // Stage 2: apply the threshold + output as 1-bit PNG.
-  // sharp's .threshold(N) outputs 8-bit black-or-white but PNG encoder
-  // will use bit-depth 1 with .png({ palette: true }) when only 2
-  // colors exist. Keeps file size minimal.
+  // Stage 2: threshold + trim dead borders + output as 1-bit PNG.
+  //
+  // .trim() crops solid-color borders introduced by the original
+  // photo (a phone shot of a DL on a dark countertop turns into a
+  // black frame around the card after Otsu — without trim, the
+  // resulting PDF has 30%+ dead area that makes the preview look
+  // like a narrow horizontal slice).
+  //
+  // The default .trim() reads the corner pixel as the background and
+  // walks inward until it finds a different color. Threshold of 10
+  // tolerates near-uniform borders without nibbling into real content.
   const binarized = await sharp(input)
     .rotate()
     .resize({
@@ -182,6 +183,7 @@ export async function binarize(input: Buffer): Promise<Buffer> {
     .greyscale()
     .normalise()
     .threshold(otsuValue)
+    .trim({ threshold: 10 })
     .png({ compressionLevel: 9, palette: true })
     .toBuffer();
 
@@ -253,10 +255,26 @@ export function computeOtsuThreshold(
 // ────────────────────────────────────────────────────────────────
 // Wrap an image (PNG/JPEG) in a single-page PDF.
 //
-// pdf-lib embeds the raster as the page contents at full page size,
-// preserving aspect ratio. Output is a minimal PDF — no metadata,
-// no fonts, no frills. ~1KB overhead over the raw image bytes.
+// The PDF page is sized to the image's natural aspect ratio at a
+// max long-dim of 8.5 inches (612pts). This means:
+//   - Landscape DLs come out as wide pages with no top/bottom dead
+//     space.
+//   - Portrait W-2s come out as letter-portrait-ish pages with no
+//     side dead space.
+// Either way, when the PDF is rendered in a browser preview iframe,
+// the image fills the visible area. No Letter-frame margins to
+// produce a "narrow slice on a tall page" preview artifact.
 // ────────────────────────────────────────────────────────────────
+
+const PDF_LONG_DIM_PT = 612; // 8.5" at 72dpi
+
+function pageSizeForImage(aspectRatio: number): [number, number] {
+  if (aspectRatio >= 1) {
+    return [PDF_LONG_DIM_PT, PDF_LONG_DIM_PT / aspectRatio];
+  }
+  return [PDF_LONG_DIM_PT * aspectRatio, PDF_LONG_DIM_PT];
+}
+
 export async function wrapImageInPdf(
   imageBytes: Buffer,
   mimeType: string,
@@ -276,17 +294,15 @@ export async function wrapImageInPdf(
     embeddedImage = await pdfDoc.embedJpg(jpegBytes);
   }
 
-  // Letter size by default (8.5x11). Image gets scaled to fit the page
-  // while preserving aspect ratio. Looks like a real document scan.
-  const [pageW, pageH] = PageSizes.Letter;
-  const page = pdfDoc.addPage([pageW, pageH]);
+  const aspectRatio = embeddedImage.width / embeddedImage.height;
+  const [pageW, pageH] = pageSizeForImage(aspectRatio);
 
-  const imgDims = embeddedImage.scaleToFit(pageW - 36, pageH - 36); // 0.5" margin
+  const page = pdfDoc.addPage([pageW, pageH]);
   page.drawImage(embeddedImage, {
-    x: (pageW - imgDims.width) / 2,
-    y: (pageH - imgDims.height) / 2,
-    width: imgDims.width,
-    height: imgDims.height,
+    x: 0,
+    y: 0,
+    width: pageW,
+    height: pageH,
   });
 
   const bytes = await pdfDoc.save();
@@ -294,15 +310,15 @@ export async function wrapImageInPdf(
 }
 
 // ────────────────────────────────────────────────────────────────
-// Multi-page wrap. Each entry becomes one PDF page, scaled to fit
-// 8.5x11 letter with a 0.5" margin. Same per-page math as the
-// single-page version (wrapImageInPdf), just iterated.
+// Multi-page wrap. Each entry becomes one PDF page sized to its
+// own image's aspect ratio. Same image-fitted strategy as
+// wrapImageInPdf — front and back of a DL preview at their native
+// aspect, no whitespace.
 // ────────────────────────────────────────────────────────────────
 export async function wrapImagesInPdf(
   pages: Array<{ bytes: Buffer; mimeType: string }>,
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
-  const [pageW, pageH] = PageSizes.Letter;
 
   for (const page of pages) {
     let embeddedImage;
@@ -315,13 +331,15 @@ export async function wrapImagesInPdf(
       embeddedImage = await pdfDoc.embedJpg(jpegBytes);
     }
 
+    const aspectRatio = embeddedImage.width / embeddedImage.height;
+    const [pageW, pageH] = pageSizeForImage(aspectRatio);
+
     const pdfPage = pdfDoc.addPage([pageW, pageH]);
-    const imgDims = embeddedImage.scaleToFit(pageW - 36, pageH - 36);
     pdfPage.drawImage(embeddedImage, {
-      x: (pageW - imgDims.width) / 2,
-      y: (pageH - imgDims.height) / 2,
-      width: imgDims.width,
-      height: imgDims.height,
+      x: 0,
+      y: 0,
+      width: pageW,
+      height: pageH,
     });
   }
 

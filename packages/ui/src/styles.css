@@ -154,3 +154,160 @@ body {
      allow normal interaction. */
   touch-action: manipulation;
 }
+
+/* ────────────────────────────────────────────────────────────────
+ * SKELETON LOADERS — three variants (shimmer, pulse, wave).
+ * Sourced from the editorial design handoff (`design_handoff_skeleton_loaders/`).
+ * Theme variables match the warm Docket palette; timings + easing
+ * match the design spec exactly.
+ *
+ * Usage:
+ *   <div class="skel-shimmer">
+ *     <div class="skel-bar skel-h-heading skel-w-86"></div>
+ *     <div class="skel-bar skel-w-100"></div>
+ *   </div>
+ *
+ * Variants by class on the parent:
+ *   .skel-shimmer  — diagonal highlight sweep (2.4s, premium feel)
+ *   .skel-pulse    — uniform opacity breathing (1.8s)
+ *   .skel-wave     — staggered top-to-bottom ripple (1.8s)
+ *
+ * Add .skel-panel to the same parent for a panel-wide effect (whole-
+ * card highlight on shimmer, bg-color breathing on pulse).
+ * ────────────────────────────────────────────────────────────────*/
+
+:root {
+  --skel-base:   #e5e1d8;
+  --skel-light:  #f0e2cc;
+  --skel-panel:  #f3f6ef;
+  --skel-panel2: #ecf2e7;
+}
+
+@keyframes skel-sweep-x {
+  0%   { background-position: -180% 0; }
+  100% { background-position:  280% 0; }
+}
+@keyframes skel-sweep-card {
+  0%   { transform: translateX(-60%) skewX(-14deg); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(160%)  skewX(-14deg); opacity: 0; }
+}
+
+.skel-shimmer .skel-bar,
+.skel-shimmer [data-skel] {
+  background-image: linear-gradient(
+    100deg,
+    var(--skel-base)  0%,
+    var(--skel-base)  44%,
+    var(--skel-light) 50%,
+    var(--skel-base)  56%,
+    var(--skel-base)  100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-color: var(--skel-base);
+  animation: skel-sweep-x 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+.skel-shimmer.skel-panel { position: relative; overflow: hidden; }
+.skel-shimmer.skel-panel::after {
+  content: "";
+  position: absolute;
+  top: -10%; bottom: -10%;
+  left: 0; width: 18%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0)    0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0)    100%
+  );
+  pointer-events: none;
+  animation: skel-sweep-card 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+@keyframes skel-pulse-a {
+  0%, 100% { opacity: 1;    }
+  50%      { opacity: 0.42; }
+}
+@keyframes skel-pulse-b {
+  0%, 100% { opacity: 0.95; }
+  50%      { opacity: 0.55; }
+}
+@keyframes skel-pulse-panel {
+  0%, 100% { background-color: var(--skel-panel);  }
+  50%      { background-color: var(--skel-panel2); }
+}
+
+.skel-pulse.skel-panel {
+  animation: skel-pulse-panel 1.8s ease-in-out infinite;
+}
+.skel-pulse .skel-bar,
+.skel-pulse [data-skel] {
+  animation: skel-pulse-a 1.8s ease-in-out infinite;
+}
+.skel-pulse [data-skel="primary"] {
+  animation: skel-pulse-b 1.8s ease-in-out infinite;
+}
+
+@keyframes skel-wave {
+  0%, 100% { opacity: 0.35; transform: translateX(0);   }
+  50%      { opacity: 1;    transform: translateX(2px); }
+}
+
+.skel-wave .skel-bar,
+.skel-wave [data-skel] {
+  animation: skel-wave 1.8s ease-in-out infinite;
+}
+
+.skel-wave .skel-bar:nth-of-type(1)  { animation-delay: -1.80s; }
+.skel-wave .skel-bar:nth-of-type(2)  { animation-delay: -1.65s; }
+.skel-wave .skel-bar:nth-of-type(3)  { animation-delay: -1.50s; }
+.skel-wave .skel-bar:nth-of-type(4)  { animation-delay: -1.35s; }
+.skel-wave .skel-bar:nth-of-type(5)  { animation-delay: -1.20s; }
+.skel-wave .skel-bar:nth-of-type(6)  { animation-delay: -1.05s; }
+.skel-wave .skel-bar:nth-of-type(7)  { animation-delay: -0.90s; }
+.skel-wave .skel-bar:nth-of-type(8)  { animation-delay: -0.75s; }
+.skel-wave .skel-bar:nth-of-type(9)  { animation-delay: -0.60s; }
+.skel-wave .skel-bar:nth-of-type(10) { animation-delay: -0.45s; }
+.skel-wave .skel-bar:nth-of-type(11) { animation-delay: -0.30s; }
+.skel-wave .skel-bar:nth-of-type(12) { animation-delay: -0.15s; }
+
+.skel-bar {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background-color: var(--skel-base);
+}
+
+.skel-w-100 { width: 100%; }
+.skel-w-86  { width: 86%;  }
+.skel-w-64  { width: 64%;  }
+.skel-w-50  { width: 50%;  }
+.skel-w-32  { width: 32%;  }
+
+.skel-h-heading { height: 18px; border-radius: 5px; }
+.skel-h-line    { height: 12px; }
+.skel-h-small   { height: 8px;  }
+
+.skel-circle {
+  display: block;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background-color: var(--skel-base);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel-shimmer .skel-bar,
+  .skel-shimmer [data-skel],
+  .skel-shimmer.skel-panel::after,
+  .skel-pulse .skel-bar,
+  .skel-pulse [data-skel],
+  .skel-pulse.skel-panel,
+  .skel-wave .skel-bar,
+  .skel-wave [data-skel] {
+    animation: none;
+  }
+  .skel-pulse .skel-bar,
+  .skel-wave .skel-bar { opacity: 0.7; }
+}

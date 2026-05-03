@@ -441,19 +441,18 @@ function SlotSubtitle({
       return <span style={{ color: '#a13d2c' }}>Tap to verify</span>;
     case 'accepted':
     case 'finalizing':
-      return <>Saving…</>;
     case 'final': {
-      // For ID docs (DL, SSN), the friendlyDescription is the user's
-      // own name — echoing it back is redundant and reads as
-      // self-congratulating. Keep the original slot subtitle ("Front
-      // and back of your card", "For Antonio") instead.
+      // Optimistic: all three "user accepted, possibly still
+      // processing" states show the same calm subtitle. For ID docs
+      // (DL, SSN), the friendlyDescription is the user's own name —
+      // echoing it back is redundant. Keep the slot subtitle.
       if (isDl || slot.kind === 'ssn_card') return <>{slot.subtitle}</>;
       return <>{friendly ?? slot.subtitle}</>;
     }
     case 'failed':
       return (
         <span style={{ color: '#a13d2c' }}>
-          {doc.errorMessage ?? 'Something went wrong — tap to retry'}
+          {doc.errorMessage ?? "Couldn't process — tap to retry"}
         </span>
       );
     default:
@@ -461,29 +460,32 @@ function SlotSubtitle({
   }
 }
 
-// Status indicator — lives on the RIGHT of every row. Same circular
-// footprint across states so the right column reads as a single
-// vertical rhythm, not a parade of competing icons.
+// Status indicator — lives on the LEFT of every row.
 //
-// Color story (intentional restraint):
-//   empty   → 1px outline of borderSoft, no fill.
-//             Reads as "to do" without shouting.
-//   parsed  → tint background + rust ! glyph. The only state the user
-//             needs to act on; deserves a touch more presence.
-//   in-flight → calm spinner over a pale ring.
-//   final   → SAGE-tinted background (#e7efde, light keylime) + a
-//             medium-green check stroke (#5b7a4f). Deliberately not
-//             dark forest with white check — that's an "achievement
-//             unlocked!" badge. We want "settled, done."
-//   failed  → quiet rust dot.
+// Optimistic UX: the moment a doc reaches `accepted` (user clicked
+// "Yes, this looks right"), we treat it as DONE and show the green
+// check. The finalize worker is doing its binarize/PDF/upload thing
+// in the background, but the user already trusted it — there's no
+// reason to make them watch a spinner for ten seconds.
 //
-// Footprint: 18px (was 22px). Smaller indicator, more breathing room.
+// Polling continues silently behind the scenes (see use-doc-poll's
+// STILL_GOING set, which still includes accepted/finalizing). If the
+// worker eventually FAILS, the indicator flips to a warning triangle
+// + the subtitle prompts retry. The check just becomes a triangle
+// in place — no jarring re-flow.
+//
+// State map:
+//   undefined  → empty hairline circle (not started)
+//   'uploaded' / 'classifying'  → spinner (we're reading the doc)
+//   'parsed'   → amber ! (action required: tap to verify)
+//   'accepted' / 'finalizing' / 'final' → SAGE check (optimistically done)
+//   'failed'   → warning triangle ⚠ (rust)
 function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }) {
   const SIZE = 18;
   const SAGE_FILL = '#e7efde';
   const SAGE_STROKE = '#5b7a4f';
 
-  // Empty / not started — just a hairline outline circle.
+  // Empty / not started.
   if (!phase) {
     return (
       <div
@@ -499,8 +501,9 @@ function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }
     );
   }
 
-  // Final = sage tint + medium-green check. Calm, not stark.
-  if (phase === 'final') {
+  // Optimistic done — collapse accepted/finalizing/final into one
+  // calm sage check. The user clicked Yes; we trust the rest.
+  if (phase === 'accepted' || phase === 'finalizing' || phase === 'final') {
     return (
       <div
         style={{
@@ -555,32 +558,48 @@ function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }
     );
   }
 
-  // Failed = rust dot.
+  // Failed = rust warning triangle. Drawn as an inline SVG triangle
+  // with an exclamation, in the same 18px footprint so the row
+  // doesn't reflow when transitioning from optimistic-check → failed.
   if (phase === 'failed') {
     return (
       <div
         style={{
           width: SIZE,
           height: SIZE,
-          borderRadius: '50%',
-          background: '#f5dcd0',
-          color: t.rust,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 11,
-          fontWeight: 700,
-          lineHeight: 1,
+          color: t.rust,
         }}
-        aria-label="Failed"
+        aria-label="Couldn't process — tap to retry"
+        title="Couldn't process — tap to retry"
       >
-        ×
+        <svg width={SIZE} height={SIZE} viewBox="0 0 18 18" fill="none">
+          <path
+            d="M9 2.5l7 12.5H2L9 2.5z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            fill="#f5dcd0"
+          />
+          <path
+            d="M9 7.5v3.5"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <circle cx="9" cy="13" r="0.9" fill="currentColor" />
+        </svg>
       </div>
     );
   }
 
-  // In-progress = subtle spinner over a sage ring (done-but-thinking).
+  // uploaded / classifying — spinner. The user just uploaded a doc
+  // and we're reading it; they're typically watching this state on
+  // the per-slot page rather than the overview, but it can briefly
+  // surface here too if they navigate away mid-read.
   return (
     <div
       style={{
@@ -592,7 +611,7 @@ function StatusIndicator({ t, phase }: { t: Theme; phase: DocPhase | undefined }
         flexShrink: 0,
         animation: 'doc-status-spin 900ms linear infinite',
       }}
-      aria-label="Processing"
+      aria-label="Reading"
     >
       <style>{`
         @keyframes doc-status-spin {
