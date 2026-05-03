@@ -72,6 +72,21 @@ function getClient(): S3Client {
       accessKeyId: cfg.accessKeyId,
       secretAccessKey: cfg.secretAccessKey,
     },
+    // ─── Checksum compatibility with R2 ───
+    // Starting in @aws-sdk/client-s3 v3.726+, "flexible checksums" are
+    // ON by default. The SDK bakes a placeholder x-amz-checksum-crc32
+    // into PRESIGNED URLs (set to AAAAAA== — base64 of 4 zero bytes),
+    // then expects the upload body to match that CRC. Browser uploads
+    // never match, so R2 returns 403. Cloudflare R2 doesn't fully
+    // implement S3's flexible-checksum spec either way, so we disable
+    // both directions:
+    //   - requestChecksumCalculation: WHEN_REQUIRED — only compute
+    //     a checksum when the operation explicitly requires one
+    //     (e.g., S3 Object Lock); skip the speculative one
+    //   - responseChecksumValidation: WHEN_REQUIRED — same on
+    //     downloads
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   });
   return _client;
 }
