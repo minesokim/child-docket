@@ -25,20 +25,47 @@
 //   If OCR errors out, the pipeline falls back to wrapImageInPdf
 //   (image-only, non-searchable but still a valid PDF).
 
-import { createWorker, type Worker } from 'tesseract.js';
-
-// Cached Tesseract worker — initialized lazily on first OCR call,
-// reused across calls within the same Node process. Loading the
-// English language model + WASM is the expensive step (~5s cold);
-// after that, recognize() is fast.
+// IMPORTANT — top-level imports of tesseract.js are forbidden here.
 //
-// In a Vercel/Inngest serverless lambda, the worker survives across
-// invocations as long as the container is warm.
-let _workerPromise: Promise<Worker> | null = null;
+// tesseract.js v7 runs heavy initialization at module-load time
+// (WASM detection, Worker-thread plumbing, fetch shimming). On
+// Vercel's Node 24 serverless lambda, that init has historically
+// crashed during cold-start. Worse, ANY module that imports this file
+// at top-level inherits that crash — and ocr.ts is reachable from
+// `@docket/document-processing` → `@docket/workers` → the /api/inngest
+// serve handler. A tesseract load-time crash there means every
+// Inngest dispatch (including classify-document, which doesn't even
+// use OCR) hits a 500. Symptom: the upload "Reading…" spinner hangs
+// forever because the classify event never gets handled.
+//
+// The fix: dynamic-import tesseract.js inside ocrToSearchablePdf()
+// only. classify-document loads without paying the tesseract cost.
+// finalize-document pays it on first invocation; if tesseract still
+// crashes, the caller's try/catch falls back to wrapImageInPdf (image-
+// only, non-searchable, but a valid PDF — pipeline does not break).
 
-function getOcrWorker(): Promise<Worker> {
+// Use a structural type for the cached worker so we don't need a
+// type-only import from tesseract.js at module top.
+type TesseractWorker = {
+  recognize(
+    image: Buffer,
+    options: Record<string, unknown>,
+    output: Record<string, boolean>,
+  ): Promise<{ data: { pdf?: number[] | null } }>;
+};
+
+let _workerPromise: Promise<TesseractWorker> | null = null;
+
+async function getOcrWorker(): Promise<TesseractWorker> {
   if (!_workerPromise) {
-    _workerPromise = createWorker('eng');
+    _workerPromise = (async () => {
+      // Dynamic import — runs only when this function is actually
+      // called, NOT at module load. Keeps tesseract out of the
+      // /api/inngest cold-start path.
+      const tesseract = await import('tesseract.js');
+      const worker = await tesseract.createWorker('eng');
+      return worker as unknown as TesseractWorker;
+    })();
   }
   return _workerPromise;
 }
