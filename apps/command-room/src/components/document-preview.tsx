@@ -195,7 +195,9 @@ export function DocumentPreview({
               {view?.ok
                 ? view.source === 'final'
                   ? 'Processed'
-                  : 'Raw upload'
+                  : view.source === 'original-fallback'
+                    ? 'Raw — finalize pending'
+                    : 'Raw upload'
                 : loading
                 ? 'Loading…'
                 : 'Preview'}

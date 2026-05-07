@@ -34,7 +34,17 @@ export type GetDocumentViewUrlResult =
       ok: true;
       url: string;
       expiresAt: number;
-      source: 'final' | 'original';
+      /**
+       * Which file is being served:
+       *   'final'           — the processed PDF (binarized + searchable).
+       *   'original'        — explicit "Raw" toggle, regardless of final state.
+       *   'original-fallback' — caller asked for 'auto' but no finalStorageKey
+       *                         yet. We're serving the raw upload as a
+       *                         placeholder. UI should NOT label this
+       *                         "Processed" — finalize is still pending or
+       *                         it errored.
+       */
+      source: 'final' | 'original' | 'original-fallback';
       mimeType: string;
       filename: string;
     }
@@ -101,11 +111,23 @@ export async function getCommandRoomDocumentViewUrl(input: {
       downloadFilename: disposition === 'attachment' ? filename : undefined,
     });
 
+    // Source labeling: 'final' when we served the actual processed
+    // PDF; 'original' when the caller explicitly asked for raw; and
+    // 'original-fallback' when 'auto' was requested but finalStorageKey
+    // is missing (finalize hasn't run yet, or it errored). The UI
+    // distinguishes the third case so users don't see a color photo
+    // with a "Processed" label, which is misleading.
+    const source: 'final' | 'original' | 'original-fallback' = useFinal
+      ? 'final'
+      : wantOriginal
+        ? 'original'
+        : 'original-fallback';
+
     return {
       ok: true,
       url: presigned.url,
       expiresAt: presigned.expiresAt,
-      source: useFinal ? 'final' : 'original',
+      source,
       mimeType,
       filename,
     };

@@ -190,7 +190,7 @@ export async function binarize(input: Buffer): Promise<Buffer> {
 
   const otsuValue = computeOtsuThreshold(rawPixels, info.width, info.height);
 
-  // Stage 2: threshold + trim dead borders + output as 1-bit PNG.
+  // Stage 2: threshold + trim dead borders + output as 8-bit grayscale PNG.
   //
   // .trim() crops solid-color borders introduced by the original
   // photo (a phone shot of a DL on a dark countertop turns into a
@@ -198,9 +198,14 @@ export async function binarize(input: Buffer): Promise<Buffer> {
   // resulting PDF has 30%+ dead area that makes the preview look
   // like a narrow horizontal slice).
   //
-  // The default .trim() reads the corner pixel as the background and
-  // walks inward until it finds a different color. Threshold of 10
-  // tolerates near-uniform borders without nibbling into real content.
+  // CRITICAL: NO `palette: true`. pdf-lib's embedPng() only accepts
+  // 8-bit DeviceRGB or DeviceGray PNGs and throws on indexed/palette
+  // PNGs. Tesseract.js's PDF embedder has similar limits. Outputting
+  // 8-bit grayscale here keeps the file ~30% larger than 1-bit
+  // indexed but guarantees BOTH downstream paths (tesseract searchable
+  // PDF + the wrapImageInPdf fallback) accept the buffer. Visually the
+  // pixels are still 0 or 255 — the PDF still looks like a fax-quality
+  // B&W scan, just stored as grayscale rather than palette-indexed.
   const binarized = await sharp(input)
     .rotate()
     .resize({
@@ -213,7 +218,7 @@ export async function binarize(input: Buffer): Promise<Buffer> {
     .normalise()
     .threshold(otsuValue)
     .trim({ threshold: 10 })
-    .png({ compressionLevel: 9, palette: true })
+    .png({ compressionLevel: 9 })
     .toBuffer();
 
   return binarized;
