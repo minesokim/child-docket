@@ -10,6 +10,12 @@ Sentry.init({
   beforeSend: scrubEvent,
   beforeSendTransaction: scrubEvent,
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
+  initialScope: {
+    tags: {
+      app: 'command-room',
+      runtime: 'browser',
+    },
+  },
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

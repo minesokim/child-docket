@@ -22,4 +22,14 @@ Sentry.init({
   beforeSend: scrubEvent,
   beforeSendTransaction: scrubEvent,
   environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+  // Tag events with the source app so we can filter `app:portal` vs
+  // `app:command-room` in Sentry's dashboard. Both apps share one
+  // Sentry project (`docket` org / `javascript-nextjs` project) but
+  // emit distinct tags so issues route correctly.
+  initialScope: {
+    tags: {
+      app: 'portal',
+      runtime: 'nodejs',
+    },
+  },
 });

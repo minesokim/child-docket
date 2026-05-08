@@ -15,4 +15,14 @@ Sentry.init({
   beforeSend: scrubEvent,
   beforeSendTransaction: scrubEvent,
   environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+  // Tag all events with the source app so we can filter command-room vs
+  // portal in the dashboard. Both apps share one Sentry project but the
+  // events come from different code paths, different user surfaces, and
+  // (typically) need different alert thresholds.
+  initialScope: {
+    tags: {
+      app: 'command-room',
+      runtime: 'nodejs',
+    },
+  },
 });

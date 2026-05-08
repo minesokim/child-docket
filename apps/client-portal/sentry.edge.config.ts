@@ -12,4 +12,10 @@ Sentry.init({
   beforeSend: scrubEvent,
   beforeSendTransaction: scrubEvent,
   environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+  initialScope: {
+    tags: {
+      app: 'portal',
+      runtime: 'edge',
+    },
+  },
 });
