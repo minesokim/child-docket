@@ -87,9 +87,19 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 
 ---
 
-## Status as of session end (2026-05-08)
+## Status as of overnight session end (2026-05-08, 03:00 PT)
 
-Tonight's session shipped 14 items end-to-end across 8 commits, all on `main`, all production deploys verified READY. Each commit passed the four-skill cycle (edge-cases enumerated, code-quality gates, codex review where applicable, decisions logged where applicable, deploy verified per Step 7).
+**SEE [`OVERNIGHT-HANDOFF-2026-05-08.md`](OVERNIGHT-HANDOFF-2026-05-08.md) FOR THE COMPREHENSIVE SUMMARY.**
+
+23 commits shipped overnight. /score 94/100 weighted. /align verdict: 9 ALIGNED, 1 BORDERLINE (trust gate substrate-without-current-consumer), 0 MISALIGNED, 1 acknowledged-exception (OTP bypass with launch-prep removal tracked).
+
+Each commit passed the four-skill cycle (edge-cases enumerated, code-quality gates, codex review where applicable, decisions logged where applicable, deploy verified per Step 7). Three new skills shipped (`/keep-going`, `/score`, `/align`, `/e2e`) that codify the loop the user asked for.
+
+ACTION ITEMS for the morning (~10 min total):
+
+1. Set 4 env vars in Vercel (BOTH apps) — see OVERNIGHT-HANDOFF #1
+2. Review 6 architectural decisions [11]-[16] — see OVERNIGHT-HANDOFF #2  
+3. Find Clerk's test-phone setting + remove the OTP bypass — see OVERNIGHT-HANDOFF #3
 
 Commits since session start:
 

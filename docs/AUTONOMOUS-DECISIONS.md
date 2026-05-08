@@ -517,5 +517,45 @@ forbid the cascade or accept chain breakage on each delete.
 
 ---
 
+## [16] 2026-05-08 — E2E OTP bypass via env-gated /api/e2e-bypass endpoint
+
+**Decision**: `apps/client-portal/src/app/api/e2e-bypass/route.ts` ships
+a production-deployed endpoint that bypasses Clerk OTP verification
+when FOUR independent env gates pass simultaneously: `E2E_BYPASS_ENABLED=true`,
+`E2E_TEST_PHONE` matches, `E2E_TEST_OTP` matches, AND
+`E2E_ALLOW_PROD_BYPASS=true` (the prod-acknowledgment gate). On
+success, generates a Clerk sign-in token; the login page detects
+`?ticket=<token>` and consumes it via `signIn.create({strategy:
+'ticket', ticket})`.
+
+**Reasoning**: Playwright UI e2e against `docket-portal.vercel.app`
+needs auth without real Twilio SMS / real Clerk OTP. Clerk's "test
+phone numbers" feature exists in the dashboard but the UI was
+reorganized in 2025 and the user couldn't find it before sleep. App-
+level bypass is a fallback. The four-gate design means the code is
+DORMANT in any deploy without ALL FOUR env vars set; setting the prod-
+acknowledgment to `false` instantly disables without redeploy.
+
+**Alternative considered**: Clerk dashboard test-phone (the user-side
+move; tracked as a removable-when-found item). Mock Clerk in-app via
+session-token forge (more invasive). Skip Playwright entirely tonight
+(loses UI composition coverage).
+
+**How to reverse**: Per [`PRODUCTION-READINESS.md`](PRODUCTION-READINESS.md)
+pre-public-launch removal checklist: delete the route handler, delete
+the `/api/e2e-bypass` allowlist line in middleware, delete the ticket-
+consumption useEffect in the login page, unset the four env vars. The
+removal is a 5-line commit. The Playwright tests can stay — they
+auto-skip without the bypass.
+
+**Severity**: architectural (security-sensitive surface in production
+deploy)
+
+**Commit**: `4723b25`
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
