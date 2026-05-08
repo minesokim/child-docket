@@ -447,5 +447,75 @@ that wrote correct (tenant_id, client_id) pairs continue to work.
 
 ---
 
+## [14] 2026-05-08 — Audit-trail chain uses chain_seq, not created_at, for ordering
+
+**Decision**: Migration 0022 introduces a per-tenant `chain_seq bigint`
+column to define chain order, rather than ordering by `created_at`.
+Chain_seq is assigned by the BEFORE INSERT trigger under the per-tenant
+advisory lock as `MAX(chain_seq) + 1` for that tenant.
+
+**Reasoning**: Codex review HIGH on the first draft (which used
+created_at) noted that two same-tenant transactions can serialize
+correctly under the advisory lock yet still have out-of-order
+created_at values (transaction_timestamp() can race in either
+direction). chain_seq is assigned monotonically while the lock is
+held, so order is unambiguous regardless of timestamp.
+
+**Alternative considered**: Postgres global sequence
+(`nextval('actions_chain_seq')`). Rejected — gives global ordering,
+not per-tenant. Two tenants would interleave chain_seq values which
+is harder to reason about. Per-tenant MAX+1 under the advisory lock
+gives clean per-tenant 1..N sequences.
+
+**How to reverse**: Drop the trigger and the chain_seq column. Chain
+becomes unverifiable on legacy data. Not recommended.
+
+**Severity**: architectural
+
+**Commit**: this commit (migration 0022)
+
+**User-review status**: pending
+
+---
+
+## [15] 2026-05-08 — client_id excluded from audit-chain hash (CCPA compatibility)
+
+**Decision**: `actions.client_id` is NOT included in the canonical
+hash computation in migration 0022. Every other action column
+(except chain_seq itself, which is computed) IS included.
+
+**Reasoning**: Migration 0012 carved out an exception in the
+append-only trigger to allow `actions.client_id` to be UPDATEd from
+non-NULL to NULL when a client is deleted (CCPA right-to-delete
+preserves the audit row but anonymizes the PII linkage). If
+client_id were in the hash, every legitimate client deletion would
+invalidate the chain — verify_actions_chain would report tampering
+on every delete operation.
+
+**Alternative considered**: Include client_id; on each CCPA delete,
+re-run the migration's trigger-drop / backfill / trigger-recreate
+sequence. Rejected — operationally fragile, makes every CCPA delete
+a multi-step DBA operation.
+
+**Trade-off**: An attacker with DDL access could change client_id
+without detection by the chain. The only mutation actually
+permitted is non-NULL → NULL (per migration 0012's tightened
+trigger), so the attack surface is limited to "anonymizing audit
+rows that were associated with a deleted client." That's the same
+mutation a legitimate CCPA flow does. Application-layer audit logs
+the action that triggered each NULL'ing.
+
+**How to reverse**: Add p_client_id parameter back to
+actions_canonical_for_hash; revert deletion semantics to either
+forbid the cascade or accept chain breakage on each delete.
+
+**Severity**: architectural
+
+**Commit**: this commit (migration 0022)
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*

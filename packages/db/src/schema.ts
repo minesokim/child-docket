@@ -5,6 +5,7 @@ import {
   uuid,
   jsonb,
   integer,
+  bigint,
   boolean,
   pgEnum,
   index,
@@ -32,6 +33,16 @@ const intArray = customType<{ data: number[]; driverData: number[] }>({
 const textArray = customType<{ data: string[]; driverData: string[] }>({
   dataType() {
     return 'text[]';
+  },
+});
+
+// bytea — raw bytes. Used by actions.prev_hash + actions.row_hash
+// (cryptographic chain, migration 0022). Application code never
+// WRITES these — the BEFORE INSERT trigger fills them. Read-side
+// returns Buffer (Node) / Uint8Array.
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType() {
+    return 'bytea';
   },
 });
 
@@ -398,10 +409,29 @@ export const actions = pgTable(
     success: boolean('success').notNull(),
     errorMessage: text('error_message'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Cryptographic chain (migration 0022). NEVER write from app
+     * code — the BEFORE INSERT trigger `actions_set_chain` fills
+     * all three. Per-tenant chain; chain_seq + prev_hash are NULL
+     * on legacy rows from before migration 0022. Note that client_id
+     * is intentionally EXCLUDED from the chain hash because of the
+     * migration 0012 carve-out (CCPA NULL'ing); see 0022 header.
+     */
+    chainSeq: bigint('chain_seq', { mode: 'number' }),
+    prevHash: bytea('prev_hash'),
+    rowHash: bytea('row_hash'),
   },
   (t) => ({
     tenantCreatedIdx: index('actions_tenant_created_idx').on(t.tenantId, t.createdAt),
     agentIdx: index('actions_agent_idx').on(t.tenantId, t.agentId),
+    /**
+     * Used by the chain trigger for "most recent prior chain_seq"
+     * lookup, and by verify_actions_chain to walk in order. Partial
+     * — legacy rows (chain_seq IS NULL) excluded.
+     */
+    tenantChainSeqUniq: uniqueIndex('actions_tenant_chain_seq_uniq')
+      .on(t.tenantId, t.chainSeq)
+      .where(sql`chain_seq IS NOT NULL`),
   }),
 );
 
