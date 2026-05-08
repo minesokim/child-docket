@@ -544,10 +544,22 @@ function DocumentSkeleton() {
 
 function PreviewBody({ url, mimeType }: { url: string; mimeType: string }) {
   if (mimeType === 'application/pdf') {
+    // sandbox notes:
+    //   - allow-scripts: required for Chrome's native PDF viewer
+    //     (PDF.js under the hood) to render. Without it the iframe
+    //     shows a download prompt instead of the inline viewer.
+    //   - allow-same-origin: required so the viewer can fetch its
+    //     own resources alongside the presigned URL.
+    //   - We intentionally do NOT grant: allow-popups, allow-forms,
+    //     allow-top-navigation. A malicious PDF can't navigate the
+    //     command-room out from under the user or post forms with
+    //     stolen credentials.
     return (
       <iframe
         src={url}
         title="Document preview"
+        sandbox="allow-scripts allow-same-origin"
+        referrerPolicy="no-referrer"
         style={{
           width: '100%',
           height: '100%',

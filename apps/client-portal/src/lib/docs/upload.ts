@@ -205,6 +205,19 @@ export async function confirmUpload(input: {
       return { ok: false, error: 'Storage key does not match your account. Contact support.' };
     }
 
+    // Re-validate MIME against the allowlist. Defense-in-depth: even
+    // though requestUploadUrl already checked, a tampered confirmUpload
+    // POST could pass a different mimeType than the one used to sign
+    // the upload URL. Refuse anything outside the allowlist before we
+    // write a documents row claiming an arbitrary mime.
+    if (!ALLOWED_MIMES.has(input.mimeType)) {
+      console.error('[confirmUpload] disallowed mime — refusing. mime=', input.mimeType);
+      return {
+        ok: false,
+        error: `Unsupported file type "${input.mimeType}". Allowed: PDF, PNG, JPEG, WEBP, GIF.`,
+      };
+    }
+
     // Verify the object actually exists in R2 — defense against the
     // "client called confirm without a successful PUT" case (no
     // orphan documents rows).
