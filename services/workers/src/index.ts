@@ -31,7 +31,13 @@ export type {
   ClassifyDocumentOptions,
 } from './agents/doc-classifier.js';
 
-export { runDiscovery, TaxPositionSchema, DiscoveryOutputSchema, CitationSchema } from './agents/discovery-agent.js';
+export {
+  runDiscovery,
+  DiscoveryAgentNotEnabledError,
+  TaxPositionSchema,
+  DiscoveryOutputSchema,
+  CitationSchema,
+} from './agents/discovery-agent.js';
 export type {
   DiscoveryContext,
   DiscoveryInput,

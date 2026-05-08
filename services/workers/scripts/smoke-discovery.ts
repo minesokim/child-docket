@@ -9,7 +9,14 @@
 //      for human-approval; L2+ firm + Tier 1 = allowed).
 //   5. Cost stays under ~$0.05 per call (Sonnet + caching).
 //
-// Usage: ANTHROPIC_API_KEY=... bun run services/workers/scripts/smoke-discovery.ts
+// Usage: ANTHROPIC_API_KEY=... DISCOVERY_AGENT_ENABLED=true \
+//          bun run services/workers/scripts/smoke-discovery.ts
+//
+// IMPORTANT — DISCOVERY_AGENT_ENABLED is the kill-switch added 2026-05-08
+// (licensure-stakes mandate). Without it set to 'true', runDiscovery
+// throws DiscoveryAgentNotEnabledError before invoking Sonnet. This
+// is intentional: pre-knowledge-layer the model can hallucinate IRC
+// citations, and Antonio's PTIN is on every return that uses them.
 //
 // EXPECTED OUTPUT (illustrative — exact positions vary per call):
 //   - Self-employment expense deductions (IRC §162(a))

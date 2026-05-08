@@ -146,6 +146,53 @@ export type DiscoverOptions = {
   onAction?: Parameters<typeof runDocketAgent>[0]['onAction'];
 };
 
+/**
+ * Class-marker thrown when runDiscovery is invoked without the explicit
+ * DISCOVERY_AGENT_ENABLED env gate. Allows callers to catch + handle
+ * (e.g., by rendering a "knowledge layer not ready" banner) without
+ * confusing it with model-output errors.
+ */
+export class DiscoveryAgentNotEnabledError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DiscoveryAgentNotEnabledError';
+  }
+}
+
+/**
+ * Pre-knowledge-layer kill-switch. The Discovery agent's system prompt
+ * tells the model to surface IRC citations directly. Without the
+ * authorities table populated (Phase 3 work), citations come from the
+ * model's training data and can be hallucinated — the EA's PTIN is on
+ * every return, so a hallucinated cite that ships could end Antonio's
+ * license. This guard refuses to run until the user explicitly opts in
+ * via DISCOVERY_AGENT_ENABLED=true.
+ *
+ * To override (for evals, dev exploration, etc.):
+ *   DISCOVERY_AGENT_ENABLED=true bun run services/workers/scripts/smoke-discovery.ts
+ *
+ * In production the env var stays UNSET until the knowledge-layer
+ * ingest lands AND there's a verifier loop confirming each citation
+ * resolves to a real authority row before the position surfaces in
+ * Antonio's queue.
+ *
+ * Per the user's 2026-05-08 licensure-stakes mandate.
+ */
+function assertDiscoveryEnabled(): void {
+  const enabled = process.env.DISCOVERY_AGENT_ENABLED;
+  if (enabled !== 'true') {
+    throw new DiscoveryAgentNotEnabledError(
+      'Discovery agent is gated off until the knowledge layer (authorities ' +
+        'table) is populated AND a citation-verifier loop is in place. The ' +
+        'system prompt asks the model to emit IRC citations; pre-knowledge-' +
+        'layer those come from training data and may be hallucinated, which ' +
+        'is a license risk for any EA who trusts the output. To override for ' +
+        'evals or dev exploration, set DISCOVERY_AGENT_ENABLED=true. Do NOT ' +
+        'set in production until citation-verification ships.',
+    );
+  }
+}
+
 export async function runDiscovery(opts: DiscoverOptions): Promise<{
   output: DiscoveryOutput;
   trustGate: DiscoveryTrustGate;
@@ -153,6 +200,8 @@ export async function runDiscovery(opts: DiscoverOptions): Promise<{
   latencyMs: number;
   modelUsed: 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
 }> {
+  assertDiscoveryEnabled();
+
   const userPrompt = JSON.stringify({
     intakeAnswers: opts.input.intakeAnswers,
     documentSummaries: opts.input.documentSummaries ?? [],
