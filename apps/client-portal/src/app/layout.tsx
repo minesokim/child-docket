@@ -1,6 +1,7 @@
 import '@docket/ui/styles';
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
+import { HealthStatusGate } from '@docket/ui';
 
 export const metadata: Metadata = {
   title: 'Docket · Client Portal',
@@ -46,7 +47,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             rel="stylesheet"
           />
         </head>
-        <body>{children}</body>
+        <body>
+          {/*
+            HealthStatusGate polls /api/health every 30s and wires
+            ReadOnlyProvider + status banner when DB is degraded/down.
+            See packages/ui/src/components/health-gate.tsx.
+          */}
+          <HealthStatusGate endpoint="/api/health">{children}</HealthStatusGate>
+        </body>
       </html>
     </ClerkProvider>
   );

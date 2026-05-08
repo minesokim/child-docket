@@ -16,6 +16,11 @@ const isPublicRoute = createRouteMatcher([
   '/login(.*)',
   '/otp(.*)',
   '/api/sentry-test(.*)',
+  // /api/health is the vendor-status probe polled by HealthStatusGate
+  // (packages/ui). Public so the gate works for unauthenticated routes.
+  // Returns only binary service-status booleans; no tenant data.
+  // Exact path — descendants stay auth-gated.
+  '/api/health',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

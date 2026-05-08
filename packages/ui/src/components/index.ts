@@ -44,3 +44,4 @@ export * from './skeleton.js';
 export * from './skeleton-docs.js';
 export * from './status-banner.js';
 export * from './read-only.js';
+export * from './health-gate.js';

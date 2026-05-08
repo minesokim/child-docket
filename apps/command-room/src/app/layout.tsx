@@ -1,6 +1,7 @@
 import '@docket/ui/styles';
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
+import { HealthStatusGate } from '@docket/ui';
 
 export const metadata: Metadata = {
   title: 'Docket · Command Room',
@@ -19,7 +20,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             rel="stylesheet"
           />
         </head>
-        <body>{children}</body>
+        <body>
+          {/*
+            HealthStatusGate polls /api/health every 30s and:
+              - flips ReadOnlyProvider when DB is degraded/down
+              - renders the neonReadOnlyBanner above children
+            Wired at root so every authenticated route inherits it.
+            See packages/ui/src/components/health-gate.tsx.
+          */}
+          <HealthStatusGate endpoint="/api/health">{children}</HealthStatusGate>
+        </body>
       </html>
     </ClerkProvider>
   );
