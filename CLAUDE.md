@@ -402,6 +402,19 @@ Layout: `Screen`, `Stack`, `Row`. Text: `Eyebrow`, `H1`, `H2`, `Body`. Buttons: 
 - **New components (command room layouts, dashboards):** Tailwind v4 utility classes for layout/spacing/responsive, custom tokens for color/typography.
 - Both can coexist in the same app.
 
+### Two visual languages (locked 2026-05-08)
+
+After the user-shared "Nexus Tax OS / Courtney Henry" dashboard reference frames, command-room moves off the editorial-warm portal language. The product now ships TWO visual languages, each crafted for its job:
+
+| Surface | Visual language | Why |
+|---|---|---|
+| **Client portal + intake** (`apps/client-portal/(intake)`, `apps/client-portal/portal`) | **Editorial-warm** — Fraunces serif display + DM Sans body + cream canvas `oklch(98% 0.01 85)` + forest green primary `oklch(42% 0.09 150)`. Inline-style based for design fidelity. | Taxpayer-facing. Antonio's clients sit in an emotional-trust transaction. The portal feels like a thoughtful welcome from a real practice, not a SaaS dashboard. Hand-crafted-feel. |
+| **Command room** (`apps/command-room`) | **Operational-modern** — geometric sans (Inter / Geist) for both display and body, line-glyph icons (Lucide), white-or-near-white card on faint warm-gray canvas `oklch(96% 0.008 85)`, soft 1px borders, small radius (10-12px), dark warm-gray sidebar spine `oklch(18% 0.01 85)`, tab-bar-under-title composition. Forest green stays as the primary accent. | Antonio-facing operational pane scanned 100x/day. Density and clarity beat warmth. Same craft level as the portal, different job. |
+
+**Both surfaces share:** forest green primary `oklch(42% 0.09 150)`, the same Antonio-voice copy rules, the same anti-AI-slop discipline, the same restraint. Different fonts and densities; same product.
+
+**Reference frames:** see `docs/visual-reference/dashboard-2026-05-08/` for the user-shared composition reference. Detailed translation rules + adopted patterns + anti-patterns: [`.claude/skills/craft/SKILL.md`](.claude/skills/craft/SKILL.md) — re-read whenever opening a new command-room route.
+
 ### Auth styling note
 The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consulting). Avatar in `apps/client-portal/public/antonio.webp` is the static fallback; live `users.avatar_url` (Clerk `imageUrl`, lazy-backfilled) is preferred when present.
 
@@ -980,9 +993,10 @@ Beyond gstack, this repo ships four project skills that together form the autono
 - [`/keep-going`](.claude/skills/keep-going/SKILL.md) — runs BETWEEN items. Kills the natural-pause-handoff anti-pattern. After a clean commit + deploy + verify cycle, pick the next item from queue → followups → PRODUCTION-READINESS automatically. Do NOT pause to ask "which direction next?" Stop only when a real stop condition fires. User-codified 5/8/2026: "i wanted it to keep going here. until the feature list is complete."
 - [`/score`](.claude/skills/score/SKILL.md) — runs AFTER every feature ships. 12-dimension production-readiness scoring (0-100 weighted average). If < 95, identifies the lowest-scoring gap and loops the same item through another iteration until it passes. Floor and ceiling guardrails prevent both self-flagellation and inflation. /keep-going only advances to the next item AFTER /score >= 95 on the current one. User-codified 5/8/2026: "it should be a loop. each feature check/end to end coding should do a score assessment."
 - [`/align`](.claude/skills/align/SKILL.md) — runs BETWEEN /score and /keep-going. Asks the harder question /score doesn't: does this feature actually serve the product mission, the goal, the segment posture? Six-question alignment check against the 12 product anchors + 7 explicit NOs. If misaligned, reshape OR kill before merging. User-codified 5/8/2026: "look at the grand plan of the product as a whole. the mission, the goal, and the alignment of the feature with our grand goal. if it doesn't align, fix."
+- [`/craft`](.claude/skills/craft/SKILL.md) — runs AFTER /code-quality, BEFORE /score on any UI-touching commit. Apple-bar UX gate. Six-question check: would I screenshot it / does the eye land on the right thing / does hierarchy do the work without color-borders-icons / does the copy have voice / are empty-loading-error states designed / does every element earn its place. Anti-AI-slop discipline applied to UI specifically. Captures the two coexisting visual languages (editorial-warm portal vs operational-modern command-room, locked 5/8 from user-shared dashboard reference). User-codified 5/8/2026: "is this beautiful user experience? is this good ui? is this how apple would handle the user experience?" + clarification: "that doesn't mean make the ui look like apple" — Apple is the BAR (rigor of craft), not the visual reference. Docket's languages stay Docket's.
 - [`/e2e`](.claude/skills/e2e/SKILL.md) — runs PERIODICALLY (every N feature commits OR before any release). App-level end-to-end smoke that exercises the whole stack — migrations, server actions, Inngest agent fleet, audit chain, cost telemetry — composing as a single user journey. Catches the "individual features pass; composition is broken" failure mode. User-codified 5/8/2026: "is it possible to do end to end testing every once in a while with the app as a whole?"
 
-The full cycle: plan → /edge-cases → implement → typecheck → test → /code-quality (lockfile, anti-patterns, codex if substantial) → commit (with /decisions-log entry if applicable) → push → verify deploy READY (curl test endpoint if applicable) → /smoke-test if applicable → /score (loop until >= 95) → /align (reshape if misaligned) → periodically /e2e → /keep-going (pick next item) ⟲
+The full cycle: plan → /edge-cases → implement → typecheck → test → /code-quality (lockfile, anti-patterns, codex if substantial) → /craft (UI-touching commits only) → commit (with /decisions-log entry if applicable) → push → verify deploy READY (curl test endpoint if applicable) → /smoke-test if applicable → /score (loop until >= 95) → /align (reshape if misaligned) → periodically /e2e → /keep-going (pick next item) ⟲
 
 ### Canonical reference docs (re-read at session start)
 
