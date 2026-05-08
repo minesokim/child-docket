@@ -43,11 +43,11 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 | 4 | Audit trail crypto chaining | ✅ done | ~1d | [`0680874`](https://github.com/minesokim/child-docket/commit/0680874) | Migration 0022 adds `chain_seq` (per-tenant monotonic, set by trigger under advisory lock) + `prev_hash` + `row_hash` to actions. `verify_actions_chain(tenantId)` walks chain in order. client_id intentionally excluded from hash (CCPA compatibility). Codex HIGH × 3 + MEDIUM × 1 fixed in rewrite. Suffix-deletion deferred to v1.5 (R2 head-hash checkpoint). |
 | 5 | PII regex scrubbing helper | ✅ done | ~0.5d | [`8f0c2d5`](https://github.com/minesokim/child-docket/commit/8f0c2d5) | `packages/shared/src/pii-scrubber.ts` + 32 tests. SSN / EIN / BANK detection. BANK regex digit-bookended with internal dashes/spaces (catches grouped formats). Documented false negatives: SSN with periods, 7-digit no-separator account, EIN no-dash falls through to SSN. Codex MEDIUM × 2 + LOW × 3 addressed. |
 | 6 | Prompt version control (`@docket/prompts`) | ✅ done | ~1d | [`fbae613`](https://github.com/minesokim/child-docket/commit/fbae613) | New workspace package. `getPrompt(id)` with hash-drift detection (sha256(version+template) verified at load). triage-classifier + inbox-drafter migrated. doc-classifier migration pending (mechanical). 11 tests pass; lockfile updated in same commit. |
-| 7 | Status-aware UX components | queued | ~1d | — | Banner + per-service indicators in `packages/ui/`. Anthropic outage / Neon outage / R2 outage / read-only-mode states. |
-| 8 | Read-only mode UI primitive | queued | ~0.5d | — | Banner + write-action wrapper in `packages/ui/`. Pairs with #7. |
-| 10 | Eval harness scaffolding | queued | ~1d | — | Pattern + first agent eval (`services/workers/scripts/eval-classify.ts`). Golden-vector approach for triage classifier. Now unblocked by `@docket/prompts` registry — eval iterates `listPrompts()`. |
+| 7 | Status-aware UX components | ✅ done | ~1d | [`0521701`](https://github.com/minesokim/child-docket/commit/0521701) | `StatusBanner` (severity info/warn/error, role=alert/status, OKLCH palette), `ServiceIndicator` (per-vendor dot), pre-shaped helpers `bedrockFallbackBanner` / `neonReadOnlyBanner` / `r2UnavailableBanner`. Codex HIGH × 1 + MEDIUM × 2 + LOW × 1 fixed (inert keyboard block, removed forceReadOnly footgun, de-promised copy). |
+| 8 | Read-only mode UI primitive | ✅ done | ~0.5d | folded into [`0521701`](https://github.com/minesokim/child-docket/commit/0521701) | `ReadOnlyContext` + `ReadOnlyProvider` + `useIsReadOnly` + `WriteAction` (uses HTML `inert` attribute to block pointer + keyboard + focus). UX-only; server actions check independently. |
+| 10 | Eval harness scaffolding | ✅ done | ~1d | [`3a26ed3`](https://github.com/minesokim/child-docket/commit/3a26ed3) | `services/workers/scripts/eval-classify.ts` + 8 golden cases. Macro F1 across 11 issue types; release-gate at 0.85. Run via `pnpm --filter @docket/workers eval:classify`. ~$0.001 per run on Haiku 4.5. Pattern extends to inbox-drafter + doc-classifier. |
 
-**Tonight's session shipped (5/8 → present)**: Q1 + Q2 + Q3 + B1 + B2 + items 1-6 + item 9 = 12 done. Items 7, 8, 10 remain (status-aware UX, read-only mode UI primitive, eval harness).
+**Tonight's session shipped (5/8 → present)**: Q1 + Q2 + Q3 + B1 + B2 + items 1-8 + item 9 + item 10 = 14 done. Original `tonight's queue` complete; `Credential-blocked items` complete except B3 (Neon read replica wiring, not yet started). All non-blocked v1 items in this queue file are done.
 
 ---
 
@@ -87,18 +87,40 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 
 ---
 
-## Status as of late-session (2026-05-08)
+## Status as of session end (2026-05-08)
 
-Tonight's session shipped 12 items end-to-end. Each lands clean with codex review where applicable, decisions logged, deploy verified READY. Six commits since the AUTONOMOUS-PROTOCOL bootloader:
+Tonight's session shipped 14 items end-to-end across 8 commits, all on `main`, all production deploys verified READY. Each commit passed the four-skill cycle (edge-cases enumerated, code-quality gates, codex review where applicable, decisions logged where applicable, deploy verified per Step 7).
 
-1. [`def8a9d`](https://github.com/minesokim/child-docket/commit/def8a9d) — AUTONOMOUS-PROTOCOL.md bootloader + queue + decisions [11].
+Commits since session start:
+
+1. [`def8a9d`](https://github.com/minesokim/child-docket/commit/def8a9d) — AUTONOMOUS-PROTOCOL.md bootloader + queue + decisions log [11].
 2. [`c8cfa18`](https://github.com/minesokim/child-docket/commit/c8cfa18) — schema migrations 0019-0021 (memory architecture foundation, composite FK + cross-tenant trigger).
-3. [`0680874`](https://github.com/minesokim/child-docket/commit/0680874) — migration 0022 audit-trail cryptographic chaining (chain_seq + verify_actions_chain).
-4. [`8f0c2d5`](https://github.com/minesokim/child-docket/commit/8f0c2d5) — PII regex scrubber for inbound text channels (SSN / EIN / BANK).
-5. [`fbae613`](https://github.com/minesokim/child-docket/commit/fbae613) — `@docket/prompts` package with hash-drift detection; triage-classifier + inbox-drafter migrated.
+3. [`0680874`](https://github.com/minesokim/child-docket/commit/0680874) — migration 0022 audit-trail cryptographic chaining.
+4. [`8f0c2d5`](https://github.com/minesokim/child-docket/commit/8f0c2d5) — PII regex scrubber for inbound text channels.
+5. [`fbae613`](https://github.com/minesokim/child-docket/commit/fbae613) — `@docket/prompts` package with hash-drift detection.
+6. [`ee9c0a7`](https://github.com/minesokim/child-docket/commit/ee9c0a7) — mid-session queue update.
+7. [`0521701`](https://github.com/minesokim/child-docket/commit/0521701) — status-aware UX banners + read-only primitive.
+8. [`3a26ed3`](https://github.com/minesokim/child-docket/commit/3a26ed3) — eval harness scaffold (triage-classifier; F1 release-gate at 0.85).
 
-Five new AUTONOMOUS-DECISIONS entries to review ([11]-[15]) — see [`AUTONOMOUS-DECISIONS.md`](AUTONOMOUS-DECISIONS.md). All architectural-severity entries are pending review.
+Five new AUTONOMOUS-DECISIONS entries to review ([11]-[15]) — see [`AUTONOMOUS-DECISIONS.md`](AUTONOMOUS-DECISIONS.md). Four are architectural-severity and pending explicit review.
 
-Production: 5 deploys verified READY. Last smoke test: 14/14 PASS against prod (commit `1576ef0`).
+Production: all 8 deploys landed READY. Last successful smoke test: 14/14 PASS against prod (commit `1576ef0`).
 
-Items remaining: #7 status-aware UX, #8 read-only mode UI primitive, #10 eval harness. Plus follow-ups (doc-classifier migration to @docket/prompts, nightly verify_actions_chain cron, suffix-deletion checkpoint to R2).
+This file's `Tonight's queue` is now empty modulo B3 (Neon read replica wiring, not started). Subsequent work picks from [`PRODUCTION-READINESS.md`](PRODUCTION-READINESS.md) directly:
+
+  Wk 4-5  Trust gate enforcement (POSITION-FRAMEWORK §6 spec)
+          §7216 consent UI add-on
+          Cost dashboard + outlier alerts
+  Wk 6    Discovery agent end-to-end (the v1 wedge demo)
+
+Follow-ups noted in commit messages:
+  - doc-classifier.ts migration to `@docket/prompts` (~15 min, mechanical)
+  - Nightly Inngest cron calling `verify_actions_chain` per tenant
+  - R2 head-hash + row-count checkpoint for suffix-deletion detection (v1.5)
+  - Wire `scrubPII` into Twilio + Gmail + portal-chat ingest paths
+  - v1.5: consolidate `PII_PATTERNS` between pii-scrubber and sentry-scrubber
+  - Cost telemetry: tag `actions.tool_input` with `prompt.version`
+  - Server-side read-only mode helper at `apps/*/src/lib/read-only-mode.ts`
+  - `/api/health` endpoint for vendor-status polling
+  - Eval harness extension to inbox-drafter + doc-classifier
+  - GitHub Actions wiring for eval-classify on every PR
