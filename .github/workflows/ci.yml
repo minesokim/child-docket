@@ -112,7 +112,13 @@ jobs:
     # the same way regardless of host.
     services:
       postgres:
-        image: postgres:16
+        # pgvector/pgvector:pg16 is postgres:16 + pgvector extension
+        # pre-installed. Migration 0019 (knowledge layer) requires
+        # pgvector for embedding columns; stock postgres:16 doesn't
+        # have it and CREATE EXTENSION fails. Same major version as
+        # Neon prod (Postgres 16). The pgvector image is maintained
+        # by the pgvector team — same lineage as Neon.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_PASSWORD: ci_postgres_password
           POSTGRES_DB: docket_ci
