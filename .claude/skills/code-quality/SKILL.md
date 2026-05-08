@@ -249,6 +249,54 @@ Specific tells of embarrassment:
 - A new file that duplicates 80%+ of an existing file
 - A new env var without a comment + entry in the env example/README
 
+### Step 7 — verify the deploy after push (HARD RULE)
+
+After `git push`, the commit triggers a Vercel deploy. **You MUST
+verify the deploy state before moving to the next item.** Skipping
+this is how broken deploys ship and the user finds them hours later.
+
+Tonight's failure mode (what this rule prevents): commit `605ba26`
+(test-fixtures) pushed → continued working → commit `a91f165`
+(code-quality skill) pushed on top → user pinged "all deploys are
+errors." Both deploys had been in ERROR state for 5 minutes. I was
+"blind to it" because I didn't check.
+
+The rule:
+
+```bash
+# After pushing, wait ~60s for the build to start, then poll Vercel
+# until terminal state. Use the Vercel deployments MCP tool:
+mcp__c199cbd0-..._list_deployments(projectId, since=<push-time>)
+
+# OR via CLI from the linked app dir:
+cd apps/<app> && vercel inspect --logs <commit-sha>
+```
+
+Read the most recent deployment for the project. State must be:
+- `BUILDING` → poll again in 30s
+- `READY` → ✅ proceed to next item
+- `ERROR` → STOP. Pull build logs immediately. Fix-up commit before
+  any other work.
+
+**Caveat — distinguish your deploys from dependabot/PR-preview deploys**:
+- Production deploys have `target: "production"` and `githubCommitRef:
+  "main"` — these are the ones you trigger.
+- PR preview deploys have `target: null` and `githubCommitRef: dependabot/...`
+  — these are automated dependency-bump PRs from dependabot. Their
+  failures are NOT your problem (dependabot bumped a major version that
+  would need a human-reviewed code change). Ignore them or close the PR.
+
+If two production deploys in a row error and the second one wasn't
+caused by the first, **STOP** and write a status report. The user
+shouldn't be the one who notices.
+
+Do not move to the next queue item until production deploy is READY.
+
+**Followup-commit failures are doubly disqualifying.** If commit X
+broke deploys and commit X+1 was a fix-up, commit X+2 must verify
+the fix-up actually deployed READY before continuing. Don't ship X+2
+on the assumption that X+1 worked.
+
 ## Anti-patterns this skill blocks
 
 These are the specific shapes of sloppenheimer code. NEVER ship any of
