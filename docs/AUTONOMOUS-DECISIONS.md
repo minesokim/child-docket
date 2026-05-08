@@ -341,7 +341,40 @@ soften the skills (lower the bar) by editing them.
 
 **Severity**: architectural
 
-**Commit**: `a91f165` (code-quality), pending (edge-cases + decisions-log)
+**Commit**: `a91f165` (code-quality), `b430887` (edge-cases + decisions-log), `7e59c58` (Step 7 added to code-quality)
+
+**User-review status**: pending
+
+---
+
+## [11] 2026-05-08 — AUTONOMOUS-PROTOCOL.md is the bootloader, not just docs
+
+**Decision**: `docs/AUTONOMOUS-PROTOCOL.md` is the FIRST canonical doc
+listed in `CLAUDE.md` §23 — ahead of PRODUCT-ROADMAP, POSITION-FRAMEWORK,
+MEMORY-ARCHITECTURE, PRODUCTION-READINESS. Re-read at every session
+start, especially after context refreshes. Defines the four-skill
+build cycle, recovery sequence after window-fill, end-of-session
+ritual.
+
+**Reasoning**: The four skills (entry [10]) only work if a fresh-
+context-me actually reads them and runs them at every wake-up.
+The protocol doc is the bootloader. User's load-bearing constraint:
+"whenever there's context refreshes because window fills up, make
+sure the skills work every time. every time. every time."
+
+**Alternative considered**: Embed the recovery sequence inline in
+each skill's `SKILL.md`. Rejected — duplicates the same instructions
+four times, and no single "what to do RIGHT NOW after a context
+refresh" entry point would exist. The bootloader belongs in one place.
+
+**How to reverse**: Delete `docs/AUTONOMOUS-PROTOCOL.md` and remove
+the reference from `CLAUDE.md` §23. Loses the explicit recovery
+sequence; future fresh-context-mes might skip skills "because we're
+catching up." Exactly the failure mode the user called out.
+
+**Severity**: architectural
+
+**Commit**: this commit
 
 **User-review status**: pending
 

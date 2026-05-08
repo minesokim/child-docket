@@ -982,9 +982,10 @@ The full cycle: plan → /edge-cases → implement → typecheck → test → /c
 
 ### Canonical reference docs (re-read at session start)
 
-Beyond this CLAUDE.md, five docs anchor product + ops decisions and SHOULD NOT be duplicated inline:
+Beyond this CLAUDE.md, six docs anchor product + ops decisions and SHOULD NOT be duplicated inline:
 
-- [`docs/PRODUCT-ROADMAP.md`](docs/PRODUCT-ROADMAP.md) — **master reference**. Every feature, every phase, every defer. The five product pillars. V1 / V1.5 / V2 timeline. Marketing positioning lock. Distribution + GTM. Pricing. Open questions + risks. Explicit NOs. Re-read FIRST at every session start; this doc supersedes the v1 phase plan that previously lived inline in §15 below.
+- [`docs/AUTONOMOUS-PROTOCOL.md`](docs/AUTONOMOUS-PROTOCOL.md) — **bootloader for any AI working autonomously**. Read FIRST on session start, especially after context refreshes. Defines the four-skill build cycle (edge-cases → code-quality → smoke-test → decisions-log), session-start ritual, communication protocol, anti-patterns blocked, and the recovery sequence after window-fill resets. The user-facing rule: "the skills work every time. every time. every time."
+- [`docs/PRODUCT-ROADMAP.md`](docs/PRODUCT-ROADMAP.md) — master product reference. Every feature, every phase, every defer. The five product pillars. V1 / V1.5 / V2 timeline. Marketing positioning lock. Distribution + GTM. Pricing. Open questions + risks. Explicit NOs. Supersedes the v1 phase plan that previously lived inline in §15 below.
 - [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) — compliance-first deduction surfacing. Four-tier confidence framework + refusal floor. The marketing differentiator. Re-read before changing any agent that emits a tax position.
 - [`docs/MEMORY-ARCHITECTURE.md`](docs/MEMORY-ARCHITECTURE.md) — six-layer memory model + cost-optimized prompt caching strategy. Re-read before changing prompt assembly order or the agent fleet's context-loading pattern.
 - [`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md) — punch list of resilience / observability / security / dev-process gaps with priority tiers. Re-read every Friday during v1 build. Items get crossed out, not deleted.

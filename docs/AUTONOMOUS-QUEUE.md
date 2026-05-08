@@ -33,19 +33,21 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 |---|---|---|---|---|---|
 | 1 | Webhook signature verification helper | ✅ done | ~1d | [`b31e91f`](https://github.com/minesokim/child-docket/commit/b31e91f) + [`00cd377`](https://github.com/minesokim/child-docket/commit/00cd377) (codex fixup) | 32/32 tests. Subpath export `@docket/shared/webhooks`. Timing-safe. Codex review cycle exercised end-to-end. |
 | 2 | Test fixtures package | ✅ done | ~1d | [`605ba26`](https://github.com/minesokim/child-docket/commit/605ba26) + [`7d36688`](https://github.com/minesokim/child-docket/commit/7d36688) (lockfile fixup) | 1 tenant + 3 users + 3 clients + 3 engagements + 3 intake answers + 5 documents. **CAUTIONARY TALE**: original commit broke deploys because lockfile wasn't regenerated. /code-quality skill now has hard rule to prevent. |
-| Q1 | `/code-quality` skill (pre-commit gate) | ✅ done | ~0.5d | [`a91f165`](https://github.com/minesokim/child-docket/commit/a91f165) | Senior-engineer pre-commit checklist. Anti-patterns blocked. Lockfile rule locked in. |
-| B2 | Sentry wiring (DSN unblocked) | in-progress | ~0.5d | — | Both Vercel projects have SENTRY_DSN + NEXT_PUBLIC_SENTRY_DSN. Command-room 3 configs updated with `app: command-room` tag. Need: client-portal 3 configs + test-error endpoints in both apps + verify events land. |
-| B1 | Bedrock fallback in orchestrator (creds unblocked, tested working) | queued | ~2d | — | Sonnet 4.5 + Haiku 4.5 both responded via Bedrock. `us.anthropic.claude-*` model IDs work. Now writing wrapper in `services/orchestrator`. |
-| 3 | Schema migrations 0019-0021 | queued | ~1d | — | `firm_profile`, `firm_patterns`, `client_facts`. SQL files only; not applied yet. |
-| 4 | Audit trail crypto chaining | queued | ~1d | — | Migration adds `prev_hash` + `row_hash` to `actions`; helper computes + verifies. |
-| 5 | PII regex scrubbing helper | queued | ~0.5d | — | Standalone module in `packages/shared/` for SSN/EIN/bank-account/DL detection + redaction. |
-| 6 | Prompt version control (`prompts/` registry) | queued | ~1d | — | Move existing system prompts to versioned MD files + loader. |
-| 7 | Status-aware UX components | queued | ~1d | — | Banner + per-service indicators in `packages/ui/`. |
-| 8 | Read-only mode UI primitive | queued | ~0.5d | — | Banner + write-action wrapper in `packages/ui/`. |
-| 9 | `@docket/orchestrator` provider abstraction | queued | ~1d | — | Wrapper that's Bedrock-ready (Bedrock client wiring lands when AWS creds arrive). |
-| 10 | Eval harness scaffolding | queued | ~1d | — | Pattern + first agent eval (`services/workers/scripts/eval-classify.ts`). |
+| Q1 | `/code-quality` skill (pre-commit gate) | ✅ done | ~0.5d | [`a91f165`](https://github.com/minesokim/child-docket/commit/a91f165) + [`7e59c58`](https://github.com/minesokim/child-docket/commit/7e59c58) (Step 7) | Senior-engineer pre-commit checklist. Anti-patterns blocked. Lockfile rule locked in. Step 7 = verify deploy READY post-push (added after the Sentry endpoint drift). |
+| Q2 | `/edge-cases` + `/decisions-log` skills + AUTONOMOUS-DECISIONS.md | ✅ done | ~0.5d | [`b430887`](https://github.com/minesokim/child-docket/commit/b430887) | Pre-implementation edge-case enumeration (8-15 cases, handle/document/out-of-scope). Decision-tracking format with severity + reversal path. Backfilled 10 existing entries from this session. |
+| Q3 | AUTONOMOUS-PROTOCOL.md (session-start bootloader) | ✅ done | ~0.5d | this commit | The discipline that prevents AI-sloppenheimer after context refreshes. Identify-mode, session-start ritual, build-cycle diagram, anti-patterns blocked, recovery sequence, end-of-session ritual. Wired into CLAUDE.md §23 as the FIRST canonical doc. |
+| B2 | Sentry wiring (DSN unblocked) | ✅ done | ~0.5d | [`a122ae5`](https://github.com/minesokim/child-docket/commit/a122ae5) → [`95e2629`](https://github.com/minesokim/child-docket/commit/95e2629) → [`40c5caa`](https://github.com/minesokim/child-docket/commit/40c5caa) | Both apps wired with `app:` tag. Test endpoints allowlisted in Clerk middleware. Final fix: explicit `captureException` + `await flush(2000)` because Vercel serverless lambdas terminate before auto-capture transport drains. Events confirmed landing. |
+| B1 | Bedrock fallback in orchestrator (creds unblocked, tested working) | ✅ done | ~2d | [`303f886`](https://github.com/minesokim/child-docket/commit/303f886) | `callClaudeWithFallover` — Anthropic primary, Bedrock fallback on transient errors only (5xx/429/network). 38/38 unit tests + 4/4 smoke tests. Sonnet 4.6 + Haiku 4.5 both verified via `us.anthropic.*` cross-region inference profiles. Deploy verified READY post-push. |
+| 9 | `@docket/orchestrator` provider abstraction | ✅ done | ~1d | folded into [`303f886`](https://github.com/minesokim/child-docket/commit/303f886) | Replaced standalone abstraction with `callClaudeWithFallover` directly in `providers.ts`. Same outcome: provider routing is hidden behind one function the agents call. |
+| 3 | Schema migrations 0019-0021 | queued | ~1d | — | `firm_profile`, `firm_patterns`, `client_facts`. Memory architecture foundation per `docs/MEMORY-ARCHITECTURE.md` §2. SQL files in `packages/db/migrations/`; not auto-applied. |
+| 4 | Audit trail crypto chaining | queued | ~1d | — | Migration adds `prev_hash` + `row_hash` to `actions`; helper computes + verifies. Tamper detection on the audit log itself. |
+| 5 | PII regex scrubbing helper | queued | ~0.5d | — | Standalone module in `packages/shared/` for SSN/EIN/bank-account/DL detection + redaction. Inbound text channels (SMS / portal chat) feed it before Anthropic. |
+| 6 | Prompt version control (`prompts/` registry) | queued | ~1d | — | Move existing system prompts (triage-classifier, inbox-drafter) to versioned MD files + loader. Per MEMORY-ARCHITECTURE §3. |
+| 7 | Status-aware UX components | queued | ~1d | — | Banner + per-service indicators in `packages/ui/`. Anthropic outage / Neon outage / R2 outage / read-only-mode states. |
+| 8 | Read-only mode UI primitive | queued | ~0.5d | — | Banner + write-action wrapper in `packages/ui/`. Pairs with #7. |
+| 10 | Eval harness scaffolding | queued | ~1d | — | Pattern + first agent eval (`services/workers/scripts/eval-classify.ts`). Golden-vector approach for triage classifier. |
 
-**Realistic completion target tonight**: items 1-5 (~5 days of work, 30-45 min per item with tooling). Items 6-10 likely tomorrow.
+**Tonight's session shipped (5/8 → present)**: Q1 + Q2 + Q3 + B1 + B2 + items 1-2 + item 9 = 8 done. Items 3-8 + 10 remain.
 
 ---
 
@@ -53,9 +55,9 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 
 | # | Item | Blocked on | Effort once unblocked |
 |---|---|---|---|
-| B1 | Bedrock fallback in `runDocketAgent` | AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BEDROCK_REGION | ~2d (most code already in place via #9) |
-| B2 | Sentry DSN wiring | SENTRY_DSN_COMMAND_ROOM, SENTRY_DSN_PORTAL | ~0.5d |
-| B3 | Neon read replica wiring | DATABASE_URL_READ_REPLICA | ~1d |
+| B1 | ~~Bedrock fallback~~ | ~~AWS creds~~ | ✅ done — see B1 above |
+| B2 | ~~Sentry DSN wiring~~ | ~~DSN env vars~~ | ✅ done — see B2 above |
+| B3 | Neon read replica wiring | DATABASE_URL_READ_REPLICA confirmed valid | ~1d. User provided `DATABASE_URL_READ_REPLICA` earlier this session. Wiring not yet done — pairs with item #7 (status-aware UX, since same-cell replica is the v1 fallback story per [`AUTONOMOUS-DECISIONS.md` §5](AUTONOMOUS-DECISIONS.md)). |
 
 ---
 
@@ -85,8 +87,8 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 
 ---
 
-## Status as of session start (2026-05-08)
+## Status as of mid-session (2026-05-08)
 
-Last successful smoke test: 14/14 PASS against prod (commit `1576ef0`). Pipeline is healthy. R2 has working binarized PDFs. Inngest is dispatching events successfully on new deploys. Position framework + memory architecture + production readiness + product roadmap docs all shipped.
+Tonight's session has shipped: webhook verification + codex fixup, test fixtures + lockfile fixup, three project skills (code-quality / edge-cases / decisions-log) + bootloader doc, Sentry pipeline (initial wire + middleware allowlist + flush fix, events confirmed landing), Bedrock fallback in the orchestrator (Anthropic primary + transient-error classifier + cross-region inference profiles, 38/38 unit tests + 4/4 smoke tests). Last successful smoke test: 14/14 PASS against prod (commit `1576ef0`); pipeline healthy. Bedrock failover fired in dev once during smoke test (intentional probe).
 
-Tonight's session begins with this queue. First item: #1 webhook signature verification helper.
+Next item: #3 schema migrations 0019-0021 (firm_profile / firm_patterns / client_facts) — memory architecture foundation per [`docs/MEMORY-ARCHITECTURE.md`](MEMORY-ARCHITECTURE.md) §2. Pure SQL files in `packages/db/migrations/`; not auto-applied so no deploy implications.
