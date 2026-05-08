@@ -74,25 +74,46 @@ export async function processDocument(opts: ProcessOptions): Promise<ProcessResu
     };
   }
 
-  // All image inputs → binarize + Tesseract OCR PDF.
+  // All image inputs → binarize. OCR is OPT-IN now (set DOCKET_ENABLE_OCR=1).
+  //
+  // Why default-off: Tesseract.js v7 in Vercel serverless throws
+  // "Uncaught Exception: Runtime..." from inside its worker thread.
+  // Worker-thread exceptions bypass our try/catch — they propagate as
+  // uncaught and kill the entire lambda before the catch fires. Net:
+  // every finalize attempt dies, doc stays at parse_phase='accepted',
+  // client polls until timeout, UI flips to "Took too long to process."
+  //
+  // The right long-term answer is OCR via Claude Vision or AWS
+  // Textract (both run server-side, don't ship 10MB of WASM to a
+  // serverless container). For now, ship binarized image-only PDFs
+  // so the visual review surface works. Loss of in-PDF text search
+  // is acceptable — the AI's extracted_fields are already searchable
+  // in command-room.
+  //
+  // Re-enable per-instance with DOCKET_ENABLE_OCR=1 once we move
+  // finalize off serverless or swap engines.
   const binarizedPng = await binarize(opts.input);
 
-  try {
-    const pdfBytes = await ocrToSearchablePdf(binarizedPng);
-    return {
-      pdf: pdfBytes,
-      sizeBytes: pdfBytes.length,
-      binarized: true,
-    };
-  } catch (err) {
-    console.error('[document-processing] OCR failed; producing image-only PDF:', err);
-    const pdfBytes = await wrapImageInPdf(binarizedPng, 'image/png', true);
-    return {
-      pdf: pdfBytes,
-      sizeBytes: pdfBytes.length,
-      binarized: true,
-    };
+  if (process.env.DOCKET_ENABLE_OCR === '1') {
+    try {
+      const pdfBytes = await ocrToSearchablePdf(binarizedPng);
+      return {
+        pdf: pdfBytes,
+        sizeBytes: pdfBytes.length,
+        binarized: true,
+      };
+    } catch (err) {
+      console.error('[document-processing] OCR failed; producing image-only PDF:', err);
+      // Fall through to wrapImageInPdf below.
+    }
   }
+
+  const pdfBytes = await wrapImageInPdf(binarizedPng, 'image/png', true);
+  return {
+    pdf: pdfBytes,
+    sizeBytes: pdfBytes.length,
+    binarized: true,
+  };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -140,21 +161,30 @@ export async function processMultiPage(opts: {
   const perPageBinarized: Buffer[] = [];
   const perPagePdfs: Buffer[] = [];
 
+  // OCR is OPT-IN per the same reasoning in processDocument — Tesseract
+  // worker-thread exceptions in Vercel serverless are uncatchable and
+  // kill the lambda. Re-enable with DOCKET_ENABLE_OCR=1 after we move
+  // off serverless or swap to Claude Vision / Textract.
+  const ocrEnabled = process.env.DOCKET_ENABLE_OCR === '1';
+
   for (const page of opts.pages) {
     if (page.inputMimeType === 'application/pdf') {
       throw new Error('processMultiPage does not accept PDF inputs');
     }
     const binarized = await binarize(page.input);
     perPageBinarized.push(binarized);
-    try {
-      perPagePdfs.push(await ocrToSearchablePdf(binarized));
-    } catch (err) {
-      console.error(
-        '[document-processing] OCR failed for page; image-only PDF:',
-        err,
-      );
-      perPagePdfs.push(await wrapImageInPdf(binarized, 'image/png', true));
+    if (ocrEnabled) {
+      try {
+        perPagePdfs.push(await ocrToSearchablePdf(binarized));
+        continue;
+      } catch (err) {
+        console.error(
+          '[document-processing] OCR failed for page; image-only PDF:',
+          err,
+        );
+      }
     }
+    perPagePdfs.push(await wrapImageInPdf(binarized, 'image/png', true));
   }
 
   try {
