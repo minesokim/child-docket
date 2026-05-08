@@ -18,6 +18,13 @@ export * from './sentry-scrubber.js';
 // Sister to sentry-scrubber.ts; consolidation tracked as v1.5 work.
 export * from './pii-scrubber.js';
 
+// Trust-gate enforcement helper. Pure function; no I/O. Pairs with
+// docs/POSITION-FRAMEWORK.md §6 + CLAUDE.md §8 trust escalation.
+// Every agent that performs a side-effect action calls assertTrustGate
+// before executing; the gate either allows, queues for EA approval,
+// or refuses (below the framework floor).
+export * from './trust-gate.js';
+
 // In-process token-bucket rate limiter for abusable server actions
 // + API routes (revealIntakeField, /api/intake/flush, etc.). v0 is
 // per-instance; swap to Upstash Redis when traffic justifies.
