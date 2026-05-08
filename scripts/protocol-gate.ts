@@ -53,6 +53,7 @@ interface Trailers {
   align?: 'ALIGNED' | 'MISALIGNED' | 'BORDERLINE';
   craft?: 'PASS' | 'FAIL' | 'N/A';
   decisions?: string;
+  complianceCheck?: string;
   protocolSkip?: string;
   raw: Record<string, string>;
 }
@@ -124,6 +125,8 @@ function parseTrailers(message: string): Trailers {
   }
   // Decisions: [17] | none
   trailers.decisions = trailers.raw['decisions'];
+  // Compliance-Check: <free-text answer to "did I do what was asked">
+  trailers.complianceCheck = trailers.raw['compliance-check'];
   // Protocol-Skip: <reason>
   trailers.protocolSkip = trailers.raw['protocol-skip'];
   return trailers;
@@ -238,6 +241,27 @@ function validate(input: ValidateInput): ValidateResult {
       'Missing trailer: "Decisions: [<n>] | none". Run /decisions-log; if no judgment calls, write "none".',
     );
   }
+  // Compliance-Check trailer (mandate 2026-05-08): every commit must end
+  // with the answer to "did I do what I was supposed to do?" The check
+  // is enforced for length only — the content is auditable in git log,
+  // not parseable. Minimum 80 chars to prevent "yes" / "I think so" /
+  // single-word answers. This is the meta-rule the user codified after
+  // observing the protocols-cited-but-not-run failure mode.
+  if (!trailers.complianceCheck) {
+    errors.push(
+      'Missing trailer: "Compliance-Check: <answer>". After every "I think I\'m done" moment, ' +
+        'answer "did I do what I was supposed to do?" Reference specific user instructions you ' +
+        'verified you followed. Minimum 80 chars. This is the meta-rule the user codified after ' +
+        'catching me ship 11 commits without running protocols.',
+    );
+  } else if (trailers.complianceCheck.length < 80) {
+    errors.push(
+      `Compliance-Check trailer is ${trailers.complianceCheck.length} chars (minimum 80). ` +
+        'A real answer to "did I do what I was supposed to do?" requires substantive content — ' +
+        'name the specific user instructions, list which protocols ran, identify any gaps. ' +
+        '"yes" or "I think so" is not an answer.',
+    );
+  }
 
   return {
     ok: errors.length === 0,
@@ -303,6 +327,15 @@ async function main() {
       console.error('  Align: ALIGNED');
       console.error('  Craft: PASS  (or: N/A — substrate-only)');
       console.error('  Decisions: [17]  (or: none)');
+      console.error(
+        '  Compliance-Check: I confirmed I ran /score (96/100), /align (ALIGNED),',
+      );
+      console.error(
+        '    /craft (PASS — UI in operational-modern), /edge-cases (13 enumerated, all handled),',
+      );
+      console.error(
+        '    and the user\'s no-shadcn-defaults rule. No gaps I\'m hiding. (>=80 chars)',
+      );
       console.error(
         '\nIf the work genuinely cannot run a protocol, add: "Protocol-Skip: <>=10-char reason>".\n',
       );

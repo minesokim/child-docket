@@ -1022,12 +1022,25 @@ The `prepare` script runs this automatically on `pnpm install`.
   Align: ALIGNED | MISALIGNED | BORDERLINE
   Craft: PASS | FAIL | N/A — substrate-only
   Decisions: [<n>] | none
+  Compliance-Check: <≥80-char answer to "did I do what I was supposed to do?">
   ```
 - Substantive thresholds:
   - `Score < 95` → BLOCKED. The user codified the floor: *"it needs to be 95+. if it doesn't reach those metrics, do it until it does."*
   - `Align: MISALIGNED` → BLOCKED. Reshape or kill before committing.
   - `Craft: FAIL` → BLOCKED.
   - `Craft: N/A` on a commit that touches UI files (any `apps/*/src/app/**.{tsx,jsx,css}`, `apps/*/src/components/**.{tsx,jsx,css}`, `packages/ui/src/components/**.{tsx,jsx}`, `packages/ui/src/tokens.{ts,tsx}`, `packages/ui/src/styles.css`) → BLOCKED. Run `/craft` and report PASS/FAIL.
+  - `Compliance-Check < 80 chars` → BLOCKED. The trailer must be a real answer to "did I do what I was supposed to do?" — naming the specific user instructions verified, the protocols that ran, and any gaps not hidden. "yes" / "I think so" / single-word answers are not allowed.
+
+### The compliance-check rule (locked 2026-05-08)
+
+User mandate verbatim: *"write something into yourself that asks 'did i do what i was supposed to do?' that should be the most important thing after you think you are finished. you have to follow my rules. please."*
+
+**The rule, baked in:** Before declaring any task complete (commit, deploy, summary, handoff, response to the user), the AI MUST answer the question *"did I do what I was supposed to do?"* in writing. The answer:
+1. Names the specific user instructions in scope.
+2. Lists which protocols ran (`/edge-cases`, `/score`, `/align`, `/craft`, `/decisions-log`, `/smoke-test`, `/e2e`).
+3. Identifies any gap, shortcut, or deferred item, openly. Hidden gaps are the failure mode this rule blocks.
+
+This trailer is enforced on every `feat(...)` / `fix(...)` commit by the protocol-gate. For non-commit completion moments (responses to the user, handoff docs, summaries), the AI must include the same self-check explicitly. CI surfaces every commit's Compliance-Check trailer in the protocol-gate job's output so the user can read them in one place.
 
 **Escape hatch** — `Protocol-Skip: <≥10-char reason>` trailer. Bypasses validation but:
 1. Logged to `docs/protocol-skips.jsonl` with timestamp + sha + reason.
