@@ -23,7 +23,7 @@
     "@sentry/nextjs": "^10.51.0",
     "drizzle-orm": "^0.45.2",
     "inngest": "^3.27.4",
-    "next": "15.5.15",
+    "next": "16.2.6",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
