@@ -544,21 +544,28 @@ function DocumentSkeleton() {
 
 function PreviewBody({ url, mimeType }: { url: string; mimeType: string }) {
   if (mimeType === 'application/pdf') {
-    // sandbox notes:
-    //   - allow-scripts: required for Chrome's native PDF viewer
-    //     (PDF.js under the hood) to render. Without it the iframe
-    //     shows a download prompt instead of the inline viewer.
-    //   - allow-same-origin: required so the viewer can fetch its
-    //     own resources alongside the presigned URL.
-    //   - We intentionally do NOT grant: allow-popups, allow-forms,
-    //     allow-top-navigation. A malicious PDF can't navigate the
-    //     command-room out from under the user or post forms with
-    //     stolen credentials.
+    // No sandbox attribute — earlier we shipped
+    // sandbox="allow-scripts allow-same-origin" as a defense-in-depth
+    // measure (P3 hardening), but it broke Chrome's native PDF viewer:
+    // the iframe rendered as a broken-image icon instead of the PDF.
+    // Chrome's PDF rendering pipeline needs more privileges than the
+    // sandbox flags expose, and the alternative (allow-popups +
+    // allow-top-navigation-by-user-activation, etc.) is not actually
+    // safer than no sandbox.
+    //
+    // Trade-off:
+    //   - Lost: a malicious PDF could navigate the command-room window
+    //     or trigger a popup. R2 only serves files we processed, so
+    //     "malicious PDF" requires a tenant-internal upload — admin
+    //     viewing their own client's doc is the threat model anyway.
+    //   - Kept: cross-origin restrictions still apply. Iframe content
+    //     can't read parent's cookies, localStorage, or DOM.
+    //   - referrerPolicy stays "no-referrer" so R2 logs don't show
+    //     internal command-room URLs.
     return (
       <iframe
         src={url}
         title="Document preview"
-        sandbox="allow-scripts allow-same-origin"
         referrerPolicy="no-referrer"
         style={{
           width: '100%',
