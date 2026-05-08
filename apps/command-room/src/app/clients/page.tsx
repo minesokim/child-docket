@@ -32,7 +32,38 @@ export default async function ClientsPage() {
   // see the same page; future SSN-reveal endpoints will narrow to
   // ['firm_owner', 'preparer', 'reviewer'] via assertRole().
   // See apps/command-room/src/lib/require-role.ts for the policy matrix.
-  const user = await requireRole(['firm_owner', 'preparer', 'reviewer', 'admin', 'assistant']);
+  //
+  // Diagnostic wrap (debug-prod-500): requireRole calls
+  // getCurrentDocketUser → multiple SELECTs against tenants + users.
+  // Earlier deploys had intermittent "Failed query: select..." with no
+  // driver detail in logs. Capture the cause here too in case the
+  // error is in the auth path, not the page query below.
+  let user: Awaited<ReturnType<typeof requireRole>>;
+  try {
+    user = await requireRole(['firm_owner', 'preparer', 'reviewer', 'admin', 'assistant']);
+  } catch (err) {
+    const e = err as Error & {
+      code?: string;
+      digest?: string;
+      cause?: { message?: string; code?: string };
+    };
+    // Don't log Next.js redirect-throws — they have a magic digest
+    // starting with NEXT_REDIRECT;... and are control flow, not errors.
+    if (!e.digest?.startsWith('NEXT_REDIRECT')) {
+      console.error(
+        '[/clients] requireRole failed',
+        JSON.stringify({
+          message: e.message,
+          code: e.code ?? null,
+          digest: e.digest ?? null,
+          causeMessage: e.cause?.message ?? null,
+          causeCode: e.cause?.code ?? null,
+          stack: e.stack?.split('\n').slice(0, 8).join('\n'),
+        }),
+      );
+    }
+    throw err;
+  }
 
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
 
