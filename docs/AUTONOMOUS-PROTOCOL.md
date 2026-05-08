@@ -127,6 +127,8 @@ If you can't answer all three sharply, the change isn't ready. Read more.
 
 **Keep-going rule** (the [`/keep-going`](../.claude/skills/keep-going/SKILL.md) skill): if NONE of the stop conditions above fire after a clean commit, **pick the next item and start the next /edge-cases iteration immediately**. Do NOT pause to surface a "which direction?" decision to the user. The user explicitly named this anti-pattern on 5/8/2026: "i wanted it to keep going here. until the feature list is complete." The selection order is queued items in `AUTONOMOUS-QUEUE.md`, then commit-message followups, then `PRODUCTION-READINESS.md` V1 items, then V1.5, then V2.
 
+**Score-loop rule** (the [`/score`](../.claude/skills/score/SKILL.md) skill): every feature gets a 12-dimension production-readiness score (0-100) AFTER it ships deploy-READY. If score < 95, the loop runs again on the SAME item, closing the lowest-scoring gap, recommitting, re-scoring. /keep-going only advances to the next item AFTER /score >= 95 on the current one. User-codified 5/8/2026: "it needs to be 95+. if it doesn't reach those metrics, do it until it does. every single nook and cranny of every feature and the product as a whole." Floor: honest work scores >= 60. Ceiling: substrate-without-consumer caps at 75 (must have at least one real call site to break above 75).
+
 ---
 
 ## 4. Anti-patterns this protocol blocks
