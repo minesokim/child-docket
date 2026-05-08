@@ -56,9 +56,39 @@ export async function GET(req: NextRequest): Promise<Response> {
       'Verify Sentry capture pipeline + app:command-room tag + scrubber path.',
   });
 
-  // Throw a NAMED error class so it's easily searchable in Sentry's UI
+  // Build a NAMED error class so it's easily searchable in Sentry's UI
   // and doesn't get coalesced with real production errors.
-  throw new DocketSentryVerificationError(
+  const err = new DocketSentryVerificationError(
     'Sentry verification trigger — if you are reading this in Sentry, the pipeline is working. Tag should be app:command-room.',
+  );
+
+  // EXPLICIT CAPTURE + FLUSH.
+  //
+  // Why not rely on Sentry's `onRequestError` auto-capture (exported
+  // from instrumentation.ts)? On Vercel serverless, the lambda
+  // terminates immediately after the response is sent. Sentry's
+  // transport batches events for ~1s before sending; auto-captured
+  // events from a thrown error sometimes miss this window because
+  // the lambda dies before flush completes.
+  //
+  // The reliable pattern is: capture explicitly, await flush with a
+  // generous timeout, THEN throw. This guarantees the event lands
+  // in Sentry before the lambda exits.
+  //
+  // 2s flush timeout is conservative — Sentry transport typically
+  // completes in <500ms; padding for cold starts.
+  const eventId = Sentry.captureException(err);
+  await Sentry.flush(2000);
+
+  // Surface the eventId in the response (developer convenience —
+  // copy/paste into Sentry to find this exact event).
+  return Response.json(
+    {
+      ok: false,
+      error: 'sentry_verification_thrown',
+      event_id: eventId,
+      hint: 'check https://noctworks.sentry.io/issues/ — search for DocketSentryVerificationError',
+    },
+    { status: 500 },
   );
 }

@@ -48,7 +48,25 @@ export async function GET(req: NextRequest): Promise<Response> {
       'Verify Sentry capture pipeline + app:portal tag + scrubber path.',
   });
 
-  throw new DocketSentryVerificationError(
+  // Same explicit-capture + flush pattern as the command-room route.
+  // See command-room/src/app/api/sentry-test/route.ts for the full
+  // explanation. Short version: Vercel serverless lambdas exit before
+  // Sentry's transport flushes; explicit flush(2000) guarantees the
+  // event lands before the response is sent.
+  const err = new DocketSentryVerificationError(
     'Sentry verification trigger — if you are reading this in Sentry, the pipeline is working. Tag should be app:portal.',
+  );
+
+  const eventId = Sentry.captureException(err);
+  await Sentry.flush(2000);
+
+  return Response.json(
+    {
+      ok: false,
+      error: 'sentry_verification_thrown',
+      event_id: eventId,
+      hint: 'check https://noctworks.sentry.io/issues/ — search for DocketSentryVerificationError',
+    },
+    { status: 500 },
   );
 }
