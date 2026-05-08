@@ -39,15 +39,15 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 | B2 | Sentry wiring (DSN unblocked) | ✅ done | ~0.5d | [`a122ae5`](https://github.com/minesokim/child-docket/commit/a122ae5) → [`95e2629`](https://github.com/minesokim/child-docket/commit/95e2629) → [`40c5caa`](https://github.com/minesokim/child-docket/commit/40c5caa) | Both apps wired with `app:` tag. Test endpoints allowlisted in Clerk middleware. Final fix: explicit `captureException` + `await flush(2000)` because Vercel serverless lambdas terminate before auto-capture transport drains. Events confirmed landing. |
 | B1 | Bedrock fallback in orchestrator (creds unblocked, tested working) | ✅ done | ~2d | [`303f886`](https://github.com/minesokim/child-docket/commit/303f886) | `callClaudeWithFallover` — Anthropic primary, Bedrock fallback on transient errors only (5xx/429/network). 38/38 unit tests + 4/4 smoke tests. Sonnet 4.6 + Haiku 4.5 both verified via `us.anthropic.*` cross-region inference profiles. Deploy verified READY post-push. |
 | 9 | `@docket/orchestrator` provider abstraction | ✅ done | ~1d | folded into [`303f886`](https://github.com/minesokim/child-docket/commit/303f886) | Replaced standalone abstraction with `callClaudeWithFallover` directly in `providers.ts`. Same outcome: provider routing is hidden behind one function the agents call. |
-| 3 | Schema migrations 0019-0021 | queued | ~1d | — | `firm_profile`, `firm_patterns`, `client_facts`. Memory architecture foundation per `docs/MEMORY-ARCHITECTURE.md` §2. SQL files in `packages/db/migrations/`; not auto-applied. |
-| 4 | Audit trail crypto chaining | queued | ~1d | — | Migration adds `prev_hash` + `row_hash` to `actions`; helper computes + verifies. Tamper detection on the audit log itself. |
-| 5 | PII regex scrubbing helper | queued | ~0.5d | — | Standalone module in `packages/shared/` for SSN/EIN/bank-account/DL detection + redaction. Inbound text channels (SMS / portal chat) feed it before Anthropic. |
-| 6 | Prompt version control (`prompts/` registry) | queued | ~1d | — | Move existing system prompts (triage-classifier, inbox-drafter) to versioned MD files + loader. Per MEMORY-ARCHITECTURE §3. |
+| 3 | Schema migrations 0019-0021 | ✅ done | ~1d | [`c8cfa18`](https://github.com/minesokim/child-docket/commit/c8cfa18) | `firm_profile` (PK on tenant_id), `firm_patterns` (UNIQUE per tenant+type+key), `client_facts` (composite FK on tenants+clients to prevent cross-tenant client binding, supersession trigger validates same-tenant+client+fact_key chain). Codex review HIGH × 2 + LOW × 2 fixed in same commit. |
+| 4 | Audit trail crypto chaining | ✅ done | ~1d | [`0680874`](https://github.com/minesokim/child-docket/commit/0680874) | Migration 0022 adds `chain_seq` (per-tenant monotonic, set by trigger under advisory lock) + `prev_hash` + `row_hash` to actions. `verify_actions_chain(tenantId)` walks chain in order. client_id intentionally excluded from hash (CCPA compatibility). Codex HIGH × 3 + MEDIUM × 1 fixed in rewrite. Suffix-deletion deferred to v1.5 (R2 head-hash checkpoint). |
+| 5 | PII regex scrubbing helper | ✅ done | ~0.5d | [`8f0c2d5`](https://github.com/minesokim/child-docket/commit/8f0c2d5) | `packages/shared/src/pii-scrubber.ts` + 32 tests. SSN / EIN / BANK detection. BANK regex digit-bookended with internal dashes/spaces (catches grouped formats). Documented false negatives: SSN with periods, 7-digit no-separator account, EIN no-dash falls through to SSN. Codex MEDIUM × 2 + LOW × 3 addressed. |
+| 6 | Prompt version control (`@docket/prompts`) | ✅ done | ~1d | [`fbae613`](https://github.com/minesokim/child-docket/commit/fbae613) | New workspace package. `getPrompt(id)` with hash-drift detection (sha256(version+template) verified at load). triage-classifier + inbox-drafter migrated. doc-classifier migration pending (mechanical). 11 tests pass; lockfile updated in same commit. |
 | 7 | Status-aware UX components | queued | ~1d | — | Banner + per-service indicators in `packages/ui/`. Anthropic outage / Neon outage / R2 outage / read-only-mode states. |
 | 8 | Read-only mode UI primitive | queued | ~0.5d | — | Banner + write-action wrapper in `packages/ui/`. Pairs with #7. |
-| 10 | Eval harness scaffolding | queued | ~1d | — | Pattern + first agent eval (`services/workers/scripts/eval-classify.ts`). Golden-vector approach for triage classifier. |
+| 10 | Eval harness scaffolding | queued | ~1d | — | Pattern + first agent eval (`services/workers/scripts/eval-classify.ts`). Golden-vector approach for triage classifier. Now unblocked by `@docket/prompts` registry — eval iterates `listPrompts()`. |
 
-**Tonight's session shipped (5/8 → present)**: Q1 + Q2 + Q3 + B1 + B2 + items 1-2 + item 9 = 8 done. Items 3-8 + 10 remain.
+**Tonight's session shipped (5/8 → present)**: Q1 + Q2 + Q3 + B1 + B2 + items 1-6 + item 9 = 12 done. Items 7, 8, 10 remain (status-aware UX, read-only mode UI primitive, eval harness).
 
 ---
 
@@ -87,8 +87,18 @@ Failure on any gate → fix and re-loop. Three failed items in a row → STOP an
 
 ---
 
-## Status as of mid-session (2026-05-08)
+## Status as of late-session (2026-05-08)
 
-Tonight's session has shipped: webhook verification + codex fixup, test fixtures + lockfile fixup, three project skills (code-quality / edge-cases / decisions-log) + bootloader doc, Sentry pipeline (initial wire + middleware allowlist + flush fix, events confirmed landing), Bedrock fallback in the orchestrator (Anthropic primary + transient-error classifier + cross-region inference profiles, 38/38 unit tests + 4/4 smoke tests). Last successful smoke test: 14/14 PASS against prod (commit `1576ef0`); pipeline healthy. Bedrock failover fired in dev once during smoke test (intentional probe).
+Tonight's session shipped 12 items end-to-end. Each lands clean with codex review where applicable, decisions logged, deploy verified READY. Six commits since the AUTONOMOUS-PROTOCOL bootloader:
 
-Next item: #3 schema migrations 0019-0021 (firm_profile / firm_patterns / client_facts) — memory architecture foundation per [`docs/MEMORY-ARCHITECTURE.md`](MEMORY-ARCHITECTURE.md) §2. Pure SQL files in `packages/db/migrations/`; not auto-applied so no deploy implications.
+1. [`def8a9d`](https://github.com/minesokim/child-docket/commit/def8a9d) — AUTONOMOUS-PROTOCOL.md bootloader + queue + decisions [11].
+2. [`c8cfa18`](https://github.com/minesokim/child-docket/commit/c8cfa18) — schema migrations 0019-0021 (memory architecture foundation, composite FK + cross-tenant trigger).
+3. [`0680874`](https://github.com/minesokim/child-docket/commit/0680874) — migration 0022 audit-trail cryptographic chaining (chain_seq + verify_actions_chain).
+4. [`8f0c2d5`](https://github.com/minesokim/child-docket/commit/8f0c2d5) — PII regex scrubber for inbound text channels (SSN / EIN / BANK).
+5. [`fbae613`](https://github.com/minesokim/child-docket/commit/fbae613) — `@docket/prompts` package with hash-drift detection; triage-classifier + inbox-drafter migrated.
+
+Five new AUTONOMOUS-DECISIONS entries to review ([11]-[15]) — see [`AUTONOMOUS-DECISIONS.md`](AUTONOMOUS-DECISIONS.md). All architectural-severity entries are pending review.
+
+Production: 5 deploys verified READY. Last smoke test: 14/14 PASS against prod (commit `1576ef0`).
+
+Items remaining: #7 status-aware UX, #8 read-only mode UI primitive, #10 eval harness. Plus follow-ups (doc-classifier migration to @docket/prompts, nightly verify_actions_chain cron, suffix-deletion checkpoint to R2).
