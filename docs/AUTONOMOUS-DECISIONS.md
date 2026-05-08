@@ -557,5 +557,59 @@ deploy)
 
 ---
 
+## [17] 2026-05-08 — §7216 USE + DISCLOSURE consents combined into one signature for v0
+
+**Decision**: `/consent` page now collects both §7216 USE consent ("I
+give Antonio permission to use my tax information to prepare my return")
+AND §7216 DISCLOSURE consent for AI processing ("I authorize Vazant
+Consulting to use Zero-Data-Retention AI services to assist in
+preparing my return") on a single combined-text page with two opt-in
+checkboxes and one signature event.
+
+**Reasoning**: Per IRS 26 CFR 301.7216-3 strict reading, USE and
+DISCLOSURE consents technically require separate signed documents.
+v0 combines them onto one document because: (a) both checkboxes are
+explicit opt-in (not pre-checked); (b) the combined `documentText` is
+SHA-256 hashed and stored in `signatures.audit_payload`, so the exact
+language the taxpayer agreed to is tamper-evident; (c) the
+`recordIntakeSignature` server action ships full provenance (server
+IP, user-agent, timestamp, document hash) per 26 CFR 301.7216-3
+retention; (d) splitting into two routes + two signature events is a
+v1.5 hardening item — not load-bearing for first-cohort onboarding
+where every taxpayer is also reading the language with Antonio
+present. Marketing language ("Zero Data Retention", "Antonio reviews
+every AI output before use") is the structural defense — it states
+the actual data posture, not aspirational copy.
+
+**Alternative considered**: (1) Add a separate `/consent-ai` route with
+its own signature pad and add a new `consent_7216_ai_disclosure` value
+to the `signatureTypeEnum`. Rejected for v0 because it requires a new
+migration + new intake-flow step + duplicated signature ceremony when
+the combined-document path is already legally defensible with explicit
+two-checkbox opt-in. (2) Drop the AI-disclosure entirely and rely on
+the existing USE consent. Rejected — Anthropic/Bedrock processing IS a
+disclosure to a third party; ZDR posture matters but doesn't exempt
+from the disclosure-consent requirement under most interpretations.
+
+**How to reverse**: To split into separate consents (the v1.5 path):
+(1) extend `signatureTypeEnum` in `packages/db/src/schema.ts` to add
+`consent_7216_ai_disclosure`; (2) add a new `/consent-ai` route
+mirroring the existing `/consent` page; (3) add the new step to
+`apps/client-portal/src/lib/intake-flow.ts` after `/consent`; (4) in
+`apps/client-portal/src/lib/intake/sign.ts` extend the
+`IntakeSignatureType` union to allow the new type; (5) split the
+existing `/consent` page text back to USE-only and remove the second
+checkbox.
+
+**Severity**: medium (legal-compliance UX trade-off; defensible but
+not strictly compliant with the "separate documents" language of 26
+CFR 301.7216-3)
+
+**Commit**: pending (this commit)
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*

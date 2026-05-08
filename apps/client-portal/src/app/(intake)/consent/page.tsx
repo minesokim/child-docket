@@ -23,11 +23,12 @@ import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { recordIntakeSignature } from '@/lib/intake/sign';
 
-const TITLE = '§7216 Consent - Use of Tax Information';
+const TITLE = '§7216 Consent - Use & Disclosure of Tax Information';
 const PARAS = [
-  'Federal law requires this consent form be provided to you. Unless authorized by law, we cannot use your tax return information for any purpose other than preparing your return without your consent.',
+  'Federal law requires this consent form be provided to you. Unless authorized by law, we cannot use or disclose your tax return information for any purpose other than preparing your return without your consent.',
   'You are not required to complete this form. If we obtain your signature on this form by conditioning our services on your consent, your consent will not be valid. Your consent is valid for the amount of time that you specify.',
   'By signing below, you authorize Antonio Vazquez, Enrolled Agent, to use the information you provide solely for the purpose of preparing your 2025 federal and state income tax returns. This consent is valid until the returns are filed and accepted by the applicable tax authorities.',
+  'You also authorize Vazant Consulting to use secure artificial-intelligence services (Anthropic Claude and AWS Bedrock) operating under Zero Data Retention agreements to assist in preparing your return. These services do not retain your information after processing, and they will not use your information to train any model. Antonio reviews and approves every AI-generated output before it is used or sent to a tax authority.',
   'If you believe your tax return information has been disclosed or used improperly in a manner unauthorized by law or without your permission, you may contact the Treasury Inspector General for Tax Administration (TIGTA).',
 ];
 
@@ -40,11 +41,22 @@ export default function ConsentPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
   const [checked, setChecked] = useIntakeField<boolean>('consent.checked', false);
+  // Separate AI-disclosure consent. Per IRS 26 CFR 301.7216-3, USE
+  // and DISCLOSURE consents technically require separate documents +
+  // separate signatures; v0 collapses them onto one signed document
+  // (the FULL_DOCUMENT_TEXT below covers BOTH) but keeps two checkboxes
+  // so the taxpayer's opt-in for each is explicit. v1.5 splits them
+  // into two separate routes + two signatures (logged as a follow-up
+  // in AUTONOMOUS-DECISIONS.md).
+  const [aiChecked, setAiChecked] = useIntakeField<boolean>(
+    'consent.aiChecked',
+    false,
+  );
   const [signed, setSigned] = useIntakeField<boolean>('consent.signed', false);
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [signError, setSignError] = React.useState<string | null>(null);
 
-  const ready = checked && signed;
+  const ready = checked && aiChecked && signed;
 
   // §7216 has criminal penalty if recorded wrong (26 USC 7216).
   // Persist the full provenance — text hash, ip, ua, server timestamp
@@ -146,6 +158,43 @@ export default function ConsentPage() {
               style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
             >
               I give Antonio permission to use my tax information to prepare my return
+            </div>
+          </Row>
+
+          <Row gap={10} align="flex-start">
+            <div
+              onClick={() => setAiChecked(!aiChecked)}
+              style={{
+                width: 22,
+                height: 22,
+                flexShrink: 0,
+                borderRadius: 5,
+                background: aiChecked ? t.ease.forestMid : t.ease.keylimeWash,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 1,
+              }}
+            >
+              {aiChecked && (
+                <svg width="12" height="10" viewBox="0 0 12 10">
+                  <path
+                    d="M1 5l3.5 3.5L11 1"
+                    stroke="#fff"
+                    strokeWidth="2"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
+            <div
+              onClick={() => setAiChecked(!aiChecked)}
+              style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
+            >
+              I authorize Vazant Consulting to use Zero-Data-Retention AI services (Anthropic Claude, AWS Bedrock) to assist in preparing my return. Antonio reviews every AI output before use.
             </div>
           </Row>
 
