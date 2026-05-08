@@ -945,6 +945,11 @@ When the user's request matches an available skill, invoke it via the Skill tool
 | Resume context | `/context-restore` |
 | Independent code review | `/codex` |
 | Security audit | `/cso` |
+| End-to-end verify a feature | `/smoke-test` (project-local; see `.claude/skills/smoke-test/`) |
+
+### Project-local skills
+
+Beyond gstack, this repo ships `/smoke-test` at [`.claude/skills/smoke-test/SKILL.md`](.claude/skills/smoke-test/SKILL.md). Required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
 
 ---
 
