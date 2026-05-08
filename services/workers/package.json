@@ -10,6 +10,8 @@
     "test:classifier": "tsx src/test/classifier.ts",
     "test:drafter": "tsx src/test/drafter.ts",
     "eval:classify": "tsx scripts/eval-classify.ts",
+    "eval:draft": "tsx scripts/eval-draft.ts",
+    "e2e:app": "tsx scripts/e2e-app.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
