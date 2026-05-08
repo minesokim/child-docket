@@ -53,7 +53,7 @@ entry from `packages/shared/package.json`. Browser bundles will break.
 
 **Commit**: `00cd377`
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08)
 
 ---
 
@@ -343,7 +343,7 @@ soften the skills (lower the bar) by editing them.
 
 **Commit**: `a91f165` (code-quality), `b430887` (edge-cases + decisions-log), `7e59c58` (Step 7 added to code-quality)
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08)
 
 ---
 
@@ -376,7 +376,7 @@ catching up." Exactly the failure mode the user called out.
 
 **Commit**: this commit
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08)
 
 ---
 
@@ -443,7 +443,7 @@ that wrote correct (tenant_id, client_id) pairs continue to work.
 
 **Commit**: this commit (migration 0021)
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08)
 
 ---
 
@@ -474,7 +474,7 @@ becomes unverifiable on legacy data. Not recommended.
 
 **Commit**: this commit (migration 0022)
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08)
 
 ---
 
@@ -513,7 +513,7 @@ forbid the cascade or accept chain breakage on each delete.
 
 **Commit**: this commit (migration 0022)
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08)
 
 ---
 
@@ -553,7 +553,7 @@ deploy)
 
 **Commit**: `4723b25`
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08) — APPROVE-FOR-NOW with explicit removal commitment per PRODUCTION-READINESS pre-public-launch checklist; reverse the moment Clerk's test-phone setting is found in the dashboard
 
 ---
 
