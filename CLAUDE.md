@@ -971,10 +971,14 @@ When the user's request matches an available skill, invoke it via the Skill tool
 
 ### Project-local skills
 
-Beyond gstack, this repo ships two project skills:
+Beyond gstack, this repo ships four project skills that together form the autonomous build cycle:
 
-- [`/smoke-test`](.claude/skills/smoke-test/SKILL.md) — required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
-- [`/code-quality`](.claude/skills/code-quality/SKILL.md) — pre-commit gate that BLOCKS AI-sloppenheimer from shipping. Runs implicitly before EVERY commit during autonomous overnight work. Forces explicit checks against the senior-engineer bar: pattern adherence, error handling, type tightness, comment quality, test coverage, lockfile-package.json sync. Reference exemplar: `packages/shared/src/webhook-verification.ts` (calibration target — webhook verifier with rich docs, 32 edge-case tests, codex-review-caught-real-issues fixup cycle).
+- [`/edge-cases`](.claude/skills/edge-cases/SKILL.md) — runs BEFORE implementation. Forces explicit enumeration of 8-15 edge cases (input / state / failure-mode / time / permission / domain-specific) with handle-vs-document-vs-out-of-scope status. Catches "shipping happy path, finding edge cases in prod" drift.
+- [`/code-quality`](.claude/skills/code-quality/SKILL.md) — runs BEFORE commit. Pre-commit gate that BLOCKS AI-sloppenheimer. Forces structural checks (typecheck, tests, no console.log, no undocumented `any`, lockfile-package.json sync) + substantive checks (pattern adherence, error handling, comment quality, atomicity) + post-push deploy verification (curl + Vercel state must be READY before next item). Reference exemplar: `packages/shared/src/webhook-verification.ts`.
+- [`/smoke-test`](.claude/skills/smoke-test/SKILL.md) — runs AFTER implementation. Required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
+- [`/decisions-log`](.claude/skills/decisions-log/SKILL.md) — runs ALONGSIDE every commit + AT SESSION END. Tracks autonomous judgment calls (naming / UX / scope cuts / architecture trade-offs / defaults / deferrals) in [`docs/AUTONOMOUS-DECISIONS.md`](docs/AUTONOMOUS-DECISIONS.md). User reviews periodically; pending entries get auto-marked reviewed-approved after 7 days for low/medium severity.
+
+The full cycle: plan → /edge-cases → implement → typecheck → test → /code-quality (lockfile, anti-patterns, codex if substantial) → commit (with /decisions-log entry if applicable) → push → verify deploy READY (curl test endpoint if applicable) → /smoke-test if applicable → next item.
 
 ### Canonical reference docs (re-read at session start)
 
