@@ -971,7 +971,10 @@ When the user's request matches an available skill, invoke it via the Skill tool
 
 ### Project-local skills
 
-Beyond gstack, this repo ships `/smoke-test` at [`.claude/skills/smoke-test/SKILL.md`](.claude/skills/smoke-test/SKILL.md). Required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
+Beyond gstack, this repo ships two project skills:
+
+- [`/smoke-test`](.claude/skills/smoke-test/SKILL.md) — required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
+- [`/code-quality`](.claude/skills/code-quality/SKILL.md) — pre-commit gate that BLOCKS AI-sloppenheimer from shipping. Runs implicitly before EVERY commit during autonomous overnight work. Forces explicit checks against the senior-engineer bar: pattern adherence, error handling, type tightness, comment quality, test coverage, lockfile-package.json sync. Reference exemplar: `packages/shared/src/webhook-verification.ts` (calibration target — webhook verifier with rich docs, 32 edge-case tests, codex-review-caught-real-issues fixup cycle).
 
 ### Canonical reference docs (re-read at session start)
 
