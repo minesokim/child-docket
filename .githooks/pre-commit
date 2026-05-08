@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+#
+# The pre-commit gate. Runs BEFORE commit-msg, so it can short-circuit
+# obviously-broken commits without needing a message at all. The
+# commit-msg hook is the protocol-gate enforcement step (it sees the
+# message). This step enforces:
+#
+#   1. Repo typechecks across the workspace.
+#   2. The `@docket/shared` test suite passes (it's the
+#      validation-layer-of-record for branded types, scrubPII, trust-gate,
+#      webhook verification).
+#
+# These are the cheapest possible checks that would have caught the
+# "shipped 11 commits with broken types" failure mode. Tests for other
+# packages run in CI but are too slow to gate every local commit.
+#
+# Bypass: `git commit --no-verify` (logged via the commit-msg hook
+# unless that's also bypassed; CI catches both).
+
+set -e
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "[pre-commit] pnpm not on PATH; skipping typecheck."
+else
+  echo "[pre-commit] typecheck (turbo)..."
+  pnpm typecheck >/dev/null 2>&1 || {
+    echo "[pre-commit] typecheck FAILED. Run 'pnpm typecheck' to see errors."
+    exit 1
+  }
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "[pre-commit] bun not on PATH; skipping shared tests."
+else
+  echo "[pre-commit] @docket/shared tests (bun)..."
+  ( cd packages/shared && bun test src ) >/dev/null 2>&1 || {
+    echo "[pre-commit] @docket/shared tests FAILED. Run 'cd packages/shared && bun test src' to see errors."
+    exit 1
+  }
+fi
+
+echo "[pre-commit] OK."

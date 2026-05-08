@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg
+#
+# Validates that feat/fix commits include the required protocol trailers
+# (Edge-Cases / Score / Align / Craft / Decisions) per scripts/protocol-gate.ts.
+#
+# To bypass for an emergency: add the trailer
+#   Protocol-Skip: <>=10-char reason>
+# to the commit message. The skip is logged to docs/protocol-skips.jsonl
+# and surfaces in CI as an audit line.
+#
+# Activated via: git config core.hooksPath .githooks  (run setup once).
+
+set -e
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "[commit-msg] bun not on PATH; skipping protocol-gate validation."
+  echo "[commit-msg] Install bun and re-run, or set core.hooksPath to use a different hook setup."
+  exit 0
+fi
+
+bun run scripts/protocol-gate.ts --commit-msg "$1"

@@ -998,6 +998,49 @@ Beyond gstack, this repo ships four project skills that together form the autono
 
 The full cycle: plan → /edge-cases → implement → typecheck → test → /code-quality (lockfile, anti-patterns, codex if substantial) → /craft (UI-touching commits only) → commit (with /decisions-log entry if applicable) → push → verify deploy READY (curl test endpoint if applicable) → /smoke-test if applicable → /score (loop until >= 95) → /align (reshape if misaligned) → periodically /e2e → /keep-going (pick next item) ⟲
 
+### Protocol enforcement (HOOKS, not docs — locked 2026-05-08)
+
+User mandate: *"never ever make this mistake again. you are jeopardizing me."* After an autonomous session shipped 11 commits while skipping `/score`, `/align`, `/edge-cases`, `/craft` entirely, the protocols moved from optional documentation into hard hooks.
+
+**Setup (run once on fresh clone):**
+```bash
+pnpm hooks:install   # sets git core.hooksPath = .githooks/
+```
+The `prepare` script runs this automatically on `pnpm install`.
+
+**Pre-commit hook** (`.githooks/pre-commit`):
+- Runs `pnpm typecheck` across all workspaces.
+- Runs `bun test src` in `packages/shared` (the validation-layer-of-record for branded types, scrubPII, trust-gate, webhook verification).
+- Fails the commit if either fails.
+
+**Commit-msg hook** (`.githooks/commit-msg`):
+- Invokes `bun run scripts/protocol-gate.ts --commit-msg <file>`.
+- For commits whose subject starts with `feat(` or `fix(`, REQUIRES these trailers in the body:
+  ```
+  Edge-Cases: <N> enumerated, <N> handled, <N> documented
+  Score: <0-100>/100
+  Align: ALIGNED | MISALIGNED | BORDERLINE
+  Craft: PASS | FAIL | N/A — substrate-only
+  Decisions: [<n>] | none
+  ```
+- Substantive thresholds:
+  - `Score < 95` → BLOCKED. The user codified the floor: *"it needs to be 95+. if it doesn't reach those metrics, do it until it does."*
+  - `Align: MISALIGNED` → BLOCKED. Reshape or kill before committing.
+  - `Craft: FAIL` → BLOCKED.
+  - `Craft: N/A` on a commit that touches UI files (any `apps/*/src/app/**.{tsx,jsx,css}`, `apps/*/src/components/**.{tsx,jsx,css}`, `packages/ui/src/components/**.{tsx,jsx}`, `packages/ui/src/tokens.{ts,tsx}`, `packages/ui/src/styles.css`) → BLOCKED. Run `/craft` and report PASS/FAIL.
+
+**Escape hatch** — `Protocol-Skip: <≥10-char reason>` trailer. Bypasses validation but:
+1. Logged to `docs/protocol-skips.jsonl` with timestamp + sha + reason.
+2. CI surfaces every protocol-skip in the `protocol-gate` job's output.
+3. The skip is auditable forever in the git log.
+
+**CI gate** (`protocol-gate` job in `.github/workflows/ci.yml`):
+- Runs `bun run scripts/protocol-gate.ts --range <base..head>` against every commit in a PR (or last commit on push to main).
+- Re-validates server-side so `git commit --no-verify` locally doesn't get past review.
+
+**Why hooks not skills:**
+The user's own audit (2026-05-08): *"the protocols are written as gates another agent could enforce. Running them on myself means catching myself before commit, and 'just commit, come back later' beats 'stop and run /score' every time when nothing external blocks me."* The hooks ARE the external block.
+
 ### Canonical reference docs (re-read at session start)
 
 Beyond this CLAUDE.md, six docs anchor product + ops decisions and SHOULD NOT be duplicated inline:

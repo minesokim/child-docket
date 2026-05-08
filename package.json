@@ -11,7 +11,10 @@
     "typecheck": "turbo typecheck",
     "clean": "turbo clean && rm -rf node_modules",
     "e2e:portal": "playwright test",
-    "e2e:portal:install": "playwright install chromium"
+    "e2e:portal:install": "playwright install chromium",
+    "hooks:install": "git config core.hooksPath .githooks && echo 'core.hooksPath set to .githooks/'",
+    "hooks:validate-range": "bun run scripts/protocol-gate.ts --range",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
