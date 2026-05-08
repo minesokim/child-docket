@@ -2,12 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { computePromptHash, getPrompt, listPrompts } from './index.js';
 import { triageClassifier } from './triage-classifier.js';
 import { inboxDrafter } from './inbox-drafter.js';
+import { docClassifier } from './doc-classifier.js';
 
 describe('@docket/prompts / registry', () => {
   test('lists every registered prompt', () => {
     const prompts = listPrompts();
     const ids = prompts.map((p) => p.id).sort();
-    expect(ids).toEqual(['inbox-drafter', 'triage-classifier']);
+    expect(ids).toEqual(['doc-classifier', 'inbox-drafter', 'triage-classifier']);
   });
 
   test('listPrompts returns id + version + model only', () => {
@@ -36,9 +37,17 @@ describe('@docket/prompts / getPrompt', () => {
     expect(p.template.startsWith('You are the Inbox Drafter')).toBe(true);
   });
 
+  test('returns the registered doc-classifier', async () => {
+    const p = await getPrompt('doc-classifier');
+    expect(p.id).toBe('doc-classifier');
+    expect(p.version).toBe('1.0.0');
+    expect(p.model).toBe('haiku-4-5');
+    expect(p.template.startsWith('You are the Document Classifier')).toBe(true);
+  });
+
   test('throws on unknown id with helpful message', async () => {
     await expect(getPrompt('nonexistent-agent')).rejects.toThrow(
-      /unknown prompt id "nonexistent-agent"\. Known: inbox-drafter, triage-classifier/,
+      /unknown prompt id "nonexistent-agent"\. Known: doc-classifier, inbox-drafter, triage-classifier/,
     );
   });
 });
@@ -60,9 +69,18 @@ describe('@docket/prompts / hash verification', () => {
     expect(inboxDrafter.hash).toBe(recomputed);
   });
 
+  test('doc-classifier stored hash matches recomputed hash', async () => {
+    const recomputed = await computePromptHash(
+      docClassifier.version,
+      docClassifier.template,
+    );
+    expect(docClassifier.hash).toBe(recomputed);
+  });
+
   test('hash is sha256 hex (64 chars)', () => {
     expect(triageClassifier.hash).toMatch(/^[0-9a-f]{64}$/);
     expect(inboxDrafter.hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(docClassifier.hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   test('hash changes when template changes', async () => {

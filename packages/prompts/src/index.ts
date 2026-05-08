@@ -43,6 +43,7 @@
 
 import { triageClassifier } from './triage-classifier.js';
 import { inboxDrafter } from './inbox-drafter.js';
+import { docClassifier } from './doc-classifier.js';
 
 export type PromptModel = 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
 
@@ -77,7 +78,7 @@ export async function computePromptHash(version: string, template: string): Prom
     .join('');
 }
 
-const PROMPTS: ReadonlyArray<Prompt> = [triageClassifier, inboxDrafter];
+const PROMPTS: ReadonlyArray<Prompt> = [triageClassifier, inboxDrafter, docClassifier];
 
 const PROMPTS_BY_ID: ReadonlyMap<string, Prompt> = new Map(
   PROMPTS.map((p) => [p.id, p]),
