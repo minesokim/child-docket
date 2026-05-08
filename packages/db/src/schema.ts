@@ -12,6 +12,9 @@ import {
   real,
   date,
   customType,
+  foreignKey,
+  check,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -807,5 +810,216 @@ export const authorityChunks = pgTable(
       t.ordinal,
     ),
     tenantIdx: index('authority_chunks_tenant_idx').on(t.tenantId),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────
+// Memory architecture (per docs/MEMORY-ARCHITECTURE.md §2).
+//
+// Three tables backing layers 4 (procedural), 6 (pattern), and the
+// per-client fact extraction substrate. The context assembler reads
+// these on every agent call — firm_profile in the cached static
+// prefix, firm_patterns + client_facts in the dynamic context.
+// ────────────────────────────────────────────────────────────────
+
+// PROCEDURAL MEMORY — how this firm/EA works. One row per tenant.
+export const firmProfile = pgTable(
+  'firm_profile',
+  {
+    /**
+     * tenantId IS the primary key. Exactly one row per tenant by
+     * construction. UPSERT pattern: ON CONFLICT (tenant_id) DO UPDATE.
+     */
+    tenantId: uuid('tenant_id')
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /** Human-readable shorthand for prompt rendering. */
+    toneDescriptor: text('tone_descriptor'),
+    /** 5-10 representative sent-comm snippets, fed to inbox-drafter. */
+    voiceExamples: jsonb('voice_examples')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /**
+     * Per-position-type tier preferences. Map from position_key
+     * (e.g., 'augusta_rule') to:
+     *   { default_tier, acceptance_rate, last_observed_at }
+     */
+    positionTierPreferences: jsonb('position_tier_preferences')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    /** "{channel}.{topic}" → { median_response_minutes, p90_minutes } */
+    responseCadence: jsonb('response_cadence')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    /** Monotonic version. Bumps each meaningful extraction-job delta. */
+    version: integer('version').notNull().default(1),
+    /**
+     * Last 5 snapshots, [{ version, snapshot, replaced_at }]. App
+     * trims to 5 on write; schema can't cleanly bound array length.
+     */
+    priorVersions: jsonb('prior_versions')
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    updatedIdx: index('firm_profile_updated_idx').on(t.updatedAt),
+  }),
+);
+
+// PATTERN MEMORY — cross-client aggregates per firm.
+// One row per (tenant_id, pattern_type, pattern_key).
+export const firmPatterns = pgTable(
+  'firm_patterns',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /**
+     * Coarse type. v1 set: 'examiner_response', 'deduction_hit_rate',
+     * 'client_segment_metric', 'response_cadence_global'. New types
+     * are app-layer additions; no schema change.
+     */
+    patternType: text('pattern_type').notNull(),
+    /** Specific key inside the type (e.g., 'examiner.glendale.mike_chen'). */
+    patternKey: text('pattern_key').notNull(),
+    /** Aggregate value. Shape varies by patternType. */
+    patternValue: jsonb('pattern_value')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    /** Data points supporting the aggregate. <10 = weak signal; ≥30 = trust. */
+    observationCount: integer('observation_count').notNull().default(0),
+    lastObservedAt: timestamp('last_observed_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** 0..1 confidence; CHECK enforced at DB layer (mirrored below). */
+    confidence: real('confidence').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantTypeKeyUniq: uniqueIndex('firm_patterns_tenant_type_key_uniq').on(
+      t.tenantId,
+      t.patternType,
+      t.patternKey,
+    ),
+    tenantTypeIdx: index('firm_patterns_tenant_type_idx').on(t.tenantId, t.patternType),
+    lastObservedIdx: index('firm_patterns_last_observed_idx').on(
+      t.tenantId,
+      t.lastObservedAt,
+    ),
+    confidenceRange: check(
+      'firm_patterns_confidence_range',
+      sql`${t.confidence} >= 0 AND ${t.confidence} <= 1`,
+    ),
+  }),
+);
+
+// CLIENT FACTS — atomic facts extracted from narratives.
+// Append-mostly; supersession via the `supersededBy` self-FK.
+//
+// The composite FK (tenant_id, client_id) -> clients(tenant_id, id) is
+// declared at the table level via `foreignKey()` below. This is the
+// hard guarantee that a fact can't be cross-tenant-bound to a client.
+// `clientId` therefore omits a column-level `.references()`.
+//
+// source_action_id keeps a single-column FK ON DELETE SET NULL because
+// composite FKs can't express SET NULL on one column without nulling
+// the rest. Tenant validation on source_action_id is enforced by the
+// `enforce_client_facts_bindings` trigger (migration 0021). Same trigger
+// validates the supersession chain stays within the same (tenant,
+// client, fact_key).
+export const clientFacts = pgTable(
+  'client_facts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /**
+     * Composite FK on (tenantId, clientId) handles cross-tenant
+     * enforcement + cascade-on-client-delete via the `tenantClientFk`
+     * declaration below. No column-level reference here.
+     */
+    clientId: uuid('client_id').notNull(),
+    /**
+     * Snake_case fact key. Free-form by design; the universe of fact
+     * types grows over time. Application code maintains the canonical
+     * registry + per-key value schema.
+     */
+    factKey: text('fact_key').notNull(),
+    /** Value shape varies by factKey; app-side validation per key. */
+    factValue: jsonb('fact_value').notNull(),
+    /** Year-tagged. CHECK enforces 2000..2100 at DB layer (below). */
+    taxYear: integer('tax_year').notNull(),
+    /**
+     * Where this fact came from. SET NULL on delete is defensive —
+     * actions is append-only by trigger (migration 0007). Tenant
+     * integrity enforced by the migration-0021 trigger.
+     */
+    sourceActionId: uuid('source_action_id').references(() => actions.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * Source authority. Free-form text matches messages.channel
+     * convention. v1 vocabulary: 'client_assertion', 'third_party_doc',
+     * 'irs_transcript', 'computed', 'firm_correction'.
+     */
+    sourceTier: text('source_tier').notNull(),
+    /** 0..1 confidence; CHECK enforced at DB layer (below). */
+    confidence: real('confidence').notNull().default(0),
+    observedAt: timestamp('observed_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Self-FK for the supersession chain. NULL = current; non-NULL
+     * points at the row that replaced this one. Same-(tenant, client,
+     * fact_key) integrity enforced by the migration-0021 trigger;
+     * cycle prevention is application-layer.
+     */
+    supersededBy: uuid('superseded_by').references((): AnyPgColumn => clientFacts.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    /**
+     * Composite FK to clients. Cross-tenant client binding is
+     * impossible by FK validation; cascade fires on either tenant
+     * deletion (transitive through clients) or direct client deletion.
+     */
+    tenantClientFk: foreignKey({
+      name: 'client_facts_tenant_client_fk',
+      columns: [t.tenantId, t.clientId],
+      foreignColumns: [clients.tenantId, clients.id],
+    }).onDelete('cascade'),
+    /** Primary retrieval pattern: current value of fact_key for client X, year Y. */
+    clientKeyYearIdx: index('client_facts_client_key_year_idx').on(
+      t.tenantId,
+      t.clientId,
+      t.factKey,
+      t.taxYear,
+    ),
+    /**
+     * Currently-active facts for client X at year Y. Partial index
+     * keeps it tight even as supersession chains grow.
+     */
+    activeIdx: index('client_facts_active_idx')
+      .on(t.tenantId, t.clientId, t.factKey, t.taxYear)
+      .where(sql`superseded_by IS NULL`),
+    observedIdx: index('client_facts_observed_idx').on(t.tenantId, t.observedAt),
+    confidenceRange: check(
+      'client_facts_confidence_range',
+      sql`${t.confidence} >= 0 AND ${t.confidence} <= 1`,
+    ),
+    taxYearRange: check(
+      'client_facts_tax_year_range',
+      sql`${t.taxYear} >= 2000 AND ${t.taxYear} <= 2100`,
+    ),
   }),
 );

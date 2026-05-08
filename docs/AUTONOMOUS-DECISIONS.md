@@ -380,5 +380,72 @@ catching up." Exactly the failure mode the user called out.
 
 ---
 
+## [12] 2026-05-08 — client_facts.source_tier is text, not an enum
+
+**Decision**: `client_facts.source_tier` (migration 0021) is `text NOT NULL`
+with documented v1 vocabulary in the migration header
+('client_assertion', 'third_party_doc', 'irs_transcript', 'computed',
+'firm_correction'). Not a Postgres enum.
+
+**Reasoning**: The vocabulary will grow as fact-extraction sources expand
+(QBO sync, computed-from-bookkeeping, partner-firm-imports). Each new
+source type would otherwise need an `ALTER TYPE` migration. The
+existing `messages.channel` and `messages.direction` columns follow the
+same text-not-enum pattern for the same reason. App-layer enum (TS
+union type) gives the typecheck-time safety without the schema-cost.
+
+**Alternative considered**: Postgres enum `client_fact_source_tier`.
+Rejected — rigid enum-set vs growing-vocabulary mismatch, costs of
+ALTER TYPE migrations during the v1 build cycle.
+
+**How to reverse**: Add a Postgres enum + alter the column. Will need
+an UPDATE-cast for existing rows. Backwards-compat fine because the
+v1 vocabulary is small.
+
+**Severity**: low
+
+**Commit**: this commit (migration 0021)
+
+**User-review status**: pending
+
+---
+
+## [13] 2026-05-08 — client_facts cross-tenant FK enforced via composite FK + trigger
+
+**Decision**: Migration 0021 enforces cross-tenant integrity on
+`client_facts` via a composite FK `(tenant_id, client_id) REFERENCES
+clients(tenant_id, id)` plus a trigger
+(`enforce_client_facts_bindings`) for `source_action_id` and
+`superseded_by` chain integrity. The trigger validates that
+`source_action_id`'s `actions.tenant_id` matches the row's tenant, and
+that `superseded_by`'s target row matches `(tenant_id, client_id,
+fact_key)`. ALTER on `clients` and `actions` adds
+`UNIQUE(tenant_id, id)` to support the composite FK target.
+
+**Reasoning**: Codex review on the initial draft surfaced HIGH severity
+"FK validation is RLS-bypass — single-column tenant_id FK lets app
+bugs cross-tenant-bind a client_id." Composite FK closes that loophole
+at the DB level. Same-tenant trigger handles cases composite FK can't
+express (ON DELETE SET NULL on a single column without nulling the rest;
+4-column chain integrity).
+
+**Alternative considered**: Single-column FKs only + RLS reliance.
+Rejected per codex HIGH. Trigger-only (no composite FK). Rejected
+because composite FK is enforced at INSERT time and is impossible to
+bypass; trigger could theoretically be `DISABLE`d for a maintenance
+operation.
+
+**How to reverse**: Drop the composite FK + trigger; revert to
+single-column FKs. Loses cross-tenant guarantee. Existing code paths
+that wrote correct (tenant_id, client_id) pairs continue to work.
+
+**Severity**: architectural
+
+**Commit**: this commit (migration 0021)
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
