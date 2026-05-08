@@ -9,6 +9,7 @@ import { inngest } from '../inngest-client.js';
 import { classifySignal } from '../agents/triage-classifier.js';
 import { draftReply, isClientFacingIssue } from '../agents/inbox-drafter.js';
 import type { TenantId, ClientId } from '@docket/shared';
+import { scrubPII } from '@docket/shared';
 
 export const classifyGmailMessage = inngest.createFunction(
   {
@@ -40,6 +41,22 @@ export const classifyGmailMessage = inngest.createFunction(
       return { classified: false };
     }
 
+    // Step 1b — PII scrub. Per docs/MEMORY-ARCHITECTURE.md §8, inbound
+    // text feeds scrubPII BEFORE the body reaches embeddings or the
+    // model. Original bodyText is kept on the message object for the
+    // gmail_threads insert (encrypted at rest via tenant DEK at the
+    // persistence layer); the SCRUBBED body is what flows to
+    // classifySignal + draftReply below.
+    const scrubResult = scrubPII(message.bodyText);
+    if (scrubResult.matches.length > 0) {
+      logger.info('pii-scrub fired on inbound gmail body', {
+        gmailMessageId,
+        counts: scrubResult.counts,
+        match_count: scrubResult.matches.length,
+      });
+    }
+    const scrubbedBody = scrubResult.scrubbed;
+
     // Step 2 — match sender to a client (or null if unmatched — manual triage)
     const clientMatch = await step.run('match-client', async () => {
       // TODO(week-1): SELECT client by email/phone matching message.from
@@ -61,7 +78,7 @@ export const classifyGmailMessage = inngest.createFunction(
           from: message.from,
           to: message.to,
           subject: message.subject,
-          bodyText: message.bodyText,
+          bodyText: scrubbedBody,
           receivedAt: message.receivedAt,
         },
         context: {
@@ -121,7 +138,7 @@ export const classifyGmailMessage = inngest.createFunction(
               firmName: 'Vazant Consulting',               // TODO(week-1): pull from tenants table
               originalMessage: {
                 channel: 'email',
-                body: message.bodyText,
+                body: scrubbedBody,
                 receivedAt: message.receivedAt,
               },
             },

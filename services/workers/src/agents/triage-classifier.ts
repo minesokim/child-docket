@@ -125,6 +125,8 @@ export async function classifySignal(opts: ClassifyOptions): Promise<{
     cachedSystem: true,
     maxTokens: 1024,
     onAction: opts.onAction,
+    promptId: prompt.id,
+    promptVersion: prompt.version,
   });
 
   // Extract first JSON object from response (model may wrap in code fences or add prose).

@@ -95,6 +95,8 @@ export async function draftReply(opts: DraftOptions): Promise<{
     cachedSystem: true,
     maxTokens: 1500,
     onAction: opts.onAction,
+    promptId: prompt.id,
+    promptVersion: prompt.version,
   });
 
   // Extract first JSON object from response

@@ -37,6 +37,15 @@ export type DocketAgentOptions = {
   maxTokens?: number;
   cachedSystem?: boolean;
   onAction?: (entry: Omit<ActionLogEntry, 'id' | 'createdAt'>) => Promise<void>;
+  /**
+   * If the systemPrompt was sourced from @docket/prompts, pass the
+   * prompt id + version so cost telemetry tags actions.tool_input
+   * with which prompt produced this call. Lets the cost dashboard
+   * break down spend per prompt version + detect regressions when
+   * a new prompt version's per-call cost spikes.
+   */
+  promptId?: string;
+  promptVersion?: string;
 };
 
 export type DocketAgentResult = {
@@ -93,6 +102,11 @@ export async function runDocketAgent(opts: DocketAgentOptions): Promise<DocketAg
         modelTier: tier,
         provider: result.provider,
         maxTokens: opts.maxTokens ?? 1024,
+        // Prompt-registry tracking. Both fields are optional so legacy
+        // call sites (orchestrator-internal calls) don't break; agent
+        // call sites that source from @docket/prompts pass them.
+        ...(opts.promptId ? { promptId: opts.promptId } : {}),
+        ...(opts.promptVersion ? { promptVersion: opts.promptVersion } : {}),
       },
       toolOutput: { textPreview: result.text.slice(0, 200) },
       modelUsed: tier,

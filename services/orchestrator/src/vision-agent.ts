@@ -73,6 +73,13 @@ export type VisionAgentOptions = {
   maxTokens?: number;
   cachedSystem?: boolean;
   onAction?: (entry: Omit<ActionLogEntry, 'id' | 'createdAt'>) => Promise<void>;
+  /**
+   * If the systemPrompt was sourced from @docket/prompts, pass the
+   * prompt id + version so cost telemetry can break down spend per
+   * prompt version. Same shape as runDocketAgent.
+   */
+  promptId?: string;
+  promptVersion?: string;
 };
 
 export type VisionAgentResult = {
@@ -148,6 +155,8 @@ export async function runVisionAgent(opts: VisionAgentOptions): Promise<VisionAg
         model: MODEL_IDS[tier],
         maxTokens: opts.maxTokens ?? 1024,
         imageCount: opts.images.length,
+        ...(opts.promptId ? { promptId: opts.promptId } : {}),
+        ...(opts.promptVersion ? { promptVersion: opts.promptVersion } : {}),
       },
       toolOutput: { textPreview: text.slice(0, 200) },
       modelUsed: tier,

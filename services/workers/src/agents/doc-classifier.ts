@@ -128,6 +128,8 @@ export async function classifyDocument(opts: ClassifyDocumentOptions): Promise<{
     cachedSystem: true,
     maxTokens: 1024,
     onAction: opts.onAction,
+    promptId: prompt.id,
+    promptVersion: prompt.version,
   });
 
   // Extract first JSON object from response. Same defensive parsing as
