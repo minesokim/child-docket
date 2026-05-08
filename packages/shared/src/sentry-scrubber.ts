@@ -42,9 +42,10 @@ const PII_PATTERNS: ReadonlyArray<{ regex: RegExp; redact: string }> = [
   // SSN: 9 digits with optional dashes (XXX-XX-XXXX or XXXXXXXXX). Word
   // boundaries on both sides to avoid false-positives inside larger numbers.
   { regex: /\b\d{3}-?\d{2}-?\d{4}\b/g, redact: '[REDACTED-SSN]' },
-  // EIN: 9 digits with optional dash after the 2nd (XX-XXXXXXX). The SSN
-  // pattern above will also match these without the dash, but since both
-  // are sensitive, double-redaction is fine.
+  // EIN: dash REQUIRED (XX-XXXXXXX). The SSN pattern above catches the
+  // no-dash 9-digit variant first; both label as redacted, just under
+  // a different marker. Same dash-required shape as
+  // `pii-scrubber.ts` PII_PATTERNS.EIN.
   { regex: /\b\d{2}-\d{7}\b/g, redact: '[REDACTED-EIN]' },
   // Email — case-insensitive standard pattern.
   { regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, redact: '[REDACTED-EMAIL]' },

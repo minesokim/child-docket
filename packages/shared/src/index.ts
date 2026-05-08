@@ -12,6 +12,12 @@ export * from './intake-schemas.js';
 // values for sensitive-looking field names.
 export * from './sentry-scrubber.js';
 
+// PII scrubber for inbound text channels (SMS / email / portal-chat).
+// Runs BEFORE the artifact gets fact-extracted or vector-indexed so
+// SSN/EIN/bank-account tokens never reach embeddings or prompts.
+// Sister to sentry-scrubber.ts; consolidation tracked as v1.5 work.
+export * from './pii-scrubber.js';
+
 // In-process token-bucket rate limiter for abusable server actions
 // + API routes (revealIntakeField, /api/intake/flush, etc.). v0 is
 // per-instance; swap to Upstash Redis when traffic justifies.
