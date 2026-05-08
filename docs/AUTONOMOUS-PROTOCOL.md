@@ -122,6 +122,10 @@ If you can't answer all three sharply, the change isn't ready. Read more.
 - Codex review surfaces SECURITY-severity finding
 - Commit touches >10 files (flag for user review before push)
 - AUTONOMOUS-DECISIONS.md has 3+ entries with severity=architectural still in `pending`
+- Context budget critically low (<10% remaining)
+- User explicitly pauses ("stop", "pause", "hold on", etc.)
+
+**Keep-going rule** (the [`/keep-going`](../.claude/skills/keep-going/SKILL.md) skill): if NONE of the stop conditions above fire after a clean commit, **pick the next item and start the next /edge-cases iteration immediately**. Do NOT pause to surface a "which direction?" decision to the user. The user explicitly named this anti-pattern on 5/8/2026: "i wanted it to keep going here. until the feature list is complete." The selection order is queued items in `AUTONOMOUS-QUEUE.md`, then commit-message followups, then `PRODUCTION-READINESS.md` V1 items, then V1.5, then V2.
 
 ---
 
