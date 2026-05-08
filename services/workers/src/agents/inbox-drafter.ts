@@ -46,7 +46,11 @@ export const DraftOutputSchema = z.object({
   language: z.enum(['en', 'es']),
   subject: z.string().nullable(),                          // null for sms / portal_chat
   body: z.string().min(5),
-  signature: z.string(),                                    // signoff line: 'Antonio' / 'Antonio Vazquez, EA'
+  // The prompt's own rules say: SMS has NO sign-off ("just message")
+  // and internal-only issues (ero_pending / meeting_prep with
+  // isClientFacing=false) skip the signature entirely. Both surfaced as
+  // model outputs of null. Schema must allow null on both paths.
+  signature: z.string().nullable(),                         // signoff: 'Antonio' / 'Antonio Vazquez, EA' / null (sms or internal)
   suggestedAttachments: z
     .array(
       z.object({
