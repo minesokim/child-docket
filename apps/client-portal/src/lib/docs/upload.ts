@@ -64,6 +64,12 @@ const ALLOWED_MIMES = new Set([
   'image/gif',
 ]);
 
+// Cap stored error_message so a megabyte-long stack trace doesn't
+// pollute the documents row.
+function truncateError(msg: string, max = 500): string {
+  return msg.length > max ? msg.slice(0, max - 3) + '...' : msg;
+}
+
 // ────────────────────────────────────────────────────────────────
 // 1. requestUploadUrl — preflight + presigned URL.
 // ────────────────────────────────────────────────────────────────
@@ -252,15 +258,14 @@ export async function confirmUpload(input: {
       return row.id;
     });
 
-    // Fire the Inngest event for classification. Outside the
-    // transaction so a transient Inngest error doesn't roll back the
-    // documents row — and wrapped in try/catch so a missing
-    // INNGEST_EVENT_KEY doesn't fail the whole upload. The bytes are
-    // safely in R2 + the documents row is committed; if the event
-    // didn't send, we log + report to Sentry so a sweep job can
-    // re-fire later. From the user's perspective the upload still
-    // succeeded; the doc just stays at parse_phase='uploaded' until
-    // the worker eventually runs.
+    // Fire the Inngest event for classification.
+    //
+    // Earlier versions swallowed inngest.send failures silently — the
+    // doc would sit at parse_phase='uploaded' forever and the user
+    // had no signal that classification never started. Now: on send
+    // failure, mark the row 'failed' with a clear error_message and
+    // return ok:false so the UI surfaces it. Bytes + audit row are
+    // preserved; a manual retry (or sweep) can re-fire later.
     try {
       await inngest.send({
         name: 'document/uploaded',
@@ -280,9 +285,22 @@ export async function confirmUpload(input: {
         tags: { component: 'client-portal-upload', stage: 'inngest-send' },
         extra: { documentId, storageKey: input.storageKey },
       });
-      // Don't fail the upload — bytes + row are good. Worker will
-      // eventually re-process from a sweep, OR this just stays in
-      // 'uploaded' phase until Inngest is configured.
+      // Mark the row failed so the user sees an explicit error
+      // state instead of a stuck "Reading..." spinner.
+      await withTenant(asTenantId(client.tenantId), async (db) => {
+        await db
+          .update(schema.documents)
+          .set({
+            parsePhase: 'failed',
+            errorMessage: `Could not start AI classification: ${truncateError(msg)}`,
+          })
+          .where(eq(schema.documents.id, documentId));
+      });
+      return {
+        ok: false,
+        error:
+          'Upload saved, but we could not start AI classification. Try again or contact support.',
+      };
     }
 
     console.log('[confirmUpload] documentId=', documentId);
@@ -505,12 +523,14 @@ export async function acceptDocClassification(
 
     // Fire the finalize event OUTSIDE the transaction. The finalize
     // worker is responsible for running the binarize + PDF + rename
-    // pipeline and updating the row to parse_phase='final'. If this
-    // event-send fails, the row stays at 'accepted' (will not advance
-    // to 'final' without the worker running). Wrapped in try/catch
-    // so a missing INNGEST_EVENT_KEY doesn't fail the whole accept
-    // — the user-visible action of "I confirmed this classification"
-    // already succeeded at the DB level.
+    // pipeline and updating the row to parse_phase='final'.
+    //
+    // Earlier versions swallowed event-send failures silently — the
+    // doc would sit at parse_phase='accepted' indefinitely with no
+    // signal to the user. Now: on send failure, ROLL BACK to 'parsed'
+    // so the verification card re-appears (user can click accept
+    // again to retry the event), and return ok:false so the UI shows
+    // the error.
     try {
       await inngest.send({
         name: 'document/accepted',
@@ -527,8 +547,26 @@ export async function acceptDocClassification(
         tags: { component: 'client-portal-upload', stage: 'inngest-accept-send' },
         extra: { documentId: input.documentId },
       });
-      // Don't fail the accept. Doc stays at 'accepted' until Inngest
-      // runs the finalize worker; a sweep job can replay later.
+      // Roll back parsePhase so the user can retry. Best-effort —
+      // if the rollback itself fails, log + bail.
+      try {
+        await withTenant(asTenantId(client.tenantId), async (db) => {
+          await db
+            .update(schema.documents)
+            .set({ parsePhase: 'parsed', acceptedAt: null })
+            .where(eq(schema.documents.id, input.documentId));
+        });
+      } catch (rollbackErr) {
+        console.error(
+          '[acceptDocClassification] rollback failed:',
+          rollbackErr,
+        );
+      }
+      return {
+        ok: false,
+        error:
+          'Could not start processing. Click "Yes, this looks right" again to retry.',
+      };
     }
 
     return { ok: true };

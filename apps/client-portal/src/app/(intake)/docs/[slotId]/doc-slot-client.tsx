@@ -758,6 +758,13 @@ function VerificationCard({
   const shouldShowRetakeWarning =
     classification.legibility < 0.5 && classification.retakeHint;
 
+  // Slot vs classification mismatch — e.g., uploaded a DL into the
+  // W-2 slot. We don't block accept (the user might know what they're
+  // doing — an out-of-template doc, or the AI mis-classified), but
+  // we surface a clear warning so they can retake before saving the
+  // wrong file under the wrong name.
+  const mismatchLabel = slotMismatchLabelFor(slot, classification.docKind);
+
   return (
     <Stack gap={20}>
       {/* 1. Document image preview — the verification anchor. */}
@@ -833,6 +840,25 @@ function VerificationCard({
           }}
         >
           {classification.retakeHint}
+        </div>
+      )}
+
+      {/* Slot/classification mismatch warning — same warm-amber
+          treatment as the legibility warning. Doesn't block accept;
+          informs the user that the AI thinks they uploaded the wrong
+          document for this slot. */}
+      {mismatchLabel && (
+        <div
+          style={{
+            padding: '12px 14px',
+            background: '#FDF1EA',
+            borderRadius: 10,
+            fontSize: 13,
+            color: '#6E2B0C',
+            lineHeight: 1.5,
+          }}
+        >
+          {mismatchLabel}
         </div>
       )}
 
@@ -1662,6 +1688,52 @@ function dlSubtitle(slot: ExpectedDoc, dl: DlContext | undefined): string {
   if (dl.step === 'front') return 'Front side · Step 1 of 2';
   if (dl.step === 'back') return 'Back side · Step 2 of 2';
   return 'Both sides captured';
+}
+
+// Build a human warning when the AI's classification doesn't match
+// the slot the user was filling. Returns null when the kinds line up
+// (or when the classification is ambiguous enough that warning would
+// be more confusing than helpful).
+//
+// Examples:
+//   slot=W-2,        classification=drivers_license  → warn
+//   slot=DL-front,   classification=ssn_card         → warn
+//   slot=1099-NEC,   classification=1099_misc        → warn (different form)
+//   slot=DL-front,   classification=drivers_license  → no warn (match)
+//   slot=Other,      classification=anything         → no warn
+function slotMismatchLabelFor(
+  slot: ExpectedDoc,
+  classifiedKind: string,
+): string | null {
+  if (!classifiedKind) return null;
+  if (slot.kind === classifiedKind) return null;
+
+  const expected = humanDocKindFor(slot.kind);
+  const actual = humanDocKindFor(classifiedKind);
+  return `This looks like ${actual}, but you opened the ${expected} slot. Save this here only if you're sure — otherwise tap Retake and upload it under the right slot.`;
+}
+
+function humanDocKindFor(kind: string): string {
+  switch (kind) {
+    case 'drivers_license':       return "a driver's license";
+    case 'ssn_card':              return 'a Social Security card';
+    case 'w2':                    return 'a W-2';
+    case '1099_nec':              return 'a 1099-NEC';
+    case '1099_misc':             return 'a 1099-MISC';
+    case '1099_int':              return 'a 1099-INT';
+    case '1099_div':              return 'a 1099-DIV';
+    case '1099_r':                return 'a 1099-R';
+    case '1098_mortgage':         return 'a 1098 mortgage statement';
+    case '1098_t':                return 'a 1098-T';
+    case '1095_a':                return 'a 1095-A';
+    case 'k1_1065':               return 'a K-1 (1065)';
+    case 'k1_1120s':              return 'a K-1 (1120-S)';
+    case 'bank_statement':        return 'a bank statement';
+    case 'brokerage_statement':   return 'a brokerage statement';
+    case 'prior_return':          return 'a prior tax return';
+    case 'irs_notice':            return 'an IRS notice';
+    default:                      return 'a different document';
+  }
 }
 
 function inferMimeType(filename: string): string {

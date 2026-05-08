@@ -120,14 +120,24 @@ export async function processMultiPage(opts: {
     throw new Error('processMultiPage: at least one page required');
   }
 
-  // Per-page strategy: binarize → OCR-to-PDF (preferred) or wrap-only
-  // (fallback). Each page becomes its own single-page searchable PDF;
-  // we then merge with mergePdfs to produce the final composite.
+  // Per-page strategy: binarize each page → OCR-to-PDF (preferred)
+  // or pdf-lib wrap (fallback). Then merge per-page PDFs into the
+  // final composite via pdf-lib's copyPages.
   //
-  // Binarize + OCR per page (not in a single batch) because phone
-  // shots vary in lighting page-to-page — a single Otsu threshold
-  // would wash one out — and each page's invisible text layer needs
-  // to align with that page's specific image dimensions.
+  // Binarize + OCR per page (not batched) because phone shots vary
+  // in lighting page-to-page — a single Otsu threshold would wash
+  // one out — and each page's invisible text layer needs to align
+  // with that page's specific image dimensions.
+  //
+  // FALLBACK CHAIN:
+  //   1. Try Tesseract per-page → mergePdfs the results.
+  //   2. If mergePdfs throws (Tesseract emits PDF structure pdf-lib
+  //      can't deep-copy: JBIG2/CCITT streams, Type-3 fonts, etc.),
+  //      fall back to wrapImagesInPdf — a single-pass pdf-lib build
+  //      where every page is a clean image embed. Searchability is
+  //      lost, but the user gets a valid 2-page B&W PDF instead of
+  //      a stuck finalize.
+  const perPageBinarized: Buffer[] = [];
   const perPagePdfs: Buffer[] = [];
 
   for (const page of opts.pages) {
@@ -135,20 +145,46 @@ export async function processMultiPage(opts: {
       throw new Error('processMultiPage does not accept PDF inputs');
     }
     const binarized = await binarize(page.input);
+    perPageBinarized.push(binarized);
     try {
       perPagePdfs.push(await ocrToSearchablePdf(binarized));
     } catch (err) {
-      console.error('[document-processing] OCR failed for page; image-only PDF:', err);
+      console.error(
+        '[document-processing] OCR failed for page; image-only PDF:',
+        err,
+      );
       perPagePdfs.push(await wrapImageInPdf(binarized, 'image/png', true));
     }
   }
 
-  const merged = await mergePdfs(perPagePdfs);
-  return {
-    pdf: merged,
-    sizeBytes: merged.length,
-    binarized: true,
-  };
+  try {
+    const merged = await mergePdfs(perPagePdfs);
+    return {
+      pdf: merged,
+      sizeBytes: merged.length,
+      binarized: true,
+    };
+  } catch (mergeErr) {
+    // pdf-lib's copyPages choked on the per-page output (most likely
+    // a Tesseract-flavored PDF whose internal streams pdf-lib can't
+    // re-embed). Fall back to wrapImagesInPdf using the SAME binarized
+    // PNGs we already computed — a clean pdf-lib build that's
+    // guaranteed to merge.
+    console.error(
+      '[document-processing] mergePdfs failed; falling back to wrapImagesInPdf:',
+      mergeErr,
+    );
+    const fallback = await wrapImagesInPdf(
+      perPageBinarized.map((bytes) => ({ bytes, mimeType: 'image/png' })),
+    );
+    return {
+      pdf: fallback,
+      sizeBytes: fallback.length,
+      // Still binarized (we ran the same pipeline) — just no
+      // searchable text layer in the fallback path.
+      binarized: true,
+    };
+  }
 }
 
 // ────────────────────────────────────────────────────────────────
