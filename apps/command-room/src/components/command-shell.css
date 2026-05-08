@@ -1,0 +1,226 @@
+/* CommandShell — operational-modern app shell.
+ *
+ * Co-located with the component. Sibling to AppShell's inline-style
+ * editorial-warm aesthetic. The two shells coexist while we migrate
+ * command-room routes one at a time. */
+
+.cmd-shell {
+  --cs-canvas: oklch(96% 0.008 85);
+  --cs-card: oklch(99% 0.005 85);
+  --cs-border: oklch(92% 0.005 85);
+  --cs-ink: oklch(22% 0.01 85);
+  --cs-ink-soft: oklch(38% 0.008 85);
+  --cs-ink-muted: oklch(58% 0.005 85);
+  --cs-forest: oklch(42% 0.09 150);
+  --cs-sidebar-bg: oklch(18% 0.01 85);
+  --cs-sidebar-card: oklch(24% 0.012 85);
+  --cs-sidebar-ink: oklch(82% 0.005 85);
+  --cs-sidebar-muted: oklch(58% 0.005 85);
+  --cs-sidebar-active-ground: oklch(28% 0.012 85);
+
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100dvh;
+  background: var(--cs-canvas);
+  color: var(--cs-ink);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+.cmd-sidebar {
+  background: var(--cs-sidebar-bg);
+  color: var(--cs-sidebar-ink);
+  padding: 16px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  border-right: 1px solid oklch(28% 0.012 85);
+}
+
+/* Workspace tile (top of sidebar) */
+.cmd-workspace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 14px;
+  border-bottom: 1px solid oklch(28% 0.012 85);
+}
+.cmd-workspace-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--cs-forest);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+.cmd-workspace-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.cmd-workspace-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: oklch(94% 0.005 85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmd-workspace-tag {
+  font-size: 10px;
+  color: var(--cs-sidebar-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Nav section */
+.cmd-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cmd-nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cs-sidebar-muted);
+  padding: 4px 8px 6px;
+}
+.cmd-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cs-sidebar-ink);
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+.cmd-nav-item:hover:not(.cmd-nav-disabled) {
+  background: oklch(22% 0.012 85);
+  color: oklch(94% 0.005 85);
+}
+.cmd-nav-item svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.cmd-nav-active {
+  background: var(--cs-sidebar-active-ground);
+  color: oklch(94% 0.005 85);
+}
+.cmd-nav-active svg {
+  opacity: 1;
+  color: var(--cs-forest);
+}
+.cmd-nav-disabled {
+  color: oklch(48% 0.005 85);
+  cursor: not-allowed;
+}
+.cmd-nav-disabled svg {
+  opacity: 0.5;
+}
+
+/* User pill (bottom of sidebar) */
+.cmd-user {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 4px;
+  border-top: 1px solid oklch(28% 0.012 85);
+}
+.cmd-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: oklch(28% 0.015 85);
+  color: oklch(94% 0.005 85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.cmd-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cmd-user-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.cmd-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(94% 0.005 85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmd-user-signout {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--cs-sidebar-muted);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.cmd-user-signout:hover {
+  color: oklch(85% 0.005 85);
+  text-decoration: underline;
+}
+
+/* Main content area */
+.cmd-main {
+  min-width: 0;
+  background: var(--cs-canvas);
+}
+
+/* Responsive: collapse sidebar on narrow viewports */
+@media (max-width: 900px) {
+  .cmd-shell {
+    grid-template-columns: 1fr;
+  }
+  .cmd-sidebar {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid oklch(28% 0.012 85);
+  }
+  .cmd-nav-section {
+    flex-direction: row;
+    gap: 4px;
+  }
+  .cmd-nav-label {
+    display: none;
+  }
+  .cmd-user {
+    margin-top: 0;
+    border-top: none;
+    margin-left: auto;
+  }
+}

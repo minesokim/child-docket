@@ -32,6 +32,7 @@
 
 import { redirect } from 'next/navigation';
 import { getCurrentDocketUser } from '@/lib/current-user';
+import { CommandShell } from '@/components/command-shell';
 import { loadCostData, type CostData, type Window, ALLOWED_WINDOWS, WINDOW_INTERVAL } from '@/lib/cost-rollups';
 import './cost-dashboard.css';
 
@@ -121,15 +122,17 @@ export default async function CostDashboardPage({
 
   if (user.role !== 'firm_owner') {
     return (
-      <div className="cost-dashboard">
-        <div className="cd-restricted">
-          <h1 className="cd-restricted-title">Cost dashboard is firm-owner-only</h1>
-          <p className="cd-restricted-body">
-            You're signed in as <span className="cd-restricted-role">{user.role}</span>.
-            Ask Antonio to grant firm-owner access if you need spend visibility.
-          </p>
+      <CommandShell user={user} tenantName={user.tenantName} activeHref="/dashboard/cost">
+        <div className="cost-dashboard">
+          <div className="cd-restricted">
+            <h1 className="cd-restricted-title">Cost dashboard is firm-owner-only</h1>
+            <p className="cd-restricted-body">
+              You're signed in as <span className="cd-restricted-role">{user.role}</span>.
+              Ask Antonio to grant firm-owner access if you need spend visibility.
+            </p>
+          </div>
         </div>
-      </div>
+      </CommandShell>
     );
   }
 
@@ -142,6 +145,7 @@ export default async function CostDashboardPage({
   }
 
   return (
+    <CommandShell user={user} tenantName={user.tenantName} activeHref="/dashboard/cost">
     <div className="cost-dashboard">
       <header className="cd-header">
         <div className="cd-eyebrow">Practice spend</div>
@@ -317,5 +321,6 @@ export default async function CostDashboardPage({
         </>
       )}
     </div>
+    </CommandShell>
   );
 }
