@@ -1,0 +1,327 @@
+/* ──────────────────────────────────────────────────────────────────
+ * Cost dashboard — operational-modern visual language (locked 2026-05-08).
+ *
+ * Per .claude/skills/craft/SKILL.md + docs/visual-reference/dashboard-2026-05-08:
+ *   - Inter sans (NOT Fraunces — that's editorial-warm for the portal)
+ *   - Faint warm-gray canvas, white card, soft 1px borders
+ *   - 10-12px radius, no shadow on resting state
+ *   - NO left-border accent lines anywhere
+ *   - Forest green primary (NOT iOS blue)
+ *   - 3-color status palette only (forest / amber / red); category colors
+ *     drawn from quiet earth-tones (moss/clay/dusk/sand)
+ * ────────────────────────────────────────────────────────────────── */
+
+.cost-dashboard {
+  --cd-canvas: oklch(96% 0.008 85);
+  --cd-card: oklch(99% 0.005 85);
+  --cd-border: oklch(92% 0.005 85);
+  --cd-border-strong: oklch(84% 0.008 85);
+  --cd-ink: oklch(22% 0.01 85);
+  --cd-ink-soft: oklch(38% 0.008 85);
+  --cd-ink-muted: oklch(58% 0.005 85);
+  --cd-forest: oklch(42% 0.09 150);
+  --cd-forest-tint: oklch(94% 0.02 150);
+  --cd-clay: oklch(60% 0.08 40);
+  --cd-clay-tint: oklch(94% 0.02 40);
+  --cd-dusk: oklch(50% 0.06 270);
+  --cd-dusk-tint: oklch(94% 0.018 270);
+  --cd-sand: oklch(72% 0.07 80);
+  --cd-sand-tint: oklch(95% 0.018 80);
+  --cd-moss: oklch(55% 0.07 130);
+  --cd-moss-tint: oklch(94% 0.02 130);
+
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+  background: var(--cd-canvas);
+  color: var(--cd-ink);
+  min-height: 100dvh;
+  padding: 32px 40px 64px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* ── Page header: eyebrow + title + tab-bar-under-title ───────────── */
+.cd-header {
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--cd-border);
+  padding-bottom: 0;
+}
+.cd-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cd-ink-muted);
+  margin-bottom: 6px;
+}
+.cd-title {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+  line-height: 1.05;
+}
+.cd-tabs {
+  display: flex;
+  gap: 4px;
+}
+.cd-tab {
+  display: inline-block;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cd-ink-soft);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.cd-tab:hover {
+  color: var(--cd-ink);
+}
+.cd-tab-active {
+  color: var(--cd-ink);
+  border-bottom-color: var(--cd-forest);
+}
+
+/* ── Stats-card row: 5 modular cards ──────────────────────────────── */
+.cd-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.cd-stat {
+  background: var(--cd-card);
+  border: 1px solid var(--cd-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cd-stat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.cd-stat-icon-forest { background: var(--cd-forest-tint); color: var(--cd-forest); }
+.cd-stat-icon-clay   { background: var(--cd-clay-tint);   color: var(--cd-clay); }
+.cd-stat-icon-dusk   { background: var(--cd-dusk-tint);   color: var(--cd-dusk); }
+.cd-stat-icon-sand   { background: var(--cd-sand-tint);   color: var(--cd-sand); }
+.cd-stat-icon-moss   { background: var(--cd-moss-tint);   color: var(--cd-moss); }
+.cd-stat-eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cd-ink-muted);
+}
+.cd-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.cd-stat-supporting {
+  font-size: 12px;
+  color: var(--cd-ink-soft);
+  margin-top: 2px;
+}
+
+/* ── Body: two-column (per-day + side rollups) ────────────────────── */
+.cd-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 20px;
+}
+.cd-card {
+  background: var(--cd-card);
+  border: 1px solid var(--cd-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cd-card-head {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--cd-border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cd-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.005em;
+}
+.cd-card-meta {
+  font-size: 12px;
+  color: var(--cd-ink-muted);
+  font-weight: 400;
+}
+
+/* Per-day list with mini bars */
+.cd-perday {
+  padding: 8px 0;
+}
+.cd-perday-row {
+  display: grid;
+  grid-template-columns: 92px 1fr 88px 56px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.cd-perday-row + .cd-perday-row {
+  border-top: 1px solid var(--cd-border);
+}
+.cd-perday-day {
+  color: var(--cd-ink-soft);
+  font-weight: 500;
+}
+.cd-perday-bar-wrap {
+  height: 6px;
+  background: var(--cd-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.cd-perday-bar {
+  display: block;
+  height: 100%;
+  background: var(--cd-forest);
+  border-radius: 3px;
+}
+.cd-perday-amount {
+  text-align: right;
+  font-weight: 500;
+}
+.cd-perday-calls {
+  text-align: right;
+  color: var(--cd-ink-muted);
+  font-size: 12px;
+}
+
+/* Side rollups (agent / model / provider) */
+.cd-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.cd-rollup {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cd-rollup-row {
+  display: grid;
+  grid-template-columns: 1fr 88px 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.cd-rollup-row + .cd-rollup-row {
+  border-top: 1px solid var(--cd-border);
+}
+.cd-rollup-label {
+  font-weight: 500;
+  color: var(--cd-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cd-rollup-label em {
+  color: var(--cd-ink-muted);
+  font-style: normal;
+}
+.cd-rollup-value {
+  text-align: right;
+  font-weight: 500;
+}
+.cd-rollup-calls {
+  text-align: right;
+  color: var(--cd-ink-muted);
+  font-size: 12px;
+}
+
+/* ── Empty / error / restricted states (designed, not omitted) ───── */
+.cd-empty,
+.cd-error,
+.cd-restricted {
+  background: var(--cd-card);
+  border: 1px solid var(--cd-border);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  max-width: 600px;
+  margin: 32px auto 0;
+}
+.cd-empty-title,
+.cd-error-title,
+.cd-restricted-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.cd-empty-body,
+.cd-error-body,
+.cd-restricted-body {
+  font-size: 14px;
+  color: var(--cd-ink-soft);
+  line-height: 1.55;
+  margin: 0;
+}
+.cd-restricted-role {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+  background: var(--cd-canvas);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--cd-border);
+}
+.cd-error-retry {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 8px 14px;
+  background: var(--cd-forest);
+  color: white;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.cd-error-retry:hover {
+  filter: brightness(1.05);
+}
+
+/* ── Responsive: stack stats on narrow viewports, single-column body ── */
+@media (max-width: 1100px) {
+  .cd-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cd-body {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .cost-dashboard {
+    padding: 24px 16px 48px;
+  }
+  .cd-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cd-perday-row {
+    grid-template-columns: 80px 1fr 76px;
+    font-size: 12px;
+  }
+  .cd-perday-calls {
+    display: none;
+  }
+}
