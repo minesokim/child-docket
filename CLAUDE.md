@@ -973,6 +973,17 @@ When the user's request matches an available skill, invoke it via the Skill tool
 
 Beyond gstack, this repo ships `/smoke-test` at [`.claude/skills/smoke-test/SKILL.md`](.claude/skills/smoke-test/SKILL.md). Required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
 
+### Canonical reference docs (re-read at session start)
+
+Beyond this CLAUDE.md, four docs anchor product + ops decisions and SHOULD NOT be duplicated inline:
+
+- [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) — compliance-first deduction surfacing. Four-tier confidence framework + refusal floor. The marketing differentiator. Re-read before changing any agent that emits a tax position.
+- [`docs/MEMORY-ARCHITECTURE.md`](docs/MEMORY-ARCHITECTURE.md) — six-layer memory model + cost-optimized prompt caching strategy. Re-read before changing prompt assembly order or the agent fleet's context-loading pattern.
+- [`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md) — punch list of resilience / observability / security / dev-process gaps with priority tiers. Re-read every Friday during v1 build. Items get crossed out, not deleted.
+- [`docs/POST-5-15.md`](docs/POST-5-15.md) — what's deferred. (Earlier-version "what's not in the demo cohort" doc; see PRODUCTION-READINESS for current deferred list.)
+
+**Vendor resilience posture (locked 2026-05-08 after Neon Cell 6 outage)**: Anthropic + Bedrock fallback at orchestrator layer (V1). Neon read replica us-east-2 (V1). Status-aware UX everywhere (V1). R2 cross-region replication (V1.5, before Feb 2027 tax season). Multi-cloud DB hot standby (V1.5). Read-only mode for DB write failures (V1). Detailed plan in PRODUCTION-READINESS §A.
+
 ---
 
 ## 24. Project history & key decisions
