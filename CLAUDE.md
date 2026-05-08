@@ -260,11 +260,29 @@ Hello-world (32 in / 28 out, no cache) on Sonnet = **$0.0005** (verified). On Ha
 5. **Prep & Return Intelligence** — pre-prep summaries, post-prep review, YoY client intelligence
 6. **Practice-Level Intelligence** — seasonal pacing, client acquisition patterns, pricing optimization
 
+### Position framework (the deduction / gray-area surface)
+
+**See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) — canonical, do not duplicate here.**
+
+Summary: every deduction or position the AI surfaces is classified into one of four confidence tiers (Settled law / Substantial authority / Reasonable basis + 8275 / More likely than not), plus a hard refusal floor below Reasonable Basis. Each surfaces as a structured `TaxPosition` object with cited authority captured at decision time. EA always decides; AI never auto-files a position above Tier 1. Three modes: Discovery (continuous, the wedge), Strategy (EA-initiated multi-year modeling), Position (aggressive client request → strongest defense or refusal).
+
+Marketing locked: never "AI maximizes deductions" or "loophole finder." Always "catches every defensible deduction your team would have caught with unlimited time" + "audit trail built in." The framework IS the differentiator vs Big-4-targeted competitors who don't carry an Antonio-equivalent EA's PTIN risk.
+
 ### Trust escalation model
+
+Generic levels (legacy framing — read for context, but enforcement maps to position tiers per POSITION-FRAMEWORK §6):
 - **Level 1 (Week 1–2):** Suggest and explain, verbose reasoning, every action requires approval
 - **Level 2 (Week 3–4):** Suggest with shorthand, compressed commentary
 - **Level 3 (Month 2+):** Auto-execute low-risk with notification, preparer reviews logs
 - **Level 4 (Season 2):** Full autopilot for known patterns, exception-based only
+
+For deduction / return positions specifically, the levels gate which tier auto-accepts:
+- **L1 firm**: AI proposes, EA decides every Tier 1-4 position. Antonio's starting state.
+- **L2 firm**: Tier 1 auto-accepted; Tier 2-4 EA decides. Logged.
+- **L3 firm**: Tier 1-2 auto-accepted; Tier 3-4 EA decides. Weekly L1-2 audit review.
+- **L4 firm**: Tier 1-2 auto-accepted; Tier 3 auto-flags + default disclosure; Tier 4 EA decides.
+
+Tier 4 always requires human attestation. Below Reasonable Basis always refuses. These never escalate.
 
 ### Insight severity
 - **Green** (informational) · **Amber** (needs attention) · **Red** (critical / deadline risk)
@@ -300,6 +318,9 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 | **OLT Prep Handoff** *(or Notice Triage — Antonio's choice week 1)* | Paper spec only | Needs `olt` browser automation MCP server (not built; M2+ per build order) |
 | **Document Triage** | Paper spec only | Needs `documents` MCP server + Cloudflare R2 + Haiku vision pipeline (per `docs/DOCS-CAPTURE-PIPELINE.md`) |
 | **Notice Response** | Paper spec only | Needs `irs-solutions` MCP + knowledge graph |
+| **Discovery Agent** *(deduction surfacing — the wedge)* | Paper spec only | Needs authority library + position-library seed + cross-channel artifact capture. See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) §4. Phase-3 work. |
+| **Strategy Agent** *(EA-initiated multi-year modeling)* | Paper spec only | Same dependencies as Discovery + entity/retirement/depreciation rule encoding. POSITION-FRAMEWORK §4. |
+| **Position Agent** *(aggressive territory: defend or refuse)* | Paper spec only | Same dependencies. The refusal-floor logic is the load-bearing piece. POSITION-FRAMEWORK §2. |
 | **Practice Pattern, Promise Keeper, Outcome Prediction, Phone Agent** | Paper spec only | v1+, post-5/15 |
 
 ### Agent contract — what's enforced today
@@ -419,17 +440,18 @@ The current `packages/db/src/schema.ts` covers operational tables (tenants, user
 
 ---
 
-## 13. The seven white-space bets (ranked)
+## 13. The eight white-space bets (ranked)
 
 Concrete edges where the funded competitors are NOT building. Ranked by signal strength.
 
-1. **Practice management × return intelligence union.** Accrual/Black Ore/Basis/TaxGPT automate the return; TaxDome/Canopy/Karbon automate the practice with shallow AI. **Nobody owns both.** Docket's structural lane.
-2. **Mediated taxpayer client portal.** Every PM incumbent treats portal as passive doc-drop. Make it a continuous bilingual conversation thread with AI drafts gated by the preparer.
-3. **EA representation rights as a second pillar.** The 2848/8821 + transcript pull + notice triage + drafted response loop. Off-season recurring revenue. $2k–$10k per engagement. Antonio is already on IRS Solutions — perfect fit.
-4. **Bilingual + voice-aware practice OS.** No funded AI-native is built for this. Spanish, Mandarin, Vietnamese, Tagalog. Voicemail transcription default substrate.
-5. **Practice intelligence as a paid module.** Margin/friction/scope-creep/pricing inconsistency across the book. $99–$299/mo standalone. Data exists in the ledger by definition; nobody else can compute it.
-6. **YoY change explainer + source-to-return traceability for the taxpayer portal.** Highest-leverage retention artifact. Currently 100% hand-written everywhere. Juno is alone pitching traceability, aiming up-market.
-7. **OLT integration as a moat.** Every funded AI-native targets Drake/ProConnect/UltraTax/Lacerte/CCH. **Zero target OLT.** First mover earns the bottom of the EA market for free.
+1. **Compliance-first deduction surfacing — the position framework.** See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md). The mechanism: every deduction the AI flags carries an IRC cite + tier classification + audit risk + draft 8275 (when needed). EAs at the down/mid-market segment cannot adopt loophole-finder tools — their PTIN is on every return. Big-4-targeted competitors (Accrual / Black Ore / Basis) sidestep this because in-house tax counsel handles the compliance line. **Nobody at Antonio's segment is building the compliance-first frame.** Marketing handle: "catches every defensible deduction your team would have caught with unlimited time + audit trail built in."
+2. **Practice management × return intelligence union.** Accrual/Black Ore/Basis/TaxGPT automate the return; TaxDome/Canopy/Karbon automate the practice with shallow AI. **Nobody owns both.** Docket's structural lane.
+3. **Mediated taxpayer client portal.** Every PM incumbent treats portal as passive doc-drop. Make it a continuous bilingual conversation thread with AI drafts gated by the preparer.
+4. **EA representation rights as a second pillar.** The 2848/8821 + transcript pull + notice triage + drafted response loop. Off-season recurring revenue. $2k–$10k per engagement. Antonio is already on IRS Solutions — perfect fit.
+5. **Bilingual + voice-aware practice OS.** No funded AI-native is built for this. Spanish, Mandarin, Vietnamese, Tagalog. Voicemail transcription default substrate.
+6. **Practice intelligence as a paid module.** Margin/friction/scope-creep/pricing inconsistency across the book. $99–$299/mo standalone. Data exists in the ledger by definition; nobody else can compute it.
+7. **YoY change explainer + source-to-return traceability for the taxpayer portal.** Highest-leverage retention artifact. Currently 100% hand-written everywhere. Juno is alone pitching traceability, aiming up-market.
+8. **OLT integration as a moat.** Every funded AI-native targets Drake/ProConnect/UltraTax/Lacerte/CCH. **Zero target OLT.** First mover earns the bottom of the EA market for free.
 
 ### Pricing edge
 Per-return / per-notice usage on top of a low monthly base. Storefront and small-firm EAs can't pay $1.5k–$3k/seat/yr that competitors charge.
