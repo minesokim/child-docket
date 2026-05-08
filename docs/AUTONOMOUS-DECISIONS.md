@@ -215,7 +215,7 @@ Tesseract first and fall back if it fails (same as before).
 
 **Commit**: `b81808b`
 
-**User-review status**: pending
+**User-review status**: reviewed-approved (2026-05-08) — APPROVE FOR V1; V1.5 swap to Claude Vision OCR or AWS Textract is the structural fix. Tracked in PRODUCTION-READINESS as v1.5 work.
 
 ---
 
