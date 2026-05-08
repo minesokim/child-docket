@@ -3,12 +3,18 @@ import { computePromptHash, getPrompt, listPrompts } from './index.js';
 import { triageClassifier } from './triage-classifier.js';
 import { inboxDrafter } from './inbox-drafter.js';
 import { docClassifier } from './doc-classifier.js';
+import { discoveryAgent } from './discovery-agent.js';
 
 describe('@docket/prompts / registry', () => {
   test('lists every registered prompt', () => {
     const prompts = listPrompts();
     const ids = prompts.map((p) => p.id).sort();
-    expect(ids).toEqual(['doc-classifier', 'inbox-drafter', 'triage-classifier']);
+    expect(ids).toEqual([
+      'discovery-agent',
+      'doc-classifier',
+      'inbox-drafter',
+      'triage-classifier',
+    ]);
   });
 
   test('listPrompts returns id + version + model only', () => {
@@ -47,7 +53,7 @@ describe('@docket/prompts / getPrompt', () => {
 
   test('throws on unknown id with helpful message', async () => {
     await expect(getPrompt('nonexistent-agent')).rejects.toThrow(
-      /unknown prompt id "nonexistent-agent"\. Known: doc-classifier, inbox-drafter, triage-classifier/,
+      /unknown prompt id "nonexistent-agent"\. Known: discovery-agent, doc-classifier, inbox-drafter, triage-classifier/,
     );
   });
 });
@@ -77,10 +83,19 @@ describe('@docket/prompts / hash verification', () => {
     expect(docClassifier.hash).toBe(recomputed);
   });
 
+  test('discovery-agent stored hash matches recomputed hash', async () => {
+    const recomputed = await computePromptHash(
+      discoveryAgent.version,
+      discoveryAgent.template,
+    );
+    expect(discoveryAgent.hash).toBe(recomputed);
+  });
+
   test('hash is sha256 hex (64 chars)', () => {
     expect(triageClassifier.hash).toMatch(/^[0-9a-f]{64}$/);
     expect(inboxDrafter.hash).toMatch(/^[0-9a-f]{64}$/);
     expect(docClassifier.hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(discoveryAgent.hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   test('hash changes when template changes', async () => {

@@ -31,6 +31,17 @@ export type {
   ClassifyDocumentOptions,
 } from './agents/doc-classifier.js';
 
+export { runDiscovery, TaxPositionSchema, DiscoveryOutputSchema, CitationSchema } from './agents/discovery-agent.js';
+export type {
+  DiscoveryContext,
+  DiscoveryInput,
+  DiscoveryOutput,
+  DiscoveryTrustGate,
+  TaxPosition,
+  Citation,
+  DiscoverOptions,
+} from './agents/discovery-agent.js';
+
 // Function array for Inngest serve() handler — Next.js route uses this.
 import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';
