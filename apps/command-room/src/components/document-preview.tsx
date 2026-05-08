@@ -1,18 +1,33 @@
 'use client';
 
-// In-page document preview overlay. Opens when a doc row is clicked
-// in DocumentsSection. NO auto-download — the browser renders the
-// PDF inline via <iframe>, or images via <img>. Explicit Download +
-// View raw buttons live in the overlay header.
+// In-page document preview overlay.
 //
-// Why an iframe vs `window.open`:
-//   - window.open is "open in new tab" UX, not "preview built in."
-//     The user explicitly asked for inline preview.
-//   - <iframe src={signedPdfUrl}> renders the browser's native PDF
-//     viewer in place. Same UX as Stripe Dashboard / Mercury when
-//     they show an attached invoice.
-//   - The signed URL is generated with disposition='inline' (no
-//     Content-Disposition: attachment), so the browser inlines.
+// Behaviors that matter:
+//
+//   - HONEST PHASE LABELING. The header pill reflects the row's
+//     parse_phase, not just whether final_storage_key happens to be
+//     set. "Processed" only when phase='final'. Mid-pipeline phases
+//     ('finalizing', 'accepted') render "Processing…" with a relative
+//     timestamp. 'failed' renders an error label + "Retry" button.
+//
+//   - RETRY for stuck or failed docs. When phase is 'failed' (Inngest
+//     exhausted retries — onFailure persisted state) OR 'finalizing'
+//     (likely stuck — long enough that the user is confused), the
+//     header shows a Retry button that resets phase='accepted' and
+//     re-fires document/accepted. See lib/clients/retry-document-finalize.
+//
+//   - RACE-SAFE FETCHES. loadUrl uses a request-generation token; a
+//     stale fetch's setView is dropped if a newer request started
+//     since. Without this, opening doc A → quickly closing → opening
+//     doc B can cause A's promise to win and show A's URL inside B's
+//     overlay.
+//
+//   - NO STALE-URL FLASH ON TOGGLE. Switching Processed↔Raw clears
+//     view first so the iframe blanks to the skeleton during the URL
+//     swap, instead of momentarily flashing the prior source's PDF.
+//
+//   - DOWNLOAD HARDENING. Button disabled while in flight; double-
+//     click can't mint two URLs and trigger two downloads.
 
 import * as React from 'react';
 import type { Theme } from '@docket/ui';
@@ -20,7 +35,9 @@ import { SkeletonGroup, SkeletonHeading, SkeletonLine } from '@docket/ui';
 import {
   getCommandRoomDocumentViewUrl,
   type GetDocumentViewUrlResult,
+  type DocumentLifecyclePhase,
 } from '@/lib/clients/get-document-view-url';
+import { retryDocumentFinalize } from '@/lib/clients/retry-document-finalize';
 
 export type PreviewTarget = {
   documentId: string;
@@ -30,30 +47,72 @@ export type PreviewTarget = {
   headerFilename: string;
 };
 
+type ViewOk = Extract<GetDocumentViewUrlResult, { ok: true }>;
+
 export function DocumentPreview({
   t,
   target,
   onClose,
+  onRetried,
 }: {
   t: Theme;
   target: PreviewTarget | null;
   onClose: () => void;
+  /**
+   * Optional: parent can refresh its data when a retry succeeds (e.g.,
+   * the documents list re-renders so the user sees the new state).
+   */
+  onRetried?: () => void;
 }) {
   const [view, setView] = React.useState<GetDocumentViewUrlResult | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [activeSource, setActiveSource] = React.useState<'auto' | 'original'>('auto');
+  const [downloading, setDownloading] = React.useState(false);
+  const [retrying, setRetrying] = React.useState(false);
+  const [retryNotice, setRetryNotice] = React.useState<string | null>(null);
 
-  // Reset state when target changes.
+  // Race-guard: every loadUrl bumps this and only writes back if its
+  // generation is still current.
+  const reqGen = React.useRef(0);
+
+  const loadUrl = React.useCallback(
+    async (documentId: string, source: 'auto' | 'original') => {
+      const myGen = ++reqGen.current;
+      setLoading(true);
+      try {
+        const result = await getCommandRoomDocumentViewUrl({
+          documentId,
+          source,
+          disposition: 'inline',
+        });
+        if (myGen !== reqGen.current) return; // stale
+        setView(result);
+      } catch (err) {
+        if (myGen !== reqGen.current) return;
+        setView({
+          ok: false,
+          error: err instanceof Error ? err.message : 'Could not load',
+        });
+      } finally {
+        if (myGen === reqGen.current) setLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Reset state when target changes (new doc opened, or closed).
   React.useEffect(() => {
     if (!target) {
       setView(null);
       setActiveSource('auto');
+      setRetryNotice(null);
+      reqGen.current++; // invalidate any in-flight fetch
       return;
     }
     setActiveSource(target.source);
+    setRetryNotice(null);
     void loadUrl(target.documentId, target.source);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target?.documentId, target?.source]);
+  }, [target?.documentId, target?.source, loadUrl]);
 
   // ESC closes.
   React.useEffect(() => {
@@ -75,51 +134,68 @@ export function DocumentPreview({
     };
   }, [target]);
 
-  const loadUrl = async (documentId: string, source: 'auto' | 'original') => {
-    setLoading(true);
+  const onDownload = async () => {
+    if (!target || downloading) return;
+    setDownloading(true);
     try {
       const result = await getCommandRoomDocumentViewUrl({
-        documentId,
-        source,
-        disposition: 'inline',
+        documentId: target.documentId,
+        source: activeSource,
+        disposition: 'attachment',
       });
-      setView(result);
-    } catch (err) {
-      setView({
-        ok: false,
-        error: err instanceof Error ? err.message : 'Could not load',
-      });
+      if (result.ok) {
+        const link = document.createElement('a');
+        link.href = result.url;
+        link.download = result.filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const onDownload = async () => {
-    if (!target) return;
-    const result = await getCommandRoomDocumentViewUrl({
-      documentId: target.documentId,
-      source: activeSource,
-      disposition: 'attachment',
-    });
-    if (result.ok) {
-      // Triggers browser download instead of navigating away from the
-      // app. window.location.href is the simplest reliable trigger.
-      const link = document.createElement('a');
-      link.href = result.url;
-      link.download = result.filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      setDownloading(false);
     }
   };
 
   const onSwitchSource = (next: 'auto' | 'original') => {
-    if (!target || next === activeSource) return;
+    if (!target || next === activeSource || loading) return;
     setActiveSource(next);
+    // Clear current view so the body re-renders the skeleton during
+    // the swap rather than flashing the previous URL's content.
+    setView(null);
     void loadUrl(target.documentId, next);
   };
 
+  const onRetry = async () => {
+    if (!target || retrying) return;
+    setRetrying(true);
+    setRetryNotice(null);
+    try {
+      const result = await retryDocumentFinalize({
+        documentId: target.documentId,
+      });
+      if (result.ok) {
+        setRetryNotice('Retry queued — refreshing in a moment.');
+        // Re-fetch the view so the header reflects the new phase.
+        await loadUrl(target.documentId, activeSource);
+        onRetried?.();
+      } else {
+        setRetryNotice(result.error);
+      }
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   if (!target) return null;
+
+  // Phase + age signals for header rendering.
+  const phase: DocumentLifecyclePhase | null =
+    view && view.ok ? view.parsePhase : null;
+  const finalizedAtIso = view && view.ok ? view.finalizedAtIso : null;
+  const headerInfo = renderHeaderInfo(phase, view, finalizedAtIso);
+  const showRetry =
+    phase === 'failed' ||
+    (phase === 'finalizing' && finalizedAtIso == null);
 
   return (
     <div
@@ -144,10 +220,6 @@ export function DocumentPreview({
           background: t.bg,
           width: '100%',
           maxWidth: 1100,
-          // DEFINITE height (was maxHeight). Without a definite size,
-          // the modal shrink-wraps to the iframe's intrinsic content,
-          // which renders as a tiny strip — that was the squished bug.
-          // 90vh gives the iframe a proper canvas to fill.
           height: '90vh',
           borderRadius: 14,
           display: 'flex',
@@ -186,21 +258,13 @@ export function DocumentPreview({
               style={{
                 fontFamily: t.mono,
                 fontSize: 9.5,
-                color: t.muted,
+                color: headerInfo.color ?? t.muted,
                 letterSpacing: 0.6,
                 textTransform: 'uppercase',
                 marginTop: 2,
               }}
             >
-              {view?.ok
-                ? view.source === 'final'
-                  ? 'Processed'
-                  : view.source === 'original-fallback'
-                    ? 'Raw — finalize pending'
-                    : 'Raw upload'
-                : loading
-                ? 'Loading…'
-                : 'Preview'}
+              {loading && !view ? 'Loading…' : headerInfo.label}
             </div>
           </div>
 
@@ -230,9 +294,33 @@ export function DocumentPreview({
             />
           </div>
 
+          {showRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={retrying}
+              style={{
+                background: t.rust,
+                border: 'none',
+                borderRadius: 8,
+                padding: '6px 12px',
+                fontFamily: t.sans,
+                fontSize: 12,
+                color: '#fff',
+                cursor: retrying ? 'wait' : 'pointer',
+                letterSpacing: 0.2,
+                opacity: retrying ? 0.7 : 1,
+              }}
+              title="Reset state and re-run the finalize worker"
+            >
+              {retrying ? 'Retrying…' : 'Retry'}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onDownload}
+            disabled={downloading}
             style={{
               background: 'transparent',
               border: `1px solid ${t.borderSoft}`,
@@ -241,12 +329,13 @@ export function DocumentPreview({
               fontFamily: t.sans,
               fontSize: 12,
               color: t.ink,
-              cursor: 'pointer',
+              cursor: downloading ? 'wait' : 'pointer',
               letterSpacing: 0.2,
+              opacity: downloading ? 0.6 : 1,
             }}
             title="Download a copy"
           >
-            Download
+            {downloading ? 'Preparing…' : 'Download'}
           </button>
 
           <button
@@ -274,6 +363,21 @@ export function DocumentPreview({
             </svg>
           </button>
         </div>
+
+        {retryNotice && (
+          <div
+            style={{
+              padding: '8px 18px',
+              fontFamily: t.sans,
+              fontSize: 12,
+              color: t.rustInk,
+              background: t.tintAccent,
+              borderBottom: `1px solid ${t.borderSoft}`,
+            }}
+          >
+            {retryNotice}
+          </div>
+        )}
 
         {/* Body */}
         <div
@@ -309,6 +413,69 @@ export function DocumentPreview({
   );
 }
 
+// ────────────────────────────────────────────────────────────────
+// Header label rendering.
+//
+// Maps parse_phase + finalizedAt + source → a human-readable label
+// in the header pill. The label is the SOURCE OF TRUTH on what the
+// user is actually seeing — earlier versions lied (showing
+// "Processed" while serving raw color content).
+// ────────────────────────────────────────────────────────────────
+
+function renderHeaderInfo(
+  phase: DocumentLifecyclePhase | null,
+  view: GetDocumentViewUrlResult | null,
+  finalizedAtIso: string | null,
+): { label: string; color?: string } {
+  if (!view || !view.ok) return { label: 'Preview' };
+
+  // Explicit "Raw" toggle wins regardless of phase.
+  if (view.source === 'original') return { label: 'Raw upload' };
+
+  switch (phase) {
+    case 'final':
+      return { label: 'Processed' };
+    case 'failed': {
+      const msg = view.errorMessage
+        ? `Processing failed — ${truncateLabel(view.errorMessage)}`
+        : 'Processing failed';
+      return { label: msg, color: '#a13d2c' };
+    }
+    case 'finalizing': {
+      const age = finalizedAtIso
+        ? `started ${relativeAgo(finalizedAtIso)}`
+        : 'in progress';
+      return { label: `Processing… (${age})` };
+    }
+    case 'accepted':
+      return { label: 'Queued for processing' };
+    case 'parsed':
+      return { label: 'Awaiting verification' };
+    case 'classifying':
+    case 'uploaded':
+      return { label: 'Reading…' };
+    default:
+      return view.source === 'original-fallback'
+        ? { label: 'Raw — finalize pending' }
+        : { label: 'Preview' };
+  }
+}
+
+function truncateLabel(s: string): string {
+  return s.length > 64 ? s.slice(0, 61) + '…' : s;
+}
+
+function relativeAgo(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return 'a moment ago';
+  const diffMs = Date.now() - t;
+  if (diffMs < 60_000) return 'just now';
+  const m = Math.round(diffMs / 60_000);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  return `${h}h ago`;
+}
+
 function ToggleButton({
   t,
   active,
@@ -341,12 +508,6 @@ function ToggleButton({
   );
 }
 
-// Document-shaped skeleton placeholder while the signed URL is being
-// minted + the iframe is loading. Uses the SHIMMER variant from
-// @docket/ui (premium feel for a single focal item — see the
-// handoff README's variant guidance for "dense documents, hero
-// sections"). Two faux paragraphs with heading rules give the silhouette
-// of a typical scanned doc page.
 function DocumentSkeleton() {
   return (
     <SkeletonGroup
@@ -381,10 +542,6 @@ function DocumentSkeleton() {
   );
 }
 
-// Render the actual preview. PDFs go through an iframe (browsers'
-// native PDF viewer renders inline). Images render as <img>. Anything
-// else gets a fallback message — shouldn't happen since uploads are
-// MIME-allowlisted to PDFs + common image types.
 function PreviewBody({ url, mimeType }: { url: string; mimeType: string }) {
   if (mimeType === 'application/pdf') {
     return (
