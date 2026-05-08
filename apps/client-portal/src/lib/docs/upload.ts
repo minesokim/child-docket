@@ -44,6 +44,7 @@ import {
 // Subpath import — inngest pulls in node:async_hooks which can't be
 // bundled for the browser. Subpath keeps it server-only.
 import { inngest } from '@docket/shared/inngest';
+import { assertWritable } from '@/lib/read-only-mode';
 import {
   buildStorageKey,
   getPresignedUploadUrl,
@@ -99,6 +100,7 @@ export async function requestUploadUrl(input: {
     // Auth.
     const client = await getOrCreateClient();
     if (!client) return { ok: false, error: 'Not signed in' };
+    await assertWritable();
 
     // Rate limit. 10 uploads/min/client.
     const limit = consumeRateToken(`doc-upload:${client.clientId}`, 10, 60_000);
@@ -188,6 +190,7 @@ export async function confirmUpload(input: {
   try {
     const client = await getOrCreateClient();
     if (!client) return { ok: false, error: 'Not signed in' };
+    await assertWritable();
 
     // Storage-key sanity check: storage keys MUST start with the
     // client's expected prefix. This catches the "browser substituted
@@ -475,6 +478,7 @@ export async function acceptDocClassification(
   try {
     const client = await getOrCreateClient();
     if (!client) return { ok: false, error: 'Not signed in' };
+    await assertWritable();
 
     const result = await withTenant(asTenantId(client.tenantId), async (db) => {
       const update: Record<string, unknown> = {

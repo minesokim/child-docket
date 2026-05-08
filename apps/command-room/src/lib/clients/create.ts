@@ -22,6 +22,7 @@ import { withTenant, schema } from '@docket/db/client';
 import { asTenantId } from '@docket/shared';
 import type { TenantId } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
+import { assertWritable } from '@/lib/read-only-mode';
 import { revalidatePath } from 'next/cache';
 
 export type CreateClientResult =
@@ -46,6 +47,11 @@ export async function createClient(input: {
   preferredLanguage?: string;
 }): Promise<CreateClientResult> {
   const user = await requireRole(['firm_owner', 'preparer', 'reviewer', 'admin']);
+
+  // Read-only mode gate. Throws ReadOnlyModeError if the DB is
+  // down / timing out. Pairs with the WriteAction UI wrapper —
+  // UI is best-effort; this is the load-bearing security check.
+  await assertWritable();
 
   // Validate.
   const fullName = input.fullName.trim();

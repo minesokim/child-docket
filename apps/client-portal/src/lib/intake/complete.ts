@@ -10,10 +10,12 @@ import { schema, withTenant } from '@docket/db';
 import { asTenantId } from '@docket/shared';
 import { getOrCreateClient } from './auth';
 import { getCurrentTaxYear } from './shared';
+import { assertWritable } from '@/lib/read-only-mode';
 
 export async function completeIntake(): Promise<{ ok: boolean; error?: string }> {
   const authed = await getOrCreateClient();
   if (!authed) return { ok: false, error: 'Not signed in' };
+  await assertWritable();
 
   const taxYear = await getCurrentTaxYear(authed.timezone);
   const startedAt = Date.now();

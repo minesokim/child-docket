@@ -30,6 +30,7 @@ import * as Sentry from '@sentry/nextjs';
 import { schema, withTenant } from '@docket/db';
 import { asTenantId } from '@docket/shared';
 import { getOrCreateClient } from './auth';
+import { assertWritable } from '@/lib/read-only-mode';
 
 type IntakeSignatureType = 'engagement_letter' | 'consent_7216';
 
@@ -39,6 +40,7 @@ export async function recordIntakeSignature(input: {
 }): Promise<{ ok: boolean; signatureId?: string; error?: string }> {
   const authed = await getOrCreateClient();
   if (!authed) return { ok: false, error: 'Not signed in' };
+  await assertWritable();
 
   if (!input.documentText || input.documentText.length < 10) {
     return { ok: false, error: 'Document text is required' };

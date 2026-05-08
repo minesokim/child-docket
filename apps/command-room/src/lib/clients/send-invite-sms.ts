@@ -39,6 +39,7 @@ import {
   consumeRateToken,
 } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
+import { assertWritable } from '@/lib/read-only-mode';
 
 export type SendInviteSmsResult =
   | { ok: true; sid: string; toMasked: string; sentAt: number }
@@ -94,6 +95,7 @@ export async function sendInviteSms(
     // 1. Auth + role gate.
     const user = await requireRole(['firm_owner', 'preparer', 'reviewer', 'admin']);
     console.log('[sendInviteSms] user=', user.id, 'role=', user.role, 'tenant=', user.tenantId);
+    await assertWritable();
 
     // 2. Rate limit. 6/min/user — same shape as the unlock flow.
     const limit = consumeRateToken(`sms-invite:${user.clerkUserId}`, 6, 60_000);

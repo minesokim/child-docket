@@ -43,6 +43,7 @@ import {
 } from '@docket/shared';
 import { getOrCreateClient } from './auth';
 import { getCurrentTaxYear } from './shared';
+import { assertWritable } from '@/lib/read-only-mode';
 
 export type SaveIntakeFieldResult =
   | { ok: true; answers: IntakeState }
@@ -64,6 +65,7 @@ export async function saveIntakeField(
   // 2. Auth.
   const authed = await getOrCreateClient();
   if (!authed) return { ok: false, error: 'Not signed in', path };
+  await assertWritable();
 
   const taxYear = await getCurrentTaxYear(authed.timezone);
   const sensitive = isSensitivePath(path);

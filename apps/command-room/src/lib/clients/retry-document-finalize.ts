@@ -32,6 +32,7 @@ import {
 import { asTenantId, asClientId } from '@docket/shared';
 import { inngest } from '@docket/shared/inngest';
 import { requireRole } from '@/lib/require-role';
+import { assertWritable } from '@/lib/read-only-mode';
 
 export type RetryDocumentFinalizeResult =
   | { ok: true }
@@ -42,6 +43,7 @@ export async function retryDocumentFinalize(input: {
 }): Promise<RetryDocumentFinalizeResult> {
   try {
     const user = await requireRole(['firm_owner', 'preparer', 'reviewer']);
+    await assertWritable();
 
     const doc = await withTenant(asTenantId(user.tenantId), async (db) => {
       const [row] = await db

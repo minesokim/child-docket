@@ -36,6 +36,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 import { withTenant, schema } from '@docket/db/client';
 import { asTenantId } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
+import { assertWritable } from '@/lib/read-only-mode';
 
 export type DeleteClientResult =
   | { ok: true; deletedName: string }
@@ -49,6 +50,7 @@ export async function deleteClient(input: {
   confirmName: string;
 }): Promise<DeleteClientResult> {
   const user = await requireRole(['firm_owner', 'admin']);
+  await assertWritable();
 
   if (!input.clientId || typeof input.clientId !== 'string') {
     return { ok: false, error: 'Missing client id.' };
