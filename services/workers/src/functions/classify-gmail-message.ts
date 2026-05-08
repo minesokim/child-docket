@@ -136,6 +136,12 @@ export const classifyGmailMessage = inngest.createFunction(
               preparerFullName: 'Antonio Vazquez',         // TODO(week-1): pull from users table
               preparerSignOff: 'Antonio',
               firmName: 'Vazant Consulting',               // TODO(week-1): pull from tenants table
+              // Trust level — L1 is the conservative posture per
+              // CLAUDE.md §8 trust escalation. v1 reads this from
+              // tenants.defaultTrustLevel; for now hardcode to L1
+              // so the trust-gate verdict on the resulting draft
+              // is deterministic + permits-but-flags-for-approval.
+              trustLevel: 1,
               originalMessage: {
                 channel: 'email',
                 body: scrubbedBody,
@@ -152,6 +158,14 @@ export const classifyGmailMessage = inngest.createFunction(
         draftConfidence: drafted.output.confidence,
         draftCostUsd: drafted.costUsd,
         draftLatencyMs: drafted.latencyMs,
+        // Trust-gate verdict — flatten for log readability. The
+        // full structured object is in `drafted.trustGate` and
+        // gets persisted alongside the draft when persist-draft
+        // lands (week-1 TODO below).
+        trustGateAllowed: drafted.trustGate.allowed,
+        trustGateActionClass: drafted.trustGate.actionClass,
+        trustGateRequires:
+          drafted.trustGate.allowed === false ? drafted.trustGate.requires : null,
       });
       draftCostUsd = drafted.costUsd;
 

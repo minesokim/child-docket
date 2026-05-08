@@ -8,7 +8,8 @@
 // produce Antonio-INTERNAL drafts (workpaper notes / call briefs), not client messages.
 
 import { z } from 'zod';
-import type { AgentId, ClientId, IssueType, TenantId } from '@docket/shared';
+import type { AgentId, ClientId, IssueType, TenantId, TrustLevel } from '@docket/shared';
+import { assertTrustGate } from '@docket/shared';
 import { runDocketAgent } from '@docket/orchestrator';
 import { getPrompt } from '@docket/prompts';
 import type { ClassifierOutput } from './triage-classifier.js';
@@ -26,6 +27,12 @@ export type DrafterContext = {
   preparerFullName: string;                              // 'Antonio Vazquez'
   preparerSignOff: string;                                // 'Antonio' (casual) or 'Antonio Vazquez, EA' (formal)
   firmName: string;                                       // 'Vazant Consulting'
+  // Firm's currently-configured trust level (per tenants.defaultTrustLevel).
+  // Drives the trust-gate verdict computed post-draft. Default L1 if the
+  // caller doesn't pass one — L1 is the conservative posture (every
+  // external send requires Antonio's approval). See CLAUDE.md §8 +
+  // POSITION-FRAMEWORK.md §6 + packages/shared/src/trust-gate.ts.
+  trustLevel?: TrustLevel;
   // Optional history for voice consistency (will be sparse in v0)
   recentOutboundDrafts?: Array<{ channel: string; body: string }>;
   // The original inbound signal that triggered the issue, if any
@@ -68,6 +75,24 @@ export const DraftOutputSchema = z.object({
 export type DraftOutput = z.infer<typeof DraftOutputSchema>;
 
 // ────────────────────────────────────────────────────────────────
+// Trust-gate verdict — attached to draftReply()'s return shape so the
+// command-room inbox UI can label the draft "auto-send eligible" vs
+// "requires Antonio's approval" vs "refused — below floor."
+//
+// NOT part of DraftOutputSchema (the model doesn't emit it; we compute
+// it deterministically post-draft from the firm's trust level + issue's
+// action class).
+// ────────────────────────────────────────────────────────────────
+export type DraftTrustGate =
+  | { allowed: true; actionClass: 'send-external' | 'send-internal' }
+  | {
+      allowed: false;
+      actionClass: 'send-external' | 'send-internal';
+      requires: 'human-approval' | 'refusal';
+      reason: string;
+    };
+
+// ────────────────────────────────────────────────────────────────
 // System prompt sourced from @docket/prompts (registry id
 // 'inbox-drafter'). Edit there, not here.
 // ────────────────────────────────────────────────────────────────
@@ -83,6 +108,7 @@ export type DraftOptions = {
 
 export async function draftReply(opts: DraftOptions): Promise<{
   output: DraftOutput;
+  trustGate: DraftTrustGate;
   costUsd: number;
   latencyMs: number;
   modelUsed: 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
@@ -125,8 +151,40 @@ export async function draftReply(opts: DraftOptions): Promise<{
     );
   }
 
+  // Compute the trust-gate verdict post-draft. The action class is
+  // 'send-external' for client-facing drafts (email/sms/portal_chat to
+  // taxpayer) and 'send-internal' for ero_pending / meeting_prep (the
+  // drafter's internal Antonio-only notes). The verdict lets the
+  // command-room inbox UI label the draft accordingly:
+  //
+  //   allowed=true  → "auto-send eligible" (only at L4 firms today)
+  //   requires=human-approval → "requires Antonio's approval" (L1-L3
+  //                              default, every external send)
+  //   requires=refusal        → "refused — below framework floor"
+  //                             (never, for v1 drafts; refusal is
+  //                              for tier-bound positions which the
+  //                              drafter does not emit yet)
+  //
+  // The verdict is also written to actions.tool_input via the orchestrator
+  // onAction hook downstream, so the audit trail captures it. When the
+  // command-room inbox UI lands, it reads this verdict to badge each draft.
+  const actionClass: 'send-external' | 'send-internal' = validation.data.isClientFacing
+    ? 'send-external'
+    : 'send-internal';
+  const trustLevel = opts.input.context.trustLevel ?? 1;
+  const decision = assertTrustGate({ trustLevel, actionClass });
+  const trustGate: DraftTrustGate = decision.allowed
+    ? { allowed: true, actionClass }
+    : {
+        allowed: false,
+        actionClass,
+        requires: decision.requires,
+        reason: decision.reason,
+      };
+
   return {
     output: validation.data,
+    trustGate,
     costUsd: result.costUsd,
     latencyMs: result.latencyMs,
     modelUsed: result.modelUsed,
