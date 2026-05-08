@@ -6,6 +6,7 @@ export { gmailPoll } from './functions/gmail-poll.js';
 export { classifyGmailMessage } from './functions/classify-gmail-message.js';
 export { classifyDocumentFn } from './functions/classify-document.js';
 export { finalizeDocumentFn } from './functions/finalize-document.js';
+export { verifyActionsChain } from './functions/verify-actions-chain.js';
 
 // Re-export the agent factories for direct invocation in tests / scripts.
 export { classifySignal } from './agents/triage-classifier.js';
@@ -34,9 +35,11 @@ import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';
 import { classifyDocumentFn } from './functions/classify-document.js';
 import { finalizeDocumentFn } from './functions/finalize-document.js';
+import { verifyActionsChain } from './functions/verify-actions-chain.js';
 export const functions = [
   gmailPoll,
   classifyGmailMessage,
   classifyDocumentFn,
   finalizeDocumentFn,
+  verifyActionsChain,
 ];
