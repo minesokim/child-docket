@@ -21,6 +21,11 @@
 //   skeleton       Skeleton (+ Line, Heading, Small, Circle), SkeletonGroup
 //   skeleton-docs  DriversLicenseFrontSkeleton, DriversLicenseBackSkeleton,
 //                  SocialSecurityCardSkeleton, TaxFormSkeleton
+//   status-banner  StatusBanner, ServiceIndicator + helpers
+//                  (bedrockFallbackBanner, neonReadOnlyBanner,
+//                  r2UnavailableBanner) + types StatusSeverity, ServiceStatus
+//   read-only      ReadOnlyContext, ReadOnlyProvider, useIsReadOnly,
+//                  WriteAction
 
 export * from './layout.js';
 export * from './text.js';
@@ -37,3 +42,5 @@ export * from './portal.js';
 export * from './citation.js';
 export * from './skeleton.js';
 export * from './skeleton-docs.js';
+export * from './status-banner.js';
+export * from './read-only.js';
