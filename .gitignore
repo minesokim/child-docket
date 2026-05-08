@@ -34,6 +34,12 @@ pnpm-debug.log*
 coverage/
 .memsearch/
 
+# Local IDE scratch — Claude Code launch file is per-machine
+.claude/launch.json
+
+# tmp/ is for ephemeral local artifacts (rendered design exports, etc.)
+tmp/
+
 # gstack runtime (security reports, incident postmortems, brain queues,
 # session timelines). Anything here is an internal developer artifact and
 # must not ship to the remote.
