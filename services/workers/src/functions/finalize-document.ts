@@ -359,10 +359,28 @@ export const finalizeDocumentFn = inngest.createFunction(
           fallback: docRow.originalFilename,
         });
 
-        // Compute final storage key (parallel to original, .pdf ext).
+        // Compute final storage key.
+        //
+        // CRITICAL — the documentId goes INTO the path, not just the
+        // filename. Earlier we built the key as
+        //   tenants/.../docs-final/<finalFilename>
+        // but if the same client uploads two docs that the AI gives the
+        // same suggested filename (e.g., the user uploads their DL into
+        // the W-2 slot AND the 1099-R slot — both rows get filename
+        // 'Minseo_DriversLicense_CA_2029exp.pdf'), the second R2 PUT
+        // OVERWRITES the first. Both documents rows then point at the
+        // same R2 object, and we've silently lost the first doc's
+        // bytes. For the user's test case this didn't matter (same DL
+        // photo both times), but with real data it's data loss.
+        //
+        // Now: tenants/.../docs-final/<documentId>/<finalFilename>.
+        // documentId is a UUID so collisions can't happen across docs.
+        // The user-facing filename in command-room still shows
+        // <finalFilename> (it's read from documents.final_filename, not
+        // the storage key); only the R2 key is unique-by-doc.
         const finalStorageKey = docRow.storageKey
           .replace('/docs/', '/docs-final/')
-          .replace(/[^/]+$/, finalFilename);
+          .replace(/[^/]+$/, `${documentId}/${finalFilename}`);
 
         // Upload to R2. The PDF bytes stay local to this step.
         await putObject({
