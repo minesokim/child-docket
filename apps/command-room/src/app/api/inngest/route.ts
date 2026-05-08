@@ -28,6 +28,27 @@ import { type NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// Inngest workers run binarize (sharp) + OCR (Tesseract.js WASM) +
+// PDF embed + R2 upload inside a single step. A real phone-photo W-2
+// or DL takes 10-30 seconds end-to-end:
+//   - sharp Otsu binarize:           1-3 s
+//   - Tesseract WASM init (1st run): 5-10 s
+//   - Tesseract OCR:                 5-15 s
+//   - pdf-lib embed + R2 upload:     1-2 s
+//
+// Vercel's serverless default maxDuration is 10s on newer Pro accounts
+// — the route gets KILLED mid-execution, Inngest sees no response,
+// marks the step as "failed to asynchronously process step output",
+// retries hit the same 10s wall, function dies. Result the user sees:
+// retry leaves doc at parse_phase='accepted', client-portal polls
+// until timeout and flips green checkmark → warning triangle.
+//
+// 300s is the Vercel Pro hard ceiling. Long enough for the slowest
+// real document we'd realistically receive (a 12-page 1040 with
+// dense schedules); cheap to leave high since lambdas only bill for
+// the time actually used.
+export const maxDuration = 300;
+
 type RouteHandlers = {
   GET: (req: NextRequest) => Promise<Response>;
   POST: (req: NextRequest) => Promise<Response>;
