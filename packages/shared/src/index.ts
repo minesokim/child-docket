@@ -28,11 +28,17 @@ export * from './format.js';
 // checklist + slot matching for AI-classified uploads.
 export * from './required-docs.js';
 
-// Webhook signature verification — defends every webhook endpoint we
-// ship (Twilio inbound SMS, Square payment events, DocuSign Connect
-// events). Each provider has its own verifier with timing-safe compare.
-// See module header for the attack model.
-export * from './webhook-verification.js';
+// Webhook signature verification lives in `@docket/shared/webhooks` as a
+// SUBPATH export — NOT from this main barrel. The verifier imports
+// `node:crypto`, which webpack/turbopack will pull into any bundle that
+// imports from the main barrel. That breaks browser builds. Same risk
+// shape as the inngest client (also server-only, also subpath-exported).
+//
+// Server code imports via:
+//
+//   import { verifyTwilioSignature } from '@docket/shared/webhooks';
+//
+// See `packages/shared/package.json` `exports['./webhooks']`.
 
 // Inngest client lives in shared but is NOT re-exported from the main
 // barrel — `inngest` internally imports `node:async_hooks` which

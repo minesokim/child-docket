@@ -332,6 +332,93 @@ describe('verifyDocuSignSignature', () => {
 });
 
 // ────────────────────────────────────────────────────────────────
+// Cross-provider: garbage / malformed inputs MUST not crash
+//
+// Codex review surfaced that the original "fails without crashing"
+// test was too loose — it only checked that a single garbage value
+// returned false. These tests pin the harder contract: NO call shape
+// throws, regardless of input.
+// ────────────────────────────────────────────────────────────────
+
+describe('garbage inputs never throw', () => {
+  test('Twilio with malformed base64 header returns false, no throw', () => {
+    expect(() =>
+      verifyTwilioSignature({
+        url: 'https://example.com',
+        params: { a: 'b' },
+        signatureHeader: '!@#$%^&*()_+={}[]|\\:";\'<>?,./~`',
+        authToken: 'token',
+      }),
+    ).not.toThrow();
+  });
+
+  test('Square with malformed base64 header returns false, no throw', () => {
+    expect(() =>
+      verifySquareSignature({
+        notificationUrl: 'https://example.com',
+        rawBody: '{}',
+        signatureHeader: '!!! not base64 !!!',
+        signatureKey: 'key',
+      }),
+    ).not.toThrow();
+  });
+
+  test('DocuSign with mix of valid and malformed headers returns false, no throw', () => {
+    expect(() =>
+      verifyDocuSignSignature({
+        rawBody: '<xml/>',
+        signatureHeaders: ['valid-looking-but-wrong', '!!!garbage!!!', ''],
+        secrets: ['secret'],
+      }),
+    ).not.toThrow();
+  });
+
+  test('Twilio with very long signature header returns false, no throw', () => {
+    expect(() =>
+      verifyTwilioSignature({
+        url: 'https://example.com',
+        params: { a: 'b' },
+        signatureHeader: 'A'.repeat(10_000),
+        authToken: 'token',
+      }),
+    ).not.toThrow();
+  });
+
+  test('Square with extremely large rawBody returns false, no throw', () => {
+    // 1 MB of body — sanity check that we don't blow up on size
+    const bigBody = 'x'.repeat(1_000_000);
+    expect(() =>
+      verifySquareSignature({
+        notificationUrl: 'https://example.com',
+        rawBody: bigBody,
+        signatureHeader: 'wrong-sig',
+        signatureKey: 'key',
+      }),
+    ).not.toThrow();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// TODO(v1.5): golden test vectors from provider SDKs
+//
+// Codex review surfaced that all current happy-path tests generate
+// expected signatures using the SAME formula as the implementation —
+// if the implementation silently differs from a provider's spec
+// (wrong canonicalization, wrong encoding step, wrong concatenation
+// order), both sides of the test produce the same wrong value and
+// the suite stays green.
+//
+// Defense: pin at least one golden vector per provider, sourced from
+// the provider's official SDK or published test fixtures:
+//   - Twilio: examples in twilio-node SDK's test suite
+//   - Square: square-node-sdk's webhook-events test fixtures
+//   - DocuSign: published Connect HMAC examples in dev docs
+//
+// Tracked in PRODUCTION-READINESS §C "Test infrastructure". Land
+// alongside the eval harness work in V1.5.
+// ────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────
 // extractDocuSignSignatureHeaders
 // ────────────────────────────────────────────────────────────────
 

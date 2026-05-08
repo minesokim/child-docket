@@ -39,10 +39,17 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 // ────────────────────────────────────────────────────────────────
 // Internal: timing-safe base64 compare with length normalization.
+//
 // timingSafeEqual throws on mismatched buffer lengths — we want false
-// instead of an exception, so we compare a known-length zero buffer
-// when lengths differ. This still leaks "lengths differ" but not the
-// signature contents.
+// instead of an exception, so we early-return when lengths differ.
+// This DOES leak "lengths differ" via timing, but in practice each
+// provider produces signatures of a fixed length (HMAC-SHA1 base64 = 28
+// chars, HMAC-SHA256 base64 = 44 chars), so an attacker who already
+// knows the provider learns nothing useful from the length channel.
+// The decoy timingSafeEqual call below is a defense-in-depth no-op
+// (over a zero-buffer of the actual signature's length); it does NOT
+// fully equalize timing across all branches of this function. Treat
+// the boolean return value as the security contract.
 // ────────────────────────────────────────────────────────────────
 function timingSafeEqualBase64(expected: string, actual: string): boolean {
   let expectedBuf: Buffer;
@@ -51,11 +58,14 @@ function timingSafeEqualBase64(expected: string, actual: string): boolean {
     expectedBuf = Buffer.from(expected, 'base64');
     actualBuf = Buffer.from(actual, 'base64');
   } catch {
+    // Buffer.from with invalid base64 doesn't typically throw — it's
+    // lenient and produces best-effort bytes. The catch here is
+    // defense-in-depth in case of future Node API changes.
     return false;
   }
   if (expectedBuf.length !== actualBuf.length) {
-    // Constant-time op against same-length zero buffer to keep timing
-    // similar regardless of which side was malformed.
+    // Decoy compare to flatten timing somewhat. Not a true constant-
+    // time guarantee — see header comment above.
     timingSafeEqual(actualBuf, Buffer.alloc(actualBuf.length));
     return false;
   }
