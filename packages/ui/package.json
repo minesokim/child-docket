@@ -8,7 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./tokens": "./src/tokens.ts",
-    "./components": "./src/components.tsx",
+    "./components": "./src/components/index.ts",
     "./services-catalog": "./src/services-catalog.tsx",
     "./styles": "./src/styles.css"
   },
