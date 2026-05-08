@@ -5,12 +5,17 @@ import { NextResponse } from 'next/server';
 //   - /login + /otp     → the auth flow itself
 //   - /                 → root, redirects to /login
 //   - root assets       → favicons etc.
+//   - /api/sentry-test  → Sentry capture verification endpoint.
+//     Deliberately throws; needs to be reachable via curl during
+//     deploy verification. Self-guarded by query-flag. REMOVE before
+//     public launch (PRODUCTION-READINESS §B).
 // Everything else (intake forms, returning portal, /docs, etc.) requires
 // an authed session.
 const isPublicRoute = createRouteMatcher([
   '/',
   '/login(.*)',
   '/otp(.*)',
+  '/api/sentry-test(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
