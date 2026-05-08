@@ -131,6 +131,38 @@ export default function LoginPage() {
   const [countryCode, setCountryCode] = usePortalState<string>('phone-country', 'US');
   const [phoneDigits, setPhoneDigits] = usePortalState<string>('phone-digits', '');
 
+  // E2E ticket consumer. Playwright (or any automated client) calls
+  // POST /api/e2e-bypass with phone + otp; on success, the response
+  // contains a Clerk sign-in token. Playwright then navigates to
+  // /login?ticket=<token> and we consume the ticket here. See
+  // /api/e2e-bypass/route.ts for the gates that protect this path.
+  // Tracked for removal in PRODUCTION-READINESS launch-prep.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const ticket = params.get('ticket');
+    if (!ticket || !signInLoaded || !signIn) return;
+    (async () => {
+      try {
+        const res = await signIn.create({ strategy: 'ticket', ticket });
+        if (res.status === 'complete' && res.createdSessionId) {
+          // Strip the ticket from the URL before activation so it
+          // doesn't end up in browser history.
+          window.history.replaceState({}, '', window.location.pathname);
+          // setActive is on the useSignIn hook's setActive, not on
+          // the result object — different from the OTP flow but the
+          // legacy SDK exposes it the same way.
+          // (We re-fetch from the hook on next render; for now
+          // glide will handle the redirect after auth state updates.)
+        }
+      } catch (e) {
+        console.error('[login] ticket consumption failed', e);
+      }
+    })();
+    // signInLoaded gates re-runs; this fires once when both load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signInLoaded]);
+
   // Invite-link prefill: when a preparer sends a client a sign-in link
   // generated from /clients/new, the URL carries `?phone=...&country=...`.
   // Apply it once at mount, then strip the params from the URL so the

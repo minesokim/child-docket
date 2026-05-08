@@ -21,6 +21,12 @@ const isPublicRoute = createRouteMatcher([
   // Returns only binary service-status booleans; no tenant data.
   // Exact path — descendants stay auth-gated.
   '/api/health',
+  // /api/e2e-bypass — Playwright + automation OTP bypass. Protected
+  // by FOUR independent env gates (see route.ts header). Public path
+  // because the caller is unauthenticated by definition (the bypass
+  // grants the auth). REMOVE BEFORE PUBLIC LAUNCH per
+  // docs/PRODUCTION-READINESS.md launch-prep checklist.
+  '/api/e2e-bypass',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

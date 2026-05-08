@@ -110,6 +110,25 @@ The stuff that keeps the PTIN safe.
 
 - **Secret rotation procedures**: 1-page runbook per secret (Anthropic key, Bedrock key, Twilio key, R2 keys, INNGEST_SIGNING_KEY, INNGEST_EVENT_KEY, Clerk keys, DocuSign key, Square key, AWS keys for backup). Annual rotation cadence + ad-hoc rotation if leaked.
 
+### Pre-public-launch removal checklist
+
+Items to delete / disable before any unauthenticated traffic hits the
+deployed apps. Each is intentionally a v1-build-time backdoor or
+debugging affordance; each becomes a security liability the moment
+the product ships to non-design-partner users.
+
+- **`/api/sentry-test` (both apps)** → Delete the route handlers + the `/api/sentry-test(.*)` allowlist line in each app's `src/middleware.ts`. The endpoints deliberately throw 500s + write to Sentry; leaving them in prod creates a free DoS amplifier + dashboard pollution.
+
+- **`/api/e2e-bypass` (client-portal)** → Delete `apps/client-portal/src/app/api/e2e-bypass/route.ts`, the `/api/e2e-bypass` allowlist line in `apps/client-portal/src/middleware.ts`, and the ticket-consumption useEffect in `apps/client-portal/src/app/(auth)/login/page.tsx`. Also unset `E2E_BYPASS_ENABLED`, `E2E_TEST_PHONE`, `E2E_TEST_OTP`, `E2E_ALLOW_PROD_BYPASS` from Vercel env. The four-gate design means the code is dormant without all envs set, but ripping the code is the SOC-2-compliant move.
+
+- **Mock 8879 route** (`apps/client-portal/src/app/portal/sign-8879/page.tsx`) → DocuSign + LexisNexis KBA replaces this in the v1 build. The mock is gated behind `NEXT_PUBLIC_ENABLE_MOCK_8879=true` (dev only) but the file should go.
+
+- **Trial fonts** in `apps/client-portal/public/fonts/trial/` → License forbids commercial use; trial expires 5/14/2026. License OR revert before launch.
+
+- **Hardcoded "Vazant Consulting" / "Antonio Vazquez" copy** in `apps/client-portal/src/app/(intake)/welcome/content.tsx`, `apps/client-portal/src/app/page.tsx`, `apps/client-portal/src/app/(intake)/deposit/page.tsx`. Marked TODO(multi-firm); load-bearing once tenant #2 onboards.
+
+Each removal should be its own commit so the diff is reviewable; the four together are the launch-day cleanup.
+
 ---
 
 ## E. Developer process
