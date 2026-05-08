@@ -28,6 +28,12 @@ export * from './format.js';
 // checklist + slot matching for AI-classified uploads.
 export * from './required-docs.js';
 
+// Webhook signature verification — defends every webhook endpoint we
+// ship (Twilio inbound SMS, Square payment events, DocuSign Connect
+// events). Each provider has its own verifier with timing-safe compare.
+// See module header for the attack model.
+export * from './webhook-verification.js';
+
 // Inngest client lives in shared but is NOT re-exported from the main
 // barrel — `inngest` internally imports `node:async_hooks` which
 // breaks browser bundles. Server code imports via the subpath:
