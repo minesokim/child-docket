@@ -58,7 +58,7 @@ let _workerPromise: Promise<TesseractWorker> | null = null;
 
 async function getOcrWorker(): Promise<TesseractWorker> {
   if (!_workerPromise) {
-    _workerPromise = (async () => {
+    const p = (async () => {
       // Dynamic import — runs only when this function is actually
       // called, NOT at module load. Keeps tesseract out of the
       // /api/inngest cold-start path.
@@ -66,6 +66,19 @@ async function getOcrWorker(): Promise<TesseractWorker> {
       const worker = await tesseract.createWorker('eng');
       return worker as unknown as TesseractWorker;
     })();
+    // Clear the cache on rejection so a transient crash (network
+    // blip during language-data fetch, WASM init flake) doesn't
+    // permanently poison the warm lambda. Without this, a single
+    // failed call would cache the rejected promise — every future
+    // OCR attempt in the same container returns the same rejection
+    // without retrying. With this guard, the next call gets a fresh
+    // attempt.
+    p.catch(() => {
+      if (_workerPromise === p) {
+        _workerPromise = null;
+      }
+    });
+    _workerPromise = p;
   }
   return _workerPromise;
 }

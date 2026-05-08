@@ -5,46 +5,51 @@
 // acceptDocClassification server action.
 //
 // Pipeline (single-doc):
-//   1. Mark parse_phase = 'finalizing'.
-//   2. Fetch original bytes from R2 (storage_key).
-//   3. Run @docket/document-processing.processDocument
-//      → grayscale + Otsu binarize + 1-bit PDF for image inputs;
-//        pass-through for PDF inputs.
-//   4. Resolve final filename from AI suggestion + name prefix + slot side.
-//   5. Compute final_storage_key (parallel to original, with .pdf ext).
-//   6. Upload final PDF to R2.
-//   7. Update documents row with final-side metadata + advance to 'final'.
-//   8. Audit row capturing latency + binarized flag + final size.
+//   1. step('fetch-and-mark-finalizing') — small DB fetch + DEK
+//      decrypt + parsePhase = 'finalizing'. Returns metadata only.
+//   2. step('detect-merge') — small DB lookup for the peer DL side.
+//   3. step('process-and-upload') — fetch R2 bytes (own + maybe peer),
+//      run processDocument / processMultiPage (binarize + OCR + PDF),
+//      upload PDF to R2 at the final key. Returns ONLY metadata.
+//   4. step('persist-final') — DB update on this row + (if merge won)
+//      conditional UPDATE on the front row's merged_into.
+//   5. step('write-audit') — separate step so the audit insert is
+//      independently memoized; Inngest retries can't double-write.
+//
+// CRITICAL DESIGN — multi-MB image + PDF Buffers MUST NOT cross
+// step.run boundaries. Inngest's per-step output is capped at ~4MB
+// (writes to its durable queue). A 5MB phone-photo base64'd is ~6.7MB,
+// blows the cap, the step's RESULT-WRITE fails (after the function
+// body succeeded). Inngest retries → same overflow → 3 retries → run
+// dies. Without an onFailure handler, the row was stuck at 'finalizing'
+// forever.
+//
+// FIXED in this version:
+//   - process-and-upload runs R2 fetch + sharp/Tesseract + R2 upload
+//     all inside one step. Returns only `{ finalStorageKey, sizeBytes,
+//     binarized, ... }` — metadata, fits the cap easily.
+//   - onFailure handler persists parse_phase='failed' + error_message
+//     when Inngest exhausts retries.
+//   - Top-level try/catch around the body persists the same state
+//     defensively if onFailure isn't reached.
+//   - intake_responses query uses desc(taxYear) — earlier code was
+//     orderBy ASC which silently selected the OLDEST year's name.
 //
 // DL MERGE PATH
 //   When this row is the BACK of a driver's-license slot AND the
-//   FRONT row exists for the same client at parse_phase >= 'accepted',
-//   the worker fetches both raw images, binarizes each, and emits a
-//   single 2-page PDF (front = page 1, back = page 2). The merged
-//   row's final_filename drops the Front/Back qualifier
-//   (Minseo_Kim_DriversLicense_CA_2029exp.pdf). The front row is then
-//   marked merged_into_document_id = this row's id, which hides it
-//   from doc listings while preserving the raw upload for audit.
-//
-//   The FRONT row's own finalize is allowed to run normally (single-
-//   page PDF). If the back's finalize runs second and supersedes,
-//   front's single-page PDF becomes an orphan in R2 (cleaned up by a
-//   sweep job). If the front's finalize runs second and finds itself
-//   already merged_into something, it exits early without writing.
+//   FRONT row exists at parse_phase >= 'accepted', the worker fetches
+//   both raw images, binarizes each, and emits a single 2-page PDF
+//   (front = page 1, back = page 2). The merged row's final_filename
+//   drops the Front/Back qualifier. The front row is then marked
+//   merged_into_document_id = this row's id, hidden from listings,
+//   raw upload preserved.
 //
 // CONCURRENCY
 //   Per documentId — protects against double-fires of the same row.
-//   Cross-row coordination (front/back) is handled with conditional
-//   UPDATEs on the merged_into column, so only one side wins the
-//   "I'm the merger" claim.
-//
-// FAILURE
-//   3 retries. After that, parse_phase stays 'failed' and the user
-//   sees "We couldn't process this — try again". The original raw
-//   upload at storage_key is preserved regardless so we can debug +
-//   retry server-side.
+//   Cross-row coordination (front/back) handled with conditional
+//   UPDATEs on the merged_into column.
 
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 import { inngest } from '../inngest-client.js';
 import { schema, withTenant, decryptTree, getTenantDek } from '@docket/db';
 import { asTenantId } from '@docket/shared';
@@ -57,9 +62,7 @@ import {
 
 // ────────────────────────────────────────────────────────────────
 // Slot-id → DL side. Drives DriversLicense → DriversLicenseFront/Back
-// substitution in resolveFinalFilename. Spouse slots use the same
-// side semantics — the `Spouse's` distinction comes from the AI's
-// suggested filename, not the slot id.
+// substitution in resolveFinalFilename.
 // ────────────────────────────────────────────────────────────────
 function dlSideForSlot(slotId: string | null | undefined): 'front' | 'back' | undefined {
   if (!slotId) return undefined;
@@ -75,10 +78,8 @@ function otherSideSlotId(slotId: string): string | null {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Build the canonical name prefix from the intake's full-name field.
-// "Minseo Kim" → "Minseo_Kim". Multi-word names (e.g., "Maria Del
-// Carmen Lopez") preserve every word. Returns null when the answers
-// have no usable name yet (intake mid-flight uploads).
+// Build the canonical name prefix from intake.personal.fullName.
+// "Minseo Kim" → "Minseo_Kim". Returns null when no usable name yet.
 // ────────────────────────────────────────────────────────────────
 function namePrefixFromAnswers(answers: Record<string, unknown> | null): string | null {
   if (!answers) return null;
@@ -87,10 +88,12 @@ function namePrefixFromAnswers(answers: Record<string, unknown> | null): string 
   if (typeof fullName !== 'string') return null;
   const trimmed = fullName.trim();
   if (!trimmed) return null;
-  return trimmed
-    .replace(/\s+/g, '_')
-    .replace(/[^A-Za-z0-9._-]+/g, '')
-    .replace(/^_+|_+$/g, '') || null;
+  return (
+    trimmed
+      .replace(/\s+/g, '_')
+      .replace(/[^A-Za-z0-9._-]+/g, '')
+      .replace(/^_+|_+$/g, '') || null
+  );
 }
 
 const VERIFIED_PHASES: ReadonlySet<string> = new Set([
@@ -99,318 +102,393 @@ const VERIFIED_PHASES: ReadonlySet<string> = new Set([
   'final',
 ]);
 
+// Cap stored error_message so a megabyte-long stack trace doesn't
+// pollute the documents row.
+function truncateError(msg: string | undefined | null, max = 1000): string {
+  if (!msg) return 'finalize failed (no message)';
+  return msg.length > max ? msg.slice(0, max - 3) + '...' : msg;
+}
+
+// Persist parse_phase='failed' + error_message + console.error.
+// Used by both onFailure (Inngest exhausted retries) and the
+// defensive top-level catch. (Workers don't have @sentry/nextjs in
+// scope — Vercel function logs are the observability surface here.)
+async function persistFinalizeFailure(
+  tenantId: string,
+  documentId: string,
+  error: unknown,
+  context: 'onFailure' | 'top-level-catch',
+): Promise<void> {
+  const message = truncateError(error instanceof Error ? error.message : String(error));
+  try {
+    await withTenant(asTenantId(tenantId), async (db) => {
+      await db
+        .update(schema.documents)
+        .set({ parsePhase: 'failed', errorMessage: message })
+        .where(eq(schema.documents.id, documentId));
+    });
+  } catch (persistErr) {
+    console.error(
+      '[finalize-document] failed to persist failure state:',
+      persistErr,
+    );
+  }
+  console.error(
+    `[finalize-document.${context}] documentId=${documentId} tenantId=${tenantId}`,
+    error,
+  );
+}
+
 export const finalizeDocumentFn = inngest.createFunction(
   {
     id: 'finalize-document',
     name: 'Finalize accepted document',
     concurrency: { key: 'event.data.documentId', limit: 1 },
     retries: 3,
+    // Inngest fires onFailure when retries are exhausted. This is
+    // the ONLY place that persists the terminal failure state. The
+    // top-level try/catch in the main handler is defensive and only
+    // fires if the worker body throws synchronously in a way Inngest
+    // doesn't capture.
+    onFailure: async ({ event, error }) => {
+      // event.data carries the original event's data shape (per
+      // Inngest v3 onFailure contract).
+      const inner = (event as { data: { event?: { data?: unknown } } }).data;
+      const original = (inner?.event?.data ?? inner) as {
+        tenantId?: string;
+        documentId?: string;
+      };
+      const tenantId = original.tenantId;
+      const documentId = original.documentId;
+      if (!tenantId || !documentId) {
+        console.error(
+          '[finalize-document.onFailure] missing tenantId/documentId in event payload',
+        );
+        return;
+      }
+      await persistFinalizeFailure(tenantId, documentId, error, 'onFailure');
+    },
   },
   { event: 'document/accepted' },
   async ({ event, step }) => {
     const { tenantId, clientId, documentId } = event.data;
     const startedAt = Date.now();
 
-    // ─── 1. Fetch the documents row + intake name + mark finalizing ───
-    //
-    // Also short-circuits if this row was already merged into another
-    // (e.g., the BACK's finalize ran first and superseded this FRONT
-    // row). In that case the merger has already produced the final
-    // PDF; this worker has nothing to do.
-    const docRow = await step.run('fetch-and-mark-finalizing', async () => {
-      return await withTenant(asTenantId(tenantId), async (db) => {
-        const [doc] = await db
-          .select({
-            id: schema.documents.id,
-            storageKey: schema.documents.storageKey,
-            originalFilename: schema.documents.originalFilename,
-            mimeType: schema.documents.mimeType,
-            aiClassification: schema.documents.aiClassification,
-            aiSuggestedFilename: schema.documents.aiSuggestedFilename,
-            finalFilename: schema.documents.finalFilename,
-            slotId: schema.documents.slotId,
-            mergedIntoDocumentId: schema.documents.mergedIntoDocumentId,
-          })
-          .from(schema.documents)
-          .where(eq(schema.documents.id, documentId))
-          .limit(1);
+    try {
+      // ─── STEP 1. Fetch row + intake + mark finalizing ───
+      // Returns ONLY metadata (no bytes).
+      const docRow = await step.run('fetch-and-mark-finalizing', async () => {
+        return await withTenant(asTenantId(tenantId), async (db) => {
+          const [doc] = await db
+            .select({
+              id: schema.documents.id,
+              storageKey: schema.documents.storageKey,
+              originalFilename: schema.documents.originalFilename,
+              mimeType: schema.documents.mimeType,
+              aiClassification: schema.documents.aiClassification,
+              aiSuggestedFilename: schema.documents.aiSuggestedFilename,
+              finalFilename: schema.documents.finalFilename,
+              slotId: schema.documents.slotId,
+              mergedIntoDocumentId: schema.documents.mergedIntoDocumentId,
+            })
+            .from(schema.documents)
+            .where(eq(schema.documents.id, documentId))
+            .limit(1);
 
-        if (!doc) {
-          throw new Error(`finalize-document: documents row ${documentId} not found`);
-        }
-
-        if (doc.mergedIntoDocumentId) {
-          // Already merged — peer's finalize handled this. No-op.
-          return { ...doc, alreadyMerged: true, intakeAnswers: null };
-        }
-
-        // Pull the intake's encrypted answers blob — `personal.fullName`
-        // is plaintext (encryption only covers SSN/EIN/bank), but we
-        // run decryptTree anyway to no-op on plaintext leaves and stay
-        // consistent with read-side helpers.
-        const [intake] = await db
-          .select({
-            answers: schema.intakeResponses.answers,
-          })
-          .from(schema.intakeResponses)
-          .where(
-            and(
-              eq(schema.intakeResponses.tenantId, tenantId),
-              eq(schema.intakeResponses.clientId, clientId),
-            ),
-          )
-          .orderBy(schema.intakeResponses.taxYear)
-          .limit(1);
-
-        let answers: Record<string, unknown> | null = null;
-        if (intake?.answers) {
-          try {
-            const dek = await getTenantDek(db, asTenantId(tenantId));
-            answers = decryptTree(
-              intake.answers as Record<string, unknown>,
-              dek,
-            ) as Record<string, unknown>;
-          } catch (err) {
-            console.error('[finalize-document] intake decrypt failed:', err);
+          if (!doc) {
+            throw new Error(
+              `finalize-document: documents row ${documentId} not found`,
+            );
           }
+
+          if (doc.mergedIntoDocumentId) {
+            // Already merged — peer's finalize handled this. No-op.
+            return { ...doc, alreadyMerged: true, intakeAnswers: null };
+          }
+
+          // Pull the intake answers blob — desc(taxYear) so we get the
+          // MOST RECENT year's name, not the earliest. Earlier code
+          // had ASC and silently picked stale names from prior years.
+          const [intake] = await db
+            .select({ answers: schema.intakeResponses.answers })
+            .from(schema.intakeResponses)
+            .where(
+              and(
+                eq(schema.intakeResponses.tenantId, tenantId),
+                eq(schema.intakeResponses.clientId, clientId),
+              ),
+            )
+            .orderBy(desc(schema.intakeResponses.taxYear))
+            .limit(1);
+
+          let answers: Record<string, unknown> | null = null;
+          if (intake?.answers) {
+            try {
+              const dek = await getTenantDek(db, asTenantId(tenantId));
+              answers = decryptTree(
+                intake.answers as Record<string, unknown>,
+                dek,
+              ) as Record<string, unknown>;
+            } catch (decryptErr) {
+              // Don't fail finalization on decrypt — just skip the
+              // name prefix. Logged for ops investigation.
+              console.error(
+                `[finalize-document] intake decrypt failed for documentId=${documentId}:`,
+                decryptErr,
+              );
+            }
+          }
+
+          await db
+            .update(schema.documents)
+            .set({ parsePhase: 'finalizing' })
+            .where(eq(schema.documents.id, documentId));
+
+          return { ...doc, alreadyMerged: false, intakeAnswers: answers };
+        });
+      });
+
+      if (docRow.alreadyMerged) {
+        return {
+          ok: true,
+          documentId,
+          skipped: 'already-merged',
+          latencyMs: Date.now() - startedAt,
+        };
+      }
+
+      // ─── STEP 2. DL merge detection ───
+      // Returns ONLY metadata (slot ids + storage keys, no bytes).
+      const dlSide = dlSideForSlot(docRow.slotId);
+      const mergeContext = await step.run('detect-merge', async () => {
+        if (dlSide !== 'back' || !docRow.slotId) {
+          return { merge: false as const };
+        }
+        const otherSlot = otherSideSlotId(docRow.slotId);
+        if (!otherSlot) return { merge: false as const };
+
+        return await withTenant(asTenantId(tenantId), async (db) => {
+          const [other] = await db
+            .select({
+              id: schema.documents.id,
+              storageKey: schema.documents.storageKey,
+              mimeType: schema.documents.mimeType,
+              parsePhase: schema.documents.parsePhase,
+              mergedIntoDocumentId: schema.documents.mergedIntoDocumentId,
+            })
+            .from(schema.documents)
+            .where(
+              and(
+                eq(schema.documents.clientId, clientId),
+                eq(schema.documents.slotId, otherSlot),
+              ),
+            )
+            .limit(1);
+
+          if (!other) return { merge: false as const };
+          if (!VERIFIED_PHASES.has(other.parsePhase)) {
+            return { merge: false as const };
+          }
+          if (other.mergedIntoDocumentId) return { merge: false as const };
+
+          return {
+            merge: true as const,
+            frontId: other.id,
+            frontStorageKey: other.storageKey,
+            frontMimeType: other.mimeType,
+          };
+        });
+      });
+
+      // ─── STEP 3. Process-and-upload (collapsed) ───
+      //
+      // CRITICAL: this entire step body runs inside ONE step.run so
+      // the multi-MB Buffer (raw image bytes + processed PDF bytes)
+      // never crosses the step boundary. Returns ONLY metadata.
+      //
+      // Inngest's per-step output cap (~4MB) was the cause of the
+      // silent finalize hang — phone photos base64-encoded over the
+      // wire blew the cap, the step result-write failed AFTER all
+      // the work was done, retries replayed the same overflow, and
+      // the function died with no error_message because nothing
+      // captured it. Now: bytes stay local, only the final R2 key +
+      // size cross step boundaries.
+      const processed = await step.run('process-and-upload', async () => {
+        // Fetch this row's raw bytes from R2.
+        const ownBuf = await getObjectBytes({ storageKey: docRow.storageKey });
+
+        // Run the processing pipeline (binarize → OCR → PDF, or
+        // pass-through for PDF inputs; multi-page when merging DL).
+        let processingResult;
+        if (mergeContext.merge) {
+          // Fetch the front side too. Both bytes stay inside this step.
+          const frontBuf = await getObjectBytes({
+            storageKey: mergeContext.frontStorageKey,
+          });
+          processingResult = await processMultiPage({
+            pages: [
+              {
+                input: frontBuf,
+                inputMimeType: mergeContext.frontMimeType,
+              },
+              {
+                input: ownBuf,
+                inputMimeType: docRow.mimeType,
+              },
+            ],
+          });
+        } else {
+          processingResult = await processDocument({
+            input: ownBuf,
+            inputMimeType: docRow.mimeType,
+            docKind: docRow.aiClassification ?? 'other',
+          });
         }
 
-        await db
-          .update(schema.documents)
-          .set({ parsePhase: 'finalizing' })
-          .where(eq(schema.documents.id, documentId));
+        // Resolve filename.
+        const namePrefix = namePrefixFromAnswers(docRow.intakeAnswers);
+        const effectiveDlSide:
+          | 'front'
+          | 'back'
+          | 'merged'
+          | undefined = mergeContext.merge ? 'merged' : dlSide;
+        const finalFilename = resolveFinalFilename({
+          suggested: docRow.aiSuggestedFilename ?? '',
+          namePrefix: namePrefix ?? undefined,
+          dlSide: effectiveDlSide,
+          fallback: docRow.originalFilename,
+        });
 
-        return { ...doc, alreadyMerged: false, intakeAnswers: answers };
+        // Compute final storage key (parallel to original, .pdf ext).
+        const finalStorageKey = docRow.storageKey
+          .replace('/docs/', '/docs-final/')
+          .replace(/[^/]+$/, finalFilename);
+
+        // Upload to R2. The PDF bytes stay local to this step.
+        await putObject({
+          storageKey: finalStorageKey,
+          body: processingResult.pdf,
+          mimeType: 'application/pdf',
+        });
+
+        // Return ONLY metadata. Fits well under Inngest's step cap.
+        return {
+          finalStorageKey,
+          finalFilename,
+          sizeBytes: processingResult.sizeBytes,
+          binarized: processingResult.binarized,
+          namePrefix: namePrefix ?? null,
+          effectiveDlSide: effectiveDlSide ?? null,
+          ownLength: ownBuf.length,
+        };
       });
-    });
 
-    if (docRow.alreadyMerged) {
+      // ─── STEP 4. Persist final state on documents (+ merge supersede) ───
+      const persistResult = await step.run('persist-final', async () => {
+        let mergeWon = false;
+        await withTenant(asTenantId(tenantId), async (db) => {
+          await db
+            .update(schema.documents)
+            .set({
+              parsePhase: 'final',
+              finalStorageKey: processed.finalStorageKey,
+              finalFilename: processed.finalFilename,
+              finalSizeBytes: processed.sizeBytes,
+              finalMimeType: 'application/pdf',
+              finalizedAt: new Date(),
+              binarized: processed.binarized,
+              errorMessage: null,
+            })
+            .where(eq(schema.documents.id, documentId));
+
+          if (mergeContext.merge) {
+            const updated = await db
+              .update(schema.documents)
+              .set({
+                mergedIntoDocumentId: documentId,
+                parsePhase: 'final',
+              })
+              .where(
+                and(
+                  eq(schema.documents.id, mergeContext.frontId),
+                  isNull(schema.documents.mergedIntoDocumentId),
+                ),
+              )
+              .returning({ id: schema.documents.id });
+            mergeWon = updated.length > 0;
+          }
+        });
+        return { mergeWon };
+      });
+
+      // ─── STEP 5. Audit row (separate step for idempotency) ───
+      //
+      // Split out so Inngest retries can't double-write. If the
+      // persist-final step succeeded but its result failed to write,
+      // a retry replays persist-final (idempotent UPDATE → no-op),
+      // then runs write-audit fresh. Without splitting, a retry
+      // would re-INSERT the audit row, polluting the audit trail.
+      await step.run('write-audit', async () => {
+        const totalLatencyMs = Date.now() - startedAt;
+        await withTenant(asTenantId(tenantId), async (db) => {
+          await db.insert(schema.actions).values({
+            tenantId,
+            clientId,
+            userId: null,
+            agentId: 'doc-finalizer',
+            actionClass: 'mutate-intake',
+            toolName: 'finalizeDocument',
+            toolInput: {
+              documentId,
+              originalStorageKey: docRow.storageKey,
+              originalSizeBytes: processed.ownLength,
+              inputMimeType: docRow.mimeType,
+              docKind: docRow.aiClassification,
+              slotId: docRow.slotId,
+              namePrefix: processed.namePrefix,
+              dlSide: processed.effectiveDlSide,
+              mergedFrontDocumentId: mergeContext.merge
+                ? mergeContext.frontId
+                : null,
+              mergeWon: persistResult.mergeWon,
+            },
+            toolOutput: {
+              finalStorageKey: processed.finalStorageKey,
+              finalFilename: processed.finalFilename,
+              finalSizeBytes: processed.sizeBytes,
+              binarized: processed.binarized,
+              compressionRatio:
+                processed.ownLength > 0
+                  ? Math.round(
+                      (processed.sizeBytes / processed.ownLength) * 100,
+                    ) / 100
+                  : null,
+            },
+            latencyMs: totalLatencyMs,
+            success: true,
+          });
+        });
+      });
+
       return {
         ok: true,
         documentId,
-        skipped: 'already-merged',
+        finalStorageKey: processed.finalStorageKey,
+        finalFilename: processed.finalFilename,
+        binarized: processed.binarized,
+        sizeBytes: processed.sizeBytes,
+        merged: mergeContext.merge,
+        mergeWon: persistResult.mergeWon,
         latencyMs: Date.now() - startedAt,
       };
+    } catch (err) {
+      // Defensive top-level catch. onFailure is the primary failure
+      // surface (fires once after retries exhaust); this catches
+      // anything Inngest doesn't reach via onFailure (rare). We
+      // re-throw so Inngest still records the run as failed and
+      // continues to retry per the function's retry policy.
+      await persistFinalizeFailure(tenantId, documentId, err, 'top-level-catch');
+      throw err;
     }
-
-    // ─── 2. DL merge detection ───
-    //
-    // Only the BACK side initiates merging. If this is a FRONT slot,
-    // skip the merge attempt and run the single-page path. If/when
-    // the BACK runs its finalize, it picks up this row's raw and
-    // produces the merged 2-page PDF (and supersedes our single-page
-    // by setting our merged_into).
-    const dlSide = dlSideForSlot(docRow.slotId);
-    const mergeContext = await step.run('detect-merge', async () => {
-      if (dlSide !== 'back' || !docRow.slotId) return { merge: false as const };
-      const otherSlot = otherSideSlotId(docRow.slotId);
-      if (!otherSlot) return { merge: false as const };
-
-      return await withTenant(asTenantId(tenantId), async (db) => {
-        const [other] = await db
-          .select({
-            id: schema.documents.id,
-            storageKey: schema.documents.storageKey,
-            mimeType: schema.documents.mimeType,
-            parsePhase: schema.documents.parsePhase,
-            mergedIntoDocumentId: schema.documents.mergedIntoDocumentId,
-          })
-          .from(schema.documents)
-          .where(
-            and(
-              eq(schema.documents.clientId, clientId),
-              eq(schema.documents.slotId, otherSlot),
-            ),
-          )
-          .limit(1);
-
-        if (!other) return { merge: false as const };
-        if (!VERIFIED_PHASES.has(other.parsePhase)) return { merge: false as const };
-        if (other.mergedIntoDocumentId) return { merge: false as const };
-
-        return {
-          merge: true as const,
-          frontId: other.id,
-          frontStorageKey: other.storageKey,
-          frontMimeType: other.mimeType,
-        };
-      });
-    });
-
-    // ─── 3. Fetch raw bytes (own + maybe peer's) ───
-    const rawBytes = await step.run('fetch-from-r2', async () => {
-      const ownBuf = await getObjectBytes({ storageKey: docRow.storageKey });
-      const out: {
-        ownBase64: string;
-        ownLength: number;
-        frontBase64?: string;
-        frontLength?: number;
-      } = {
-        ownBase64: ownBuf.toString('base64'),
-        ownLength: ownBuf.length,
-      };
-      if (mergeContext.merge) {
-        const frontBuf = await getObjectBytes({
-          storageKey: mergeContext.frontStorageKey,
-        });
-        out.frontBase64 = frontBuf.toString('base64');
-        out.frontLength = frontBuf.length;
-      }
-      return out;
-    });
-
-    // ─── 4. Process: single-page or merged 2-page ───
-    const processed = await step.run('process-image', async () => {
-      const ownInput = Buffer.from(rawBytes.ownBase64, 'base64');
-
-      if (mergeContext.merge && rawBytes.frontBase64) {
-        // 2-page merged DL: front is page 1, back is page 2.
-        const frontInput = Buffer.from(rawBytes.frontBase64, 'base64');
-        const result = await processMultiPage({
-          pages: [
-            { input: frontInput, inputMimeType: mergeContext.frontMimeType },
-            { input: ownInput, inputMimeType: docRow.mimeType },
-          ],
-        });
-        return {
-          pdfBase64: result.pdf.toString('base64'),
-          sizeBytes: result.sizeBytes,
-          binarized: result.binarized,
-        };
-      }
-
-      // Single-page (any docKind, including DL front-only or back-only).
-      const result = await processDocument({
-        input: ownInput,
-        inputMimeType: docRow.mimeType,
-        docKind: docRow.aiClassification ?? 'other',
-      });
-      return {
-        pdfBase64: result.pdf.toString('base64'),
-        sizeBytes: result.sizeBytes,
-        binarized: result.binarized,
-      };
-    });
-
-    // ─── 5. Resolve final filename ───
-    // Composition: {NamePrefix}_{ProcessedAISuggestion}.pdf
-    // For merged DL: dlSide = 'merged' strips Front/Back qualifier
-    // entirely (Minseo_Kim_DriversLicense_CA_2029exp.pdf).
-    const namePrefix = namePrefixFromAnswers(docRow.intakeAnswers);
-    const effectiveDlSide: 'front' | 'back' | 'merged' | undefined = mergeContext.merge
-      ? 'merged'
-      : dlSide;
-    const finalFilename = resolveFinalFilename({
-      suggested: docRow.aiSuggestedFilename ?? '',
-      namePrefix: namePrefix ?? undefined,
-      dlSide: effectiveDlSide,
-      fallback: docRow.originalFilename,
-    });
-
-    // ─── 6. Compute final storage key ───
-    const finalStorageKey = docRow.storageKey
-      .replace('/docs/', '/docs-final/')
-      .replace(/[^/]+$/, finalFilename);
-
-    // ─── 7. Upload final PDF to R2 ───
-    await step.run('upload-final', async () => {
-      await putObject({
-        storageKey: finalStorageKey,
-        body: Buffer.from(processed.pdfBase64, 'base64'),
-        mimeType: 'application/pdf',
-      });
-    });
-
-    // ─── 8. Update documents row(s) ───
-    //
-    // For the merge path, we run a CONDITIONAL UPDATE on the front
-    // row: only set merged_into if front.merged_into IS NULL. If the
-    // front's own finalize ran concurrently and beat us to writing
-    // its own state, that's OK — the front's row is already 'final'
-    // with a single-page PDF, and we now overwrite the listing
-    // semantics by setting merged_into = us. The orphaned front
-    // single-page PDF gets cleaned up later by a sweep.
-    const persistResult = await step.run('persist-final', async () => {
-      const totalLatencyMs = Date.now() - startedAt;
-      let mergeWon = false;
-      await withTenant(asTenantId(tenantId), async (db) => {
-        await db
-          .update(schema.documents)
-          .set({
-            parsePhase: 'final',
-            finalStorageKey,
-            finalFilename,
-            finalSizeBytes: processed.sizeBytes,
-            finalMimeType: 'application/pdf',
-            finalizedAt: new Date(),
-            binarized: processed.binarized,
-            errorMessage: null,
-          })
-          .where(eq(schema.documents.id, documentId));
-
-        if (mergeContext.merge) {
-          const updated = await db
-            .update(schema.documents)
-            .set({
-              mergedIntoDocumentId: documentId,
-              parsePhase: 'final',
-            })
-            .where(
-              and(
-                eq(schema.documents.id, mergeContext.frontId),
-                isNull(schema.documents.mergedIntoDocumentId),
-              ),
-            )
-            .returning({ id: schema.documents.id });
-          mergeWon = updated.length > 0;
-        }
-
-        await db.insert(schema.actions).values({
-          tenantId,
-          clientId,
-          userId: null,
-          agentId: 'doc-finalizer',
-          actionClass: 'mutate-intake',
-          toolName: 'finalizeDocument',
-          toolInput: {
-            documentId,
-            originalStorageKey: docRow.storageKey,
-            originalSizeBytes: rawBytes.ownLength,
-            inputMimeType: docRow.mimeType,
-            docKind: docRow.aiClassification,
-            slotId: docRow.slotId,
-            namePrefix: namePrefix ?? null,
-            dlSide: effectiveDlSide ?? null,
-            mergedFrontDocumentId: mergeContext.merge ? mergeContext.frontId : null,
-            mergeWon,
-          },
-          toolOutput: {
-            finalStorageKey,
-            finalFilename,
-            finalSizeBytes: processed.sizeBytes,
-            binarized: processed.binarized,
-            compressionRatio:
-              rawBytes.ownLength > 0
-                ? Math.round((processed.sizeBytes / rawBytes.ownLength) * 100) / 100
-                : null,
-          },
-          latencyMs: totalLatencyMs,
-          success: true,
-        });
-      });
-      return { mergeWon };
-    });
-
-    return {
-      ok: true,
-      documentId,
-      finalStorageKey,
-      finalFilename,
-      binarized: processed.binarized,
-      sizeBytes: processed.sizeBytes,
-      merged: mergeContext.merge,
-      mergeWon: persistResult.mergeWon,
-      latencyMs: Date.now() - startedAt,
-    };
   },
 );
