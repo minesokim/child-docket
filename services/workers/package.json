@@ -16,6 +16,7 @@
     "@docket/db": "workspace:*",
     "@docket/document-processing": "workspace:*",
     "@docket/orchestrator": "workspace:*",
+    "@docket/prompts": "workspace:*",
     "@docket/shared": "workspace:*",
     "@docket/storage": "workspace:*",
     "drizzle-orm": "^0.45.2",

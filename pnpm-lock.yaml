@@ -184,6 +184,12 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/prompts:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/shared:
     dependencies:
       inngest:
@@ -309,6 +315,9 @@ importers:
       '@docket/orchestrator':
         specifier: workspace:*
         version: link:../orchestrator
+      '@docket/prompts':
+        specifier: workspace:*
+        version: link:../../packages/prompts
       '@docket/shared':
         specifier: workspace:*
         version: link:../../packages/shared
