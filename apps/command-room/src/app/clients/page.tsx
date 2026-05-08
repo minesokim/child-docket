@@ -36,38 +36,62 @@ export default async function ClientsPage() {
 
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
 
-  const rows = await withTenant(user.tenantId as TenantId, async (db) => {
-    // For each client: latest engagement (by createdAt desc) + count of open issues.
-    return db.execute<Row>(sql`
-      SELECT
-        c.id,
-        c.full_name as "fullName",
-        c.email,
-        c.phone,
-        c.state,
-        c.intake_status as "intakeStatus",
-        c.preferred_language as "preferredLanguage",
-        c.created_at as "createdAt",
-        e.type as "engagementType",
-        e.status as "engagementStatus",
-        e.tax_year as "taxYear",
-        COALESCE(i.open_count, 0)::int as "openIssueCount"
-      FROM ${schema.clients} c
-      LEFT JOIN LATERAL (
-        SELECT type, status, tax_year
-        FROM ${schema.engagements}
-        WHERE client_id = c.id
-        ORDER BY created_at DESC
-        LIMIT 1
-      ) e ON true
-      LEFT JOIN LATERAL (
-        SELECT COUNT(*) as open_count
-        FROM ${schema.issues}
-        WHERE client_id = c.id AND status = 'open'
-      ) i ON true
-      ORDER BY c.full_name ASC
-    `);
-  });
+  // Diagnostic wrap: when this query fails, the error otherwise surfaces
+  // as a generic Next.js 500 with a digest. Log the full driver error +
+  // tenant context so the runtime logs show which Neon failure mode hit
+  // (timeout / pool-exhausted / RLS / column-missing). The page still
+  // 500s — re-throw after logging so the framework error boundary kicks
+  // in.
+  let rows: Row[];
+  try {
+    rows = (await withTenant(user.tenantId as TenantId, async (db) => {
+      // For each client: latest engagement (by createdAt desc) + count of open issues.
+      return db.execute<Row>(sql`
+        SELECT
+          c.id,
+          c.full_name as "fullName",
+          c.email,
+          c.phone,
+          c.state,
+          c.intake_status as "intakeStatus",
+          c.preferred_language as "preferredLanguage",
+          c.created_at as "createdAt",
+          e.type as "engagementType",
+          e.status as "engagementStatus",
+          e.tax_year as "taxYear",
+          COALESCE(i.open_count, 0)::int as "openIssueCount"
+        FROM ${schema.clients} c
+        LEFT JOIN LATERAL (
+          SELECT type, status, tax_year
+          FROM ${schema.engagements}
+          WHERE client_id = c.id
+          ORDER BY created_at DESC
+          LIMIT 1
+        ) e ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) as open_count
+          FROM ${schema.issues}
+          WHERE client_id = c.id AND status = 'open'
+        ) i ON true
+        ORDER BY c.full_name ASC
+      `);
+    })) as unknown as Row[];
+  } catch (err) {
+    const e = err as Error & { code?: string; cause?: { message?: string; code?: string } };
+    console.error(
+      '[/clients] query failed',
+      JSON.stringify({
+        tenantId: user.tenantId,
+        userId: user.id,
+        message: e.message,
+        code: e.code ?? null,
+        causeMessage: e.cause?.message ?? null,
+        causeCode: e.cause?.code ?? null,
+        stack: e.stack?.split('\n').slice(0, 6).join('\n'),
+      }),
+    );
+    throw err;
+  }
 
   return (
     <AppShell

@@ -109,7 +109,24 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
       return { ok: true, documents };
     });
   } catch (error) {
-    console.error('[listDocuments] CAUGHT:', error);
+    // Surface driver-level details so a "Failed query: select..." 500
+    // doesn't black-box the actual Neon failure mode (timeout / pool /
+    // RLS / column-missing). The error.message in the page response
+    // stays plain-English; the structured detail goes to runtime logs.
+    const e = error as Error & {
+      code?: string;
+      cause?: { message?: string; code?: string };
+    };
+    console.error(
+      '[listDocuments] CAUGHT',
+      JSON.stringify({
+        message: e.message,
+        code: e.code ?? null,
+        causeMessage: e.cause?.message ?? null,
+        causeCode: e.cause?.code ?? null,
+        stack: e.stack?.split('\n').slice(0, 6).join('\n'),
+      }),
+    );
     Sentry.captureException(error, { tags: { component: 'client-portal-docs-list' } });
     return {
       ok: false,
