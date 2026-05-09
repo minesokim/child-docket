@@ -5,5 +5,8 @@
     "outDir": "dist"
   },
   "include": ["src/**/*", "scripts/**/*"],
-  "exclude": ["scripts/install-docusign-sandbox.ts"]
+  "exclude": [
+    "scripts/install-docusign-sandbox.ts",
+    "scripts/smoke-docusign-8879.ts"
+  ]
 }

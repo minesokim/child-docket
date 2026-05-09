@@ -35,6 +35,12 @@ const isPublicRoute = createRouteMatcher([
   // tenant's auth token before any DB write. Spoofed POSTs without a
   // valid signature are rejected with 401.
   '/api/webhooks/twilio/(.*)',
+  // DocuSign Connect webhook — DocuSign POSTs envelope-completed
+  // events here when 8879 KBA passes + signature lands. The route
+  // verifies X-DocuSign-Signature-1 (HMAC-SHA256 over the raw body)
+  // against DOCUSIGN_CONNECT_HMAC_KEY. Unverified events are
+  // dropped with 401 before any DB read or write.
+  '/api/webhooks/docusign/(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

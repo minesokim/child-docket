@@ -19,6 +19,7 @@ import { CommandShell } from '@/components/command-shell';
 import { IntakeSummary } from '@/components/intake-summary';
 import { DocumentsSection } from '@/components/documents-section';
 import { SignaturesSection } from '@/components/signatures-section';
+import { Sign8879Form } from '@/components/sign-8879-form';
 import { PaymentsSection, type PaymentRow } from '@/components/payments-section';
 import { DeleteClientButton } from '@/components/delete-client-button';
 import { PIIUnlockProvider } from '@/components/pii-unlock-provider';
@@ -155,16 +156,17 @@ export default async function ClientDetailPage({ params }: PageProps) {
       .where(eq(schema.payments.clientId, id))
       .orderBy(desc(schema.payments.createdAt));
 
-    // Probe whether the tenant has a Square credential at all. The
-    // result drives whether the "Create deposit link" CTA is enabled
-    // or shows a "Configure Square →" link instead. tenant_credentials
-    // is RLS-scoped via withTenant so this is safe.
+    // Probe which integration credentials the tenant has. Drives
+    // whether per-section CTAs render in their "configured" or
+    // "not yet configured" state. tenant_credentials is RLS-scoped
+    // via withTenant so this is safe (one round-trip, returns kinds
+    // for THIS tenant only).
     const credRows = await db
       .select({ kind: schema.tenantCredentials.kind })
-      .from(schema.tenantCredentials)
-      .where(eq(schema.tenantCredentials.kind, 'square'))
-      .limit(1);
-    const hasSquareCred = credRows.length > 0;
+      .from(schema.tenantCredentials);
+    const credKinds = new Set(credRows.map((r) => r.kind));
+    const hasSquareCred = credKinds.has('square');
+    const hasDocuSignCred = credKinds.has('docusign');
 
     return {
       client,
@@ -176,11 +178,12 @@ export default async function ClientDetailPage({ params }: PageProps) {
       signatures,
       payments,
       hasSquareCred,
+      hasDocuSignCred,
     };
   });
 
   if (!data) notFound();
-  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred } = data;
+  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred, hasDocuSignCred } = data;
 
   const initials = client.fullName
     .split(/\s+/)
@@ -306,6 +309,16 @@ export default async function ClientDetailPage({ params }: PageProps) {
               count={signatures.length > 0 ? signatures.length : undefined}
             >
               <SignaturesSection t={t} signatures={signatures} />
+              <Sign8879Form
+                t={t}
+                clientId={client.id}
+                defaultTaxYear={engagement?.taxYear ?? new Date().getFullYear()}
+                portalBaseUrl={
+                  process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ?? 'https://docket-portal.vercel.app'
+                }
+                canRequest={hasRole(user, ['firm_owner', 'preparer'])}
+                hasDocuSignCred={hasDocuSignCred}
+              />
             </Section>
 
             <Section t={t} label="Engagement">
