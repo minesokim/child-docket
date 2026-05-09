@@ -60,3 +60,13 @@ export {
   persistAgentAction,
   type PersistAgentActionOptions,
 } from './agent-action-log.js';
+
+// Authority search — full-text + lookup over authorities +
+// authority_chunks. Used by the citation-verifier loop and by
+// retrieval-augmented agents (Discovery, notice-drafter).
+export {
+  searchAuthorities,
+  lookupAuthorityByCitation,
+  type AuthoritySearchHit,
+  type AuthoritySearchOptions,
+} from './authority-search.js';
