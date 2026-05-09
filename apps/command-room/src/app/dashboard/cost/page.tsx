@@ -350,7 +350,23 @@ export default async function CostDashboardPage({
               </div>
               <div className="cd-stat-eyebrow">Cached tokens</div>
               <div className="cd-stat-value">{formatTokens(data.totals.total_cached_tokens)}</div>
-              <div className="cd-stat-supporting">prompt-cache hits</div>
+              <div className="cd-stat-supporting">
+                {(() => {
+                  // Cache hit rate as % of total input tokens. Per
+                  // Anthropic prompt-caching: cached tokens cost ~10%
+                  // of normal input tokens, so this percent maps
+                  // directly to cost savings on the input side.
+                  // Target: 80%+ for repeated-system-prompt agents
+                  // (per COSTS.md anchor).
+                  const input = Number(data.totals.total_input_tokens);
+                  const cached = Number(data.totals.total_cached_tokens);
+                  if (!Number.isFinite(input) || input <= 0) {
+                    return 'prompt-cache hits';
+                  }
+                  const pct = Math.min(100, Math.round((cached / input) * 100));
+                  return `${pct}% cache hit on input`;
+                })()}
+              </div>
             </article>
           </section>
 
