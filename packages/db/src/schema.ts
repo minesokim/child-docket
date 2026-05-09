@@ -685,6 +685,31 @@ export const tenantCredentials = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// Gmail sync state — per-tenant polling cursor for the gmail-poll
+// Inngest cron. One row per tenant; tracks Gmail historyId + the
+// timestamps the dashboard uses to show stale-poll tenants.
+// Migration 0023.
+// ────────────────────────────────────────────────────────────────
+export const gmailSyncState = pgTable(
+  'gmail_sync_state',
+  {
+    tenantId: uuid('tenant_id').primaryKey().references(() => tenants.id, { onDelete: 'cascade' }),
+    // Gmail's history cursor. ~7-day TTL per Gmail API docs — falls
+    // out of window → 404 from history.list → bootstrap from current
+    // historyId via getProfile.
+    lastHistoryId: text('last_history_id'),
+    lastPolledAt: timestamp('last_polled_at', { withTimezone: true }),
+    lastAdvancedAt: timestamp('last_advanced_at', { withTimezone: true }),
+    totalClassified: integer('total_classified').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    polledIdx: index('gmail_sync_state_polled_idx').on(t.lastPolledAt),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────
 // Notice responses — IRS notices and the drafted/sent responses.
 // Powers the irs_notice issue type. Antonio uploads a notice or it arrives via
 // IRS Solutions API (when key lands); AI classifies + drafts response.
