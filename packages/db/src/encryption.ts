@@ -84,7 +84,7 @@ export function isEncrypted(value: unknown): value is EncryptedMarker {
 //   - A tenant DEK for encrypting fields (encryptFieldForTenant)
 // ────────────────────────────────────────────────────────────────
 
-function encryptWithKey(plaintext: string, key: Buffer): EncryptedMarker {
+function encryptWithKey(plaintext: string, key: Buffer, aad?: Buffer): EncryptedMarker {
   if (typeof plaintext !== 'string') {
     throw new TypeError(`encryptWithKey expects string, got ${typeof plaintext}`);
   }
@@ -93,6 +93,15 @@ function encryptWithKey(plaintext: string, key: Buffer): EncryptedMarker {
   }
   const iv = randomBytes(IV_LEN);
   const cipher = createCipheriv(ALGO, key, iv);
+  if (aad && aad.length > 0) {
+    // AAD (Additional Authenticated Data) — authenticated but not
+    // encrypted. The GCM auth tag covers BOTH the ciphertext AND the
+    // AAD, so a swap of the encrypted blob to a different DB location
+    // (different tenant_id/client_id/path) fails the decrypt-time
+    // auth check because the caller's recomputed AAD wouldn't match
+    // the AAD baked into the tag.
+    cipher.setAAD(aad);
+  }
   const ciphertext = Buffer.concat([
     cipher.update(plaintext, 'utf8'),
     cipher.final(),
@@ -103,7 +112,7 @@ function encryptWithKey(plaintext: string, key: Buffer): EncryptedMarker {
   };
 }
 
-function decryptWithKey(value: EncryptedMarker, key: Buffer): string {
+function decryptWithKey(value: EncryptedMarker, key: Buffer, aad?: Buffer): string {
   if (key.length !== KEY_LEN) {
     throw new Error(`decryptWithKey expects a ${KEY_LEN}-byte key, got ${key.length}`);
   }
@@ -115,6 +124,9 @@ function decryptWithKey(value: EncryptedMarker, key: Buffer): string {
   const tag = buf.subarray(IV_LEN, IV_LEN + TAG_LEN);
   const ciphertext = buf.subarray(IV_LEN + TAG_LEN);
   const decipher = createDecipheriv(ALGO, key, iv);
+  if (aad && aad.length > 0) {
+    decipher.setAAD(aad);
+  }
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
     'utf8',
@@ -167,6 +179,114 @@ export function decryptDek(marker: EncryptedMarker): Buffer {
 // pure (no DB dependency) and makes the call site explicit about which
 // tenant's key it's using.
 // ────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────
+// AAD binding — extra defense against ciphertext-relocation attacks.
+//
+// Without AAD, an attacker with DB write access could move an
+// encrypted blob from one (tenant, client, path) to another and the
+// decryption would still succeed — both rows belong to the same
+// tenant DEK. AAD binds the ciphertext to a SPECIFIC location:
+// decrypt time recomputes the AAD from the row's identity and
+// passes it to setAAD(). If the AAD doesn't match what was used at
+// encrypt time, the GCM auth tag check fails.
+//
+// AAD format (canonical):
+//   tenant:<uuid>;client:<uuid>;path:<json-path>
+//
+// The AAD is NOT secret. It just needs to be deterministic. Callers
+// reconstruct it from the row's tenant_id + client_id + the JSONB
+// path the encrypted leaf lives at.
+//
+// MIGRATION POSTURE
+//   v0 ciphertexts were written WITHOUT AAD. New writes use AAD.
+//   decryptIfMarkedForTenantWithAAD tries AAD-bound first, falls
+//   back to AAD-less, falls back to master KEK (legacy). Reads
+//   keep working across the migration window. The /reencrypt-with-
+//   aad script (followup) walks the JSONB tree and re-writes leaves
+//   in AAD-bound form.
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Build the AAD bytes from row-identity components. Use the same
+ * components on encrypt + decrypt; otherwise the auth tag check
+ * fails. Empty / undefined components are skipped (so callers can
+ * pass partial context — e.g., for a credentials write where the
+ * client_id isn't known, just pass tenantId).
+ */
+export function deriveAAD(input: {
+  tenantId?: string;
+  clientId?: string | null;
+  path?: string;
+}): Buffer {
+  const parts: string[] = [];
+  if (input.tenantId) parts.push(`tenant:${input.tenantId}`);
+  if (input.clientId) parts.push(`client:${input.clientId}`);
+  if (input.path) parts.push(`path:${input.path}`);
+  return Buffer.from(parts.join(';'), 'utf8');
+}
+
+/**
+ * Encrypt a plaintext PII field with a tenant-specific DEK plus AAD
+ * binding. Use over encryptFieldForTenant for new writes; the AAD
+ * makes the ciphertext non-relocatable.
+ */
+export function encryptFieldForTenantWithAAD(
+  plaintext: string,
+  dek: Buffer,
+  aad: Buffer,
+): EncryptedMarker {
+  return encryptWithKey(plaintext, dek, aad);
+}
+
+/**
+ * Decrypt an AAD-bound ciphertext. Throws on AAD mismatch (the GCM
+ * auth tag won't validate). Use when you KNOW the row was written
+ * with AAD; otherwise use decryptIfMarkedForTenantWithAAD which
+ * tries-then-falls-back gracefully.
+ */
+export function decryptFieldForTenantWithAAD(
+  marker: EncryptedMarker,
+  dek: Buffer,
+  aad: Buffer,
+): string {
+  return decryptWithKey(marker, dek, aad);
+}
+
+/**
+ * Tree-walking decrypt that tries AAD-bound first, falls back to
+ * AAD-less, then falls back to master-KEK legacy. Used during the
+ * AAD-migration window so existing data keeps reading while new
+ * writes go AAD-bound.
+ *
+ * The AAD passed here is the EXPECTED AAD if the row was written
+ * with AAD. When AAD doesn't match (legacy write), GCM throws and we
+ * try the AAD-less path next.
+ */
+export function decryptIfMarkedForTenantWithAAD(
+  value: unknown,
+  dek: Buffer,
+  aad: Buffer,
+): unknown {
+  if (!isEncrypted(value)) return value;
+  // 1. Try AAD-bound decrypt (new writes).
+  try {
+    return decryptFieldForTenantWithAAD(value, dek, aad);
+  } catch {
+    // 2. Try AAD-less decrypt (pre-AAD writes with tenant DEK).
+    try {
+      return decryptFieldForTenant(value, dek);
+    } catch (errNoAad) {
+      // 3. Try master-KEK decrypt (legacy pre-tenant-DEK).
+      try {
+        return decryptField(value);
+      } catch {
+        // Surface the no-AAD error — most informative for ops.
+        throw errNoAad;
+      }
+    }
+  }
+}
 
 /**
  * Encrypt a plaintext PII field with a tenant-specific DEK. Returns an

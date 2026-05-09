@@ -28,6 +28,14 @@ export {
   encryptFieldForTenant,
   decryptFieldForTenant,
   decryptIfMarkedForTenant,
+  // AAD-bound variants (new — bind ciphertext to (tenantId, clientId,
+  // path) so it can't be relocated across rows). Use for new writes;
+  // existing data reads via decryptIfMarkedForTenantWithAAD which
+  // falls back to AAD-less + master-KEK during the migration window.
+  encryptFieldForTenantWithAAD,
+  decryptFieldForTenantWithAAD,
+  decryptIfMarkedForTenantWithAAD,
+  deriveAAD,
   decryptTree,
   // Master-KEK helpers (internal — used by dek-cache)
   encryptDek,

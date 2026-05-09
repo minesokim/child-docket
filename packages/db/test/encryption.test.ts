@@ -313,3 +313,121 @@ describe('decryptIfMarkedForTenant — legacy master-encrypted fallback', () => 
     expect(() => decryptIfMarkedForTenant(garbage, dek)).toThrow();
   });
 });
+
+// ────────────────────────────────────────────────────────────────
+// AAD-bound API — ciphertext locked to a (tenantId, clientId, path)
+// triple. Defense against ciphertext-relocation attacks.
+// ────────────────────────────────────────────────────────────────
+
+describe('AAD-bound encryption — ciphertext relocation defense', () => {
+  test('round-trip: same AAD on encrypt + decrypt → plaintext recovered', () => {
+    const {
+      encryptFieldForTenantWithAAD,
+      decryptFieldForTenantWithAAD,
+      deriveAAD,
+    } = require('../src/encryption.ts');
+    const dek = randomBytes(32);
+    const aad = deriveAAD({
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      clientId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      path: 'personal.ssn',
+    });
+    const ct = encryptFieldForTenantWithAAD('123-45-6789', dek, aad);
+    expect(decryptFieldForTenantWithAAD(ct, dek, aad)).toBe('123-45-6789');
+  });
+
+  test('different AAD on decrypt → throws (relocation attack blocked)', () => {
+    const {
+      encryptFieldForTenantWithAAD,
+      decryptFieldForTenantWithAAD,
+      deriveAAD,
+    } = require('../src/encryption.ts');
+    const dek = randomBytes(32);
+    const aadOriginal = deriveAAD({
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      clientId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      path: 'personal.ssn',
+    });
+    const aadAttacker = deriveAAD({
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      clientId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', // DIFFERENT client
+      path: 'personal.ssn',
+    });
+    const ct = encryptFieldForTenantWithAAD('123-45-6789', dek, aadOriginal);
+    // Attacker tries to "paste" the ciphertext into a different client's row.
+    // Recompute AAD from THAT row's identity → AAD mismatch → tag check fails.
+    expect(() => decryptFieldForTenantWithAAD(ct, dek, aadAttacker)).toThrow();
+  });
+
+  test('different path on decrypt → throws (intra-row relocation blocked)', () => {
+    const {
+      encryptFieldForTenantWithAAD,
+      decryptFieldForTenantWithAAD,
+      deriveAAD,
+    } = require('../src/encryption.ts');
+    const dek = randomBytes(32);
+    const aadSsn = deriveAAD({
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      clientId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      path: 'personal.ssn',
+    });
+    const aadEin = deriveAAD({
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      clientId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      path: 'business.ein', // DIFFERENT path within same client
+    });
+    const ssnCt = encryptFieldForTenantWithAAD('123-45-6789', dek, aadSsn);
+    // Attacker can't move the SSN ciphertext into the EIN slot — same
+    // tenant, same client, but path-bound AAD blocks it.
+    expect(() => decryptFieldForTenantWithAAD(ssnCt, dek, aadEin)).toThrow();
+  });
+
+  test('decryptIfMarkedForTenantWithAAD falls back to AAD-less for legacy data', () => {
+    const {
+      decryptIfMarkedForTenantWithAAD,
+      deriveAAD,
+    } = require('../src/encryption.ts');
+    const dek = randomBytes(32);
+    // Legacy ciphertext: encrypted with tenant DEK but NO AAD.
+    const legacyCt = encryptFieldForTenant('legacy-ssn-555-12-3456', dek);
+    const aad = deriveAAD({ tenantId: 'tx', clientId: 'cy', path: 'legacy.ssn' });
+    // Decrypt with AAD path — should fall back to AAD-less path and succeed.
+    expect(decryptIfMarkedForTenantWithAAD(legacyCt, dek, aad)).toBe(
+      'legacy-ssn-555-12-3456',
+    );
+  });
+
+  test('decryptIfMarkedForTenantWithAAD prefers AAD-bound when both work', () => {
+    const {
+      encryptFieldForTenantWithAAD,
+      decryptIfMarkedForTenantWithAAD,
+      deriveAAD,
+    } = require('../src/encryption.ts');
+    const dek = randomBytes(32);
+    const aad = deriveAAD({ tenantId: 'tx', clientId: 'cy', path: 'p.x' });
+    const ct = encryptFieldForTenantWithAAD('aad-bound-secret', dek, aad);
+    expect(decryptIfMarkedForTenantWithAAD(ct, dek, aad)).toBe('aad-bound-secret');
+  });
+
+  test('plain non-marker values pass through AAD decryptor unchanged', () => {
+    const { decryptIfMarkedForTenantWithAAD, deriveAAD } = require('../src/encryption.ts');
+    const dek = randomBytes(32);
+    const aad = deriveAAD({ tenantId: 'tx' });
+    expect(decryptIfMarkedForTenantWithAAD('plain-string', dek, aad)).toBe('plain-string');
+    expect(decryptIfMarkedForTenantWithAAD(42, dek, aad)).toBe(42);
+    expect(decryptIfMarkedForTenantWithAAD(null, dek, aad)).toBe(null);
+  });
+
+  test('deriveAAD is deterministic + skips empty components', () => {
+    const { deriveAAD } = require('../src/encryption.ts');
+    const a = deriveAAD({ tenantId: 'tx', clientId: 'cy', path: 'p' });
+    const b = deriveAAD({ tenantId: 'tx', clientId: 'cy', path: 'p' });
+    expect(a.equals(b)).toBe(true);
+
+    const c = deriveAAD({ tenantId: 'tx' });
+    expect(c.toString('utf8')).toBe('tenant:tx');
+
+    const d = deriveAAD({ tenantId: 'tx', clientId: null, path: 'p' });
+    expect(d.toString('utf8')).toBe('tenant:tx;path:p');
+  });
+});
