@@ -33,7 +33,15 @@
 import { redirect } from 'next/navigation';
 import { getCurrentDocketUser } from '@/lib/current-user';
 import { CommandShell } from '@/components/command-shell';
-import { loadCostData, type CostData, type Window, ALLOWED_WINDOWS, WINDOW_INTERVAL } from '@/lib/cost-rollups';
+import {
+  loadCostData,
+  loadCostAlerts,
+  type CostData,
+  type CostAlertRow,
+  type Window,
+  ALLOWED_WINDOWS,
+  WINDOW_INTERVAL,
+} from '@/lib/cost-rollups';
 import './cost-dashboard.css';
 
 export const runtime = 'nodejs';
@@ -107,6 +115,110 @@ function IconCache() {
   );
 }
 
+// Inline alerts banner. Renders the 1–N most recent
+// cost_(runaway|outlier|spike).detected audit rows. Never overrides the
+// page; it adds context above the rollup so Antonio sees the spike before
+// he reads the chart.
+//
+// Anti-AI-slop discipline:
+//   - No left-border accents (per CLAUDE.md §19)
+//   - No decorative icons; one inline SVG warning glyph at the eyebrow
+//   - Forest green primary for "ok" tones, ember (clay) for warning
+//   - Real numbers in the copy, not "high cost" generic language
+function CostAlertsBanner({ alerts }: { alerts: CostAlertRow[] }) {
+  return (
+    <section className="cd-alerts" aria-live="polite" aria-label="Recent cost alerts">
+      <header className="cd-alerts-head">
+        <span className="cd-alerts-eyebrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
+          {alerts.length} {alerts.length === 1 ? 'alert' : 'alerts'} this window
+        </span>
+        <span className="cd-alerts-meta">Auto-detected by background crons</span>
+      </header>
+      <ul className="cd-alerts-list">
+        {alerts.map((a, i) => (
+          <li key={`${a.detected_at}-${i}`} className="cd-alert-row">
+            <CostAlertLine alert={a} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function CostAlertLine({ alert }: { alert: CostAlertRow }) {
+  const detected = new Date(alert.detected_at);
+  const ago = formatRelative(detected);
+
+  if (alert.kind === 'cost_runaway.detected') {
+    const scope = (alert.payload.scope as string | undefined) ?? '?';
+    const total = Number(alert.payload.total_usd ?? 0);
+    const threshold = Number(alert.payload.threshold_usd ?? 0);
+    return (
+      <>
+        <span className="cd-alert-kind cd-alert-kind-runaway">Runaway</span>
+        <span className="cd-alert-line">
+          {scope === 'global' ? 'Global' : 'Per-tenant'} spend hit{' '}
+          <strong>{formatUsd(total)}</strong> over 24h (ceiling{' '}
+          {formatUsd(threshold)})
+        </span>
+        <span className="cd-alert-time">{ago}</span>
+      </>
+    );
+  }
+
+  if (alert.kind === 'cost_outlier.detected') {
+    const cost = Number(alert.payload.cost_usd ?? 0);
+    const threshold = Number(alert.payload.threshold_usd ?? 0);
+    const tool = (alert.payload.tool_name as string | undefined) ?? 'unknown call';
+    const model = (alert.payload.model_used as string | undefined) ?? null;
+    return (
+      <>
+        <span className="cd-alert-kind cd-alert-kind-outlier">Outlier</span>
+        <span className="cd-alert-line">
+          One <code>{tool}</code>
+          {model ? <> on <code>{model}</code></> : null} cost{' '}
+          <strong>{formatUsd(cost)}</strong> (threshold {formatUsd(threshold)})
+        </span>
+        <span className="cd-alert-time">{ago}</span>
+      </>
+    );
+  }
+
+  if (alert.kind === 'cost_spike.detected') {
+    const today = Number(alert.payload.today_usd ?? 0);
+    const yesterday = Number(alert.payload.yesterday_usd ?? 0);
+    const ratio = Number(alert.payload.ratio ?? 0);
+    return (
+      <>
+        <span className="cd-alert-kind cd-alert-kind-spike">Spike</span>
+        <span className="cd-alert-line">
+          Today {formatUsd(today)} vs yesterday {formatUsd(yesterday)} —{' '}
+          <strong>{ratio.toFixed(2)}× day-over-day</strong>
+        </span>
+        <span className="cd-alert-time">{ago}</span>
+      </>
+    );
+  }
+
+  return null;
+}
+
+function formatRelative(d: Date): string {
+  const ms = Date.now() - d.getTime();
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
 export default async function CostDashboardPage({
   searchParams,
 }: {
@@ -137,9 +249,13 @@ export default async function CostDashboardPage({
   }
 
   let data: CostData | null = null;
+  let alerts: CostAlertRow[] = [];
   let errorMessage: string | null = null;
   try {
-    data = await loadCostData(user.tenantId, WINDOW_INTERVAL[windowKey]);
+    [data, alerts] = await Promise.all([
+      loadCostData(user.tenantId, WINDOW_INTERVAL[windowKey]),
+      loadCostAlerts(user.tenantId, WINDOW_INTERVAL[windowKey]),
+    ]);
   } catch (err) {
     errorMessage = err instanceof Error ? err.message : 'Database unreachable';
   }
@@ -182,6 +298,10 @@ export default async function CostDashboardPage({
         </div>
       ) : (
         <>
+          {alerts.length > 0 ? (
+            <CostAlertsBanner alerts={alerts} />
+          ) : null}
+
           {/* Stats-card row — 5 modular cards, tinted icon-circle + eyebrow + big number + supporting */}
           <section className="cd-stats" aria-label="Spend summary">
             <article className="cd-stat">

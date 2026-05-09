@@ -59,6 +59,23 @@ export interface CostData {
 }
 
 /**
+ * One row of the alerts banner shown on /dashboard/cost. Each shape is
+ * a snapshot of a `cost_runaway.detected` / `cost_outlier.detected` /
+ * `cost_spike.detected` audit row. The cost-runaway-alert,
+ * cost-outlier-alert, and cost-spike-alert Inngest crons emit these.
+ */
+export type CostAlertKind =
+  | 'cost_runaway.detected'
+  | 'cost_outlier.detected'
+  | 'cost_spike.detected';
+
+export interface CostAlertRow {
+  kind: CostAlertKind;
+  detected_at: string;
+  payload: Record<string, unknown>;
+}
+
+/**
  * Aggregate cost telemetry for a tenant over a relative time window.
  * 5 independent SUM/GROUP BY queries run in parallel; total latency
  * is one query's worth (~30-50ms on dev DB; bounded by the slowest).
@@ -144,5 +161,59 @@ export async function loadCostData(
       perProvider: perProvider as unknown as ProviderSpendRow[],
       perDay: perDay as unknown as DaySpendRow[],
     };
+  });
+}
+
+interface RawAlertRow {
+  kind: string;
+  detected_at: string;
+  payload: unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * Load the recent cost alerts for a tenant, newest first.
+ *
+ * Surfaced on /dashboard/cost as a banner above the rollup. Three kinds:
+ *   - cost_runaway.detected — 24h aggregate exceeded (per-tenant or global)
+ *   - cost_outlier.detected — single call exceeded threshold ($0.50 default)
+ *   - cost_spike.detected   — today's spend > 1.5× yesterday's
+ *
+ * RLS-bound via withTenant — Antonio sees his alerts only.
+ */
+export async function loadCostAlerts(
+  tenantId: string,
+  interval: string,
+  limit = 12,
+): Promise<CostAlertRow[]> {
+  return await withTenant(tenantId as TenantId, async (db) => {
+    const rows = await db.execute<RawAlertRow>(sql`
+      SELECT
+        tool_name AS kind,
+        created_at::text AS detected_at,
+        tool_input AS payload
+      FROM actions
+      WHERE tool_name IN (
+        'cost_runaway.detected',
+        'cost_outlier.detected',
+        'cost_spike.detected'
+      )
+        AND created_at > now() - (${interval})::interval
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `);
+    return (rows as unknown as RawAlertRow[])
+      .filter((r): r is RawAlertRow & { kind: CostAlertKind } =>
+        r.kind === 'cost_runaway.detected' ||
+        r.kind === 'cost_outlier.detected' ||
+        r.kind === 'cost_spike.detected',
+      )
+      .map((r) => ({
+        kind: r.kind,
+        detected_at: r.detected_at,
+        payload: (r.payload && typeof r.payload === 'object'
+          ? (r.payload as Record<string, unknown>)
+          : {}) as Record<string, unknown>,
+      }));
   });
 }

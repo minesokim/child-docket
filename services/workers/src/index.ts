@@ -9,6 +9,8 @@ export { classifyNoticeFn } from './functions/classify-notice.js';
 export { finalizeDocumentFn } from './functions/finalize-document.js';
 export { verifyActionsChain } from './functions/verify-actions-chain.js';
 export { costRunawayAlert } from './functions/cost-runaway-alert.js';
+export { costOutlierAlert } from './functions/cost-outlier-alert.js';
+export { costSpikeAlert } from './functions/cost-spike-alert.js';
 
 // Re-export the agent factories for direct invocation in tests / scripts.
 export { classifySignal } from './agents/triage-classifier.js';
@@ -72,6 +74,8 @@ import { classifyNoticeFn } from './functions/classify-notice.js';
 import { finalizeDocumentFn } from './functions/finalize-document.js';
 import { verifyActionsChain } from './functions/verify-actions-chain.js';
 import { costRunawayAlert } from './functions/cost-runaway-alert.js';
+import { costOutlierAlert } from './functions/cost-outlier-alert.js';
+import { costSpikeAlert } from './functions/cost-spike-alert.js';
 export const functions = [
   gmailPoll,
   classifyGmailMessage,
@@ -80,4 +84,6 @@ export const functions = [
   finalizeDocumentFn,
   verifyActionsChain,
   costRunawayAlert,
+  costOutlierAlert,
+  costSpikeAlert,
 ];
