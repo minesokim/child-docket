@@ -12,6 +12,7 @@ import type { AgentId, ClientId, IssueType, TenantId, TrustLevel } from '@docket
 import { assertTrustGate } from '@docket/shared';
 import { runDocketAgent } from '@docket/orchestrator';
 import { getPrompt } from '@docket/prompts';
+import { persistAgentAction } from '@docket/db';
 import type { ClassifierOutput } from './triage-classifier.js';
 
 // ────────────────────────────────────────────────────────────────
@@ -103,12 +104,25 @@ export type DraftTrustGate =
 export type DraftOptions = {
   input: DrafterInput;
   modelTier?: 'haiku-4-5' | 'sonnet-4-6';
-  onAction?: Parameters<typeof runDocketAgent>[0]['onAction'];
+  /**
+   * Persist the agent action row to the audit trail. Default true.
+   * Set false for evals / tests where you don't want a real DB row.
+   * The audit row is written AFTER the trust-gate verdict is computed,
+   * so tool_input.trustGate is always present in production.
+   */
+  persistAudit?: boolean;
+  /**
+   * Hook fired AFTER the audit row is persisted, with the new action
+   * row id. Used by callers (e.g., classify-gmail-message) to link
+   * issues.draft_action_id. Failure here does NOT block the draft.
+   */
+  onAuditPersisted?: (actionId: string) => Promise<void>;
 };
 
 export async function draftReply(opts: DraftOptions): Promise<{
   output: DraftOutput;
   trustGate: DraftTrustGate;
+  draftActionId: string | null;
   costUsd: number;
   latencyMs: number;
   modelUsed: 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
@@ -116,6 +130,14 @@ export async function draftReply(opts: DraftOptions): Promise<{
   const userPrompt = JSON.stringify(opts.input);
   const prompt = await getPrompt('inbox-drafter');
 
+  // No onAction passed here — draftReply owns audit-row persistence
+  // (see end of fn). Reason: trustGate is computed POST-runDocketAgent
+  // from the model output's isClientFacing flag, but the orchestrator's
+  // onAction hook fires INSIDE runDocketAgent BEFORE we've parsed the
+  // output. Writing the row ourselves AFTER trustGate is computed is
+  // the only way to get trustGate into tool_input on a single audit
+  // row (the actions table is append-only via migration 0007 trigger,
+  // so we can't UPDATE later).
   const result = await runDocketAgent({
     tenantId: opts.input.context.tenantId,
     agentId: 'inbox-drafter' as AgentId,
@@ -124,7 +146,6 @@ export async function draftReply(opts: DraftOptions): Promise<{
     modelTier: opts.modelTier ?? 'sonnet-4-6',
     cachedSystem: true,
     maxTokens: 1500,
-    onAction: opts.onAction,
     promptId: prompt.id,
     promptVersion: prompt.version,
   });
@@ -182,9 +203,80 @@ export async function draftReply(opts: DraftOptions): Promise<{
         reason: decision.reason,
       };
 
+  // Persist the audit row with trustGate baked into tool_input. This
+  // is what makes the inbox UI's badge logic find the verdict via
+  // JSONB extraction (apps/command-room/src/lib/inbox-queries.ts reads
+  // tool_input->'trustGate'->>'allowed' / 'requires').
+  //
+  // The action_class on the audit row is 'draft' — generated content
+  // awaiting approval, not the eventual send. The actual send (when it
+  // happens) gets its own action row with action_class='send-external'
+  // or 'send-internal' depending on the trustGate verdict.
+  let draftActionId: string | null = null;
+  const shouldPersist = opts.persistAudit !== false;
+  if (shouldPersist) {
+    const persist = persistAgentAction({
+      textPreviewLength: 280,
+      extraToolInput: {
+        trustGate,
+        promptId: prompt.id,
+        promptVersion: prompt.version,
+        modelTier: opts.modelTier ?? 'sonnet-4-6',
+      },
+      onPersisted: async (id) => {
+        draftActionId = id;
+        if (opts.onAuditPersisted) {
+          await opts.onAuditPersisted(id);
+        }
+      },
+    });
+    try {
+      await persist({
+        tenantId: opts.input.context.tenantId,
+        clientId: opts.input.context.clientId,
+        userId: null,
+        agentId: 'inbox-drafter' as AgentId,
+        actionClass: 'draft',
+        toolName:
+          result.provider === 'anthropic'
+            ? 'inbox-drafter.via.anthropic'
+            : 'inbox-drafter.via.bedrock',
+        toolInput: {
+          channel: opts.input.context.channel,
+          preferredLanguage: opts.input.context.preferredLanguage,
+          issueType: opts.input.issue.issueType,
+          trustLevel,
+        },
+        toolOutput: {
+          isClientFacing: validation.data.isClientFacing,
+          channel: validation.data.channel,
+          language: validation.data.language,
+          subject: validation.data.subject,
+          body: validation.data.body,
+          confidence: validation.data.confidence,
+          reasoning: validation.data.reasoning,
+        },
+        modelUsed: result.modelUsed,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        cachedTokens: result.cachedTokens,
+        costUsd: result.costUsd,
+        latencyMs: result.latencyMs,
+        success: true,
+        errorMessage: null,
+      });
+    } catch (err) {
+      // Audit-row write failed — log but don't block the draft return.
+      // The in-memory result is still valid; the caller can decide
+      // whether to retry or surface the failure.
+      console.error('[inbox-drafter] audit-row persist failed:', err);
+    }
+  }
+
   return {
     output: validation.data,
     trustGate,
+    draftActionId,
     costUsd: result.costUsd,
     latencyMs: result.latencyMs,
     modelUsed: result.modelUsed,

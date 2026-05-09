@@ -72,10 +72,11 @@ async function main() {
       },
     },
     modelTier: 'sonnet-4-6',
-    onAction: async (entry) => {
-      const cost = entry.costUsd?.toFixed(6) ?? '0.000000';
-      console.log(`        ${entry.toolName} (${entry.latencyMs}ms, $${cost})`);
-    },
+    // Skip the audit-row write in this integration script — it's a
+    // dev-loop smoke that runs against the real Anthropic API; we
+    // don't want stray draft rows in dev DB. draftReply persists by
+    // default; setting persistAudit=false skips it.
+    persistAudit: false,
   });
 
   console.log(`        ✓ drafted (conf ${drafted.output.confidence})`);

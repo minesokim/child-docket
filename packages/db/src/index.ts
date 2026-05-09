@@ -52,3 +52,11 @@ export {
   type DocusignCredentials,
   type GmailCredentials,
 } from './tenant-credentials.js';
+
+// Agent action audit-trail persistence — canonical onAction handler
+// for runDocketAgent. See agent-action-log.ts header for usage +
+// threat model.
+export {
+  persistAgentAction,
+  type PersistAgentActionOptions,
+} from './agent-action-log.js';

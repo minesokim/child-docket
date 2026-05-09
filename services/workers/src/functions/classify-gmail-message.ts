@@ -150,6 +150,10 @@ export const classifyGmailMessage = inngest.createFunction(
             },
           },
           modelTier: 'sonnet-4-6',
+          // draftReply owns audit-row persistence (writes the row
+          // AFTER computing trustGate so tool_input.trustGate is
+          // populated). The hook below fires after the row lands
+          // with the new action.id — used to update issues.draft_action_id.
         });
       });
 
@@ -158,22 +162,31 @@ export const classifyGmailMessage = inngest.createFunction(
         draftConfidence: drafted.output.confidence,
         draftCostUsd: drafted.costUsd,
         draftLatencyMs: drafted.latencyMs,
-        // Trust-gate verdict — flatten for log readability. The
-        // full structured object is in `drafted.trustGate` and
-        // gets persisted alongside the draft when persist-draft
-        // lands (week-1 TODO below).
+        // Trust-gate verdict — persisted into actions.tool_input
+        // by draftReply. Flattened here for log readability.
         trustGateAllowed: drafted.trustGate.allowed,
         trustGateActionClass: drafted.trustGate.actionClass,
         trustGateRequires:
           drafted.trustGate.allowed === false ? drafted.trustGate.requires : null,
+        draftActionId: drafted.draftActionId,
       });
       draftCostUsd = drafted.costUsd;
+      draftActionId = drafted.draftActionId;
 
-      // TODO(week-1): persist draft as an action row + link issues.draft_action_id
-      draftActionId = await step.run('persist-draft', async () => {
-        logger.info('persist-draft (placeholder)');
-        return 'action-placeholder-id';
-      });
+      // Link the draft action row to the issue. issues.draft_action_id
+      // is the join the inbox UI uses to surface the draft preview +
+      // trust-gate badge.
+      if (draftActionId && issueId !== 'issue-placeholder-id') {
+        await step.run('link-draft-to-issue', async () => {
+          // TODO(week-1): once persist-issue is wired, do:
+          //   UPDATE issues SET draft_action_id = $1 WHERE id = $2
+          // For now persist-issue is still a placeholder (issueId
+          // is the literal 'issue-placeholder-id') so this branch
+          // doesn't fire. When persist-issue lands, this hook is
+          // already in the right place.
+          logger.info('link-draft-to-issue (waiting on persist-issue)');
+        });
+      }
     }
 
     // Step 6 — emit downstream event so UI surfaces the new issue
