@@ -12,11 +12,11 @@
 // rail). The staggered ripple feels like the content is filling in
 // from the top.
 //
-// AppShell is intentionally omitted here: it lives inside page.tsx
-// (not a shared layout), so during the loading window the previous
-// page's shell remains painted. Hoisting AppShell to a layout is the
-// proper fix; this file just provides a useful skeleton in the
-// meantime.
+// The shell (CommandShell as of the operational-modern migration) is
+// intentionally omitted here: it lives inside page.tsx (not a shared
+// layout), so during the loading window the previous page's shell
+// remains painted. Hoisting the shell to a layout is the proper fix;
+// this file just provides a useful skeleton in the meantime.
 //
 // 'use client' marker — needed because React Server Components can't
 // safely consume client-bundled named exports from packages with

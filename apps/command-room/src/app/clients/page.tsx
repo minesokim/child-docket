@@ -9,7 +9,7 @@ import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
 import { desc, eq, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/require-role';
-import { AppShell } from '@/components/app-shell';
+import { CommandShell } from '@/components/command-shell';
 import type { TenantId } from '@docket/shared';
 
 type Row = {
@@ -125,8 +125,9 @@ export default async function ClientsPage() {
   }
 
   return (
-    <AppShell
+    <CommandShell
       user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
+      tenantName={user.tenantName}
       activeHref="/clients"
     >
       <div style={{ padding: '32px 36px 48px', maxWidth: 1200 }}>
@@ -417,7 +418,7 @@ export default async function ClientsPage() {
           background: ${t.bgElev};
         }
       `}</style>
-    </AppShell>
+    </CommandShell>
   );
 }
 

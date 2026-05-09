@@ -15,7 +15,7 @@ import { withTenant, schema } from '@docket/db/client';
 import { decryptTree, getTenantDek } from '@docket/db';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { requireRole } from '@/lib/require-role';
-import { AppShell } from '@/components/app-shell';
+import { CommandShell } from '@/components/command-shell';
 import { IntakeSummary } from '@/components/intake-summary';
 import { DocumentsSection } from '@/components/documents-section';
 import { SignaturesSection } from '@/components/signatures-section';
@@ -151,8 +151,9 @@ export default async function ClientDetailPage({ params }: PageProps) {
     .join('');
 
   return (
-    <AppShell
+    <CommandShell
       user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
+      tenantName={user.tenantName}
       activeHref="/clients"
     >
       <div style={{ padding: '32px 36px 60px', maxWidth: 1200 }}>
@@ -454,7 +455,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </div>
         )}
       </div>
-    </AppShell>
+    </CommandShell>
   );
 }
 

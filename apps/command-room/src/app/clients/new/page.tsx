@@ -7,7 +7,7 @@
 import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { requireRole } from '@/lib/require-role';
-import { AppShell } from '@/components/app-shell';
+import { CommandShell } from '@/components/command-shell';
 import { NewClientForm } from './new-client-form';
 
 export default async function NewClientPage() {
@@ -22,8 +22,9 @@ export default async function NewClientPage() {
     process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ?? 'https://docket-portal.vercel.app';
 
   return (
-    <AppShell
+    <CommandShell
       user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
+      tenantName={user.tenantName}
       activeHref="/clients"
     >
       <div style={{ padding: '32px 36px 60px', maxWidth: 720 }}>
@@ -78,6 +79,6 @@ export default async function NewClientPage() {
           firmOwnerFirstName={user.name?.split(/\s+/)[0] ?? 'your preparer'}
         />
       </div>
-    </AppShell>
+    </CommandShell>
   );
 }
