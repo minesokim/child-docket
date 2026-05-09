@@ -685,6 +685,44 @@ export const tenantCredentials = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// Payments — per-tenant Square Checkout link state.
+// One row per checkout link minted; status transitions on
+// refresh-status action OR future webhook. Migration 0024.
+// ────────────────────────────────────────────────────────────────
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+    engagementId: uuid('engagement_id').references(() => engagements.id, { onDelete: 'set null' }),
+    squarePaymentLinkId: text('square_payment_link_id').notNull(),
+    squareOrderId: text('square_order_id').notNull(),
+    // Free-text with CHECK constraint at DB level (matches enum:
+    // pending | paid | partial | refunded | cancelled | failed).
+    status: text('status').notNull().default('pending'),
+    amountCents: integer('amount_cents').notNull(),
+    collectedCents: integer('collected_cents').notNull().default(0),
+    refundedCents: integer('refunded_cents').notNull().default(0),
+    currency: text('currency').notNull().default('USD'),
+    checkoutUrl: text('checkout_url').notNull(),
+    taxYear: integer('tax_year'),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    refundedAt: timestamp('refunded_at', { withTimezone: true }),
+    lastPolledAt: timestamp('last_polled_at', { withTimezone: true }),
+    lastSquareStatus: text('last_square_status'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantLinkUniq: uniqueIndex('payments_tenant_link_uniq').on(t.tenantId, t.squarePaymentLinkId),
+    tenantClientIdx: index('payments_tenant_client_idx').on(t.tenantId, t.clientId),
+    tenantStatusIdx: index('payments_tenant_status_idx').on(t.tenantId, t.status),
+    engagementIdx: index('payments_engagement_idx').on(t.tenantId, t.engagementId),
+  }),
+);
+
+// ────────────────────────────────────────────────────────────────
 // Gmail sync state — per-tenant polling cursor for the gmail-poll
 // Inngest cron. One row per tenant; tracks Gmail historyId + the
 // timestamps the dashboard uses to show stale-poll tenants.

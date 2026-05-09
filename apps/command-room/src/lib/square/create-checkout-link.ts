@@ -41,7 +41,7 @@
 //     two checkout links. v1.
 
 import { createHash } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import {
   getTenantCredential,
@@ -146,12 +146,28 @@ export async function createCheckoutLink(
         };
       }
 
-      // Idempotency key: deterministic per (client, year, amount).
-      // A double-click within the same minute returns the SAME
-      // checkout link from Square (no duplicate). Different days
-      // or different amounts mint a new link.
+      // Idempotency key: deterministic per (client, year, amount,
+      // attempt#). A double-click within the same minute returns the
+      // SAME link from Square (no duplicate). But if a PREVIOUS link
+      // for the same (client, year, amount) was cancelled or failed,
+      // we want a FRESH link — so the attempt# advances by counting
+      // existing terminal-state rows for this trio. This prevents
+      // Square from returning a dead/cancelled link to a client.
+      const priorTerminal = await db
+        .select({ id: schema.payments.id })
+        .from(schema.payments)
+        .where(
+          and(
+            eq(schema.payments.tenantId, user.tenantId),
+            eq(schema.payments.clientId, input.clientId),
+            eq(schema.payments.taxYear, input.taxYear),
+            eq(schema.payments.amountCents, amountCents),
+            inArray(schema.payments.status, ['cancelled', 'failed', 'refunded']),
+          ),
+        );
+      const attemptNum = priorTerminal.length;
       const idemKey = createHash('sha256')
-        .update(`${input.clientId}|${input.taxYear}|${amountCents}`)
+        .update(`${input.clientId}|${input.taxYear}|${amountCents}|${attemptNum}`)
         .digest('hex')
         .slice(0, 45);
 
@@ -237,7 +253,29 @@ export async function createCheckoutLink(
         };
       }
 
-      // Success.
+      // Success — persist the payments row BEFORE the audit row so
+      // the row exists when downstream UI queries by paymentLinkId.
+      // ON CONFLICT DO NOTHING handles replay (Square's idempotency
+      // returns the same link; we don't want to throw on the second
+      // create with same idem_key).
+      await db
+        .insert(schema.payments)
+        .values({
+          tenantId: user.tenantId,
+          clientId: input.clientId,
+          engagementId: null,
+          squarePaymentLinkId: json.payment_link.id,
+          squareOrderId: json.payment_link.order_id,
+          status: 'pending',
+          amountCents,
+          currency: 'USD',
+          checkoutUrl: json.payment_link.url,
+          taxYear: input.taxYear,
+        })
+        .onConflictDoNothing({
+          target: [schema.payments.tenantId, schema.payments.squarePaymentLinkId],
+        });
+
       await writeAuditRow(user, input.clientId, true, {
         stage: 'created',
         paymentLinkId: json.payment_link.id,
