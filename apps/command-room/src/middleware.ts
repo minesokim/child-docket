@@ -41,6 +41,12 @@ const isPublicRoute = createRouteMatcher([
   // against DOCUSIGN_CONNECT_HMAC_KEY. Unverified events are
   // dropped with 401 before any DB read or write.
   '/api/webhooks/docusign/(.*)',
+  // Square webhook — Square POSTs payment + refund lifecycle events
+  // here. The route verifies X-Square-HmacSha256-Signature against
+  // SQUARE_WEBHOOK_SIGNATURE_KEY (hashed over notificationUrl + raw
+  // body). Pairs with the manual refresh-payment-status server
+  // action; either flow can flip payments status.
+  '/api/webhooks/square',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

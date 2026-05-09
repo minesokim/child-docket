@@ -121,10 +121,15 @@ export async function POST(req: NextRequest) {
   }
 
   const event = payload.event;
-  // Only act on envelope-completed for v0. recipient-completed +
-  // others are recorded for audit-trail completeness but don't flip
-  // status.
-  if (event !== 'envelope-completed') {
+  // We act on three lifecycle events:
+  //   envelope-completed → KBA-gated flip to signed (or declined if
+  //                        KBA didn't pass — see KBA gate below)
+  //   envelope-voided    → flip to declined (Antonio voided externally)
+  //   envelope-declined  → flip to declined (client clicked Decline)
+  // Other events (recipient-completed, envelope-sent, etc) are
+  // recorded for audit-trail visibility but don't change status.
+  const HANDLED_EVENTS = new Set(['envelope-completed', 'envelope-voided', 'envelope-declined']);
+  if (!HANDLED_EVENTS.has(event ?? '')) {
     console.log(`[docusign-connect] received '${event}'; no-op for v0`);
     return new Response('ok', { status: 200 });
   }
@@ -173,18 +178,27 @@ export async function POST(req: NextRequest) {
   // verified KBA is non-compliant for federal e-filing. The signer
   // could only sign in this state if the envelope's requireIdLookup
   // was misconfigured or DocuSign sent an event we don't expect.
-  // Set status='kba-failed' instead so Antonio sees the issue and
+  // Set status='declined' instead so Antonio sees the issue and
   // can re-send a fresh envelope (or arrange paper signing).
   //
-  // The signature_status_enum doesn't have 'kba-failed' yet — we
-  // store as 'declined' (the closest existing status) and audit
-  // the actual reason in audit_payload. Schema enum extension is
-  // a follow-up migration.
-  const newStatus: 'signed' | 'declined' =
-    kbaPassedAt !== null ? 'signed' : 'declined';
-  const kbaGateNote = kbaPassedAt !== null
-    ? null
-    : 'KBA did not pass; status set to declined per IRS Pub 1345. Re-send a fresh envelope or arrange paper signing.';
+  // For envelope-voided + envelope-declined, the result is also
+  // 'declined' — these never produce a valid signed 8879.
+  let newStatus: 'signed' | 'declined';
+  let kbaGateNote: string | null = null;
+  if (event === 'envelope-completed') {
+    newStatus = kbaPassedAt !== null ? 'signed' : 'declined';
+    if (kbaPassedAt === null) {
+      kbaGateNote =
+        'KBA did not pass; status set to declined per IRS Pub 1345. Re-send a fresh envelope or arrange paper signing.';
+    }
+  } else if (event === 'envelope-voided') {
+    newStatus = 'declined';
+    kbaGateNote = 'Envelope voided in DocuSign — re-send a fresh envelope to retry.';
+  } else {
+    // envelope-declined
+    newStatus = 'declined';
+    kbaGateNote = 'Client declined to sign — discuss with client before re-sending.';
+  }
 
   // 6. UPDATE signatures. Tenant-bound WHERE clause (defense-in-depth
   // beyond the PK filter — even though tenant_id from matchedRow is
