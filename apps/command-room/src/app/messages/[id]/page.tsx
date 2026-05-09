@@ -17,6 +17,7 @@ import {
   formatRelativeTime,
   type IssueDetail,
 } from '@/lib/issue-detail-queries';
+import { ResolveActions } from './resolve-actions';
 import './issue-detail.css';
 
 export const runtime = 'nodejs';
@@ -160,20 +161,12 @@ export default async function IssueDetailPage({
                   <span>{issue.trust_gate_reason}</span>
                 </div>
               )}
-              <div className="idtl-draft-actions">
-                <button type="button" className="idtl-btn idtl-btn-primary" disabled>
-                  Send as Antonio
-                </button>
-                <button type="button" className="idtl-btn" disabled>
-                  Edit
-                </button>
-                <button type="button" className="idtl-btn idtl-btn-quiet" disabled>
-                  Reject
-                </button>
-                <span className="idtl-actions-note">
-                  Action wiring lands when /messages send-handler ships.
-                </span>
-              </div>
+              <ResolveActions
+                issueId={issue.id}
+                channel={issue.draft_channel}
+                trustAllowed={issue.trust_gate_allowed}
+                trustRefused={issue.trust_gate_requires === 'refusal'}
+              />
             </div>
           </section>
         )}
