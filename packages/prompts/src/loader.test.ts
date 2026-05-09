@@ -4,6 +4,7 @@ import { triageClassifier } from './triage-classifier.js';
 import { inboxDrafter } from './inbox-drafter.js';
 import { docClassifier } from './doc-classifier.js';
 import { discoveryAgent } from './discovery-agent.js';
+import { noticeTriage } from './notice-triage.js';
 
 describe('@docket/prompts / registry', () => {
   test('lists every registered prompt', () => {
@@ -13,6 +14,7 @@ describe('@docket/prompts / registry', () => {
       'discovery-agent',
       'doc-classifier',
       'inbox-drafter',
+      'notice-triage',
       'triage-classifier',
     ]);
   });
@@ -53,7 +55,7 @@ describe('@docket/prompts / getPrompt', () => {
 
   test('throws on unknown id with helpful message', async () => {
     await expect(getPrompt('nonexistent-agent')).rejects.toThrow(
-      /unknown prompt id "nonexistent-agent"\. Known: discovery-agent, doc-classifier, inbox-drafter, triage-classifier/,
+      /unknown prompt id "nonexistent-agent"\. Known: discovery-agent, doc-classifier, inbox-drafter, notice-triage, triage-classifier/,
     );
   });
 });
@@ -89,6 +91,14 @@ describe('@docket/prompts / hash verification', () => {
       discoveryAgent.template,
     );
     expect(discoveryAgent.hash).toBe(recomputed);
+  });
+
+  test('notice-triage stored hash matches recomputed hash', async () => {
+    const recomputed = await computePromptHash(
+      noticeTriage.version,
+      noticeTriage.template,
+    );
+    expect(noticeTriage.hash).toBe(recomputed);
   });
 
   test('hash is sha256 hex (64 chars)', () => {

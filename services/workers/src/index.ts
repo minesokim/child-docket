@@ -48,6 +48,15 @@ export type {
   DiscoverOptions,
 } from './agents/discovery-agent.js';
 
+export { triageNotice, NoticeTriageSchema } from './agents/notice-triage.js';
+export type {
+  NoticeTriageOutput,
+  TriageNoticeInput,
+  NoticeIssuingAuthority,
+  NoticeSeverity,
+  NoticeResponseTemplate,
+} from './agents/notice-triage.js';
+
 // Function array for Inngest serve() handler — Next.js route uses this.
 import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';

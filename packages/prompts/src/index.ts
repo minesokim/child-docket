@@ -45,6 +45,7 @@ import { triageClassifier } from './triage-classifier.js';
 import { inboxDrafter } from './inbox-drafter.js';
 import { docClassifier } from './doc-classifier.js';
 import { discoveryAgent } from './discovery-agent.js';
+import { noticeTriage } from './notice-triage.js';
 
 export type PromptModel = 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
 
@@ -84,6 +85,7 @@ const PROMPTS: ReadonlyArray<Prompt> = [
   inboxDrafter,
   docClassifier,
   discoveryAgent,
+  noticeTriage,
 ];
 
 const PROMPTS_BY_ID: ReadonlyMap<string, Prompt> = new Map(
