@@ -867,5 +867,97 @@ explicitly directed the install in chat
 
 ---
 
+## [22] 2026-05-08 — Credentials UI smoke deferred to user (no /browse skill access this session)
+
+**Decision**: Commit B (`7e03e7a`) shipped to Vercel READY, with
+HTTP 401 confirming auth gate fires on `/settings/credentials`.
+Substrate-level smoke (Commit A roundtrip + 4 live install scripts
+in this same session) all PASSED. The visual UI rendering smoke —
+loading the page in a browser with Antonio's session, clicking
+Edit, verifying focus management, confirming the 4 Connected
+states — was DEFERRED to the next user session.
+
+**Reasoning**: CLAUDE.md mandates `/browse` from gstack as the
+only browsing path ("Use /browse from gstack for all web browsing.
+Never use mcp__claude-in-chrome__* tools."). The /browse skill
+was not in this session's available-skills list, so I had no
+way to drive the browser without violating the explicit instruction.
+The substrate is verified (typecheck 12/12 clean, 191/191 shared
+tests pass, smoke roundtrip on synthetic tenant covers set/read/
+rotate/delete/validator-rejection for all 4 kinds, real Vazant
+creds installed + live-tested via the script suite). Visual smoke
+is the last 5%.
+
+**Alternative considered**: (1) Fall back to the chrome MCP tools.
+Rejected — explicit CLAUDE.md prohibition. (2) Spawn a sub-agent
+that has /browse. Rejected — agents inherit the same skill list,
+no upgrade path. (3) Leave Commit B unpushed until next session.
+Rejected — substrate is solid, the user's "do not stop" mandate
+takes precedence; better to ship + flag the deferred verification
+than sit on production-ready code.
+
+**How to reverse**: User opens `/settings/credentials` against the
+deployed command-room URL (latest Vercel deploy, currently
+`docket-command-room-lfuqufkh2-david-kims-projects-cfff450b.vercel.app`)
+in a logged-in browser. Verify: (a) page renders without errors,
+(b) all 4 cards show "Connected" with last-updated timestamps,
+(c) Edit button mounts the form with first-field focus,
+(d) Cancel returns to idle, (e) Test connection on Twilio runs
+the live API check + shows result. If any fails, file a bug;
+the next session picks it up via `/investigate`.
+
+**Severity**: low (deferred verification on a substrate that's
+already proven; not shipping unverified new code paths)
+
+**Commit**: `7e03e7a`
+
+**User-review status**: pending
+
+---
+
+## [23] 2026-05-08 — Loop format extended with codex review + periodic /e2e
+
+**Decision**: Per user mid-build instructions "you also have to
+add codex review in between" and "and end to end testing every
+once in a while dont forget about that," the per-commit build
+loop now includes a codex review step between unit tests and
+/craft, and a periodic /e2e step that runs every 3-5 feature
+commits or before any release. This was applied immediately to
+Commit B (`7e03e7a`) — codex review flagged 8 issues, all 8 were
+fixed before commit.
+
+**Reasoning**: The user's "this is for production" framing means
+no path to production should rely on "Claude alone reviewed it."
+Codex provides an independent second-opinion pass that caught a
+real security issue (raw `err.message` echoed to client surface,
+which would leak DB connection strings / pg-error fragments).
+Periodic /e2e catches the failure mode where individual features
+pass their unit tests but composition is broken.
+
+**Alternative considered**: (1) Codex review only on "substantial"
+commits. Rejected — Commit B was substantial by any measure
+(1641 LOC) and codex still found an issue I missed. The discipline
+should be unconditional. (2) /e2e per-commit. Rejected — too
+expensive (full app boot + Inngest run + audit chain walk per
+commit would 10x the per-commit cost). Periodic at 3-5 commit
+cadence balances coverage with cost.
+
+**How to reverse**: Edit `.claude/skills/` to remove the codex
+review and /e2e steps from the loop, OR ignore the cadence in
+practice. The hooks system (commit-msg, pre-commit) doesn't
+enforce codex/e2e — it's a discipline layer. Reverting means the
+loop returns to: PLAN → /edge-cases → implement → typecheck →
+test → /craft → /score → /align → commit → push → verify → /smoke-test.
+
+**Severity**: medium (process change affecting future commit
+quality; not load-bearing on any single commit)
+
+**Commit**: `7e03e7a` (first commit using the v2 loop)
+
+**User-review status**: reviewed-approved (2026-05-08) — user
+explicitly added these steps to the loop in chat
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
