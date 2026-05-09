@@ -683,5 +683,56 @@ every future commit; license-stakes mandate from the user)
 
 ---
 
+## [19] 2026-05-08 — Square sandbox token installed via one-shot script (rotation pending)
+
+**Decision**: User pasted a Square sandbox access token (`EAAAl-7Lz...`)
+in chat with explicit instruction *"use it. im going to rotate it
+anyways after."* Installed the credential into `tenant_credentials`
+for the Vazant tenant via a one-shot script
+(`packages/db/scripts/install-square-sandbox.ts`) that fetched the
+locationId from Square's `/v2/locations` API + called the existing
+`setTenantCredential('square', ...)` helper. The token was used in the
+single explicit context the user authorized + the row is encrypted
+via the tenant DEK in the same shape the credentials UI will use.
+
+**Reasoning**: User-explicit instruction in a trusted context; sandbox
+(not production) token; expedient onboarding ahead of the credentials-
+management UI ship; same `setTenantCredential` code path the UI will
+exercise. Refusing would have provided no security benefit (the token
+was already in the conversation transcript) and would have blocked
+operational testing of the Square Checkout scaffold (`cc8edd1`) that
+depends on a configured credential to fire end-to-end.
+
+**Alternative considered**: (1) Refuse to use the token, force the
+user to wait for the credentials UI to ship and paste it in the form.
+Rejected — provides no security benefit, blocks testing for hours.
+(2) Use it but skip audit-logging. Rejected — the install path goes
+through `setTenantCredential` which writes the standard audit row;
+this is the same audit shape the UI will produce.
+
+**How to reverse**: Run `DELETE FROM tenant_credentials WHERE
+tenant_id = '<vazant-uuid>' AND kind = 'square'` against the dev DB,
+OR use the credentials UI's Delete action once it ships. The append-
+only audit row stays in the actions table either way.
+
+**Rotation commitment**: User stated *"im going to rotate it anyways
+after."* Tracking as a follow-up: post-UI-ship, user generates a NEW
+sandbox access token in the Square dev dashboard, deletes the
+current row (or rotates via the UI), and re-installs. The pasted
+token at that point becomes invalid. Until rotation, the encrypted
+row in tenant_credentials is the only place the token lives in
+plaintext-form (decrypted at use); the chat transcript also has it
+but that's the user's transcript to manage.
+
+**Severity**: medium (security-sensitive credential install, but
+sandbox + user-explicit + reversible)
+
+**Commit**: pending (this commit)
+
+**User-review status**: reviewed-approved (2026-05-08) — user
+explicitly directed the install in chat
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
