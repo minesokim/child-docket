@@ -528,27 +528,45 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 
 ### v1 production phased plan — 12 weeks, 6 phases
 
+> **⚠ STALENESS WARNING — read this first.** This phased plan was authored
+> 5/2/2026. Items below are listed in the order they were originally
+> intended to ship. The actual current state is in
+> [`docs/AUTONOMOUS-QUEUE.md`](docs/AUTONOMOUS-QUEUE.md) and the latest
+> [`docs/OVERNIGHT-HANDOFF-*.md`](docs/) — those are the source of truth for
+> "what shipped, what's queued." Items below are tagged ✅ done /
+> 🟡 partial / ⬜ open as of 5/9/2026, but the queue file is canonical.
+> Whenever you ask "what's next," read AUTONOMOUS-QUEUE.md FIRST, not this
+> phased plan.
+
 **Phase 1 (Weeks 1–2, 5/2 → 5/16) — Foundation + Antonio Production Essentials**
-- Preparer-side SSN/EIN reveal flow on command-room (highest-leverage gap)
-- Twilio "Send via SMS" for client invites (per-tenant credentials)
-- Knowledge layer schema in DB + ingestion infrastructure scaffolded
-- `packages/tax-graph` package created (Authority, TaxConcept, WorkflowObject, FactPattern, DecisionRule, PlanningStrategy)
-- Citation rendering scaffolding in agent output
-- Trust gate scaffolding (per-tenant × agent × action-class)
-- Docs pipeline started: Cloudflare R2 bucket + presigned URL helper
-- Continue down-market production essentials (rate limiting, auth refactor)
-- Sidebar dead links resolved (placeholder routes for /messages, /documents, /settings)
+- ✅ Preparer-side SSN/EIN reveal flow on command-room — shipped as per-session unlock with 15-min TTL, role gate (firm_owner/preparer/reviewer), 6/min rate limit, audit row per unlock. See `apps/command-room/src/lib/intake/unlock.ts` + `pii-unlock-button.tsx`.
+- ✅ Twilio "Send via SMS" for client invites (per-tenant credentials) — Twilio inbound webhook + outbound via /messages/[id] approve. Credentials installed for Vazant + rotatable via /settings/credentials.
+- ✅ Knowledge layer schema in DB + ingestion infrastructure scaffolded — migrations 0019-0021 (firm_profile, firm_patterns, client_facts) + 7 starter authorities seeded + authority full-text search + citation verifier.
+- ✅ `packages/tax-graph` package created — exists at `packages/tax-graph/`.
+- ✅ Citation rendering scaffolding in agent output — citation-verifier loop in notice-drafter + discovery agent (commit `a58f05d`).
+- ✅ Trust gate scaffolding (per-tenant × agent × action-class) — `assertTrustGate` enforcement helper (15 tests, commit `3929fef`). Substrate-without-current-consumer; consumer wiring is Phase 3.
+- 🟡 Docs pipeline started: Cloudflare R2 bucket + presigned URL helper — verify state via /smoke-test.
+- ✅ Sidebar dead links resolved — /messages (`de266f9`), /documents (`95d1fed`), /settings (`b623ce4`), /settings/credentials (`7e03e7a`).
+- ✅ + (added later) Cost dashboard at /dashboard/cost (commit `f170c03` + `86e7e0a`).
+- ✅ + (added later) Home dashboard at / (commit `8cc55eb`).
+- ✅ + (added later) `@docket/prompts` registry with hash-drift detection (commit `fbae613`).
+- ✅ + (added later) PII regex scrubber (commit `8f0c2d5`, 32 tests).
+- ✅ + (added later) Audit-trail cryptographic chain — `chain_seq` + `prev_hash` + `row_hash` + nightly `verify_actions_chain` cron (commits `0680874` + `5b4ef92`).
 
 **Phase 2 (Weeks 3–4, 5/16 → 5/30) — Antonio Production Sub-Milestone**
-- Real bidirectional messages (Twilio SMS + Gmail email + portal chat, channel-aware via Inbox Drafter)
-- Square Checkout API integration (per-client payment links, webhook for paid status)
-- DocuSign embedded signing for Form 8879 with LexisNexis KBA (NIST IAL2)
-- IRS Pub 17 + FTB residency manual ingested with effective-date versioning
-- AAD on AES-GCM bound to (tenant_id, client_id, path)
-- KEK rotation procedure documented + master-KEK fallback removed
-- Webhook signature verification helper (shared across Square / DocuSign / Twilio / Inngest)
-- Sentry signup + DSN configured
-- **✅ Sub-milestone 5/30: Antonio's full 200+ client base operational on production-grade substrate**
+- 🟡 Real bidirectional messages — Twilio inbound webhook ✅ + outbound approval flow ✅; Gmail polling has 8 `TODO(week-1)` stubs in `services/workers/src/functions/gmail-poll.ts` + `classify-gmail-message.ts`.
+- 🟡 Square Checkout API integration — scaffold shipped (`cc8edd1`); needs production wiring (real Checkout API call, webhook for paid status, link tied to engagement).
+- 🟡 DocuSign embedded signing for Form 8879 with LexisNexis KBA (NIST IAL2) — scaffold shipped (`7d330fd`); needs production wiring (LexisNexis KBA add-on, real envelope creation, webhook for completion).
+- ⬜ IRS Pub 17 + FTB residency manual ingested with effective-date versioning — 7 starter authorities seeded; bulk ingestion + effective-date versioning still open.
+- ⬜ AAD on AES-GCM bound to (tenant_id, client_id, path).
+- ⬜ KEK rotation procedure documented + master-KEK fallback removed.
+- ✅ Webhook signature verification helper — shipped at `@docket/shared/webhooks` subpath (commit `b31e91f` + codex-fixup `00cd377`). 32/32 tests, timing-safe.
+- ✅ Sentry signup + DSN configured — both apps wired with `app:` tag (commit chain `a122ae5` → `95e2629` → `40c5caa`).
+- ✅ + (added later) Bedrock fallback in orchestrator (`callClaudeWithFallover`, commit `303f886`). 38/38 unit tests + 4/4 smoke.
+- ✅ + (added later) `/api/health` + `HealthStatusGate` + `assertWritable` server-side gate (commit `c72ba1b`).
+- ✅ + (added later) Status banners + ReadOnlyProvider + WriteAction (commit `0521701`).
+- ⬜ Neon read replica wiring (B3 in queue file) — `DATABASE_URL_READ_REPLICA` provided; pairs with status-banners; ~1d.
+- **🟡 Sub-milestone 5/30: Antonio's full 200+ client base operational on production-grade substrate** — substrate is ~70% there; Square + DocuSign production-real wiring + Gmail polling + AAD-binding + KEK rotation are the remaining must-haves before pointing real client volume at it.
 
 **Phase 3 (Weeks 5–6, 5/30 → 6/13) — Agent Fleet Build-Out**
 - Wire intake agent (intake completeness scoring, missing-data prompts)

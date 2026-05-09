@@ -50,6 +50,16 @@ Four skills form the autonomous build cycle. **Each one is mandatory at its mome
 
 Open [`docs/AUTONOMOUS-QUEUE.md`](AUTONOMOUS-QUEUE.md). Find the next item with status `queued` or `in-progress`. That's what to work on. Do NOT pick by what feels easy or interesting — pick the next item in queue order.
 
+**HARD RULE (added 2026-05-09 after a "what's next" failure):** Before answering ANY question shaped like "what's next," "what should I work on," or "what's the next step" — whether the user asked it or you're picking autonomously — do this state check FIRST, in this order:
+
+1. `git log --oneline -50` — what shipped recently?
+2. Read [`docs/AUTONOMOUS-QUEUE.md`](AUTONOMOUS-QUEUE.md) (canonical: what's queued + what's in-progress).
+3. Read the latest [`docs/OVERNIGHT-HANDOFF-*.md`](.) (canonical: what's done + what's open from the last autonomous run).
+4. Grep the codebase for the proposed feature ("does this already exist?") before recommending it.
+5. ONLY THEN consult `CLAUDE.md` §15 — and treat it as the WHY (strategy, anchors, NOs), not the WHAT (current state). The build-order section in CLAUDE.md is a 5/2 snapshot and explicitly tagged stale; trust the queue + handoff.
+
+The failure mode being blocked: anchoring on `CLAUDE.md` §15 phased-plan items as if they were ground truth, then proposing work that already shipped a week ago. The protocol is here; my discipline is the gap to close.
+
 ### Step D — declare intent
 
 Before writing any code, write down (in scratch, not committed):

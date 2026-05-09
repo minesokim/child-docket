@@ -257,19 +257,26 @@ async function main(): Promise<number> {
     }
 
     // ─── Step 6: insert audit rows for the agent calls ───
-    // The agents above DON'T pass an onAction callback (this script
-    // doesn't want to depend on the orchestrator's persistence layer).
-    // To exercise the audit chain end-to-end, we insert the audit
-    // rows directly here, simulating what runDocketAgent.onAction
-    // would have written. This proves the chain trigger fires across
-    // heterogeneous tenant inserts.
+    // The agents fall into two categories:
+    //   (a) self-persisting via persistAgentAction (commit e9d0d71):
+    //       draftReply, notice-triage, notice-drafter. These already
+    //       wrote their audit row during step 5 — DO NOT re-insert.
+    //   (b) caller-persisting (no self-write): triage-classifier and
+    //       doc-classifier. The orchestrator's onAction callback would
+    //       normally insert these, but this script skips the orchestrator,
+    //       so we insert direct stand-ins to exercise the chain trigger.
+    //
+    // Net: 2 manual inserts (doc-classifier + triage-classifier) +
+    // 1 self-written (inbox-drafter) = 3 chain_seq rows total.
+    //
+    // bypass_rls=on (session-level, set above) lets the inserts skip
+    // RLS without needing SET LOCAL inside a transaction. The chain
+    // trigger reads tenant_id from the inserted row, not from
+    // app.current_tenant_id, so it fires correctly without the LOCAL.
     try {
-      await sql.unsafe(`SET LOCAL app.current_tenant_id = '${TENANT_ID}'`);
-      // Insert 3 action rows representing the 3 agent calls.
       for (const { agent, tool } of [
         { agent: 'doc-classifier', tool: 'anthropic.vision.messages.create' },
         { agent: 'triage-classifier', tool: 'anthropic.messages.create' },
-        { agent: 'inbox-drafter', tool: 'anthropic.messages.create' },
       ]) {
         await sql`
           INSERT INTO actions (tenant_id, client_id, agent_id, action_class, tool_name, latency_ms, success, tool_input)
@@ -290,7 +297,7 @@ async function main(): Promise<number> {
       `;
       const chainCount = Number(rows[0]?.count ?? 0);
       logStep(
-        'audit chain captured 3 agent action rows',
+        'audit chain captured 3 agent action rows (2 manual + 1 self-written)',
         chainCount === 3,
         `chain_seq rows=${chainCount}`,
       );
