@@ -32,6 +32,7 @@ import type { AgentId, ClientId, TenantId, TrustLevel } from '@docket/shared';
 import { assertTrustGate, type PositionTier } from '@docket/shared';
 import { runDocketAgent } from '@docket/orchestrator';
 import { getPrompt } from '@docket/prompts';
+import { lookupAuthorityByCitation } from '@docket/db';
 
 // ────────────────────────────────────────────────────────────────
 // Input shape — what the Discovery agent needs to scan a client.
@@ -243,6 +244,48 @@ export async function runDiscovery(opts: DiscoverOptions): Promise<{
     throw new Error(
       `discovery-agent: schema validation failed. Errors: ${JSON.stringify(validation.error.issues)}. Parsed: ${JSON.stringify(parsed).slice(0, 500)}`,
     );
+  }
+
+  // CITATION-VERIFIER LOOP. The Discovery agent prompt instructs
+  // "always provide IRC or regulatory citation"; pre-knowledge-layer
+  // those came from the model's training data and could be
+  // hallucinated. Now (post-authorities-seed-8af06f5) we verify each
+  // emitted citation against the authority library. Positions whose
+  // citations don't resolve get marked: their gapsToConfirm gains a
+  // "verify cite '${cite}'" note. The trust-gate verdict downgrades
+  // for any position with unverified citations (treat as one tier
+  // lower because we can't confirm authority). The kill-switch can
+  // be lifted once: (1) authorities populated (done), (2) this
+  // verifier in place (done), (3) eval suite confirms <1%
+  // hallucination rate (next).
+  for (const position of validation.data.positions) {
+    const unverified: string[] = [];
+    for (const cite of position.authority) {
+      try {
+        const found = await lookupAuthorityByCitation(
+          opts.input.context.tenantId,
+          cite.cite,
+        );
+        if (!found) unverified.push(cite.cite);
+      } catch (err) {
+        console.error('[discovery] citation verifier threw:', err);
+        unverified.push(cite.cite);
+      }
+    }
+    if (unverified.length > 0) {
+      const verifyNotes = unverified.map(
+        (c) =>
+          `Citation '${c}' did not resolve against the authority library — verify before relying on this position.`,
+      );
+      position.gapsToConfirm = [...position.gapsToConfirm, ...verifyNotes];
+      // Downgrade by one tier (capped at 4 since we don't push to
+      // refusal-floor here — the floor is for positions BELOW
+      // reasonable basis, not for unverified-cite positions). The
+      // surfaced position still ships, just at lower auto-acceptance.
+      if (position.tier < 4) {
+        position.tier = (position.tier + 1) as 2 | 3 | 4;
+      }
+    }
   }
 
   // Compute trust-gate verdict. Highest tier in the output drives the

@@ -19,7 +19,7 @@ import { z } from 'zod';
 import type { AgentId, ClientId, TenantId } from '@docket/shared';
 import { runDocketAgent } from '@docket/orchestrator';
 import { getPrompt } from '@docket/prompts';
-import { persistAgentAction } from '@docket/db';
+import { lookupAuthorityByCitation, persistAgentAction } from '@docket/db';
 import type { NoticeTriageOutput } from './notice-triage.js';
 
 export const NoticeDraftSchema = z.object({
@@ -126,6 +126,41 @@ export async function draftNoticeResponse(
     validation.data.template = opts.triage.recommended_response_template;
   }
 
+  // CITATION-VERIFIER LOOP. Per the system prompt: "never fabricate
+  // citations." Today we make that enforceable: every cite the model
+  // emitted must resolve via lookupAuthorityByCitation. Misses get
+  // pushed into needs_preparer_decision so Antonio sees them as
+  // "verify this cite before sending" rather than appearing in the
+  // letter as silent hallucinations. Verified cites stay in citations.
+  const verifiedCitations: string[] = [];
+  const unverifiedCitations: string[] = [];
+  for (const cite of validation.data.citations) {
+    try {
+      const found = await lookupAuthorityByCitation(opts.tenantId, cite);
+      if (found) {
+        verifiedCitations.push(cite);
+      } else {
+        unverifiedCitations.push(cite);
+      }
+    } catch (err) {
+      // Verifier failure is best-effort — if the lookup throws, we
+      // surface the cite as unverified rather than blocking the draft.
+      console.error('[notice-drafter] citation verifier threw:', err);
+      unverifiedCitations.push(cite);
+    }
+  }
+  validation.data.citations = verifiedCitations;
+  if (unverifiedCitations.length > 0) {
+    const verifyNotes = unverifiedCitations.map(
+      (cite) =>
+        `Citation '${cite}' could not be resolved against the authority library — verify before sending.`,
+    );
+    validation.data.needs_preparer_decision = [
+      ...validation.data.needs_preparer_decision,
+      ...verifyNotes,
+    ];
+  }
+
   let draftActionId: string | null = null;
   if (opts.persistAudit !== false) {
     const persist = persistAgentAction({
@@ -135,6 +170,8 @@ export async function draftNoticeResponse(
         promptVersion: prompt.version,
         template: validation.data.template,
         triageNoticeType: opts.triage.notice_type,
+        verifiedCitationCount: verifiedCitations.length,
+        unverifiedCitationCount: unverifiedCitations.length,
       },
       onPersisted: async (id) => {
         draftActionId = id;
