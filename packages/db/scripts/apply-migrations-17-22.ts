@@ -39,6 +39,7 @@ const MIGRATIONS = [
   '0022_actions_crypto_chain.sql',
   '0023_gmail_sync_state.sql',
   '0024_payments.sql',
+  '0025_deposit_config.sql',
 ];
 
 async function main(): Promise<number> {

@@ -19,6 +19,7 @@ import { withTenant } from '@docket/db';
 import type { TenantId } from '@docket/shared';
 import { getCurrentDocketUser } from '@/lib/current-user';
 import { CommandShell } from '@/components/command-shell';
+import { DefaultDepositForm } from './default-deposit-form';
 import './settings.css';
 
 export const runtime = 'nodejs';
@@ -53,11 +54,12 @@ interface SettingsData {
   tenant: TenantInfo | null;
   integrations: IntegrationsStatus;
   audit: AuditStatus;
+  defaultDepositCents: number;
 }
 
 async function loadSettings(tenantId: string): Promise<SettingsData> {
   return await withTenant(tenantId as TenantId, async (db) => {
-    const [tenantRows, credRows, auditRows] = await Promise.all([
+    const [tenantRows, credRows, auditRows, fpRows] = await Promise.all([
       db.execute<TenantInfo>(sql`
         SELECT
           id::text AS id,
@@ -81,7 +83,13 @@ async function loadSettings(tenantId: string): Promise<SettingsData> {
                ELSE NULL END AS last_action_at
         FROM actions
       `),
+      db.execute<{ default_deposit_cents: number }>(sql`
+        SELECT default_deposit_cents FROM firm_profile WHERE tenant_id = ${tenantId}::uuid LIMIT 1
+      `),
     ]);
+
+    const fpArr = fpRows as unknown as Array<{ default_deposit_cents: number }>;
+    const defaultDepositCents = fpArr[0]?.default_deposit_cents ?? 5000;
 
     const kindsPresent = new Set(
       (credRows as unknown as Array<{ kind: string }>).map((r) => r.kind),
@@ -101,6 +109,7 @@ async function loadSettings(tenantId: string): Promise<SettingsData> {
         max_chain_seq: null,
         last_action_at: null,
       },
+      defaultDepositCents,
     };
   });
 }
@@ -238,6 +247,25 @@ export default async function SettingsPage() {
                       ) : (
                         <em>not linked (using email-claim fallback)</em>
                       )}
+                    </dd>
+                  </div>
+                  <div className="settings-row">
+                    <dt>Default deposit</dt>
+                    <dd>
+                      <DefaultDepositForm
+                        initialDefaultDepositCents={data.defaultDepositCents}
+                        canEdit={user.role === 'firm_owner'}
+                      />
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontSize: 11,
+                          color: 'var(--s-ink-muted)',
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        Charged at intake completion. Engagement-level fee_quoted_cents overrides this. Per-engagement deposit waiver lives on /clients/[id].
+                      </div>
                     </dd>
                   </div>
                 </dl>

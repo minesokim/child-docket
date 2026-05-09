@@ -466,6 +466,12 @@ export const engagements = pgTable(
     feeQuotedCents: integer('fee_quoted_cents'),
     feeCollectedCents: integer('fee_collected_cents').notNull().default(0),
     depositPaidCents: integer('deposit_paid_cents').notNull().default(0),
+    /**
+     * When true, the intake /deposit page skips the deposit gate.
+     * Antonio sets this for referral / pro-bono / waived engagements
+     * via /clients/[id]. Migration 0025.
+     */
+    depositWaived: boolean('deposit_waived').notNull().default(false),
     deadline: timestamp('deadline', { withTimezone: true }),
     extendedDeadline: timestamp('extended_deadline', { withTimezone: true }),
     complexityFlags: jsonb('complexity_flags').$type<string[]>().default([]).notNull(),
@@ -947,6 +953,13 @@ export const firmProfile = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    /**
+     * Firm-wide default deposit amount (cents). Used by the intake
+     * /deposit page when the engagement doesn't override via
+     * fee_quoted_cents. Settings → "Default deposit amount" surface
+     * is firm_owner-gated. Migration 0025.
+     */
+    defaultDepositCents: integer('default_deposit_cents').notNull().default(5000),
     /** Monotonic version. Bumps each meaningful extraction-job delta. */
     version: integer('version').notNull().default(1),
     /**

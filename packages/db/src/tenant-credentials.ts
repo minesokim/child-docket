@@ -53,6 +53,18 @@ export type SquareCredentials = {
   locationId: string;
   /** "production" | "sandbox" — selects Square API host. */
   environment: 'production' | 'sandbox';
+  /**
+   * Square Application ID — required for the Web Payments SDK
+   * (browser-side card form). Distinct from accessToken: applicationId
+   * is PUBLIC (it ships in the client bundle), accessToken is PRIVATE
+   * (server-only, never reaches the browser). Sandbox prefix is
+   * 'sandbox-sq0idb-'; production is 'sq0idp-'.
+   *
+   * Optional for backwards compat — credentials installed before SDK
+   * support don't have it. The /deposit page falls back to the
+   * Hosted Checkout flow when applicationId is missing.
+   */
+  applicationId?: string;
 };
 
 export type DocusignCredentials = {
@@ -138,6 +150,9 @@ const CRED_VALIDATORS: { [K in CredentialKind]: (value: unknown) => KindMap[K] }
       accessToken: v.accessToken,
       locationId: v.locationId,
       environment: v.environment,
+      ...(typeof v.applicationId === 'string' && v.applicationId.length > 0
+        ? { applicationId: v.applicationId }
+        : {}),
     };
   },
   docusign: (value): DocusignCredentials => {

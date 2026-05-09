@@ -20,6 +20,7 @@ import { IntakeSummary } from '@/components/intake-summary';
 import { DocumentsSection } from '@/components/documents-section';
 import { SignaturesSection } from '@/components/signatures-section';
 import { Sign8879Form } from '@/components/sign-8879-form';
+import { DepositWaiverToggle } from '@/components/deposit-waiver-toggle';
 import { PaymentsSection, type PaymentRow } from '@/components/payments-section';
 import { DeleteClientButton } from '@/components/delete-client-button';
 import { PIIUnlockProvider } from '@/components/pii-unlock-provider';
@@ -367,6 +368,12 @@ export default async function ClientDetailPage({ params }: PageProps) {
                       &ldquo;{engagement.notes}&rdquo;
                     </div>
                   )}
+                  <DepositWaiverToggle
+                    t={t}
+                    engagementId={engagement.id}
+                    initialWaived={engagement.depositWaived}
+                    canEdit={hasRole(user, ['firm_owner', 'preparer'])}
+                  />
                 </div>
               ) : (
                 <EmptyCard t={t} text="No engagement yet" />

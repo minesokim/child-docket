@@ -180,6 +180,7 @@ export function SquareEditForm(props: BaseProps) {
         accessToken: String(formData.get('accessToken') ?? ''),
         locationId: String(formData.get('locationId') ?? ''),
         environment,
+        applicationId: String(formData.get('applicationId') ?? '') || undefined,
       });
     } catch {
       // Don't echo err.message — could leak network internals or stack
@@ -239,6 +240,21 @@ export function SquareEditForm(props: BaseProps) {
         />
         <span className="creds-form-hint">Starts with "L". Square Dashboard → Locations.</span>
         <ErrorRow state={state} field="locationId" />
+      </div>
+      <div className="creds-form-row">
+        <label htmlFor="s-app">Application ID (optional)</label>
+        <input
+          id="s-app"
+          name="applicationId"
+          type="text"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="sandbox-sq0idb-... or sq0idp-..."
+        />
+        <span className="creds-form-hint">
+          Required for embedded card form on /deposit page. Square Dev Dashboard → Credentials → Application ID. PUBLIC value (ships in client bundle, no secrecy needed). Sandbox prefix: sandbox-sq0idb-; Production prefix: sq0idp-.
+        </span>
+        <ErrorRow state={state} field="applicationId" />
       </div>
       <GeneralError state={state} />
       <div className="creds-form-actions">

@@ -279,6 +279,13 @@ export async function setSquareCredentials(input: {
   accessToken: string;
   locationId: string;
   environment: 'sandbox' | 'production';
+  /**
+   * Square Web Payments SDK Application ID. PUBLIC value (ships in
+   * client bundle). Required for SDK B (embedded card form) which
+   * the /deposit intake page uses. Sandbox: prefix 'sandbox-sq0idb-';
+   * production: prefix 'sq0idp-'.
+   */
+  applicationId?: string;
 }): Promise<SetCredentialResult> {
   const user = await getCurrentDocketUser();
   if (!user) return { ok: false, reason: 'unauthenticated', message: 'Not signed in' };
@@ -288,6 +295,7 @@ export async function setSquareCredentials(input: {
   const accessToken = input.accessToken.trim();
   const locationId = input.locationId.trim();
   const environment = input.environment;
+  const applicationIdRaw = input.applicationId?.trim() ?? '';
 
   if (accessToken.length < 16) {
     return {
@@ -313,19 +321,56 @@ export async function setSquareCredentials(input: {
       field: 'environment',
     };
   }
+  // applicationId is optional but format-checked when provided.
+  // sandbox: 'sandbox-sq0idb-...'; production: 'sq0idp-...'
+  if (applicationIdRaw.length > 0) {
+    const validSandbox = applicationIdRaw.startsWith('sandbox-sq0idb-');
+    const validProd = applicationIdRaw.startsWith('sq0idp-');
+    if (!validSandbox && !validProd) {
+      return {
+        ok: false,
+        reason: 'invalid-format',
+        message: 'Application ID must start with "sandbox-sq0idb-" or "sq0idp-"',
+        field: 'applicationId',
+      };
+    }
+    if (environment === 'sandbox' && !validSandbox) {
+      return {
+        ok: false,
+        reason: 'invalid-format',
+        message: 'Sandbox environment requires a sandbox-prefixed Application ID',
+        field: 'applicationId',
+      };
+    }
+    if (environment === 'production' && !validProd) {
+      return {
+        ok: false,
+        reason: 'invalid-format',
+        message: 'Production environment requires a production-prefixed Application ID',
+        field: 'applicationId',
+      };
+    }
+  }
 
   try {
     await withTenant(asTenantId(user.tenantId), async (db) => {
-      await setTenantCredential(db, asTenantId(user.tenantId), 'square', {
+      const cred: SquareCredentials = {
         accessToken,
         locationId,
         environment,
-      } satisfies SquareCredentials);
+        ...(applicationIdRaw.length > 0 ? { applicationId: applicationIdRaw } : {}),
+      };
+      await setTenantCredential(db, asTenantId(user.tenantId), 'square', cred);
     });
     await auditCredentialAction(
       user,
       'credentials.set.square',
-      { locationId, environment, tokenLast4: accessToken.slice(-4) },
+      {
+        locationId,
+        environment,
+        tokenLast4: accessToken.slice(-4),
+        applicationIdConfigured: applicationIdRaw.length > 0,
+      },
       true,
     );
     return { ok: true, kind: 'square' };
