@@ -19,6 +19,7 @@ import { CommandShell } from '@/components/command-shell';
 import { IntakeSummary } from '@/components/intake-summary';
 import { DocumentsSection } from '@/components/documents-section';
 import { SignaturesSection } from '@/components/signatures-section';
+import { PaymentsSection, type PaymentRow } from '@/components/payments-section';
 import { DeleteClientButton } from '@/components/delete-client-button';
 import { PIIUnlockProvider } from '@/components/pii-unlock-provider';
 import { PIIUnlockButton } from '@/components/pii-unlock-button';
@@ -129,6 +130,42 @@ export default async function ClientDetailPage({ params }: PageProps) {
       .where(eq(schema.signatures.clientId, id))
       .orderBy(desc(schema.signatures.createdAt));
 
+    // Square Checkout deposit links for this client. Surfaces in the
+    // Deposits section (sibling to Engagement). Hide the row's
+    // checkout_url is non-secret (already a hosted Square URL the
+    // client gets sent), but the Refresh action is firm_owner|preparer
+    // gated server-side regardless of what the UI shows.
+    const payments = await db
+      .select({
+        id: schema.payments.id,
+        status: schema.payments.status,
+        amountCents: schema.payments.amountCents,
+        collectedCents: schema.payments.collectedCents,
+        refundedCents: schema.payments.refundedCents,
+        currency: schema.payments.currency,
+        checkoutUrl: schema.payments.checkoutUrl,
+        taxYear: schema.payments.taxYear,
+        paidAt: schema.payments.paidAt,
+        refundedAt: schema.payments.refundedAt,
+        lastPolledAt: schema.payments.lastPolledAt,
+        lastSquareStatus: schema.payments.lastSquareStatus,
+        createdAt: schema.payments.createdAt,
+      })
+      .from(schema.payments)
+      .where(eq(schema.payments.clientId, id))
+      .orderBy(desc(schema.payments.createdAt));
+
+    // Probe whether the tenant has a Square credential at all. The
+    // result drives whether the "Create deposit link" CTA is enabled
+    // or shows a "Configure Square →" link instead. tenant_credentials
+    // is RLS-scoped via withTenant so this is safe.
+    const credRows = await db
+      .select({ kind: schema.tenantCredentials.kind })
+      .from(schema.tenantCredentials)
+      .where(eq(schema.tenantCredentials.kind, 'square'))
+      .limit(1);
+    const hasSquareCred = credRows.length > 0;
+
     return {
       client,
       engagement,
@@ -137,11 +174,13 @@ export default async function ClientDetailPage({ params }: PageProps) {
       intake,
       documents,
       signatures,
+      payments,
+      hasSquareCred,
     };
   });
 
   if (!data) notFound();
-  const { client, engagement, issues, messages, intake, documents, signatures } = data;
+  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred } = data;
 
   const initials = client.fullName
     .split(/\s+/)
@@ -315,6 +354,25 @@ export default async function ClientDetailPage({ params }: PageProps) {
               ) : (
                 <EmptyCard t={t} text="No engagement yet" />
               )}
+            </Section>
+
+            <Section t={t} label="Deposits" count={payments.length > 0 ? payments.length : undefined}>
+              <PaymentsSection
+                t={t}
+                rows={payments.map((p) => ({
+                  ...p,
+                  // Status is text in the DB (CHECK-constrained to 6
+                  // values); narrow at the server boundary so the UI
+                  // never sees an unexpected value. Defensive default
+                  // 'pending' covers a row written by a future migration
+                  // that adds new states without updating this consumer.
+                  status: narrowPaymentStatus(p.status),
+                }))}
+                clientId={client.id}
+                defaultTaxYear={engagement?.taxYear ?? new Date().getFullYear()}
+                hasSquareCred={hasSquareCred}
+                canEdit={hasRole(user, ['firm_owner', 'preparer'])}
+              />
             </Section>
 
             <Section t={t} label="Messages" count={messages.length > 0 ? messages.length : undefined}>
@@ -639,6 +697,20 @@ const ENGAGEMENT_LABEL: Record<string, string> = {
 
 function humanizeEngagementType(t: string): string {
   return ENGAGEMENT_LABEL[t] ?? t;
+}
+
+const KNOWN_PAYMENT_STATUSES = new Set<PaymentRow['status']>([
+  'pending',
+  'paid',
+  'partial',
+  'refunded',
+  'cancelled',
+  'failed',
+]);
+function narrowPaymentStatus(raw: string): PaymentRow['status'] {
+  return KNOWN_PAYMENT_STATUSES.has(raw as PaymentRow['status'])
+    ? (raw as PaymentRow['status'])
+    : 'pending';
 }
 
 const ISSUE_LABEL: Record<string, string> = {
