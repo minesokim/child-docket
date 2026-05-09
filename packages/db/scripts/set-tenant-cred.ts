@@ -177,10 +177,22 @@ async function collectDocusign(args: Record<string, string>): Promise<DocusignCr
 }
 
 async function collectGmail(args: Record<string, string>): Promise<GmailCredentials> {
-  const refreshToken = args['refresh-token'] || (await promptHidden('Gmail OAuth Refresh Token'));
+  const clientId =
+    args['client-id'] ||
+    (await promptHidden('OAuth Client ID (.apps.googleusercontent.com)'));
+  const clientSecret =
+    args['client-secret'] || (await promptHidden('OAuth Client Secret (GOCSPX-...)'));
+  const refreshToken =
+    args['refresh-token'] || (await promptHidden('Gmail OAuth Refresh Token'));
   const accessToken = args['access-token'] || undefined;
   const scope = args.scope || (await promptHidden('Granted scopes (space-separated)'));
-  return { refreshToken: refreshToken.trim(), accessToken, scope: scope.trim() };
+  return {
+    clientId: clientId.trim(),
+    clientSecret: clientSecret.trim(),
+    refreshToken: refreshToken.trim(),
+    accessToken,
+    scope: scope.trim(),
+  };
 }
 
 async function readUntilSentinel(sentinel: string): Promise<string> {

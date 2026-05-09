@@ -67,6 +67,13 @@ export type DocusignCredentials = {
 };
 
 export type GmailCredentials = {
+  /** OAuth Client ID from the tenant's Google Cloud project (per-tenant
+   *  OAuth app — each firm runs through their own Google Cloud project).
+   *  Format: <numeric-project-id>-<alphanum>.apps.googleusercontent.com */
+  clientId: string;
+  /** OAuth Client Secret. Pair with clientId for token-refresh calls.
+   *  Format: GOCSPX-<alphanum> */
+  clientSecret: string;
   /** OAuth refresh token (long-lived). Used to mint access tokens. */
   refreshToken: string;
   /** Most-recent access token (short-lived). May be empty until first refresh. */
@@ -155,6 +162,15 @@ const CRED_VALIDATORS: { [K in CredentialKind]: (value: unknown) => KindMap[K] }
       throw new Error('Gmail credentials: not an object');
     }
     const v = value as Record<string, unknown>;
+    if (
+      typeof v.clientId !== 'string' ||
+      !v.clientId.endsWith('.apps.googleusercontent.com')
+    ) {
+      throw new Error('Gmail credentials: clientId must end in .apps.googleusercontent.com');
+    }
+    if (typeof v.clientSecret !== 'string' || !v.clientSecret.startsWith('GOCSPX-')) {
+      throw new Error('Gmail credentials: clientSecret must start with GOCSPX-');
+    }
     if (typeof v.refreshToken !== 'string' || v.refreshToken.length < 16) {
       throw new Error('Gmail credentials: refreshToken missing or too short');
     }
@@ -162,6 +178,8 @@ const CRED_VALIDATORS: { [K in CredentialKind]: (value: unknown) => KindMap[K] }
       throw new Error('Gmail credentials: scope required');
     }
     return {
+      clientId: v.clientId,
+      clientSecret: v.clientSecret,
       refreshToken: v.refreshToken,
       accessToken: typeof v.accessToken === 'string' ? v.accessToken : undefined,
       scope: v.scope,

@@ -795,5 +795,77 @@ explicitly directed the install in chat
 
 ---
 
+## [21] 2026-05-08 — Gmail OAuth cred installed + GmailCredentials shape extended for per-tenant client_id/secret
+
+**Decision**: User pasted Gmail OAuth Client ID + Client Secret +
+refresh_token in chat with explicit "ill refresh later just use it"
+pattern (matches Square [19] + DocuSign [20]). Installed into
+`tenant_credentials` for Vazant via
+`packages/db/scripts/install-gmail-test.ts` which reads from env
+vars + calls `setTenantCredential('gmail', ...)` + live-tests
+the refresh-token exchange against
+`oauth2.googleapis.com/token` + verifies access by calling
+`gmail.users.getProfile` on the authorized account.
+
+**Live test result**: PASSED. Refresh exchange minted a 253-char
+access_token (1h TTL); profile API confirmed authorized email
+`minseodavid@gmail.com` with 99,318 messages + 97,684 threads.
+
+**Schema extension**: `GmailCredentials` shape extended from
+`{ refreshToken, accessToken?, scope }` to
+`{ clientId, clientSecret, refreshToken, accessToken?, scope }`.
+The validator in `CRED_VALIDATORS` enforces clientId ends in
+`.apps.googleusercontent.com` and clientSecret starts with
+`GOCSPX-`. The schema (jsonb data column) accepts the new shape
+without migration.
+
+**Why per-tenant clientId/clientSecret**: Each firm runs through
+their own Google Cloud project (creates their own OAuth client).
+The previous shape assumed a Docket-wide OAuth app at the env-var
+layer; that model only works if Docket-the-company owns one
+shared OAuth client. The per-tenant shape supports both: in v0
+each tenant brings their own clientId/secret; in v1 if Docket
+publishes its own OAuth app + verifies, all tenants reuse the
+same Docket-issued credentials and the per-tenant fields become
+denormalized but still valid.
+
+**Identifiers (non-secret)**:
+- Client ID: `345554515775-7ikcvu23b0lm5am8nie230qmvdeejq1f.apps.googleusercontent.com`
+- Authorized email: `minseodavid@gmail.com`
+- Scopes: `gmail.readonly gmail.send`
+- Refresh token expiry: ~7 days (test/unverified app limit;
+  upgrade to verified for indefinite refresh)
+
+The refresh_token + clientSecret (the secrets) live ONLY in the
+encrypted `tenant_credentials` row. The chat transcript carries
+them but that is the user's transcript to manage.
+
+**Alternative considered**: (1) Refuse to use pasted secrets,
+require credentials UI first. Rejected — same logic as [19] +
+[20]. (2) Store clientId/secret as Vercel env vars (Docket-wide).
+Rejected for v0 because per-tenant shape supports the actual
+multi-tenant architecture; converting later is harder than
+extending now.
+
+**How to reverse**: `DELETE FROM tenant_credentials WHERE
+tenant_id = '<vazant-uuid>' AND kind = 'gmail'` against dev DB,
+OR rotate via the credentials UI when it ships.
+
+**Rotation commitment**: User stated intent to rotate. Tracking:
+when credentials UI ships and user rotates the Gmail OAuth
+client, the install-gmail-test.ts script becomes a one-time
+bootstrap artifact.
+
+**Severity**: medium (security-sensitive credential install +
+schema extension, but sandbox/test user + user-explicit +
+reversible + live-tested)
+
+**Commit**: pending (this commit)
+
+**User-review status**: reviewed-approved (2026-05-08) — user
+explicitly directed the install in chat
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
