@@ -734,5 +734,66 @@ explicitly directed the install in chat
 
 ---
 
+## [20] 2026-05-08 — DocuSign sandbox cred installed via one-shot script + JWT exchange verified live
+
+**Decision**: User pasted the DocuSign sandbox RSA private key in chat
+with explicit "use it" pattern (matches Square install [19]).
+Installed into `tenant_credentials` for Vazant tenant via
+`packages/db/scripts/install-docusign-sandbox.ts` which:
+(1) reads the PEM from a file path in env var (PEM never on the
+command line), (2) calls `setTenantCredential('docusign', ...)`,
+(3) immediately tests JWT mint + exchange against the demo
+DocuSign auth host to verify the credential works end-to-end.
+
+**JWT live test result**: PASSED. `access_token` minted (718 chars),
+`apiBaseUri` resolved to `https://demo.docusign.net`. Consent was
+already granted by the user before script run; `consent_required`
+error did not occur.
+
+**Reasoning**: Same pattern as decision [19] (Square install). User-
+explicit instruction in trusted context; sandbox (not production)
+credential; expedient onboarding ahead of credentials-management UI;
+same `setTenantCredential` code path the UI will exercise.
+
+**Identifiers (non-secret, in plaintext audit)**:
+- Integration Key: `69aa41d7-bb87-4138-a490-e63b9e7e00cb`
+- User ID: `1f30debe-f23b-4dba-841f-64a09b1039ba`
+- API Account ID: `52125d58-5892-4e99-b069-0e4bfe9768fb`
+- Account Base URI: `https://demo.docusign.net`
+
+The RSA private key (the secret) lives ONLY in the encrypted row
+in `tenant_credentials` after the temp PEM file at
+`C:/Users/minse/AppData/Local/Temp/dctemp.pem` was deleted post-
+install. The chat transcript carries it but that is the user's
+transcript to manage.
+
+**Alternative considered**: (1) Refuse to use the pasted PEM, force
+the user to wait for the credentials UI. Rejected — same logic as
+[19], no security benefit, blocks integration testing for hours.
+(2) Skip the JWT test step. Rejected — without the live test we
+would not know whether consent was granted; the test is what
+confirms the integration is end-to-end usable.
+
+**How to reverse**: `DELETE FROM tenant_credentials WHERE tenant_id =
+'<vazant-uuid>' AND kind = 'docusign'` against dev DB, OR rotate
+via the credentials UI when it ships. The append-only audit row
+stays in actions either way.
+
+**Rotation commitment**: User stated intent to rotate (matches [19]
+pattern). When the credentials UI ships, user generates a NEW RSA
+keypair in the DocuSign developer dashboard, deletes the old
+keypair, and re-installs via the UI's edit flow. The pasted PEM
+becomes invalid at that point.
+
+**Severity**: medium (security-sensitive credential install, but
+sandbox + user-explicit + reversible + JWT live-tested)
+
+**Commit**: pending (this commit)
+
+**User-review status**: reviewed-approved (2026-05-08) — user
+explicitly directed the install in chat
+
+---
+
 *Last updated: 2026-05-08. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
