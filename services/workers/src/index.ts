@@ -57,6 +57,12 @@ export type {
   NoticeResponseTemplate,
 } from './agents/notice-triage.js';
 
+export { draftNoticeResponse, NoticeDraftSchema } from './agents/notice-drafter.js';
+export type {
+  NoticeDraftOutput,
+  DraftNoticeResponseInput,
+} from './agents/notice-drafter.js';
+
 // Function array for Inngest serve() handler — Next.js route uses this.
 import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';
