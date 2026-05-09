@@ -1039,6 +1039,7 @@ The `prepare` script runs this automatically on `pnpm install`.
   Score: <0-100>/100
   Align: ALIGNED | MISALIGNED | BORDERLINE
   Craft: PASS | FAIL | N/A — substrate-only
+  Codex-Reviewed: PASS | PASS-with-fixes-applied
   Decisions: [<n>] | none
   Compliance-Check: <≥80-char answer to "did I do what I was supposed to do?">
   ```
@@ -1047,7 +1048,15 @@ The `prepare` script runs this automatically on `pnpm install`.
   - `Align: MISALIGNED` → BLOCKED. Reshape or kill before committing.
   - `Craft: FAIL` → BLOCKED.
   - `Craft: N/A` on a commit that touches UI files (any `apps/*/src/app/**.{tsx,jsx,css}`, `apps/*/src/components/**.{tsx,jsx,css}`, `packages/ui/src/components/**.{tsx,jsx}`, `packages/ui/src/tokens.{ts,tsx}`, `packages/ui/src/styles.css`) → BLOCKED. Run `/craft` and report PASS/FAIL.
+  - `Codex-Reviewed` missing → BLOCKED. Run codex via `bash scripts/codex-review-staged.sh` (wraps `codex review --uncommitted`); fix any findings; commit with `Codex-Reviewed: PASS` or `PASS-with-fixes-applied`. NO N/A escape — codex itself flagged on the gate's first commit that allowing N/A would let the AI bypass the enforcement by claiming "trivial." For genuine emergencies (codex CLI broken, infra outage), use `Protocol-Skip` with a >=10-char reason. User mandate 2026-05-09 escalation: *"you continually skip steps i tell you not to skip. continually. over and over. it is very frustrating. bake it in."*
   - `Compliance-Check < 80 chars` → BLOCKED. The trailer must be a real answer to "did I do what I was supposed to do?" — naming the specific user instructions verified, the protocols that ran, and any gaps not hidden. "yes" / "I think so" / single-word answers are not allowed.
+
+**/e2e cadence enforcement** (added 2026-05-09):
+- WARN at >= 3 feat|fix commits since last `/e2e` pass
+- BLOCK at >= 6 feat|fix commits since last `/e2e` pass
+- State file: `.gstack/last-e2e-sha` (gitignored, per-developer-machine)
+- Recorded automatically by `pnpm --filter @docket/workers e2e` wrapper
+- Manual record: `bun run scripts/protocol-gate.ts --record-e2e-pass`
 
 ### The compliance-check rule (locked 2026-05-08)
 

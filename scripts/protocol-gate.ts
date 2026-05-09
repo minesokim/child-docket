@@ -56,10 +56,156 @@ interface Trailers {
   decisions?: string;
   complianceCheck?: string;
   protocolSkip?: string;
+  /**
+   * Codex-Reviewed trailer (mandate 2026-05-09): every feat|fix MUST
+   * have an independent codex review. The trailer reports the verdict.
+   *   PASS                    — codex review run, no issues
+   *   PASS-with-fixes-applied — codex review run, findings fixed in
+   *                             this same commit
+   *
+   * NO N/A escape hatch. Codex itself flagged on this gate's first
+   * commit that allowing N/A would let me bypass the enforcement on
+   * substantive commits by claiming "trivial." For genuine emergencies
+   * (codex CLI broken, infra outage), use the existing `Protocol-Skip`
+   * trailer with a real >=10-char reason.
+   */
+  codexReviewed?: 'PASS' | 'PASS-WITH-FIXES-APPLIED';
   raw: Record<string, string>;
 }
 
 const FEAT_PREFIX = /^(feat|fix)(\([\w/-]+\))?:/;
+
+/**
+ * Grandfathering for the Codex-Reviewed trailer + /e2e cadence
+ * enforcement (the two new-as-of-2026-05-09 checks).
+ *
+ * Range mode (CI): a commit is post-enforcement IFF it has the
+ * enforcement commit as an ancestor. Codex flagged on the gate's
+ * first commit that date-based grandfathering breaks for in-flight
+ * feature branches: a branch cut from main BEFORE the enforcement
+ * commit but with new commits authored AFTER the cutoff date would
+ * fail the gate even though the contributor's branch never had the
+ * hook installed. Ancestry-based is the correct semantic: the
+ * commits become "subject to the gate" only after the contributor
+ * merges main and inherits the enforcement commit.
+ *
+ * Commit-msg mode: always enforces. The commit being authored
+ * happens after the enforcement commit landed (or the operator
+ * couldn't have run protocol-gate at all). Bypass via Protocol-Skip.
+ *
+ * The enforcement SHA lives in `docs/codex-e2e-enforcement-sha`
+ * (tracked, NOT gitignored) so CI sees it. Initial commit ships an
+ * EMPTY file; an immediate follow-up commit captures the
+ * enforcement-commit SHA via:
+ *
+ *   git rev-parse HEAD > docs/codex-e2e-enforcement-sha
+ *   git commit docs/codex-e2e-enforcement-sha \
+ *     -m "chore: record codex/e2e enforcement SHA"
+ *
+ * If the file is empty (= we're in the gap between the enforcement
+ * commit and the SHA-recording follow-up), all commits are exempt
+ * from these checks in range mode. That's the correct fallback —
+ * we'd rather skip enforcement on a one-commit window than break
+ * unrelated PRs.
+ *
+ * Edge-Cases / Score / Align / Craft / Compliance-Check have been
+ * gated since 2026-05-08; pre-existing commits already comply, no
+ * grandfathering needed for those.
+ */
+const ENFORCEMENT_SHA_FILE = 'docs/codex-e2e-enforcement-sha';
+
+/**
+ * Read the enforcement SHA from a TRUSTED ROOT — not from the
+ * candidate patch's working tree.
+ *
+ * Codex flagged across multiple review passes that local-file fallback
+ * lets a PR self-disable enforcement by tampering with the tracked
+ * file. The fix: only trust origin/main or the merge-base. NO local
+ * fallback in range mode.
+ *
+ * Trust hierarchy (first hit wins):
+ *   1. `git show origin/main:docs/codex-e2e-enforcement-sha`
+ *      — main is branch-protected; PRs can't touch it
+ *   2. `git show <merge-base HEAD origin/main>:<file>`
+ *      — last common ancestor with main; same protection
+ *
+ * If neither resolves to a valid SHA → return null. The CALLER
+ * fail-CLOSES on null (enforces trailers) so the rollout PR can't
+ * disable the gate against itself. The rollout commit uses
+ * Protocol-Skip with a reason; the SHA-recording follow-up is a
+ * chore() commit that doesn't trigger feat/fix enforcement.
+ *
+ * Local-file existence is reported separately (for diagnostics in
+ * the bootstrap window) but is NOT used to compute pre-enforcement.
+ */
+function readEnforcementShaFromTrustedRoot(): {
+  sha: string | null;
+  source: 'origin-main' | 'merge-base' | 'none';
+} {
+  // 1. Try origin/main directly. CI workflows that fetch full history
+  // (actions/checkout with fetch-depth: 0) have this ref.
+  try {
+    const sha = execSync(`git show origin/main:${ENFORCEMENT_SHA_FILE}`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    if (/^[0-9a-f]{7,40}$/i.test(sha)) {
+      return { sha, source: 'origin-main' };
+    }
+  } catch {
+    // origin/main not fetched, or file doesn't exist there.
+  }
+
+  // 2. Try merge-base with origin/main. The merge-base is on main
+  // (or main's history) and unreachable from the PR's tampering.
+  try {
+    const mergeBase = execSync('git merge-base HEAD origin/main', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    const sha = execSync(`git show ${mergeBase}:${ENFORCEMENT_SHA_FILE}`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    if (/^[0-9a-f]{7,40}$/i.test(sha)) {
+      return { sha, source: 'merge-base' };
+    }
+  } catch {
+    // No merge-base or no file at that revision.
+  }
+
+  return { sha: null, source: 'none' };
+}
+
+/**
+ * Returns true if `commitSha` has `ancestorSha` in its history (or is
+ * the same commit). Uses `git merge-base --is-ancestor`. Returns
+ * false on any git error (e.g., SHA not reachable).
+ */
+function isAncestor(ancestorSha: string, commitSha: string): boolean {
+  try {
+    execSync(`git merge-base --is-ancestor ${ancestorSha} ${commitSha}`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Committer-date is unused now (ancestry check is more correct), but
+ * the helper stays in case a future grandfathering adds a date-based
+ * constraint. %cI (NOT %aI) so cherry-pick/rebase resets the date.
+ */
+function commitDateIso(sha: string): string | null {
+  try {
+    return execSync(`git log -1 --format=%cI ${sha}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
+      .trim();
+  } catch {
+    return null;
+  }
+}
 // File extensions/paths that count as UI-touching for /craft enforcement.
 const UI_PATTERNS = [
   /^apps\/[^/]+\/src\/app\/.+\.(tsx|jsx|css)$/,
@@ -150,16 +296,36 @@ function checkE2eCadence(): E2eCadenceResult {
   // Count feat|fix commits since the last e2e pass. The grep
   // matches conventional-commit prefixes only — docs/, chore/,
   // refactor/, test/, etc. don't count toward cadence.
+  //
+  // Exclude grandfathered commits (commits that don't have the
+  // codex/e2e enforcement SHA as ancestor). Codex flagged that
+  // long-lived branches with several pre-enforcement feat/fix
+  // commits would WARN/BLOCK on the first new commit purely
+  // because of grandfathered work — incomplete grandfathering.
   let count = 0;
   try {
     // Verify the lastSha is reachable. If not (force-push, branch
     // switch), warn and continue without blocking.
     execSync(`git cat-file -e ${lastSha}`, { stdio: 'pipe' });
     const out = execSync(
-      `git log --pretty=%s --grep "^feat" --grep "^fix" -E ${lastSha}..HEAD`,
+      `git log --pretty="%H %s" --grep "^feat" --grep "^fix" -E ${lastSha}..HEAD`,
       { encoding: 'utf8' },
     );
-    count = out.split('\n').filter((l) => l.trim()).length;
+    const candidates = out.split('\n').filter((l) => l.trim());
+    const { sha: enforcementSha } = readEnforcementShaFromTrustedRoot();
+    if (enforcementSha === null) {
+      // No SHA recorded → bootstrap window → don't filter (everything
+      // counts; the cadence system is itself bootstrapping).
+      count = candidates.length;
+    } else {
+      // Filter out commits that DON'T have enforcement SHA as ancestor
+      // (= pre-enforcement, grandfathered).
+      count = candidates.filter((line) => {
+        const sha = line.split(' ')[0];
+        if (!sha) return false;
+        return isAncestor(enforcementSha, sha);
+      }).length;
+    }
   } catch {
     return {
       warn:
@@ -249,6 +415,25 @@ function parseTrailers(message: string): Trailers {
   trailers.complianceCheck = trailers.raw['compliance-check'];
   // Protocol-Skip: <reason>
   trailers.protocolSkip = trailers.raw['protocol-skip'];
+  // Codex-Reviewed: PASS | PASS-with-fixes-applied
+  // (no N/A — see comment on the codexReviewed field)
+  //
+  // EXACT match (after trim + upper). Codex flagged that prefix matching
+  // accepted "PASS (codex was down)" and "PASS-but-skipped" as valid —
+  // an easy bypass on a hard gate. Hyphen vs space normalized so both
+  // "PASS-WITH-FIXES-APPLIED" and "PASS WITH FIXES APPLIED" pass.
+  const cx = trailers.raw['codex-reviewed'];
+  if (cx) {
+    const normalized = cx.trim().toUpperCase().replace(/\s+/g, '-');
+    if (normalized === 'PASS-WITH-FIXES-APPLIED') {
+      trailers.codexReviewed = 'PASS-WITH-FIXES-APPLIED';
+    } else if (normalized === 'PASS') {
+      trailers.codexReviewed = 'PASS';
+    }
+    // Any other value (including "PASS (codex down)", "PASS-skipped",
+    // "N/A", etc.) is treated as missing — the validate() check
+    // fires the BLOCK error.
+  }
   return trailers;
 }
 
@@ -283,6 +468,14 @@ interface ValidateInput {
   body: string;
   files: string[];
   shaForLog?: string;
+  /**
+   * The commit's SHA, used for ancestry-based grandfathering of the
+   * Codex-Reviewed + /e2e cadence checks in range mode. In commit-msg
+   * mode this is unset (the commit hasn't been authored yet) and the
+   * checks always enforce. The validate function calls isAncestor()
+   * against the enforcement SHA to decide if this commit is exempt.
+   */
+  commitSha?: string;
 }
 
 interface ValidateResult {
@@ -383,12 +576,102 @@ function validate(input: ValidateInput): ValidateResult {
     );
   }
 
-  // /e2e cadence enforcement (mandate 2026-05-09).
-  const cadence = checkE2eCadence();
-  if (cadence.error) {
-    errors.push(cadence.error);
-  } else if (cadence.warn) {
-    warnings.push(cadence.warn);
+  // Grandfather pre-enforcement commits in range/CI mode. Per codex
+  // review on the first version of this gate: "any range that still
+  // contains older feat/fix commits authored before this trailer
+  // existed" would fail unmergeably. The exemption applies only to
+  // Codex-Reviewed + /e2e cadence — those are the new-as-of-2026-05-09
+  // checks. Score / Align / Craft / Compliance-Check have been gated
+  // since 2026-05-08; pre-existing commits already comply.
+  //
+  // Ancestry-based grandfathering: a commit is post-enforcement IFF
+  // it has the enforcement commit as an ancestor.
+  //
+  // Read the enforcement SHA from a TRUSTED ROOT (origin/main or
+  // merge-base), NOT the local working tree, to prevent a PR from
+  // self-disabling enforcement by emptying the tracked file. Codex
+  // flagged this as a P1 CI bypass on the prior version of the gate.
+  //
+  // Trusted-root SHA missing → exempt all commits in range mode.
+  // Codex flagged across passes that fail-closed-on-null breaks
+  // every in-flight PR across the team during the rollout window.
+  // The bounded risk during this window (1-2 PRs landing without
+  // gate enforcement) is preferable to all-PRs-blocked. After the
+  // SHA-recording chore() commit lands on main, ancestry check
+  // takes over normally.
+  //
+  // Trusted-root SHA present + commit is descendant → enforce.
+  // Trusted-root SHA present + commit is NOT descendant →
+  //   genuinely pre-enforcement (in-flight branch from before
+  //   rollout) → exempt, IFF the recorded SHA is itself a real
+  //   mainline commit. If the recording is bogus (squashed out,
+  //   feature-branch SHA), fail CLOSED so the operator notices.
+  let isPreEnforcement = false;
+  if (input.commitSha !== undefined) {
+    const { sha: enforcementSha } = readEnforcementShaFromTrustedRoot();
+    if (enforcementSha === null) {
+      // Bootstrap window — exempt to avoid breaking in-flight PRs.
+      isPreEnforcement = true;
+    } else if (isAncestor(enforcementSha, input.commitSha)) {
+      isPreEnforcement = false;
+    } else {
+      // Commit is not a descendant of the recorded SHA. Distinguish:
+      //   (a) Genuinely pre-enforcement (older branch) → exempt
+      //   (b) Recording is bogus (SHA not on mainline) → fail CLOSED
+      let onMainline = false;
+      try {
+        execSync(`git cat-file -e ${enforcementSha}`, { stdio: 'pipe' });
+        execSync(`git merge-base --is-ancestor ${enforcementSha} origin/main`, {
+          stdio: 'pipe',
+        });
+        onMainline = true;
+      } catch {
+        onMainline = false;
+      }
+      if (!onMainline) {
+        isPreEnforcement = false;
+        warnings.push(
+          `Recorded enforcement SHA ${enforcementSha.slice(0, 8)} is unreachable or not on ` +
+            `origin/main. Treating commit as post-enforcement (fail-closed). Re-record via ` +
+            `\`git rev-parse <real-mainline-commit> > ${ENFORCEMENT_SHA_FILE}\`.`,
+        );
+      } else {
+        isPreEnforcement = true;
+      }
+    }
+  }
+
+  // Codex-Reviewed trailer (mandate 2026-05-09 escalated). The user
+  // codified codex review as unconditional in AUTONOMOUS-DECISIONS [23]
+  // ("the discipline should be unconditional"). After observing me skip
+  // codex on 8/8 substantial commits in one session with rationalizations
+  // ("textbook pattern", "bounded surface area"), the trailer is a hard
+  // gate — same as Score, Align, Craft.
+  //
+  // NO N/A escape. Codex itself reviewed the first version of this gate
+  // and correctly flagged that allowing N/A would let me bypass the
+  // enforcement on substantive commits by claiming "trivial." So PASS
+  // or PASS-with-fixes-applied only. For genuine emergencies (codex CLI
+  // broken, infra outage), use Protocol-Skip with a real >=10-char reason.
+  if (!isPreEnforcement && !trailers.codexReviewed) {
+    errors.push(
+      'Missing trailer: "Codex-Reviewed: PASS | PASS-with-fixes-applied". Run codex review ' +
+        'BEFORE commit via `bash scripts/codex-review-staged.sh`. The discipline is unconditional ' +
+        'per AUTONOMOUS-DECISIONS [23] and [25]. No N/A escape — codex itself flagged that path ' +
+        'as a bypass surface. For genuine emergencies (codex CLI broken, infra outage), use ' +
+        'Protocol-Skip with a >=10-char reason.',
+    );
+  }
+
+  // /e2e cadence enforcement (mandate 2026-05-09). Same grandfather
+  // rule as Codex-Reviewed.
+  if (!isPreEnforcement) {
+    const cadence = checkE2eCadence();
+    if (cadence.error) {
+      errors.push(cadence.error);
+    } else if (cadence.warn) {
+      warnings.push(cadence.warn);
+    }
   }
 
   return {
@@ -459,6 +742,7 @@ async function main() {
       console.error('  Score: 96/100');
       console.error('  Align: ALIGNED');
       console.error('  Craft: PASS  (or: N/A — substrate-only)');
+      console.error('  Codex-Reviewed: PASS  (or: PASS-with-fixes-applied)');
       console.error('  Decisions: [17]  (or: none)');
       console.error(
         '  Compliance-Check: I confirmed I ran /score (96/100), /align (ALIGNED),',
@@ -506,7 +790,13 @@ async function main() {
     for (const sha of shas) {
       const { subject, body } = readCommit(sha);
       const files = getCommitFiles(sha);
-      const result = validate({ subject, body, files, shaForLog: sha });
+      const result = validate({
+        subject,
+        body,
+        files,
+        shaForLog: sha,
+        commitSha: sha,
+      });
       if (result.skipped) {
         skipped += 1;
         const reason = parseTrailers(body).protocolSkip ?? '';
