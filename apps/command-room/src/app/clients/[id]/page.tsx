@@ -308,7 +308,11 @@ export default async function ClientDetailPage({ params }: PageProps) {
               label="Signatures"
               count={signatures.length > 0 ? signatures.length : undefined}
             >
-              <SignaturesSection t={t} signatures={signatures} />
+              <SignaturesSection
+                t={t}
+                signatures={signatures}
+                canRefresh={hasRole(user, ['firm_owner', 'preparer'])}
+              />
               <Sign8879Form
                 t={t}
                 clientId={client.id}

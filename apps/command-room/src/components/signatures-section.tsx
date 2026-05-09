@@ -1,3 +1,5 @@
+'use client';
+
 // Signatures panel for the per-client detail page.
 //
 // Engagement letter, §7216 consent, and Form 8879 statuses with their
@@ -5,10 +7,16 @@
 // in Day 1 hardening). Antonio uses this to verify legal artifacts
 // before filing.
 //
-// Day 5 wiring: render only. The 8879 KBA flow will write rows into
-// this same table on Day 13 — UI doesn't change, just rows get richer.
+// PER-ROW REFRESH BUTTON (added when DocuSign Connect Admin UI was
+// blocking webhook setup): Antonio can click "Refresh status" on any
+// pending DocuSign row to manually pull the current envelope state
+// from DocuSign's API. Same DB updates the webhook would make
+// (status flip + KBA gate + signed_at + audit) — just human-driven.
 
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import type { Theme } from '@docket/ui';
+import { refreshSignatureStatus } from '@/lib/docusign/refresh-signature-status';
 
 type SignatureRow = {
   id: string;
@@ -33,10 +41,46 @@ const TYPE_LABEL: Record<string, string> = {
 export function SignaturesSection({
   t,
   signatures,
+  canRefresh = false,
 }: {
   t: Theme;
   signatures: SignatureRow[];
+  /**
+   * Whether to render the per-row "Refresh status" button. Only true
+   * for firm_owner | preparer roles (server action also gates the
+   * call, so this is defense-in-depth UI hide).
+   */
+  canRefresh?: boolean;
 }) {
+  const router = useRouter();
+  const [refreshState, setRefreshState] = React.useState<
+    Record<string, { kind: 'idle' } | { kind: 'refreshing' } | { kind: 'error'; message: string }>
+  >({});
+
+  const onRefresh = React.useCallback(
+    async (signatureRowId: string) => {
+      setRefreshState((s) => ({ ...s, [signatureRowId]: { kind: 'refreshing' } }));
+      try {
+        const result = await refreshSignatureStatus(signatureRowId);
+        if (result.ok) {
+          setRefreshState((s) => ({ ...s, [signatureRowId]: { kind: 'idle' } }));
+          router.refresh();
+        } else {
+          setRefreshState((s) => ({
+            ...s,
+            [signatureRowId]: { kind: 'error', message: result.message },
+          }));
+        }
+      } catch {
+        setRefreshState((s) => ({
+          ...s,
+          [signatureRowId]: { kind: 'error', message: 'Network error. Try again.' },
+        }));
+      }
+    },
+    [router],
+  );
+
   if (signatures.length === 0) {
     return (
       <div
@@ -137,6 +181,63 @@ export function SignaturesSection({
                 : 'required · not yet completed'}
             </div>
           )}
+
+          {/* Per-row refresh control. Only fires for DocuSign-backed
+              rows (form_8879 with kbaProvider='lexisnexis'); the
+              other signature types (engagement_letter, consent_7216)
+              are not in the DocuSign envelope universe and can't be
+              polled. Hidden once status is signed (no further state
+              transitions to fetch). */}
+          {canRefresh &&
+            sig.type === 'form_8879' &&
+            sig.kbaProvider === 'lexisnexis' &&
+            sig.status !== 'signed' &&
+            sig.status !== 'declined' && (
+              <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center' }}>
+                {(() => {
+                  const rs = refreshState[sig.id] ?? { kind: 'idle' as const };
+                  const isRefreshing = rs.kind === 'refreshing';
+                  const errorMessage = rs.kind === 'error' ? rs.message : null;
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onRefresh(sig.id)}
+                        disabled={isRefreshing}
+                        aria-busy={isRefreshing}
+                        style={{
+                          fontFamily: t.sans,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          padding: '4px 10px',
+                          borderRadius: 999,
+                          border: `1px solid ${t.border}`,
+                          background: 'transparent',
+                          color: t.ink,
+                          cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                          opacity: isRefreshing ? 0.5 : 1,
+                        }}
+                      >
+                        {isRefreshing ? 'Checking…' : 'Refresh status'}
+                      </button>
+                      {errorMessage && (
+                        <span
+                          role="alert"
+                          aria-live="polite"
+                          style={{
+                            fontFamily: t.mono,
+                            fontSize: 10,
+                            color: t.rust,
+                          }}
+                        >
+                          {errorMessage}
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
         </div>
       ))}
     </div>
