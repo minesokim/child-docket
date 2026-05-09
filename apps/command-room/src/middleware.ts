@@ -30,6 +30,11 @@ const isPublicRoute = createRouteMatcher([
   // Exact path — descendants are NOT exempted (so a future
   // /api/health-evil stays auth-gated).
   '/api/health',
+  // Twilio inbound webhook — Twilio doesn't carry user credentials.
+  // The route verifies X-Twilio-Signature against the matched
+  // tenant's auth token before any DB write. Spoofed POSTs without a
+  // valid signature are rejected with 401.
+  '/api/webhooks/twilio/(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
