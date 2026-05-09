@@ -13,6 +13,7 @@
 // is the read-only diagnostic surface that lets him SEE what's set.
 
 import { sql } from 'drizzle-orm';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { withTenant } from '@docket/db';
 import type { TenantId } from '@docket/shared';
@@ -248,9 +249,9 @@ export default async function SettingsPage() {
             <section className="settings-section">
               <div className="settings-section-head">
                 <h2 className="settings-section-title">Integrations</h2>
-                <span className="settings-section-meta">
-                  per-tenant credentials in vault
-                </span>
+                <Link href="/settings/credentials" className="settings-section-link">
+                  Manage credentials →
+                </Link>
               </div>
               <ul className="settings-integrations">
                 {(Object.keys(INTEGRATION_LABELS) as Array<keyof IntegrationsStatus>).map(

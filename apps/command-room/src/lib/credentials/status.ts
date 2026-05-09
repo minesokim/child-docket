@@ -110,7 +110,12 @@ export async function loadCredentialStatuses(
           };
         }
       } catch (err) {
-        console.error('[credentials/status] twilio decrypt failed:', err);
+        // Log only message, never raw err — exception context can carry
+        // secret-adjacent fragments (key fingerprints, payload bytes).
+        console.error(
+          '[credentials/status] twilio decrypt failed:',
+          err instanceof Error ? err.message : 'unknown error',
+        );
       }
     }
 
@@ -134,7 +139,10 @@ export async function loadCredentialStatuses(
           };
         }
       } catch (err) {
-        console.error('[credentials/status] square decrypt failed:', err);
+        console.error(
+          '[credentials/status] square decrypt failed:',
+          err instanceof Error ? err.message : 'unknown error',
+        );
       }
     }
 
@@ -158,7 +166,10 @@ export async function loadCredentialStatuses(
           };
         }
       } catch (err) {
-        console.error('[credentials/status] docusign decrypt failed:', err);
+        console.error(
+          '[credentials/status] docusign decrypt failed:',
+          err instanceof Error ? err.message : 'unknown error',
+        );
       }
     }
 
@@ -185,7 +196,10 @@ export async function loadCredentialStatuses(
           };
         }
       } catch (err) {
-        console.error('[credentials/status] gmail decrypt failed:', err);
+        console.error(
+          '[credentials/status] gmail decrypt failed:',
+          err instanceof Error ? err.message : 'unknown error',
+        );
       }
     }
 

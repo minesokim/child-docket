@@ -254,6 +254,9 @@ export async function setTwilioCredentials(input: {
     );
     return { ok: true, kind: 'twilio' };
   } catch (err) {
+    // Server captures full detail via Sentry; client gets a sanitized
+    // fixed-copy message so DB connection strings / pg-error fragments
+    // / stack traces never leak through the action return shape.
     Sentry.captureException(err, {
       tags: { component: 'credentials-set', kind: 'twilio' },
     });
@@ -267,7 +270,7 @@ export async function setTwilioCredentials(input: {
     return {
       ok: false,
       reason: 'db-error',
-      message: err instanceof Error ? err.message : 'Database write failed',
+      message: 'Could not save Twilio credentials. The error has been logged for review.',
     };
   }
 }
@@ -340,7 +343,7 @@ export async function setSquareCredentials(input: {
     return {
       ok: false,
       reason: 'db-error',
-      message: err instanceof Error ? err.message : 'Database write failed',
+      message: 'Could not save Square credentials. The error has been logged for review.',
     };
   }
 }
@@ -433,7 +436,7 @@ export async function setDocuSignCredentials(input: {
     return {
       ok: false,
       reason: 'db-error',
-      message: err instanceof Error ? err.message : 'Database write failed',
+      message: 'Could not save DocuSign credentials. The error has been logged for review.',
     };
   }
 }
@@ -522,7 +525,7 @@ export async function setGmailCredentials(input: {
     return {
       ok: false,
       reason: 'db-error',
-      message: err instanceof Error ? err.message : 'Database write failed',
+      message: 'Could not save Gmail credentials. The error has been logged for review.',
     };
   }
 }
@@ -588,7 +591,7 @@ export async function deleteCredential(
     return {
       ok: false,
       reason: 'db-error',
-      message: err instanceof Error ? err.message : 'Database delete failed',
+      message: `Could not delete ${kind} credentials. The error has been logged for review.`,
     };
   }
 }
@@ -649,7 +652,7 @@ export async function testCredential(
     return {
       ok: false,
       reason: 'db-error',
-      message: err instanceof Error ? err.message : 'Test failed',
+      message: `Could not run ${kind} connection test. The error has been logged for review.`,
     };
   }
 }

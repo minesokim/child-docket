@@ -77,6 +77,19 @@
   font-size: 11px;
   color: var(--s-ink-muted);
 }
+.settings-section-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--s-forest);
+  text-decoration: none;
+  letter-spacing: -0.005em;
+  transition: color 120ms ease;
+}
+.settings-section-link:hover {
+  color: oklch(35% 0.10 150);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 .settings-list {
   list-style: none;
