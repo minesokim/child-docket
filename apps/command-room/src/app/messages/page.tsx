@@ -11,6 +11,7 @@
 // room route, operational-modern visual language, CommandShell wrapper,
 // Inter sans, soft 1px borders, low-saturation status pills.
 
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentDocketUser } from '@/lib/current-user';
 import { CommandShell } from '@/components/command-shell';
@@ -152,6 +153,11 @@ export default async function MessagesPage({
               const badge = trustBadge(row);
               return (
                 <li key={row.id} className="inbox-item">
+                  <Link
+                    href={`/messages/${row.id}`}
+                    className="inbox-item-link"
+                    aria-label={`Open ${row.title}`}
+                  />
                   <div className="inbox-item-left">
                     <span className={`inbox-sev ${severityClass(row.severity)}`} aria-label={`Severity ${row.severity}`}>
                       {row.severity}

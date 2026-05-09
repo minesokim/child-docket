@@ -186,9 +186,9 @@ export default async function HomePage() {
                         )}
                       </div>
                       <Link
-                        href={`/messages?filter=all`}
+                        href={`/messages/${issue.id}`}
                         className="home-brief-cta"
-                        aria-label={`Open ${issue.title} in inbox`}
+                        aria-label={`Open ${issue.title}`}
                       >
                         Open
                       </Link>

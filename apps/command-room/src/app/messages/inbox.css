@@ -113,9 +113,28 @@
   border-radius: 10px;
   padding: 14px 16px;
   transition: border-color 120ms ease;
+  position: relative;
 }
 .inbox-item:hover {
   border-color: oklch(86% 0.008 85);
+}
+/* Full-card click target. The Link is absolutely positioned over the
+ * whole item; sub-elements with their own affordance can sit above it
+ * via z-index if needed. */
+.inbox-item-link {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  z-index: 1;
+}
+.inbox-item-link:focus-visible {
+  outline: 2px solid var(--ix-forest);
+  outline-offset: 2px;
+}
+.inbox-item > *:not(.inbox-item-link) {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
 }
 
 /* Severity pill */
