@@ -56,7 +56,7 @@ const ALLOWED_ROLES = new Set(['firm_owner', 'preparer']);
 export type RefreshSignatureStatusResult =
   | {
       ok: true;
-      newStatus: 'signed' | 'pending' | 'declined' | 'expired';
+      newStatus: 'signed' | 'pending' | 'declined' | 'expired' | 'kba-failed';
       kbaPassed: boolean;
       envelopeStatus: string;
       signedAt: string | null;
@@ -212,7 +212,10 @@ export async function refreshSignatureStatus(
       // Map DocuSign envelope status → signatures.status.
       // SAME KBA-passed gate as the webhook: completed-without-KBA
       // does NOT flip to 'signed' (IRS Pub 1345 violation otherwise).
-      let newStatus: 'signed' | 'pending' | 'declined' | 'expired' = 'pending';
+      // KBA-failed maps to its own status (migration 0027) so SOC 2 +
+      // IRS audit reports can enumerate KBA failures distinctly from
+      // envelope decline/void/expire.
+      let newStatus: 'signed' | 'pending' | 'declined' | 'expired' | 'kba-failed' = 'pending';
       let signedAt: Date | null = null;
       let signedByIp: string | null = null;
       let signedByUserAgent: string | null = null;
@@ -230,9 +233,9 @@ export async function refreshSignatureStatus(
           // recipients endpoint; would need /audit_events. Leave
           // null — webhook captures these when it fires.
         } else {
-          newStatus = 'declined';
+          newStatus = 'kba-failed';
           kbaGateNote =
-            'KBA did not pass; status set to declined per IRS Pub 1345. Re-send a fresh envelope.';
+            'KBA lookup or questions failed; status set to kba-failed per IRS Pub 1345. Re-send a FRESH envelope (DocuSign retries against the same envelope are not compliant).';
         }
       } else if (envelope.status === 'declined') {
         newStatus = 'declined';

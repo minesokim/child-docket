@@ -148,6 +148,10 @@ export const signatureStatusEnum = pgEnum('signature_status', [
   'signed',
   'declined',
   'expired',
+  // Migration 0027 — distinguishes KBA-failure from envelope-declined.
+  // Per IRS Pub 1345, a KBA-failed envelope must be re-issued fresh;
+  // DocuSign retries against the same envelope are not compliant.
+  'kba-failed',
 ]);
 
 // ────────────────────────────────────────────────────────────────

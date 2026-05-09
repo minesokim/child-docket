@@ -392,14 +392,18 @@ export function SignaturesSection({
 }
 
 function StatusPill({ t, status }: { t: Theme; status: string }) {
+  // 'kba-failed' is rust like declined/expired (operator must re-send
+  // fresh) but rendered as "KBA FAILED" (label below) so Antonio sees
+  // the distinct operational meaning at a glance.
   const palette =
     status === 'signed'
       ? { bg: '#1f4621', fg: '#fff' }
       : status === 'pending' || status === 'sent'
       ? { bg: '#fde9c2', fg: '#7a4a08' }
-      : status === 'declined' || status === 'expired'
+      : status === 'declined' || status === 'expired' || status === 'kba-failed'
       ? { bg: t.rust, fg: '#fff' }
       : { bg: t.borderSoft, fg: t.muted };
+  const label = status === 'kba-failed' ? 'kba failed' : status;
   return (
     <span
       style={{
@@ -414,7 +418,7 @@ function StatusPill({ t, status }: { t: Theme; status: string }) {
         color: palette.fg,
       }}
     >
-      {status}
+      {label}
     </span>
   );
 }

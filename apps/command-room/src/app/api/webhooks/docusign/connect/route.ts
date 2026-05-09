@@ -178,18 +178,25 @@ export async function POST(req: NextRequest) {
   // verified KBA is non-compliant for federal e-filing. The signer
   // could only sign in this state if the envelope's requireIdLookup
   // was misconfigured or DocuSign sent an event we don't expect.
-  // Set status='declined' instead so Antonio sees the issue and
-  // can re-send a fresh envelope (or arrange paper signing).
+  // Set status='kba-failed' instead so SOC 2 + IRS audit reports can
+  // enumerate KBA failures distinctly from envelope void/decline,
+  // and Antonio sees the right operator action ("re-send FRESH
+  // envelope; DocuSign retries against the same envelope are not
+  // compliant").
   //
-  // For envelope-voided + envelope-declined, the result is also
-  // 'declined' — these never produce a valid signed 8879.
-  let newStatus: 'signed' | 'declined';
+  // For envelope-voided + envelope-declined, the result is 'declined'
+  // — these never produce a valid signed 8879 but they are also not
+  // KBA-failures (signer never reached the KBA step or the envelope
+  // was killed before completion).
+  let newStatus: 'signed' | 'declined' | 'kba-failed';
   let kbaGateNote: string | null = null;
   if (event === 'envelope-completed') {
-    newStatus = kbaPassedAt !== null ? 'signed' : 'declined';
-    if (kbaPassedAt === null) {
+    if (kbaPassedAt !== null) {
+      newStatus = 'signed';
+    } else {
+      newStatus = 'kba-failed';
       kbaGateNote =
-        'KBA did not pass; status set to declined per IRS Pub 1345. Re-send a fresh envelope or arrange paper signing.';
+        'KBA lookup or questions failed; status set to kba-failed per IRS Pub 1345. Re-send a FRESH envelope (DocuSign retries against the same envelope are not compliant).';
     }
   } else if (event === 'envelope-voided') {
     newStatus = 'declined';

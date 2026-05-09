@@ -1,0 +1,30 @@
+-- 0027_signature_status_kba_failed.sql
+--
+-- Extend signature_status enum with 'kba-failed'.
+--
+-- Why this matters: today both "envelope voided/declined" and "KBA
+-- check failed despite envelope-completed" map to 'declined'. The
+-- audit_payload.kbaGateNote distinguishes them, but the status itself
+-- doesn't. For SOC 2 + IRS Pub 1345 audit reporting, KBA-failed
+-- signatures must be enumerable distinctly from declined ones (they
+-- carry a different operational meaning: re-send fresh envelope vs.
+-- talk to client).
+--
+-- New status semantics:
+--
+--   pending     — envelope sent / delivered, awaiting signer
+--   sent        — same as pending; legacy alias kept for callers
+--   signed      — envelope completed AND KBA passed
+--   declined    — envelope voided OR signer-declined OR envelope-expired
+--   expired     — envelope expired without sign attempt
+--   kba-failed  — envelope completed but KBA lookup/questions did not pass
+--                 (signer answered ID-verification questions wrong or
+--                  bureau couldn't match identity); per IRS Pub 1345
+--                 a fresh envelope must be issued — DocuSign retries
+--                 against the same envelope are not compliant.
+--
+-- ALTER TYPE … ADD VALUE is non-blocking and the new value is
+-- immediately usable in subsequent transactions. The IF NOT EXISTS
+-- guard makes this idempotent across re-runs.
+
+ALTER TYPE signature_status ADD VALUE IF NOT EXISTS 'kba-failed' AFTER 'declined';

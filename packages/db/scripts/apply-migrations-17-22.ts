@@ -41,6 +41,7 @@ const MIGRATIONS = [
   '0024_payments.sql',
   '0025_deposit_config.sql',
   '0026_signatures_envelope_id_idx.sql',
+  '0027_signature_status_kba_failed.sql',
 ];
 
 async function main(): Promise<number> {

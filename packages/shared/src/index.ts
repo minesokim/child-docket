@@ -219,7 +219,13 @@ export type SignatureType =
   | 'form_2848'
   | 'form_8821';
 
-export type SignatureStatus = 'pending' | 'sent' | 'signed' | 'declined' | 'expired';
+export type SignatureStatus =
+  | 'pending'
+  | 'sent'
+  | 'signed'
+  | 'declined'
+  | 'expired'
+  | 'kba-failed';
 
 // ────────────────────────────────────────────────────────────────
 // Channel types — every comm surface.
