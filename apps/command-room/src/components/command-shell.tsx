@@ -89,7 +89,7 @@ const NAV: NavSection[] = [
     label: 'Practice',
     items: [
       { href: '/clients', label: 'Clients', icon: <IconUsers /> },
-      { href: '/messages', label: 'Messages', icon: <IconMessages />, disabled: true },
+      { href: '/messages', label: 'Messages', icon: <IconMessages /> },
       { href: '/documents', label: 'Documents', icon: <IconDocs />, disabled: true },
     ],
   },
