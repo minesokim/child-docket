@@ -37,6 +37,16 @@ type IntakeSignatureType = 'engagement_letter' | 'consent_7216';
 export async function recordIntakeSignature(input: {
   type: IntakeSignatureType;
   documentText: string;
+  /**
+   * Per-checkbox decision tracking — only consent_7216 today carries
+   * multiple checkboxes (use of tax info + AI services + optional SMS).
+   * Each flag flows into auditPayload so Antonio's command-room shows
+   * who opted into SMS vs not. Field name format: bareKey: boolean.
+   *
+   * SMS consent specifically is required by TCPA before any outbound
+   * text — without it, Twilio sends to that phone are illegal.
+   */
+  consentFlags?: Record<string, boolean>;
 }): Promise<{ ok: boolean; signatureId?: string; error?: string }> {
   const authed = await getOrCreateClient();
   if (!authed) return { ok: false, error: 'Not signed in' };
@@ -71,7 +81,11 @@ export async function recordIntakeSignature(input: {
           signedAt: new Date(),
           signedByIp: ip,
           signedByUserAgent: userAgent,
-          auditPayload: { documentHash, source: 'intake-portal' },
+          auditPayload: {
+            documentHash,
+            source: 'intake-portal',
+            ...(input.consentFlags ? { consentFlags: input.consentFlags } : {}),
+          },
           // KBA is not required for engagement_letter or consent_7216.
           // Form 8879 (which IS KBA-required) does not flow through
           // this function — it goes through DocuSign on Day 13.

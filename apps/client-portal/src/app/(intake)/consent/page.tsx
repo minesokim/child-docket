@@ -29,6 +29,12 @@ const PARAS = [
   'You are not required to complete this form. If we obtain your signature on this form by conditioning our services on your consent, your consent will not be valid. Your consent is valid for the amount of time that you specify.',
   'By signing below, you authorize Antonio Vazquez, Enrolled Agent, to use the information you provide solely for the purpose of preparing your 2025 federal and state income tax returns. This consent is valid until the returns are filed and accepted by the applicable tax authorities.',
   'You also authorize Vazant Consulting to use secure artificial-intelligence services (Anthropic Claude and AWS Bedrock) operating under Zero Data Retention agreements to assist in preparing your return. These services do not retain your information after processing, and they will not use your information to train any model. Antonio reviews and approves every AI-generated output before it is used or sent to a tax authority.',
+  // TCPA-compliant SMS consent (V1 add-on per PRODUCTION-READINESS §D).
+  // Required before any outbound SMS — Twilio messages without prior
+  // express consent risk $500-$1,500 per text in TCPA penalties. Wording
+  // mirrors the FCC/TCPA template for express consent to commercial
+  // automated text messages, with clear right-to-revoke.
+  'You consent to receive text messages from Vazant Consulting at the phone number you provided, including (a) account and tax-status updates, (b) document and signature requests, and (c) appointment reminders. Message frequency varies. Message and data rates may apply. Reply STOP to any message to opt out at any time; reply HELP for help. Consent is not a condition of services — you can decline and continue to receive non-SMS communication.',
   'If you believe your tax return information has been disclosed or used improperly in a manner unauthorized by law or without your permission, you may contact the Treasury Inspector General for Tax Administration (TIGTA).',
 ];
 
@@ -52,10 +58,23 @@ export default function ConsentPage() {
     'consent.aiChecked',
     false,
   );
+  // SMS consent — TCPA Express Written Consent. Decoupled from the other
+  // checkboxes so a taxpayer can sign §7216 + AI but decline SMS (Antonio
+  // falls back to email + portal-only for those clients). Without this,
+  // any Twilio outbound to that phone violates 47 USC §227.
+  const [smsChecked, setSmsChecked] = useIntakeField<boolean>(
+    'consent.smsChecked',
+    false,
+  );
   const [signed, setSigned] = useIntakeField<boolean>('consent.signed', false);
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [signError, setSignError] = React.useState<string | null>(null);
 
+  // SMS consent is OPTIONAL by TCPA design (consent is not a condition
+  // of services). The signature gate requires §7216 + AI checkboxes,
+  // not SMS. The smsChecked flag is recorded in intake state and
+  // persisted via the signature audit_payload regardless — Antonio
+  // sees who opted in vs out from the command-room messages surface.
   const ready = checked && aiChecked && signed;
 
   // §7216 has criminal penalty if recorded wrong (26 USC 7216).
@@ -68,6 +87,15 @@ export default function ConsentPage() {
     const result = await recordIntakeSignature({
       type: 'consent_7216',
       documentText: FULL_DOCUMENT_TEXT,
+      // TCPA + IRS §7216 require explicit per-purpose consent. Persist
+      // each checkbox decision in audit_payload so Antonio's command-
+      // room shows who opted into SMS vs not. The smsChecked flag is
+      // the gate Twilio outbound checks before sending any text.
+      consentFlags: {
+        useTaxInfo: checked,
+        aiServices: aiChecked,
+        smsCommunication: smsChecked,
+      },
     });
     if (result.ok) {
       setSigned(true);
@@ -195,6 +223,50 @@ export default function ConsentPage() {
               style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
             >
               I authorize Vazant Consulting to use Zero-Data-Retention AI services (Anthropic Claude, AWS Bedrock) to assist in preparing my return. Antonio reviews every AI output before use.
+            </div>
+          </Row>
+
+          {/*
+            Third checkbox — TCPA SMS consent. Optional (per FCC/TCPA the
+            consent must NOT be a condition of services), so it's NOT in
+            the `ready` gate. Decline → Antonio uses email + portal-only.
+            The taxpayer's choice is persisted to intake state and
+            recorded in the signature audit_payload at sign time.
+          */}
+          <Row gap={10} align="flex-start">
+            <div
+              onClick={() => setSmsChecked(!smsChecked)}
+              style={{
+                width: 22,
+                height: 22,
+                flexShrink: 0,
+                borderRadius: 5,
+                background: smsChecked ? t.ease.forestMid : t.ease.keylimeWash,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 1,
+              }}
+            >
+              {smsChecked && (
+                <svg width="12" height="10" viewBox="0 0 12 10">
+                  <path
+                    d="M1 5l3.5 3.5L11 1"
+                    stroke="#fff"
+                    strokeWidth="2"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
+            <div
+              onClick={() => setSmsChecked(!smsChecked)}
+              style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
+            >
+              <strong style={{ fontWeight: 600 }}>(Optional)</strong> I consent to receive text-message updates from Vazant Consulting (account, document, signature, and appointment notifications). Reply STOP to opt out anytime; message and data rates may apply.
             </div>
           </Row>
 
