@@ -65,7 +65,12 @@ const UI_PATTERNS = [
   /^apps\/[^/]+\/src\/components\/.+\.(tsx|jsx|css)$/,
   /^packages\/ui\/src\/components\/.+\.(tsx|jsx)$/,
   /^packages\/ui\/src\/tokens\.(ts|tsx)$/,
-  /^packages\/ui\/src\/styles\.css$/,
+  // Any CSS file directly under packages/ui/src/. Catches styles.css
+  // (the canonical token sheet) AND skeleton-docs.css / future per-
+  // surface CSS that the prior regex (only ^./styles.css$) missed.
+  // Caught after the SSN/DL skeleton fix shipped without /craft
+  // enforcement firing on its CSS file (commit 4964378, 2026-05-08).
+  /^packages\/ui\/src\/[^/]+\.css$/,
 ];
 
 function parseArgs(argv: string[]): { mode: string; arg?: string } {
