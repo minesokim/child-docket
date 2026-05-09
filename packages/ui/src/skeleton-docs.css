@@ -255,11 +255,15 @@
  * IDENTITY DOCUMENTS — Driver's License (front + back)
  * ═══════════════════════════════════════════════════════════════ */
 .doc-card.id-card {
+  /* Explicit width is load-bearing: the parent hero centers via flex,
+   * so without an intrinsic width the card collapses to its tiny
+   * inner content (3-9px bars). max-width keeps it responsive on
+   * narrow phones. Padding restores the prototype's breathing room
+   * inside the keylime hero so the card feels framed, not edge-to-edge. */
+  width: 320px;
+  max-width: 100%;
   aspect-ratio: 1.586 / 1;
-  /* No padding — the inner page fills the card. The keylime hero
-   * provides the breathing room; doubling up here just makes the
-   * silhouette feel small in the center of a green panel. */
-  padding: 0;
+  padding: 14px 16px;
 }
 .doc-card.id-card .id-page { flex: 1; }
 
@@ -286,9 +290,12 @@
 .id-page {
   flex: 1;
   background: var(--doc-paper);
+  /* Inset hairlines only — matches the prototype's flatter, more
+   * editorial treatment. The previous drop shadow read as
+   * skeuomorphic / SaaS-y on the cream-on-keylime stack. */
   box-shadow:
-    0 4px 16px rgba(15, 62, 23, 0.08),
-    0 0 0 1px rgba(28, 40, 30, 0.05);
+    0 0 0 1px rgba(28, 40, 30, 0.04),
+    0 1px 0 rgba(28, 40, 30, 0.04);
   padding: 14px 16px;
   position: relative;
   overflow: hidden;
@@ -507,8 +514,14 @@
  * SOCIAL SECURITY CARD
  * ═══════════════════════════════════════════════════════════════ */
 .doc-card.ssn-card {
+  /* Same width fix as .id-card — without this the card collapses to
+   * its inner content. Sage outer + the prototype's padding give the
+   * nested-frame feel: keylime hero → sage card frame → cream SSN body. */
+  width: 240px;
+  max-width: 100%;
   aspect-ratio: 240 / 158;
-  padding: 0;
+  padding: 14px 18px;
+  background: #f3f6ef;
 }
 .ssn-page {
   flex: 1;
@@ -518,11 +531,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Outer drop shadow so the SSN card reads as raised on the
-   * keylime hero. Inner hairline preserves the prototype's edge. */
-  box-shadow:
-    0 4px 16px rgba(15, 62, 23, 0.08),
-    inset 0 0 0 1px rgba(28, 40, 30, 0.05);
+  /* Inset hairline only — the sage outer frame on .ssn-card already
+   * provides depth. Drop shadow read as skeuomorphic. */
+  box-shadow: inset 0 0 0 1px rgba(28, 40, 30, 0.05);
 }
 .ssn-banner {
   height: 32%;
@@ -666,6 +677,11 @@
  * 1098-*, 1095-*, K-1, statements, and prior returns.
  * ═══════════════════════════════════════════════════════════════ */
 .doc-card.taxform {
+  /* Same width fix as id-card / ssn-card — without this the form
+   * collapses inside its keylime hero (flex parent, no intrinsic
+   * width). 8.5/11 is the IRS form proportion. */
+  width: 320px;
+  max-width: 100%;
   aspect-ratio: 8.5 / 11;
   padding: 0;
 }

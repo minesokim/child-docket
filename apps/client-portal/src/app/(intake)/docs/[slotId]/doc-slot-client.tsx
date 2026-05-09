@@ -937,7 +937,7 @@ function DocumentPreview({
     return (
       <div
         style={{
-          aspectRatio: '4 / 3',
+          aspectRatio: '4 / 5',
           borderRadius: 14,
           background: t.ease.keylimeWash,
           display: 'flex',
@@ -984,7 +984,7 @@ function DocumentPreview({
         panel
         label="Loading document preview"
         style={{
-          aspectRatio: '4 / 3',
+          aspectRatio: '4 / 5',
           borderRadius: 14,
           background: t.ease.keylimeWash,
           padding: '28px 32px',
@@ -1007,7 +1007,7 @@ function DocumentPreview({
     return (
       <div
         style={{
-          aspectRatio: '4 / 3',
+          aspectRatio: '4 / 5',
           borderRadius: 14,
           background: t.ease.keylimeWash,
           display: 'flex',
@@ -1035,7 +1035,7 @@ function DocumentPreview({
   return (
     <div
       style={{
-        aspectRatio: '4 / 3',
+        aspectRatio: '4 / 5',
         borderRadius: 14,
         background: t.ease.keylimeWash,
         overflow: 'hidden',
@@ -1079,7 +1079,7 @@ function DocHero({
     <div
       style={{
         position: 'relative',
-        aspectRatio: '4 / 3',
+        aspectRatio: '4 / 5',
         borderRadius: 14,
         background: t.ease.keylimeWash,
         overflow: 'hidden',
@@ -1638,11 +1638,13 @@ function DocPlaceholder({
   return (
     <div
       style={{
-        // Match DocHero's outer dimensions exactly — the user liked
-        // this size; we're just swapping the inner illustration for
-        // a per-doc-kind silhouette.
+        // Portrait-ish hero (4/5) so landscape ID cards (DL, SSN) get
+        // prototype-style breathing room above and below. The original
+        // 4/3 landscape squeezed the cards too tightly — prototype
+        // designed DL in a 380×400 panel and SSN in a 300×420 panel
+        // (both portrait), giving the card room to feel "framed."
         position: 'relative',
-        aspectRatio: '4 / 3',
+        aspectRatio: '4 / 5',
         borderRadius: 14,
         background: t.ease.keylimeWash,
         overflow: 'hidden',
