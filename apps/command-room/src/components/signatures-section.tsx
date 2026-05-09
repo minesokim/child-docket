@@ -17,6 +17,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import type { Theme } from '@docket/ui';
 import { refreshSignatureStatus } from '@/lib/docusign/refresh-signature-status';
+import { voidEnvelope } from '@/lib/docusign/void-envelope';
 
 type SignatureRow = {
   id: string;
@@ -56,6 +57,15 @@ export function SignaturesSection({
   const [refreshState, setRefreshState] = React.useState<
     Record<string, { kind: 'idle' } | { kind: 'refreshing' } | { kind: 'error'; message: string }>
   >({});
+  const [voidState, setVoidState] = React.useState<
+    Record<
+      string,
+      | { kind: 'idle' }
+      | { kind: 'confirming' }
+      | { kind: 'voiding' }
+      | { kind: 'error'; message: string }
+    >
+  >({});
 
   const onRefresh = React.useCallback(
     async (signatureRowId: string) => {
@@ -73,6 +83,38 @@ export function SignaturesSection({
         }
       } catch {
         setRefreshState((s) => ({
+          ...s,
+          [signatureRowId]: { kind: 'error', message: 'Network error. Try again.' },
+        }));
+      }
+    },
+    [router],
+  );
+
+  const onVoidConfirm = React.useCallback((signatureRowId: string) => {
+    setVoidState((s) => ({ ...s, [signatureRowId]: { kind: 'confirming' } }));
+  }, []);
+
+  const onVoidCancel = React.useCallback((signatureRowId: string) => {
+    setVoidState((s) => ({ ...s, [signatureRowId]: { kind: 'idle' } }));
+  }, []);
+
+  const onVoid = React.useCallback(
+    async (signatureRowId: string) => {
+      setVoidState((s) => ({ ...s, [signatureRowId]: { kind: 'voiding' } }));
+      try {
+        const result = await voidEnvelope(signatureRowId);
+        if (result.ok) {
+          setVoidState((s) => ({ ...s, [signatureRowId]: { kind: 'idle' } }));
+          router.refresh();
+        } else {
+          setVoidState((s) => ({
+            ...s,
+            [signatureRowId]: { kind: 'error', message: result.message },
+          }));
+        }
+      } catch {
+        setVoidState((s) => ({
           ...s,
           [signatureRowId]: { kind: 'error', message: 'Network error. Try again.' },
         }));
@@ -193,17 +235,22 @@ export function SignaturesSection({
             sig.kbaProvider === 'lexisnexis' &&
             sig.status !== 'signed' &&
             sig.status !== 'declined' && (
-              <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 {(() => {
                   const rs = refreshState[sig.id] ?? { kind: 'idle' as const };
+                  const vs = voidState[sig.id] ?? { kind: 'idle' as const };
                   const isRefreshing = rs.kind === 'refreshing';
-                  const errorMessage = rs.kind === 'error' ? rs.message : null;
+                  const isVoiding = vs.kind === 'voiding';
+                  const isConfirming = vs.kind === 'confirming';
+                  const refreshError = rs.kind === 'error' ? rs.message : null;
+                  const voidError = vs.kind === 'error' ? vs.message : null;
+                  const buttonDisabled = isRefreshing || isVoiding || isConfirming;
                   return (
                     <>
                       <button
                         type="button"
                         onClick={() => onRefresh(sig.id)}
-                        disabled={isRefreshing}
+                        disabled={buttonDisabled}
                         aria-busy={isRefreshing}
                         style={{
                           fontFamily: t.sans,
@@ -214,13 +261,100 @@ export function SignaturesSection({
                           border: `1px solid ${t.border}`,
                           background: 'transparent',
                           color: t.ink,
-                          cursor: isRefreshing ? 'not-allowed' : 'pointer',
-                          opacity: isRefreshing ? 0.5 : 1,
+                          cursor: buttonDisabled ? 'not-allowed' : 'pointer',
+                          opacity: buttonDisabled ? 0.5 : 1,
                         }}
                       >
                         {isRefreshing ? 'Checking…' : 'Refresh status'}
                       </button>
-                      {errorMessage && (
+                      {/*
+                        Void & start over — only on rows in 'pending'.
+                        DocuSign 'sent' status maps to signatures.status='pending'
+                        in our schema, so this covers both DocuSign-side
+                        envelope-sent and envelope-delivered. Confirm dialog
+                        is two-click — not a destructive-by-accident click.
+                      */}
+                      {sig.status === 'pending' && !isConfirming && (
+                        <button
+                          type="button"
+                          onClick={() => onVoidConfirm(sig.id)}
+                          disabled={buttonDisabled}
+                          style={{
+                            fontFamily: t.sans,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            padding: '4px 10px',
+                            borderRadius: 999,
+                            border: `1px solid ${t.border}`,
+                            background: 'transparent',
+                            color: t.muted,
+                            cursor: buttonDisabled ? 'not-allowed' : 'pointer',
+                            opacity: buttonDisabled ? 0.5 : 1,
+                          }}
+                        >
+                          Void & start over
+                        </button>
+                      )}
+                      {isConfirming && (
+                        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          <span
+                            style={{
+                              fontFamily: t.mono,
+                              fontSize: 10,
+                              color: t.muted,
+                            }}
+                          >
+                            Void this envelope?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onVoid(sig.id)}
+                            style={{
+                              fontFamily: t.sans,
+                              fontSize: 11,
+                              fontWeight: 500,
+                              padding: '4px 10px',
+                              borderRadius: 999,
+                              border: `1px solid ${t.rust}`,
+                              background: t.rust,
+                              color: '#fff',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Yes, void
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onVoidCancel(sig.id)}
+                            style={{
+                              fontFamily: t.sans,
+                              fontSize: 11,
+                              fontWeight: 500,
+                              padding: '4px 10px',
+                              borderRadius: 999,
+                              border: `1px solid ${t.border}`,
+                              background: 'transparent',
+                              color: t.ink,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      )}
+                      {isVoiding && (
+                        <span
+                          aria-live="polite"
+                          style={{
+                            fontFamily: t.mono,
+                            fontSize: 10,
+                            color: t.muted,
+                          }}
+                        >
+                          Voiding envelope…
+                        </span>
+                      )}
+                      {refreshError && (
                         <span
                           role="alert"
                           aria-live="polite"
@@ -230,7 +364,20 @@ export function SignaturesSection({
                             color: t.rust,
                           }}
                         >
-                          {errorMessage}
+                          {refreshError}
+                        </span>
+                      )}
+                      {voidError && (
+                        <span
+                          role="alert"
+                          aria-live="polite"
+                          style={{
+                            fontFamily: t.mono,
+                            fontSize: 10,
+                            color: t.rust,
+                          }}
+                        >
+                          {voidError}
                         </span>
                       )}
                     </>
