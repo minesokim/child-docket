@@ -34,6 +34,9 @@ importers:
       '@docket/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@docket/docusign-shared':
+        specifier: workspace:*
+        version: link:../../packages/docusign-shared
       '@docket/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -92,6 +95,9 @@ importers:
       '@docket/document-processing':
         specifier: workspace:*
         version: link:../../packages/document-processing
+      '@docket/docusign-shared':
+        specifier: workspace:*
+        version: link:../../packages/docusign-shared
       '@docket/orchestrator':
         specifier: workspace:*
         version: link:../../services/orchestrator
@@ -187,6 +193,12 @@ importers:
       tesseract.js:
         specifier: ^7.0.0
         version: 7.0.0
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/docusign-shared:
     devDependencies:
       typescript:
         specifier: ^5.7.2

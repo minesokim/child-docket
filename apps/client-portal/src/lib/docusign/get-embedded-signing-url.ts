@@ -38,8 +38,7 @@ import {
   consumeRateToken,
 } from '@docket/shared';
 import { getOrCreateClient } from '@/lib/intake/auth';
-import { getDocuSignAccessToken } from './jwt';
-import { createRecipientView } from './envelope';
+import { getDocuSignAccessToken, createRecipientView } from '@docket/docusign-shared';
 
 export type GetEmbeddedSigningUrlResult =
   | { ok: true; signingUrl: string; envelopeId: string; signatureRowId: string }

@@ -64,8 +64,11 @@ import {
   getAtPath,
 } from '@docket/shared';
 import { getCurrentDocketUser } from '@/lib/current-user';
-import { getDocuSignAccessToken } from './jwt';
-import { createEnvelope, createRecipientView } from './envelope';
+import {
+  getDocuSignAccessToken,
+  createEnvelope,
+  createRecipientView,
+} from '@docket/docusign-shared';
 
 const ALLOWED_ROLES = new Set(['firm_owner', 'preparer']);
 

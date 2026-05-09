@@ -14,6 +14,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.2.9",
     "@docket/db": "workspace:*",
+    "@docket/docusign-shared": "workspace:*",
     "@docket/shared": "workspace:*",
     "@docket/storage": "workspace:*",
     "@docket/ui": "workspace:*",
