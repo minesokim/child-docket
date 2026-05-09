@@ -959,5 +959,80 @@ explicitly added these steps to the loop in chat
 
 ---
 
-*Last updated: 2026-05-08. Backfilled from session start; subsequent
+## [24] 2026-05-09 — Autopilot session: 8 commits across security + ops + DocuSign hardening
+
+**Decision**: User-codified autopilot directive ("just keep going
+until i wake up unless its GENUINELY something where you cannot move
+forward") executed by shipping 8 commits in sequence covering one
+V1-must-have block (cost outlier + spike alerts), three codex
+findings from the 270e7f1 DocuSign 8879 ship (stale-pending
+recovery, JSONB envelopeId index, kba-failed enum), the KEK rotation
+script the runbook (2d63206) referenced, and the @docket/docusign-shared
+package extraction (also a codex MEDIUM finding).
+
+The 8 commits, in order:
+- `2c5db11` AAD-bound AES-GCM (D §V1 ciphertext-relocation defense)
+- `2d63206` KEK rotation runbook (operator procedure)
+- `3bd42b1` rotate-kek.ts script (the runbook spec)
+- `af808e7` cost outlier + spike alerts + dashboard banner (B §V1)
+- `6ecb672` void-envelope action + UI (codex MEDIUM stale-pending)
+- `2b9949a` partial expression idx on signatures.envelopeId (codex LOW)
+- `78aa4f9` kba-failed signature enum (codex LOW)
+- `f421b0e` @docket/docusign-shared package extraction (codex MEDIUM)
+
+**Reasoning**: User's directive was unambiguous about cadence — "i
+want to have so much work done when i wake up" + "i better not run
+into another 'i did this what should i do next'." Each commit
+followed the protocol-gate hooks (typecheck + shared tests +
+trailers including Compliance-Check ≥80 chars), held to score 96+,
+ran /align ALIGNED, and either /craft PASS (UI commits) or /craft
+N/A (substrate-only). No protocols skipped. Stops happened only
+inside the loop (mark complete → pick next from queue → repeat),
+not as natural-pause-handoff anti-pattern.
+
+**Alternative considered**: (1) Stop at commit 4 (cost-alerts) and
+let user verify before continuing. Rejected — directive said "until
+I wake up unless GENUINELY stuck." All 4 remaining items were
+codex findings or runbook follow-ups with clear specs; not stuck.
+(2) Bundle all 8 into one mega-commit. Rejected — protocol-gate
+trailer reasoning works at the commit-level granularity; 8 atomic
+commits preserve the audit trail.
+
+**How to reverse**: Each commit is independently revertable via
+`git revert <sha>`. The DB migrations 0026 (envelope idx) + 0027
+(kba-failed enum) are idempotent (IF NOT EXISTS) so reverting the
+code without the migrations is also safe. The @docket/docusign-shared
+extraction can be reverted by undoing f421b0e (puts the duplicated
+files back).
+
+**Deferrals openly named** (per Compliance-Check trailers):
+- Daily cost-summary email portion of B §V1 — blocked on
+  transactional email vendor decision; alerts surface on /dashboard/cost
+  banner today via audit-row read
+- Caller migration to encryptFieldForTenantWithAAD across existing
+  write sites — deferred to follow-up; backwards-compat fallback in
+  decryptIfMarkedForTenantWithAAD covers reads during migration window
+- Pre-0027 'declined' rows that meant kba-failed are NOT
+  retroactively remapped — audit_payload.kbaGateNote preserves the
+  reason; future cleanup walker out of scope
+- Server-action layer of DocuSign (request-sign-8879, refresh, void,
+  get-embedded-signing-url) NOT moved into @docket/docusign-shared —
+  app-bound auth + tenant-credential vault writes + rate-limit keys
+  differ between command-room (firm) and client-portal (taxpayer)
+- Operator-supplied void reason via UI textarea — deferred; current
+  button calls voidEnvelope() with the default reason
+
+**Severity**: high (8 commits in one autopilot stretch is the
+largest single-session ship since the audit-chain landing — needs
+user review for scope cut quality and any drift from product
+intent)
+
+**Commits**: `2c5db11`, `2d63206`, `3bd42b1`, `af808e7`, `6ecb672`,
+`2b9949a`, `78aa4f9`, `f421b0e`
+
+**User-review status**: pending
+
+---
+
+*Last updated: 2026-05-09. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
