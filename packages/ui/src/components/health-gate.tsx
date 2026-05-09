@@ -60,12 +60,27 @@ import { ReadOnlyProvider } from './read-only.js';
 import {
   StatusBanner,
   neonReadOnlyBanner,
+  neonPrimaryDegradedBanner,
+  neonBothDegradedBanner,
+  neonReplicaAvailableBanner,
+  neonReplicaDegradedBanner,
   type StatusBannerProps,
   type ServiceStatus,
 } from './status-banner.js';
 
+/**
+ * Replica status from /api/health. `configured: false` means the
+ * server-side env var DATABASE_URL_READ_REPLICA isn't set — replica
+ * not wired at all (do not show any replica banner). `configured: true`
+ * means it's wired; status reflects the live probe.
+ */
+type ReplicaState =
+  | { configured: false }
+  | { configured: true; status: ServiceStatus; latencyMs: number };
+
 interface HealthBody {
   db: { status: ServiceStatus; latencyMs: number };
+  replica?: ReplicaState; // optional for backwards compat with older /api/health
   timestamp: string;
 }
 
@@ -94,6 +109,7 @@ export function HealthStatusGate({
 }: HealthStatusGateProps) {
   const theme = React.useMemo(() => t ?? buildTheme(), [t]);
   const [dbStatus, setDbStatus] = React.useState<ServiceStatus | 'unknown'>('unknown');
+  const [replicaState, setReplicaState] = React.useState<ReplicaState | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -101,12 +117,6 @@ export function HealthStatusGate({
     const controller = new AbortController();
     let consecutiveDownCount = 0;
 
-    // Self-scheduling poll with in-flight guard + backoff on `down`.
-    // Replaces the naive setInterval which would fire concurrent
-    // requests if a probe stalled. During a real outage every client
-    // would otherwise hit /api/health every 30s forever; backoff
-    // caps that at 1 request per (intervalMs * 2^min(n, 4)) when the
-    // DB is down.
     async function poll() {
       let nextDelay = intervalMs;
       try {
@@ -116,10 +126,12 @@ export function HealthStatusGate({
         const status = parseDbStatus(body);
         const next = status ?? 'down';
         setDbStatus(next);
+        // Replica field is optional — older endpoints don't ship it.
+        // parseReplicaState returns null when missing/malformed; we
+        // treat null as "unknown / don't show replica-specific UX."
+        setReplicaState(parseReplicaState(body));
         if (next === 'down') {
           consecutiveDownCount += 1;
-          // Cap at 16x base interval. With 30s base → 8 min between
-          // probes during a sustained outage.
           const factor = Math.min(2 ** Math.min(consecutiveDownCount, 4), 16);
           nextDelay = intervalMs * factor;
         } else {
@@ -128,6 +140,7 @@ export function HealthStatusGate({
       } catch (err) {
         if (cancelled || (err as Error).name === 'AbortError') return;
         setDbStatus('down');
+        // Don't clobber replicaState on fetch failure; keep last known.
         consecutiveDownCount += 1;
         const factor = Math.min(2 ** Math.min(consecutiveDownCount, 4), 16);
         nextDelay = intervalMs * factor;
@@ -146,18 +159,47 @@ export function HealthStatusGate({
     };
   }, [endpoint, intervalMs]);
 
-  // Read-only mode flips ONLY on `down`. `degraded` shows a banner
-  // (visible warning) but writes still flow — Neon p99 can spike to
-  // 200-400ms in normal operation and we don't want to flap the app
-  // into read-only on routine slowness. This pairs with
-  // assertWritable() in apps/*/src/lib/read-only-mode.ts which also
-  // only blocks on down/timeout.
+  // Read-only mode flips ONLY on primary `down`. Replica state never
+  // toggles read-only — replica is informational only in v0 (auto-
+  // routing reads to it is V1.5).
   const readOnly = dbStatus === 'down';
 
-  // Banner severity follows DB status. Only render when degraded/down.
+  // Banner selection — explicit case mapping. Each branch picks the
+  // banner whose copy MATCHES the actual operational state. Earlier
+  // version reused neonReadOnlyBanner (which says "saves are paused")
+  // on the degraded path even though writes still flow — codex review
+  // caught that lie. New banners separate degraded-but-writable from
+  // genuinely-down.
+  //
+  //   primary down            → readOnly banner (saves paused)
+  //   primary degraded
+  //     + replica healthy     → replicaAvailable banner (info)
+  //     + replica down/degr.  → bothDegraded banner (warn — failover impaired)
+  //     + replica unconfig'd
+  //       OR replica unknown  → primaryDegraded banner (warn — saves still live)
+  //   primary healthy
+  //     + replica down/degr.  → replicaDegraded banner (warn — failover unavailable)
+  //     + else                → no banner
   let banner: StatusBannerProps | null = null;
-  if (dbStatus === 'degraded' || dbStatus === 'down') {
+  if (dbStatus === 'down') {
     banner = neonReadOnlyBanner(theme);
+  } else if (dbStatus === 'degraded') {
+    if (replicaState?.configured === true && replicaState.status === 'healthy') {
+      banner = neonReplicaAvailableBanner(theme);
+    } else if (
+      replicaState?.configured === true &&
+      (replicaState.status === 'down' || replicaState.status === 'degraded')
+    ) {
+      banner = neonBothDegradedBanner(theme);
+    } else {
+      banner = neonPrimaryDegradedBanner(theme);
+    }
+  } else if (
+    dbStatus === 'healthy' &&
+    replicaState?.configured === true &&
+    (replicaState.status === 'down' || replicaState.status === 'degraded')
+  ) {
+    banner = neonReplicaDegradedBanner(theme);
   }
 
   return (
@@ -184,4 +226,32 @@ function parseDbStatus(body: unknown): ServiceStatus | null {
     return status;
   }
   return null;
+}
+
+/**
+ * Parse the replica field from a /api/health response. Returns null
+ * when the field is missing (older endpoints) or malformed — caller
+ * treats null as "unknown, don't show replica-specific UX." Returns
+ * a structured state otherwise.
+ */
+function parseReplicaState(body: unknown): ReplicaState | null {
+  if (!body || typeof body !== 'object') return null;
+  const replica = (body as { replica?: unknown }).replica;
+  if (!replica || typeof replica !== 'object') return null;
+  const configured = (replica as { configured?: unknown }).configured;
+  if (configured === false) return { configured: false };
+  if (configured !== true) return null;
+  const status = (replica as { status?: unknown }).status;
+  const latencyMs = (replica as { latencyMs?: unknown }).latencyMs;
+  if (
+    (status === 'healthy' || status === 'degraded' || status === 'down') &&
+    typeof latencyMs === 'number'
+  ) {
+    return { configured: true, status, latencyMs };
+  }
+  // Configured replica with malformed/unknown status. Treat as 'down'
+  // rather than 'unknown / no banner' — a configured-but-malfunctioning
+  // replica is exactly the operational signal we want to surface, not
+  // hide. Latency unknown so 0.
+  return { configured: true, status: 'down', latencyMs: 0 };
 }

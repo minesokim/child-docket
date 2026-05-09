@@ -300,3 +300,69 @@ export function r2UnavailableBanner(t: Theme): StatusBannerProps {
       'Document storage is temporarily unavailable. You can still view existing files; new uploads will fail — try again in a few minutes.',
   };
 }
+
+/**
+ * Pre-shaped banner for the "primary DB is slow but read replica is
+ * healthy" state. Informational severity — the app still works; this
+ * just tells operators that the v1 disaster-recovery target is ready
+ * if primary degrades further. Pairs with /api/health's replica field.
+ */
+export function neonReplicaAvailableBanner(t: Theme): StatusBannerProps {
+  return {
+    t,
+    severity: 'info',
+    title: 'Primary DB slow — failover available',
+    description:
+      'Primary Postgres is responding slowly. The read replica is healthy and ready as a manual failover target if the primary fails. No action needed yet.',
+  };
+}
+
+/**
+ * Pre-shaped banner for the "replica configured but unreachable" state.
+ * Operational warning, not user-facing — primary is fine, the failover
+ * target is what's broken. Operators see this on the admin dashboard;
+ * end users typically don't.
+ */
+export function neonReplicaDegradedBanner(t: Theme): StatusBannerProps {
+  return {
+    t,
+    severity: 'warn',
+    title: 'Replica DB unavailable',
+    description:
+      'Read replica is not reachable. Primary is healthy so the app still works — but the manual failover target is currently unavailable. Check Neon status.',
+  };
+}
+
+/**
+ * Pre-shaped banner for the "primary is degraded but writes still flow"
+ * state. Distinct from `neonReadOnlyBanner` — that one tells the user
+ * saves are paused; this one tells them saves are live but slower than
+ * usual. Used when primary p99 spikes above 500ms but hasn't tipped to
+ * down. Replaces the previous (latently incorrect) reuse of
+ * neonReadOnlyBanner for the degraded state.
+ */
+export function neonPrimaryDegradedBanner(t: Theme): StatusBannerProps {
+  return {
+    t,
+    severity: 'warn',
+    title: 'Primary DB slow',
+    description:
+      'Primary Postgres is responding slowly. Saves still work; you may notice 1-2 second lag on edits. If this persists for more than a few minutes, refresh the page or come back shortly.',
+  };
+}
+
+/**
+ * Pre-shaped banner for the "both primary AND replica are impaired"
+ * state — Antonio's actual moment of crisis. Failover target is also
+ * degraded, so the manual flip won't help. Highest-severity warning
+ * the gate fires short of full down.
+ */
+export function neonBothDegradedBanner(t: Theme): StatusBannerProps {
+  return {
+    t,
+    severity: 'warn',
+    title: 'Primary slow — failover also impaired',
+    description:
+      'Primary Postgres is degraded AND the read replica is unreachable or also slow. The manual failover target is currently not viable. Saves still work but the system is fragile — escalate now if this persists.',
+  };
+}

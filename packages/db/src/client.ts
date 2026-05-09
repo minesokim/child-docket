@@ -82,12 +82,90 @@ export async function withTenant<T>(
 }
 
 // ────────────────────────────────────────────────────────────────
+// READ-REPLICA client — same-cell Neon replica for vendor resilience.
+//
+// v0 disaster-recovery posture (per PRODUCTION-READINESS §A + decision
+// AUTONOMOUS-DECISIONS §5):
+//
+//   1. /api/health probes BOTH primary + replica. Operators see
+//      replica state on the dashboard.
+//   2. When primary degrades or fails, the manual failover is to flip
+//      DATABASE_URL to point at the replica's URL (Neon docs: promote
+//      replica to primary via the console, or just point the app at
+//      the replica for read-only mode).
+//   3. Auto-routing reads to replica is V1.5 — needs request-scoped
+//      session config, txn boundary detection, and cache coherence
+//      handling. Not v0 scope.
+//
+// The replica is a SEPARATE postgres-js connection pool with its own
+// idle timeouts. Lazy-constructed: not initialized until first use,
+// so a missing or malformed DATABASE_URL_READ_REPLICA doesn't crash
+// the app at startup.
+// ────────────────────────────────────────────────────────────────
+
+let _replicaClient: Sql | null = null;
+
+/**
+ * Returns true if DATABASE_URL_READ_REPLICA is configured, regardless
+ * of whether the connection has been opened or is reachable. Used by
+ * /api/health to decide whether to surface a replica field.
+ */
+export function isReadReplicaConfigured(): boolean {
+  return Boolean(process.env.DATABASE_URL_READ_REPLICA);
+}
+
+function getReplicaClient(): Sql | null {
+  if (_replicaClient) return _replicaClient;
+  const url = process.env.DATABASE_URL_READ_REPLICA;
+  if (!url) return null;
+  // Same connection settings as primary. Smaller pool because replica
+  // is read-mostly + the primary handles writes; if traffic shifts
+  // to replica during a failover the operator can scale up via env.
+  _replicaClient = postgres(url, {
+    max: 5,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    prepare: false,
+  });
+  return _replicaClient;
+}
+
+/**
+ * Returns a Drizzle client connected to the read replica, or null when
+ * DATABASE_URL_READ_REPLICA is unset OR the connection construction
+ * throws. Callers MUST handle null — no implicit fallback to primary
+ * (that would mask a broken replica config in production).
+ *
+ * Use ONLY for read paths that are explicitly opted-in to replica
+ * routing. v0 has no such call sites; the function exists so /api/health
+ * can probe it and so V1.5 read-routing has a stable handle to import.
+ */
+export function getReadReplicaDb(): DocketDb | null {
+  // Wrap BOTH client construction AND drizzle(...) in the catch.
+  // Either call can throw — postgres-js may reject malformed URLs at
+  // construction; drizzle() is less likely but not impossible to throw
+  // (e.g., schema-validation surprises). Catching only the first leaves
+  // a hole.
+  try {
+    const client = getReplicaClient();
+    if (!client) return null;
+    return drizzle(client, { schema });
+  } catch {
+    return null;
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
 // Lifecycle helpers for tests + scripts.
 // ────────────────────────────────────────────────────────────────
 export async function disconnect(): Promise<void> {
   if (_client) {
     await _client.end();
     _client = null;
+  }
+  if (_replicaClient) {
+    await _replicaClient.end();
+    _replicaClient = null;
   }
 }
 

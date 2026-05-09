@@ -1,11 +1,23 @@
 export * from './schema.js';
 export {
   getAdminDb,
+  getReadReplicaDb,
+  isReadReplicaConfigured,
   withTenant,
   disconnect,
   schema,
   type DocketDb,
 } from './client.js';
+
+// Health probes — used by /api/health in both apps + by status-aware
+// UX components consuming the response shape.
+export {
+  checkPrimaryDb,
+  checkReadReplica,
+  type ServiceStatus as HealthServiceStatus,
+  type DbStatusResult,
+  type ReplicaStatusResult,
+} from './health-probe.js';
 
 // Encryption — two-tier API. Application code touching user PII MUST go
 // through the per-tenant variants (encryptFieldForTenant + DEK from

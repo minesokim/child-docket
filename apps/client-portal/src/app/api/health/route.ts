@@ -6,17 +6,19 @@
 
 import { type NextRequest } from 'next/server';
 import { sql } from 'drizzle-orm';
-import { getAdminDb } from '@docket/db';
+import {
+  getAdminDb,
+  checkPrimaryDb,
+  checkReadReplica,
+  type DbStatusResult,
+  type ReplicaStatusResult,
+} from '@docket/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const DB_TIMEOUT_MS = 1500;
-const DB_DEGRADED_MS = 500;
 const CACHE_TTL_MS = 5000;
 
-type ServiceStatus = 'healthy' | 'degraded' | 'down';
-type DbResult = { status: ServiceStatus; latencyMs: number };
 type SchemaResult = {
   firmProfileTable: boolean;
   firmPatternsTable: boolean;
@@ -25,28 +27,14 @@ type SchemaResult = {
   verifyActionsChainFn: boolean;
   allMigrationsApplied: boolean;
 };
-type CombinedResult = { db: DbResult; schema: SchemaResult | null };
+type CombinedResult = {
+  db: DbStatusResult;
+  replica: ReplicaStatusResult;
+  schema: SchemaResult | null;
+};
 
 let cachedAt = 0;
 let cachedResult: CombinedResult | null = null;
-
-async function checkDb(): Promise<DbResult> {
-  const t0 = Date.now();
-  try {
-    const db = getAdminDb();
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('db_check_timeout')), DB_TIMEOUT_MS),
-    );
-    await Promise.race([db.execute(sql`SELECT 1`), timeout]);
-    const latencyMs = Date.now() - t0;
-    return {
-      status: latencyMs > DB_DEGRADED_MS ? 'degraded' : 'healthy',
-      latencyMs,
-    };
-  } catch {
-    return { status: 'down', latencyMs: Date.now() - t0 };
-  }
-}
 
 async function checkSchema(): Promise<SchemaResult | null> {
   try {
@@ -96,20 +84,25 @@ async function checkSchema(): Promise<SchemaResult | null> {
   }
 }
 
-async function checkBoth(): Promise<CombinedResult> {
+async function checkAll(): Promise<CombinedResult> {
   const now = Date.now();
   if (cachedResult && now - cachedAt < CACHE_TTL_MS) {
     return cachedResult;
   }
-  const [db, schema] = await Promise.all([checkDb(), checkSchema()]);
-  const result: CombinedResult = { db, schema };
+  const [db, replica, schema] = await Promise.all([
+    checkPrimaryDb(),
+    checkReadReplica(),
+    checkSchema(),
+  ]);
+  const result: CombinedResult = { db, replica, schema };
   cachedResult = result;
   cachedAt = now;
   return result;
 }
 
 export async function GET(_req: NextRequest) {
-  const result = await checkBoth();
+  const result = await checkAll();
   const body = { ...result, timestamp: new Date().toISOString() };
+  // 503 keys off PRIMARY status only. Replica is informational in v0.
   return Response.json(body, { status: result.db.status === 'down' ? 503 : 200 });
 }
