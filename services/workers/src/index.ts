@@ -5,6 +5,7 @@ export { inngest } from './inngest-client.js';
 export { gmailPoll } from './functions/gmail-poll.js';
 export { classifyGmailMessage } from './functions/classify-gmail-message.js';
 export { classifyDocumentFn } from './functions/classify-document.js';
+export { classifyNoticeFn } from './functions/classify-notice.js';
 export { finalizeDocumentFn } from './functions/finalize-document.js';
 export { verifyActionsChain } from './functions/verify-actions-chain.js';
 export { costRunawayAlert } from './functions/cost-runaway-alert.js';
@@ -67,6 +68,7 @@ export type {
 import { gmailPoll } from './functions/gmail-poll.js';
 import { classifyGmailMessage } from './functions/classify-gmail-message.js';
 import { classifyDocumentFn } from './functions/classify-document.js';
+import { classifyNoticeFn } from './functions/classify-notice.js';
 import { finalizeDocumentFn } from './functions/finalize-document.js';
 import { verifyActionsChain } from './functions/verify-actions-chain.js';
 import { costRunawayAlert } from './functions/cost-runaway-alert.js';
@@ -74,6 +76,7 @@ export const functions = [
   gmailPoll,
   classifyGmailMessage,
   classifyDocumentFn,
+  classifyNoticeFn,
   finalizeDocumentFn,
   verifyActionsChain,
   costRunawayAlert,

@@ -174,6 +174,34 @@ export const classifyDocumentFn = inngest.createFunction(
       });
     });
 
+    // ─── 5. Chain to notice-triage if this is an IRS / state notice ───
+    // The doc-classifier identifies the BROAD kind (irs_notice / state_notice
+    // / etc.); the notice-triage agent does the detailed classification
+    // (CP2000 vs CP504 vs LT11 etc.) + extracts deadlines + amounts.
+    // We fire an event rather than running it inline so:
+    //   - The doc-classifier function can return fast for the UI
+    //   - The notice-triage function is independently retriable if it fails
+    //   - Audit chain stays clean (one action row per agent call)
+    if (classification.output.docKind === 'irs_notice') {
+      const fullText =
+        (classification.output.extractedFields as Record<string, unknown> | null)?.[
+          'fullText'
+        ];
+      await step.sendEvent('emit-notice-uploaded', {
+        name: 'notice/uploaded',
+        data: {
+          tenantId,
+          clientId,
+          documentId,
+          // Pass the OCR'd text the classifier already extracted; the
+          // notice-triage agent reads it directly without re-OCRing.
+          // The doc-classifier's extractedFields.fullText carries this
+          // when present.
+          noticeText: typeof fullText === 'string' ? fullText : null,
+        },
+      });
+    }
+
     return {
       ok: true,
       documentId,
@@ -181,6 +209,7 @@ export const classifyDocumentFn = inngest.createFunction(
       confidence: classification.output.confidence,
       latencyMs: Date.now() - startedAt,
       costUsd: classification.costUsd,
+      noticeTriageQueued: classification.output.docKind === 'irs_notice',
     };
   },
 );

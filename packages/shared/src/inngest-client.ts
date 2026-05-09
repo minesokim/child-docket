@@ -73,6 +73,19 @@ type DocketEvents = {
       documentId: string;
     };
   };
+  /**
+   * Triggered by classify-document when the doc is classified as an
+   * IRS / state notice. Picked up by classify-notice (which runs
+   * notice-triage agent + persists an issue with type='irs_notice').
+   */
+  'notice/uploaded': {
+    data: {
+      tenantId: TenantId;
+      clientId: ClientId;
+      documentId: string;
+      noticeText: string | null;
+    };
+  };
   'issue/created': {
     data: {
       tenantId: TenantId;
