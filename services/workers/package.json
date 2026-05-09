@@ -12,6 +12,7 @@
     "eval:classify": "tsx scripts/eval-classify.ts",
     "eval:draft": "tsx scripts/eval-draft.ts",
     "e2e:app": "tsx scripts/e2e-app.ts",
+    "e2e": "tsx scripts/e2e-app.ts && bun run ../../scripts/protocol-gate.ts --record-e2e-pass",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

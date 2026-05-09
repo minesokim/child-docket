@@ -44,8 +44,9 @@
 // CI mode runs the same validator on every commit in a PR; locally
 // the pre-commit + commit-msg hooks run it on the staged commit.
 
-import { readFileSync, existsSync, appendFileSync } from 'node:fs';
+import { readFileSync, existsSync, appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { dirname } from 'node:path';
 
 interface Trailers {
   edgeCases?: { enumerated: number; handled: number; documented: number };
@@ -78,10 +79,124 @@ function parseArgs(argv: string[]): { mode: string; arg?: string } {
   if (args[0] === '--commit-msg' && args[1]) return { mode: 'commit-msg', arg: args[1] };
   if (args[0] === '--staged') return { mode: 'staged' };
   if (args[0] === '--range' && args[1]) return { mode: 'range', arg: args[1] };
+  if (args[0] === '--record-e2e-pass') return { mode: 'record-e2e-pass' };
   console.error(
-    'usage: protocol-gate.ts --commit-msg <file> | --staged | --range <from..to>',
+    'usage: protocol-gate.ts --commit-msg <file> | --staged | --range <from..to> | --record-e2e-pass',
   );
   process.exit(2);
+}
+
+// ────────────────────────────────────────────────────────────────
+// /e2e cadence enforcement.
+//
+// User mandate (2026-05-09): "i have to run e2e? why aren't you
+// doing it? its part of your strict protocol you have to follow.
+// you are disappointing me. you aren't following my explicit
+// directions. you are cutting corners every time. make sure this
+// doesn't happen again."
+//
+// After 11 commits in one autonomous session without /e2e once,
+// the cadence is now enforced HERE — not as documentation,
+// not as a discipline I might forget.
+//
+// Cadence rules:
+//   - WARN  at >= 3 feat|fix commits since last e2e pass
+//           (= the cadence threshold per .claude/skills/e2e/SKILL.md)
+//   - BLOCK at >= 6 feat|fix commits since last e2e pass
+//           (= twice the cadence; clear cue I've been skipping)
+//
+// The state file `.gstack/last-e2e-sha` records the SHA of the
+// commit that was at HEAD when /e2e last passed. Recorded by:
+//   - `pnpm --filter @docket/workers e2e` wrapper on pass
+//   - manual: `bun run scripts/protocol-gate.ts --record-e2e-pass`
+//
+// Bypassable via Protocol-Skip trailer for genuine emergencies.
+// ────────────────────────────────────────────────────────────────
+
+const E2E_STATE_FILE = '.gstack/last-e2e-sha';
+const E2E_WARN_THRESHOLD = 3;
+const E2E_BLOCK_THRESHOLD = 6;
+
+interface E2eCadenceResult {
+  warn?: string;
+  error?: string;
+}
+
+function checkE2eCadence(): E2eCadenceResult {
+  // No state file means /e2e has never been recorded. WARN once
+  // with init instructions but don't block — first commit needs
+  // breathing room.
+  if (!existsSync(E2E_STATE_FILE)) {
+    return {
+      warn:
+        '/e2e cadence state file missing (.gstack/last-e2e-sha). After your next /e2e pass, ' +
+        'run `bun run scripts/protocol-gate.ts --record-e2e-pass` to seed it. ' +
+        'The cadence enforcer counts feat|fix commits since the last recorded pass.',
+    };
+  }
+
+  let lastSha: string;
+  try {
+    lastSha = readFileSync(E2E_STATE_FILE, 'utf8').trim();
+  } catch {
+    return { warn: `Could not read ${E2E_STATE_FILE}; e2e cadence check skipped.` };
+  }
+  if (!lastSha || !/^[0-9a-f]{7,40}$/i.test(lastSha)) {
+    return {
+      warn: `${E2E_STATE_FILE} contains an invalid SHA ("${lastSha}"). Re-record with --record-e2e-pass.`,
+    };
+  }
+
+  // Count feat|fix commits since the last e2e pass. The grep
+  // matches conventional-commit prefixes only — docs/, chore/,
+  // refactor/, test/, etc. don't count toward cadence.
+  let count = 0;
+  try {
+    // Verify the lastSha is reachable. If not (force-push, branch
+    // switch), warn and continue without blocking.
+    execSync(`git cat-file -e ${lastSha}`, { stdio: 'pipe' });
+    const out = execSync(
+      `git log --pretty=%s --grep "^feat" --grep "^fix" -E ${lastSha}..HEAD`,
+      { encoding: 'utf8' },
+    );
+    count = out.split('\n').filter((l) => l.trim()).length;
+  } catch {
+    return {
+      warn:
+        `Last-e2e SHA ${lastSha.slice(0, 8)} not reachable from HEAD (rebase / force-push?). ` +
+        'Re-record after the next /e2e pass.',
+    };
+  }
+
+  if (count >= E2E_BLOCK_THRESHOLD) {
+    return {
+      error:
+        `BLOCKED: ${count} feat|fix commits since last /e2e pass (${lastSha.slice(0, 8)}). ` +
+        `Cadence threshold is every ${E2E_WARN_THRESHOLD} commits. You are at ${E2E_BLOCK_THRESHOLD}+ — that's twice ` +
+        `the cadence. Run /e2e (\`bun run services/workers/scripts/e2e-app.ts\`), then ` +
+        `\`bun run scripts/protocol-gate.ts --record-e2e-pass\`. ` +
+        `Genuine bypass: add Protocol-Skip trailer with reason.`,
+    };
+  }
+  if (count >= E2E_WARN_THRESHOLD) {
+    return {
+      warn:
+        `${count} feat|fix commits since last /e2e pass (${lastSha.slice(0, 8)}). ` +
+        `Cadence is every ${E2E_WARN_THRESHOLD}; run /e2e soon to avoid the BLOCK at ${E2E_BLOCK_THRESHOLD}.`,
+    };
+  }
+  return {};
+}
+
+function recordE2ePass(): void {
+  const sha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  if (!/^[0-9a-f]{40}$/i.test(sha)) {
+    console.error(`refusing to record invalid SHA: ${sha}`);
+    process.exit(1);
+  }
+  mkdirSync(dirname(E2E_STATE_FILE), { recursive: true });
+  writeFileSync(E2E_STATE_FILE, sha + '\n');
+  console.log(`[protocol-gate] /e2e pass recorded at ${sha.slice(0, 8)}`);
 }
 
 function parseTrailers(message: string): Trailers {
@@ -268,6 +383,14 @@ function validate(input: ValidateInput): ValidateResult {
     );
   }
 
+  // /e2e cadence enforcement (mandate 2026-05-09).
+  const cadence = checkE2eCadence();
+  if (cadence.error) {
+    errors.push(cadence.error);
+  } else if (cadence.warn) {
+    warnings.push(cadence.warn);
+  }
+
   return {
     ok: errors.length === 0,
     errors,
@@ -310,6 +433,11 @@ function readCommit(sha: string): { subject: string; body: string } {
 
 async function main() {
   const args = parseArgs(process.argv);
+
+  if (args.mode === 'record-e2e-pass') {
+    recordE2ePass();
+    process.exit(0);
+  }
 
   if (args.mode === 'commit-msg') {
     if (!args.arg) process.exit(2);
