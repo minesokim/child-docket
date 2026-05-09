@@ -100,7 +100,7 @@ const NAV: NavSection[] = [
   },
   {
     label: 'Settings',
-    items: [{ href: '/settings', label: 'Settings', icon: <IconSettings />, disabled: true }],
+    items: [{ href: '/settings', label: 'Settings', icon: <IconSettings /> }],
   },
 ];
 
