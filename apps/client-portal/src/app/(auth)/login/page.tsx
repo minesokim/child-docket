@@ -124,7 +124,7 @@ export default function LoginPage() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { signIn, isLoaded: signInLoaded } = useSignIn();
+  const { signIn, setActive, isLoaded: signInLoaded } = useSignIn();
   const { signUp, isLoaded: signUpLoaded } = useSignUp();
 
   // State persisted across page loads
@@ -141,19 +141,28 @@ export default function LoginPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const ticket = params.get('ticket');
-    if (!ticket || !signInLoaded || !signIn) return;
+    if (!ticket || !signInLoaded || !signIn || !setActive) return;
     (async () => {
       try {
         const res = await signIn.create({ strategy: 'ticket', ticket });
         if (res.status === 'complete' && res.createdSessionId) {
-          // Strip the ticket from the URL before activation so it
-          // doesn't end up in browser history.
+          // Strip the ticket from the URL BEFORE activating so it
+          // doesn't end up in browser history. window.history works
+          // here even though we're about to navigate — the next nav
+          // overwrites it cleanly.
           window.history.replaceState({}, '', window.location.pathname);
-          // setActive is on the useSignIn hook's setActive, not on
-          // the result object — different from the OTP flow but the
-          // legacy SDK exposes it the same way.
-          // (We re-fetch from the hook on next render; for now
-          // glide will handle the redirect after auth state updates.)
+          // ACTUALLY activate the session. Without setActive the
+          // ticket-create succeeds but Clerk's auth state never
+          // flips; middleware keeps bouncing /login → /login. The
+          // earlier comment "glide will handle the redirect" was
+          // wrong — Clerk requires explicit activation here.
+          await setActive({ session: res.createdSessionId });
+          // Navigate to the post-auth destination. /welcome is the
+          // intake-flow entry point; matches the OTP flow's redirect
+          // (line 287 below) so e2e + real users land identically.
+          glide('/welcome');
+        } else {
+          console.warn('[login] ticket consumption returned non-complete status', res.status);
         }
       } catch (e) {
         console.error('[login] ticket consumption failed', e);
