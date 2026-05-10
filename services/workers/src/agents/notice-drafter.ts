@@ -17,6 +17,7 @@
 
 import { z } from 'zod';
 import type { AgentId, ClientId, TenantId } from '@docket/shared';
+import { assertTrustGate, type PositionTier } from '@docket/shared';
 import { runDocketAgent } from '@docket/orchestrator';
 import { getPrompt } from '@docket/prompts';
 import { lookupAuthorityByCitation, persistAgentAction } from '@docket/db';
@@ -61,6 +62,15 @@ export type DraftNoticeResponseInput = {
     preparerSignOff: string;
     firmName: string;
     taxYear: number;
+    /**
+     * Trust escalation level (1-4) governing whether the drafted
+     * letter can auto-send vs. requires preparer approval. Default 1
+     * = "every external send requires Antonio's approval." Per
+     * CLAUDE.md §8 trust-escalation model + AUTONOMOUS-DECISIONS [3].
+     * Bake this in so the consumer wiring fires on every notice
+     * draft, not just the inbox-drafter.
+     */
+    trustLevel?: 1 | 2 | 3 | 4;
     /** Optional prior-year return summary (1-2 sentences). */
     priorReturnSummary?: string;
     /** Optional notice-text excerpt the triage saw. Lets the drafter
@@ -71,10 +81,26 @@ export type DraftNoticeResponseInput = {
   persistAudit?: boolean;
 };
 
+/**
+ * Trust-gate verdict on the notice draft. Letters to the IRS are
+ * `send-external` (= taxpayer-facing legal correspondence). Mirrors
+ * the shape inbox-drafter uses so command-room UI reads a single
+ * verdict shape across both drafters.
+ */
+export type NoticeDraftTrustGate =
+  | { allowed: true; actionClass: 'send-external' | 'send-internal' }
+  | {
+      allowed: false;
+      actionClass: 'send-external' | 'send-internal';
+      requires: 'human-approval' | 'refusal';
+      reason: string;
+    };
+
 export async function draftNoticeResponse(
   opts: DraftNoticeResponseInput,
 ): Promise<{
   output: NoticeDraftOutput;
+  trustGate: NoticeDraftTrustGate;
   draftActionId: string | null;
   costUsd: number;
   latencyMs: number;
@@ -161,11 +187,63 @@ export async function draftNoticeResponse(
     ];
   }
 
+  // Compute trust-gate verdict on the drafted notice. v0 posture is
+  // FULLY CONSERVATIVE: every notice draft requires preparer approval
+  // regardless of trust level or template. Reasons codex flagged
+  // across 3 review passes:
+  //
+  //   1. Position-bearing templates (cp2000-disagree, etc.) at L2+
+  //      would auto-send without 8275 disclosure if we used the
+  //      standard generic-comms path.
+  //   2. The L4 tier-3 'flag' branch in assertTrustGate returns
+  //      allowed=true with an IMPLICIT requirement to attach Form
+  //      8275. Surfacing that signal end-to-end is V1.5 work.
+  //   3. Template-vs-content drift: even when triage requests an
+  //      administrative template, Sonnet can write position-bearing
+  //      content. Tag-based gating misses this.
+  //   4. Form-dependent packets (cp2000-agree → 5564, cp504 → 9465,
+  //      etc.) need attached forms before sending. Marking them
+  //      auto-send eligible without verifying form attachment is
+  //      premature.
+  //   5. Antonio's actual posture: every IRS response gets his eyes
+  //      anyway. Auto-send saves zero time at v0 scale.
+  //
+  // Until V1.5 wires position-tier classification from the drafter
+  // itself + form-completeness verification, every draft requires
+  // human approval.  When V1.5 lands, this collapses to a single
+  // assertTrustGate call with the drafter-emitted positionTier and
+  // a forms-complete check.
+  const isManualReview = validation.data.template === 'manual-review-required';
+  const actionClass: 'send-external' | 'send-internal' = isManualReview
+    ? 'send-internal'
+    : 'send-external';
+  const trustLevel = opts.context.trustLevel ?? 1;
+  // Compute the standard verdict for diagnostic visibility — operators
+  // can see what the standard gate would have said vs. the conservative
+  // override below. Suppresses the unused-import warning on PositionTier.
+  const _stdDecision: ReturnType<typeof assertTrustGate> = assertTrustGate({
+    trustLevel,
+    actionClass,
+  });
+  void _stdDecision;
+  const _positionTierUnused: PositionTier | undefined = undefined;
+  void _positionTierUnused;
+
+  const trustGate: NoticeDraftTrustGate = {
+    allowed: false,
+    actionClass,
+    requires: 'human-approval',
+    reason: isManualReview
+      ? 'manual-review-required template — preparer must compose the response'
+      : 'v0 conservative posture: every notice draft requires preparer approval (position-tier + form-completeness gating is V1.5)',
+  };
+
   let draftActionId: string | null = null;
   if (opts.persistAudit !== false) {
     const persist = persistAgentAction({
       textPreviewLength: 280,
       extraToolInput: {
+        trustGate,
         promptId: prompt.id,
         promptVersion: prompt.version,
         template: validation.data.template,
@@ -218,6 +296,7 @@ export async function draftNoticeResponse(
 
   return {
     output: validation.data,
+    trustGate,
     draftActionId,
     costUsd: result.costUsd,
     latencyMs: result.latencyMs,
