@@ -108,6 +108,50 @@ The 5/30 deadline: Antonio's full 200+ client base operational on production-gra
 - Trust gate enforcement code at the position-tier level
 - DB write-failure → read-only mode
 
+### Antonio call feedback (2026-05-09)
+
+Live demo of intake + dashboard with Antonio (design partner). Feedback distilled into prioritized fixes / features / strategic context. **VC application deadline 8/1 means 84-day clock; Antonio explicitly offered to introduce us to his network once the product looks pitch-ready. So shipping speed beats ambition.**
+
+Antonio's macro reaction: positive. *"I like the way it looks. I like the way it feels. It doesn't feel clunky. It goes smooth on it."* Dashboard avatar fallback to Gmail profile picture worked correctly.
+
+#### P0 BUGS (this week)
+
+- **Intake "Take photo" + upload-arrow buttons are dead links** — clicking does nothing, no file picker opens. Antonio hit this on the docs step. Located at the document-upload phase of `apps/client-portal/src/app/(intake)/...` (likely the camera/upload component). Until fixed, every intake stalls at docs upload.
+- **Business-type branching is wrong** — when user selects "Corp" entity type, the intake still surfaces W2 income questions (which are individual-only). Need to branch the income/deductions questions by entity type (individual/sole-prop vs. LLC vs. S-corp/C-corp/partnership) so Corp clients see corp-relevant fields only.
+
+#### P1 FEATURES — Antonio explicitly demoed his workflow (this + next week)
+
+- **California Secretary of State entity lookup** (~2-3d). Antonio's competitive moat: during sales calls he live-checks every prospect's corp/LLC against `bizfileonline.sos.ca.gov` to verify standing, entity type, FTB compliance, statement-of-information dates. *"They go, oh, like, this guy knows what he's doing because I pulled them."* Public API; no auth. When user enters business name + entity number on intake, validate against CA SoS and surface: active/suspended status, FTB standing, entity-type-correctness check (LLCs taxed as S-corp have corp numbers; flag the mismatch), statement-of-information status, agent for service, formation date, addresses. Expose to the preparer dashboard as "live entity check" alongside intake.
+- **Routing number → bank name lookup** (~0.5d). On the deposit/refund-method step, when a routing number is entered, surface "JP Morgan Chase" / "Wells Fargo" etc at the bottom in real time. Antonio: *"It's a nice little touch."* OLT does this. Free APIs available.
+- **State auto-fill** (~30 min). When user types "CA" in state field, auto-complete to "California". Antonio: *"thinking in the ways of lazy people, like I already know."*
+- **Mask/unmask sensitive fields on outbound documents** (~1d). When sending docs to clients (the existing 8879 + signature flow), per-document setting to mask SSN/EIN/bank/address vs. full reveal. IRS does this on transcripts. Antonio said "do unmask, unmask" toggle is the model.
+- **Document upload → PDF, not JPG** (~1d, partially shipped). Photos taken via intake should convert to PDF (not `image1.jpg image2.jpg`). Auto-rename based on context: `Mary_Jane_W2_2026.pdf`. Antonio: *"That's what I'm thinking about."*
+- **Filing-status deeper qualifying questions** (~2d). HoH and MFS need specific follow-up question flows:
+  - **HoH**: IRS-compliant qualifying questions (relationship, residency, support test, custodial parent rules). Antonio: *"someone doesn't claim it just because they say their head of household. My job as a tax professional, I qualify you."* Without IRS-correct questions, the firm carries the disqualification risk.
+  - **MFS**: spouse income allocation. If MFS taxpayer's spouse files with a DIFFERENT firm, the prep firm needs the spouse's tax return + Form 8958 (community property states like CA). Branch: "is your spouse filing with Vazant?" If yes, auto-link to the spouse's intake. If no, prompt for spouse return upload OR spouse income breakdown.
+
+#### P2 FEATURES — Antonio's wishlist (next 2-4 weeks)
+
+- **Email/SMS reply-tracking ("forgot to answer one")** — already on roadmap as inbox-drafter; Antonio confirmed this is critical. *"I get so many emails that you forget to answer one. And all of a sudden they're like, hey, so I emailed you, you never got back to me."* AI drafter watches inbox + portal + SMS for unanswered messages, surfaces them. (= Phase 3 inbox-drafter feature; already shipped substrate.)
+- **AI tasks layer (natural language workflows)** — already on roadmap as Phase 4. Antonio described the vision: *"every morning at 8 o'clock, can you do a briefing? Can you scan the IRS headline news? Can you check if my clients need anything?"* Natural-language → AI agent workflow, vs. TaxDome's complex if-this-then-that automation.
+- **Mom-and-pop incorporation flow** (~3d). Antonio sells incorporation as a service: customer asks "I want to be an LLC", he checks name availability on CA SoS, files articles, manages first-year compliance. Add a "I want to incorporate" intake variant that drives that workflow + uses CA SoS API.
+
+#### Strategic context (locked from this call)
+
+- **Pricing posture (CONFIRMED, supersedes earlier $99-299 range)**: $250/mo base + tiered add-ons. Antonio: *"have that available there. don't try to be like, oh, I'm gonna save you 50 bucks because they don't want to hear that shift. They're gonna be like, no, we just need to get this going."* Sell from the customer's pocket, not ours. **Action**: build pricing page with menu-of-add-ons (8879 KBA, AI features, doc storage tiers, Twilio SMS allowance, etc.).
+- **Target persona narrowed**: NOT $150-tax-prep mills. Target EAs / CPAs / mid-market who do prep + advisory. *"You're not going to sell this to people who are charging $150 for a tax."* Filters out the bottom segment we'd been hesitant about.
+- **Antonio's offer**: he'll be the "guinea pig" + intro to his network of EAs + present the product on a group call once it's pitch-ready. Distribution unlock for partners #2–#10. **Action**: get a polished demo by Wks 3-4; Antonio runs a group session with his peer network in Wks 4-5.
+- **Vazant Consulting website refresh** (deferred, ~5d). Antonio asked Docket team to rebuild his site. Defer until v1 ships; queue for late June.
+- **Twilio TCPA opt-in** — already shipped 2026-05-09 (`73ee0db`). Antonio's flow needs 10DLC campaign registration on his prod Twilio (operator step).
+- **App vs. web**: Antonio confirmed web-only for v0. iOS app deferred until he scales beyond solo (when he hires staff for the W2-only client tier). *"I don't want to have an app for tax stuff for people who have a W2."*
+- **Marketing positioning**: *"I'm the example. He's an old agent and he's doing it. He's not scared of it? Okay, cool, then I'll try it."* Antonio as case study lead in the network outreach.
+
+#### Defer beyond v1 unless asked
+
+- IRS Tax Pro Account browser automation (Antonio uses it manually; integration is V1.5)
+- App Store iOS app (Antonio is single-practitioner v0)
+- Bookkeeping intake variant (intake currently focuses on individual + business returns; bookkeeping is a separate flow Antonio hinted at but didn't push for v0)
+
 ### Agent fleet build-out (Phase 3, Wks 5-6, 5/30 → 6/13)
 
 The five core specialist agents in production:
@@ -346,10 +390,18 @@ The realistic v1 distribution shortlist for solo-EA-Antonio-shape ICP:
 
 ## 8. Pricing
 
+**Posture confirmed by Antonio call 2026-05-09**: $250/mo base + menu-of-add-ons. *"Have that available there. Don't try to be like, oh, I'm gonna save you 50 bucks because they don't want to hear that shift."* Sell from the customer's pocket, not ours. Build a tiered "menu" UI so customers see exactly what they're getting per dollar. Avoid the $99-149 bottom which targets $150-tax-prep mills (out of scope).
+
 ### V1
 
 - **Discovery Scan (productized service)**: $1-5K per book scan. Wedge product. Antonio uploads OLT export, gets PDF report 24 hours later.
-- **Subscription base**: $99-299/mo per practitioner seat
+- **Subscription base**: **$250/mo** per practitioner seat (locked 2026-05-09 with Antonio).
+- **Add-on menu** (each line-item priced; customer toggles):
+  - DocuSign 8879 + KBA: ~$3/envelope passthrough + $5 markup
+  - Twilio SMS allowance: $20/mo for 500 messages, +$0.05/msg over
+  - AI features (drafter + discovery): $50/mo
+  - Doc storage tiers (R2): $0/$10/$25/mo for 5GB / 50GB / unlimited
+  - White-glove onboarding: $500 one-time
 - **Per-return**: $5-15
 - **Per-notice handled**: $200-500
 
