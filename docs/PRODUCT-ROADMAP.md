@@ -17,6 +17,19 @@ Every artifact — every doc, message, transaction, signature, notice, action �
 
 **The framing principle** (from YC AI-native company guidance): AI is not a tool the company uses; it is the substrate the company runs on. Antonio is at the edge guiding outcomes. The intelligence layer is the routing, not human middleware.
 
+**Path 2 commitment (locked 2026-05-09 per L1)**: Docket is the orchestration platform that runs the firm's AI tax stack. Public API + MCP server ship in v1, NOT v1.5. The category framing is "tax practice operating system," NOT "AI-native practice management." The verb is "Docket it." Path 2 is the swing-for-unicorn bet; Path 1 (vertical SaaS only) is the floor that funds the swing.
+
+**Multi-year strategic arc** (locked 2026-05-09):
+
+| Year | Posture | Revenue source | Strategic milestone |
+|---|---|---|---|
+| **2026 (v1)** | Forward-deployed services + foundation product. Antonio + mid-market partner #2. | Discovery Scan ($1-5K/book) + founder-tier subscription ($250/mo × first 50 firms). | v1 launch 7/30. SOC 2 controls in codebase per L8. Public API + MCP server live (Path 2). |
+| **2027 (v1.5)** | Standard pricing tiers go live (post-founder-50). Tax franchise networks door open. State Compliance Engine + intake v2 ship. | Tiered subscription + per-event + Discovery Scan + Audit Defense subscription. | First franchise corporate licensee deal. SOC 2 Type II attestation begins. Mid-market reference customer in hand. |
+| **2028 (v2)** | AI CPA play + memory marketplace + cross-firm anonymized aggregation. Voice agent in customer hands. | Subscription + memory marketplace + AI CPA white-label + per-firm fine-tuning. | Network-effect moat starts compounding. Practice-as-asset (transferable at 2x revenue). |
+| **2029-2030** | Optionally: top-100 firm + F500 in-house tax department lane (deferred per CLAUDE.md §14 segment cuts; revisit when SOC 2 Type II + 2 enterprise references in hand). | + Enterprise tier ($150K-$1M ACV). | Path-1-floor ($25-50M ARR self-serve + mid-market) plus Path-2-orchestration upside (10-100x of Path 1 if it works). |
+
+The 2026-2027 arc is committed. The 2028-2030 arc is plausible-not-locked; revisit annually based on what's true at the time.
+
 ---
 
 ## 2. The five product pillars
@@ -475,34 +488,84 @@ The realistic v1 distribution shortlist for solo-EA-Antonio-shape ICP:
 
 ---
 
-## 8. Pricing
+## 8. Pricing (locked 2026-05-09 per L6)
 
-**Posture confirmed by Antonio call 2026-05-09**: $250/mo base + menu-of-add-ons. *"Have that available there. Don't try to be like, oh, I'm gonna save you 50 bucks because they don't want to hear that shift."* Sell from the customer's pocket, not ours. Build a tiered "menu" UI so customers see exactly what they're getting per dollar. Avoid the $99-149 bottom which targets $150-tax-prep mills (out of scope).
+**Posture**: tiered base + active-client metering, NOT per-seat. Per-active-client cost target $1.39/mo (heavy $4.30, medium $1.35, light $0.22; weighted by tax-season seasonality). At 200 clients per firm: ~$278/mo infrastructure cost. Drives 80%+ gross margin at peak tier usage (per L7).
 
-### V1
+Antonio's actual call price ($250/mo) honored as the **founder tier**. Standard tiers go live for firm 51 onward.
 
-- **Discovery Scan (productized service)**: $1-5K per book scan. Wedge product. Antonio uploads OLT export, gets PDF report 24 hours later.
-- **Subscription base**: **$250/mo** per practitioner seat (locked 2026-05-09 with Antonio).
-- **Add-on menu** (each line-item priced; customer toggles):
-  - DocuSign 8879 + KBA: ~$3/envelope passthrough + $5 markup
-  - Twilio SMS allowance: $20/mo for 500 messages, +$0.05/msg over
-  - AI features (drafter + discovery): $50/mo
-  - Doc storage tiers (R2): $0/$10/$25/mo for 5GB / 50GB / unlimited
-  - White-glove onboarding: $500 one-time
-- **Per-return**: $5-15
-- **Per-notice handled**: $200-500
+### Founder tier (first 50 firms only, year 1)
 
-### V1.5
+**$250/mo** — locked 2026-05-09 with Antonio.
+- ≤100 active clients
+- ALL agents included (Discovery, Strategy/Planning, Audit Defense, Multi-Entity Optimization)
+- 30% lifetime discount when reverting to standard tier in year 2
+- Selection criteria: design-partner-shape + willingness to onboard before v1 launch + commitment to provide feedback monthly
 
-- **Audit defense subscription**: $20/return/mo (recurring through return retention period)
-- **Practice Intelligence module**: $99-299/mo separate
-- **BOI reporting**: $50-100/filing
+### Standard tiers (post-50-firms, year 2+)
 
-### V2
+| Tier | Base | Included clients | Overage | Max | Best for |
+|---|---|---|---|---|---|
+| **Solo** | $499/mo | 50 | $5/active | $749/mo | Solo EAs, 50-100 clients |
+| **Small** | $1,499/mo | 150 | $5/active | $1,999/mo | 1-3 staff firms |
+| **Growing** | $4,499/mo | 500 | $4/active | $5,499/mo | 5-10 staff firms |
+| **Mid-market** | $14,999/mo | 2,000 | $3/active | $23,999/mo | 20-100 staff regional firms |
 
-- **Memory marketplace** (anonymized examiner intelligence): $TBD
-- **AI CPA white-label**: $TBD
-- **Franchise corporate licensee deals**: $1-5M ARR potential per
+### Add-on agents (Solo + Small only; Growing + Mid include all)
+
+| Agent | Add-on price | Why opt-in |
+|---|---|---|
+| Discovery | +$199/mo | Continuous deduction surfacing across the book |
+| Strategy / Planning | +$299/mo | Multi-year scenario modeling on demand |
+| Audit Defense | +$99/mo | Year-round monitoring + pre-built defense file |
+| Multi-Entity Optimization | +$199/mo | Typed-graph entity workspace |
+
+### Per-event pricing (any tier)
+
+| Event | Price | Notes |
+|---|---|---|
+| Notice handled | $50 | CP2000/CP504/LT11 triage + drafted response |
+| Representation engagement | $99 | Full 2848 + transcript pull + initial response |
+| Incorporation | $25 + state filing fee | Form prep + filing assistance |
+| BOI report | $15 | FinCEN BOI E-Filing |
+| Statement of Information | $10 | CA SoS + state equivalents |
+| Form 8879 envelope (DocuSign + KBA) | ~$8 passthrough | $3 KBA + $5 markup; included in tiers above 100 envelopes/mo |
+
+### API tier (Path 2, per L1)
+
+The orchestration platform play. Public API + MCP server ship in v1, NOT v1.5.
+
+| Tier | Price | Calls/mo | Overage | Best for |
+|---|---|---|---|---|
+| **Developer** | Free | 1K | $0.005/call | Hobbyists + evaluators |
+| **Partner** | $999/mo | 1M | $0.001/call | Other AI tax tools embedding Docket capabilities |
+| **Platform** | Custom | Custom | Custom | Tax software vendors integrating at scale |
+
+### Discovery Scan (productized service, V1 wedge)
+
+**$1-5K per book scan.** The wedge demo. Antonio uploads OLT export → PDF report 24 hours later listing every defensible deduction missed on prior-year returns. Closes deals.
+
+### V1.5 add-ons (post-7/30 launch)
+
+- **Audit Defense subscription** (already in tiers as add-on for Solo/Small): $99/mo per firm; included for Growing + Mid.
+- **Practice Intelligence module**: $99-299/mo separate (margin per client, friction score, capacity, pricing inconsistency, churn risk).
+- **State compliance modules**: $49/mo per state beyond CA (TX, NY, FL launch sequence).
+
+### V2 (2028+)
+
+- **Memory marketplace** (anonymized examiner intelligence): $TBD; differential-privacy-protected (k-anonymity ≥10).
+- **AI CPA white-label**: $TBD; firms license Docket-as-firm-brand.
+- **Franchise corporate licensee deals**: $1-5M ARR potential per (Liberty Tax, Jackson Hewitt, JTH-aligned). Activate after mid-market reference customer.
+- **Per-firm fine-tuning / LoRA distillation**: included in Mid-market tier; add-on for Growing.
+
+### Pricing principles (locked)
+
+- **Public + transparent.** No "request a quote" pages on standard tiers; the table above is the public price. Mid-market may be quote-driven for >2,000 active clients.
+- **No per-return fees** on subscription tiers. Per-return is per-event-pricing-only territory.
+- **No per-seat pricing.** Per-active-client metering aligns cost with value; per-seat punishes growth.
+- **Annual discount: 15%** if customer pre-pays.
+- **Founder-tier protection.** First 50 firms get 30% lifetime discount on year-2 standard pricing as gratitude for being design partners.
+- **Active client = client with at least one of: filed return in last 12 months, active engagement letter, billable activity in last 90 days.** Inactive clients in storage don't count.
 
 ---
 
@@ -574,14 +637,17 @@ Tracked at [`CLAUDE.md` §14](../CLAUDE.md). Re-listed here for completeness:
 - [`docs/POSITION-FRAMEWORK.md`](POSITION-FRAMEWORK.md) — compliance-first deduction framework, 4-tier structure, 3 modes
 - [`docs/MEMORY-ARCHITECTURE.md`](MEMORY-ARCHITECTURE.md) — six-layer memory model, cost-optimized prompt caching, bloat solutions
 - [`docs/PRODUCTION-READINESS.md`](PRODUCTION-READINESS.md) — punch list with priority tiers, vendor resilience, IG-ad defense
+- [`docs/STATE.md`](STATE.md) — live state of connected systems, migrations, deployed surfaces (single source of truth for "what's connected, configured, applied")
+- [`docs/security/`](security/) — SOC 2 Type II policy + procedure set per L8 lock (12-doc set: info security, access control, change management, incident response, vendor management, BCP, data classification, logging + monitoring, training, risk register, controls matrix)
 - [`docs/STRATEGIC-BRIEF.md`](STRATEGIC-BRIEF.md) — full strategic synthesis (2026-05-02)
 - [`docs/PERSONA.md`](PERSONA.md) — Antonio at Vazant
 - [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) — data model, RLS, encryption boundary
 - [`docs/DOCS-CAPTURE-PIPELINE.md`](DOCS-CAPTURE-PIPELINE.md) — 4-phase doc upload pipeline
 - [`docs/DECISION-JOURNEY.md`](DECISION-JOURNEY.md) — chronological narrative of decisions
+- [`docs/AUTONOMOUS-DECISIONS.md`](AUTONOMOUS-DECISIONS.md) — autonomous judgment-call ledger
 - [`docs/SLICES.md`](SLICES.md) — user's verbatim framings
 - [`COSTS.md`](../COSTS.md) — $50/mo discipline rules
-- [`CLAUDE.md`](../CLAUDE.md) — canonical project context
+- [`CLAUDE.md`](../CLAUDE.md) — canonical project context (start here on every session, especially §🔒 LOCKED DECISIONS)
 
 ---
 
@@ -599,4 +665,4 @@ Revenue from week 8 (Antonio's amendments). Sales artifact from week 10. Distrib
 
 ---
 
-*Last updated: 2026-05-08. Reviewed alongside the post-doc-pipeline-debugging session, after the YC AI-native company framing locked in, after the position framework was made explicit, after the BlackTaxPro distribution reframe, after Perplexity Finance research, and after the Neon Cell 6 outage forced vendor resilience to be made specific. Re-read at every session start. Items get crossed out, not deleted (audit trail of decisions).*
+*Last updated: 2026-05-09. Updated after the strategic Path 2 commitment locked (L1), after pricing tiers + founder-tier locked (L6 + L7), after memory architecture locked (L4), after voice transcription locked (L5), after SOC 2 Type II posture locked (L8), and after the docs/security/ doc set landed. Multi-year strategic arc added to §1. Pricing fully replaced per L6 (founder tier $250/mo for first 50 firms; standard tiers Solo/Small/Growing/Mid; add-on agents; per-event; API tier for Path 2). Companion docs updated to reference docs/security/ + docs/STATE.md. Re-read at every session start. Items get crossed out, not deleted (audit trail of decisions).*
