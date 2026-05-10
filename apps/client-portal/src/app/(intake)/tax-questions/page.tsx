@@ -52,7 +52,14 @@ export default function TaxQuestionsPage() {
     void setField(`taxQuestions.${k}`, !tq[k]);
   };
 
-  const stateSnapshot = { income: { types: incomeTypes }, taxQuestions: tq };
+  // Spread full answers so the /income gate fires on back-nav for entity-
+  // only biz filings. Without service.kind in the snapshot, /income looks
+  // applicable and Back lands the user on the (now-empty) income screen
+  // instead of a useful prior step. /business-info IS applicable for biz
+  // path and may surface as the back target — that's intentional UX since
+  // /business-info isn't yet on the canonical forward chain but biz users
+  // need to fill it eventually.
+  const stateSnapshot = { ...answers, income: { types: incomeTypes }, taxQuestions: tq };
   const handleNext = () => {
     const target = getNextStep('/tax-questions', stateSnapshot);
     if (target) nav.next(target);

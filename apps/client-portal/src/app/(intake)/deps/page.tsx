@@ -18,7 +18,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { FilingStatus } from '@docket/shared';
@@ -92,6 +92,11 @@ export default function DepsCountPage() {
   });
   // Filing status drives back-nav: /spouse when MFJ/MFS, else /filing.
   const [filingStatus] = useIntakeField<FilingStatus>('filing.status', 'single');
+  // Full state needed so downstream isApplicable checks (specifically
+  // /income gating on service.kind === 'biz') see the right context. Local
+  // in-flight values still override the saved-state snapshot for fields
+  // edited on this page.
+  const answers = useIntakeAnswers();
 
   const dec = () => void setCount(Math.max(0, count - 1));
   const inc = () => void setCount(Math.min(MAX_DEPS, count + 1));
@@ -99,7 +104,11 @@ export default function DepsCountPage() {
   // Branching logic (count===0 → /income, count>0 → /deps-detail) lives in
   // intake-flow.ts. Adding new criteria (e.g. age check) means editing that
   // file, not this page.
-  const stateSnapshot = { filing: { status: filingStatus }, dependents: { count } };
+  const stateSnapshot = {
+    ...answers,
+    filing: { status: filingStatus },
+    dependents: { count },
+  };
   const handleContinue = () => {
     const target = getNextStep('/deps', stateSnapshot);
     if (target) nav.next(target);

@@ -354,6 +354,104 @@ export function isSensitivePath(path: string): boolean {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Entity-level filing detection.
+//
+// Distinguishes filings that go on the OWNER'S 1040 (sole prop, single-member
+// LLC disregarded, schedule C/E) from filings that go on the ENTITY'S OWN
+// return (1120, 1120-S, 1065). Drives intake gating: 1040-specific questions
+// (W-2, deductions, refund preference, etc.) only apply to individual filings.
+//
+// Primary signal: `service.kind === 'biz'`. The /services screen labels this
+// option as "Business return — S-Corp, Partnership, LLC" (see SERVICE_CATALOG
+// in packages/ui/src/services-catalog.tsx). Sole-prop / Schedule C / 1099
+// filers are explicitly directed to the 'self' option ("Self-employed return
+// — Schedule C or 1099 income"). So picking 'biz' is a strong user-driven
+// commitment to entity-level filing — which is why it's safe to default the
+// biz path to entity-only even before /business-info has run.
+//
+// /business-info collects free-form `business.entityType` which CAN refine
+// the gate but is not yet wired into the canonical forward chain (see the
+// /business-info comment in intake-flow.ts). When entityType IS set (future
+// flow change, direct URL visit, or returning client) it overrides in either
+// direction. Free-form parsing follows the existing pattern in
+// required-docs.ts.
+//
+// V0 trade-off (Antonio bug 2026-05-09 fix): the "biz + also preparing
+// personal return" override only kicks in if `business.preparingPersonal`
+// is set to 'yes', which lives on /business-info — currently off the
+// forward chain. That case will route correctly once /business-info is
+// wired in. For v0, biz = entity-only is the simplest correct fix.
+//
+// Known v0 trade-off: a single-member-LLC user who reads the /services
+// option literally ("Business return — S-Corp, Partnership, LLC") and
+// picks 'biz' is classified as entity-only here, even though a disregarded
+// SMLLC actually files Schedule C on the owner's 1040. They won't see
+// /income on the forward path. Mitigations: (a) Antonio catches it in
+// prep, (b) the user can back-nav into /business-info and set entityType
+// to "Sole Prop" / "Disregarded" / "Single Member LLC" to flip the gate,
+// (c) the eventual proper fix is to collect entityType BEFORE /income
+// (wire /business-info into the forward chain). The Antonio-reported bug
+// (corp clients seeing W-2) is the priority for v0.
+//
+// Entity-level keywords are checked BEFORE individual-grade keywords so
+// "Single Member LLC (S-Corp election)" correctly resolves to entity-level —
+// the corp election overrides the default disregarded treatment.
+// ────────────────────────────────────────────────────────────────
+
+const ENTITY_LEVEL_KEYWORDS = [
+  's-corp',
+  's_corp',
+  's corp',
+  '1120-s',
+  '1120s',
+  'c-corp',
+  'c_corp',
+  'c corp',
+  '1120',
+  'partnership',
+  '1065',
+];
+
+const INDIVIDUAL_ENTITY_KEYWORDS = [
+  'sole prop',          // covers sole prop / sole proprietor / sole proprietorship
+  'sole-prop',
+  'schedule c',
+  'sched c',
+  'disregarded',
+  'single member',      // single-member LLC defaults to disregarded (Schedule C)
+  'single-member',
+  'smllc',
+];
+
+/**
+ * True when the filing is for the entity itself (1120/1120-S/1065), not the
+ * owner's 1040. Used to gate 1040-specific intake steps.
+ *
+ * Returns false when:
+ *   - service.kind !== 'biz' (no business path → personal 1040)
+ *   - business.preparingPersonal === 'yes' (also doing the owner's 1040)
+ *   - business.entityType matches an individual-grade keyword (sole prop,
+ *     single-member LLC without further election, etc.)
+ *
+ * Returns true when service.kind === 'biz' AND no individual override fires.
+ * Empty entityType on the biz path counts as entity-level — this is how
+ * Antonio's bug gets fixed in the current intake flow (where /business-info
+ * is not yet on the forward chain, so entityType is unset when /income is
+ * reached). The user already said "Business Tax Return" upstream; absent
+ * conflicting info we honor that intent and skip 1040-specific questions.
+ */
+export function isEntityOnlyFiling(state: IntakeState): boolean {
+  if (state.service?.kind !== 'biz') return false;
+  if (state.business?.preparingPersonal === 'yes') return false;
+  const entityType = state.business?.entityType?.trim().toLowerCase() ?? '';
+  // Entity-level keyword wins — corp election overrides default disregarded
+  // treatment on a single-member LLC.
+  if (ENTITY_LEVEL_KEYWORDS.some((kw) => entityType.includes(kw))) return true;
+  if (INDIVIDUAL_ENTITY_KEYWORDS.some((kw) => entityType.includes(kw))) return false;
+  return true;
+}
+
+// ────────────────────────────────────────────────────────────────
 // Masking — what the SERVER sends to the CLIENT for sensitive fields
 // when they're not actively being edited. The server NEVER sends the
 // plaintext SSN/EIN/bank by default. The client receives a masked

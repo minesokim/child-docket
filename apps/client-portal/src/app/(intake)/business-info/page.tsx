@@ -25,7 +25,7 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
 import { formatDigits, formatEin, formatStateCode, formatZip } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
@@ -77,12 +77,17 @@ export default function BusinessInfoPage() {
     '',
   );
 
+  // Pass full answers so /income gating fires (entity-only biz filings
+  // skip /income and walk straight to /tax-questions). With an empty
+  // snapshot the gate would silently fail and Continue would route to
+  // /income for every biz client — which is the bug we're trying to fix.
+  const answers = useIntakeAnswers();
   const handleNext = () => {
-    const target = getNextStep('/business-info', {});
+    const target = getNextStep('/business-info', answers);
     if (target) nav.next(target);
   };
   const handleBack = () => {
-    const target = getPrevStep('/business-info', {});
+    const target = getPrevStep('/business-info', answers);
     if (target) nav.back(target);
   };
 

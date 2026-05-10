@@ -48,6 +48,28 @@ const selfOnly: IntakeState = { income: { types: ['self'] } };
 const rentalOnly: IntakeState = { income: { types: ['rental'] } };
 const selfPlusRental: IntakeState = { income: { types: ['self', 'rental'] } };
 
+// Biz path with various entity types — drives /income gating.
+const corpEntityOnly: IntakeState = {
+  service: { kind: 'biz' },
+  business: { entityType: 'C-Corp' },
+};
+const sCorpEntityOnly: IntakeState = {
+  service: { kind: 'biz' },
+  business: { entityType: 'S-Corp' },
+};
+const partnershipEntityOnly: IntakeState = {
+  service: { kind: 'biz' },
+  business: { entityType: 'Partnership' },
+};
+const corpAlsoPersonal: IntakeState = {
+  service: { kind: 'biz' },
+  business: { entityType: 'C-Corp', preparingPersonal: 'yes' },
+};
+const solePropOnBizPath: IntakeState = {
+  service: { kind: 'biz' },
+  business: { entityType: 'Sole Prop' },
+};
+
 // ────────────────────────────────────────────────────────────────
 // getNextStep - every branch
 // ────────────────────────────────────────────────────────────────
@@ -291,6 +313,154 @@ describe('isApplicable - side paths gated correctly', () => {
       false,
     );
     expect(getStep('/business-info')!.isApplicable(empty)).toBe(false);
+  });
+
+  // Antonio bug 2026-05-09: corp clients were being asked W-2 questions on
+  // /income. These lock down the conditional skip so the regression can't
+  // come back. The W-2 question lives on /income (multi-select), so gating
+  // the whole step is the v0 fix per the bug brief.
+  test('income skipped for entity-only filings (C-Corp)', () => {
+    expect(getStep('/income')!.isApplicable(corpEntityOnly)).toBe(false);
+  });
+  test('income skipped for entity-only filings (S-Corp)', () => {
+    expect(getStep('/income')!.isApplicable(sCorpEntityOnly)).toBe(false);
+  });
+  test('income skipped for entity-only filings (Partnership)', () => {
+    expect(getStep('/income')!.isApplicable(partnershipEntityOnly)).toBe(false);
+  });
+  test('income still applicable when also preparing personal return', () => {
+    expect(getStep('/income')!.isApplicable(corpAlsoPersonal)).toBe(true);
+  });
+  test('income still applicable for sole-prop on biz path (Schedule C is 1040)', () => {
+    expect(getStep('/income')!.isApplicable(solePropOnBizPath)).toBe(true);
+  });
+  test('income applicable on personal/self/other paths', () => {
+    expect(getStep('/income')!.isApplicable({ service: { kind: 'personal' } })).toBe(true);
+    expect(getStep('/income')!.isApplicable({ service: { kind: 'self' } })).toBe(true);
+    expect(getStep('/income')!.isApplicable({ service: { kind: 'other' } })).toBe(true);
+  });
+  test('income SKIPPED on biz path even before entityType is filled (Antonio bug fix)', () => {
+    // /business-info isn't yet wired into the canonical forward chain, so
+    // entityType is empty when corp clients reach /income. The fix: empty
+    // entityType on biz path is treated as entity-only.
+    expect(getStep('/income')!.isApplicable({ service: { kind: 'biz' } })).toBe(false);
+  });
+
+  // Stale-state defense: a biz user who flipped from 'self' service path
+  // could carry old income.types into the biz intake. /self-employment and
+  // /rental-detail must NOT be applicable for entity-only filings even
+  // when types still includes the trigger value.
+  test('self-employment NOT applicable for entity-only biz even with types=self', () => {
+    expect(
+      getStep('/self-employment')!.isApplicable({
+        ...corpEntityOnly,
+        income: { types: ['self'] },
+      }),
+    ).toBe(false);
+  });
+  test('rental-detail NOT applicable for entity-only biz even with types=rental', () => {
+    expect(
+      getStep('/rental-detail')!.isApplicable({
+        ...corpEntityOnly,
+        income: { types: ['rental'] },
+      }),
+    ).toBe(false);
+  });
+  test('self-employment STILL applicable for sole-prop on biz path with types=self', () => {
+    expect(
+      getStep('/self-employment')!.isApplicable({
+        ...solePropOnBizPath,
+        income: { types: ['self'] },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe('getNextStep - entity-only filings short-circuit /income.next', () => {
+  test('stale types=self on biz path does NOT route to /self-employment', () => {
+    // Defense-in-depth in getNextStep walks `/income.next()` when /income is
+    // skipped. With stale types=self the old next() would have returned
+    // /self-employment; the short-circuit returns /tax-questions instead.
+    const stale: IntakeState = { ...corpEntityOnly, income: { types: ['self'] } };
+    expect(getNextStep('/deps', { ...stale, dependents: { count: 0 } })).toBe(
+      '/tax-questions',
+    );
+  });
+  test('stale types=rental on biz path does NOT route to /rental-detail', () => {
+    const stale: IntakeState = { ...corpEntityOnly, income: { types: ['rental'] } };
+    expect(getNextStep('/deps', { ...stale, dependents: { count: 0 } })).toBe(
+      '/tax-questions',
+    );
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// Forward-nav skips inapplicable steps for entity-only filings —
+// /business-info → /income should walk past /income to /tax-questions.
+// ────────────────────────────────────────────────────────────────
+
+describe('getNextStep - entity-only filings skip /income', () => {
+  test('business-info → tax-questions (skips /income) for corp', () => {
+    expect(getNextStep('/business-info', corpEntityOnly)).toBe('/tax-questions');
+  });
+  test('business-info → income for sole-prop on biz path', () => {
+    expect(getNextStep('/business-info', solePropOnBizPath)).toBe('/income');
+  });
+  test('business-info → income when also preparing personal return', () => {
+    expect(getNextStep('/business-info', corpAlsoPersonal)).toBe('/income');
+  });
+});
+
+describe('getPrevStep - entity-only filings skip /income on back-nav', () => {
+  test('tax-questions → business-info for corp (skips /income, /deps, etc.)', () => {
+    // For a corp filing the prev applicable step before /tax-questions should
+    // not be /income — the corp filing skipped it.
+    expect(getStep('/income')!.isApplicable(corpEntityOnly)).toBe(false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// Antonio bug 2026-05-09 regression: a corp client should never visit
+// /income when walking the flow forward. Lock down by walking the full
+// graph and asserting the route trace.
+// ────────────────────────────────────────────────────────────────
+
+describe('full-flow walk — corp filing never reaches /income', () => {
+  function walkFlow(state: IntakeState): string[] {
+    const visited: string[] = ['/welcome'];
+    let current: string | null = '/welcome';
+    let guard = 0;
+    while (current && guard < 100) {
+      const next: string | null = getNextStep(current, state);
+      if (!next) break;
+      visited.push(next);
+      current = next;
+      guard++;
+    }
+    return visited;
+  }
+
+  test('C-Corp entity-only walk does not include /income', () => {
+    const trace = walkFlow(corpEntityOnly);
+    expect(trace).not.toContain('/income');
+    // sanity: it should still reach /done eventually
+    expect(trace).toContain('/done');
+  });
+
+  test('S-Corp entity-only walk does not include /income', () => {
+    const trace = walkFlow(sCorpEntityOnly);
+    expect(trace).not.toContain('/income');
+    expect(trace).toContain('/done');
+  });
+
+  test('Sole-prop on biz path DOES include /income (Schedule C is 1040)', () => {
+    const trace = walkFlow(solePropOnBizPath);
+    expect(trace).toContain('/income');
+  });
+
+  test('Corp + preparingPersonal=yes DOES include /income', () => {
+    const trace = walkFlow(corpAlsoPersonal);
+    expect(trace).toContain('/income');
   });
 });
 

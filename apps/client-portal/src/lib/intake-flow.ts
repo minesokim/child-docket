@@ -17,7 +17,7 @@
 // `if` blocks to page components.
 // ────────────────────────────────────────────────────────────────
 
-import type { IntakeState } from '@docket/shared';
+import { isEntityOnlyFiling, type IntakeState } from '@docket/shared';
 
 export type IntakeSection =
   | 'welcome'      // welcome / tutorial / service path
@@ -201,14 +201,34 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
   },
 
   // ─── Income ───────────────────────────────────────────────────
+  // Skipped for entity-only filings (1120/1120-S/1065) — every option on
+  // the /income multi-select is 1040-specific (W-2, 1099, Schedule E,
+  // brokerage, retirement). Antonio's bug 2026-05-09: corp clients were
+  // being asked about W-2 income, which doesn't apply to the entity's
+  // return. See isEntityOnlyFiling for the precise gate.
+  //
+  // /self-employment and /rental-detail are also gated on !isEntityOnlyFiling
+  // so stale `income.types` from before a service-path switch can't leak a
+  // biz user into a 1040 sub-flow.
+  //
+  // V0 known limitation: stale `answers.income`/`selfEmployment`/`rental`
+  // from a prior personal-path session persists in the JSONB even after
+  // /income is skipped, so requiredDocsFor() (and the command-room intake
+  // summary) may still surface W-2 / 1099 doc requests. The mitigation is
+  // a service-path-change scrubber (see follow-up task spawned 2026-05-09).
   {
     id: 'income',
     route: '/income',
     label: 'Income',
     section: 'income',
-    isApplicable: () => true,
+    isApplicable: (s) => !isEntityOnlyFiling(s),
     isComplete: (s) => (s.income?.types?.length ?? 0) > 0,
     next: (s) => {
+      // Short-circuit for entity-only: even if types is somehow set (stale
+      // value, returning client switching paths), don't route into 1040
+      // sub-flows. The defense-in-depth loop in getNextStep evaluates this
+      // when /income is skipped.
+      if (isEntityOnlyFiling(s)) return '/tax-questions';
       const types = s.income?.types ?? [];
       if (types.includes('self')) return '/self-employment';
       if (types.includes('rental')) return '/rental-detail';
@@ -220,7 +240,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/self-employment',
     label: 'Self-employment',
     section: 'income',
-    isApplicable: (s) => s.income?.types?.includes('self') ?? false,
+    isApplicable: (s) => !isEntityOnlyFiling(s) && (s.income?.types?.includes('self') ?? false),
     isComplete: (s) =>
       !!s.selfEmployment?.businessName && !!s.selfEmployment?.whatYouDo,
     next: (s) => {
@@ -234,7 +254,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/rental-detail',
     label: 'Rental property',
     section: 'income',
-    isApplicable: (s) => s.income?.types?.includes('rental') ?? false,
+    isApplicable: (s) => !isEntityOnlyFiling(s) && (s.income?.types?.includes('rental') ?? false),
     isComplete: (s) => (s.rental?.properties?.length ?? 0) > 0,
     next: () => '/tax-questions',
   },

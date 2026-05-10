@@ -23,10 +23,10 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
-import type { IncomeType } from '@docket/shared';
+import { isEntityOnlyFiling, type IncomeType } from '@docket/shared';
 
 type IncomeId = IncomeType;
 
@@ -52,12 +52,26 @@ export default function IncomePage() {
   // For back-nav, we need to know if dependents.count > 0 (deps-detail
   // applies) so getPrevStep can decide where to bounce back to.
   const [depsCount] = useIntakeField<number>('dependents.count', 0);
+  const answers = useIntakeAnswers();
+
+  // Antonio bug 2026-05-09 belt-and-suspenders: forward routing already
+  // skips /income for entity-only biz filings (1120/1120-S/1065), but if
+  // a user lands here via back-nav or direct URL we hide every option —
+  // each one (W-2, 1099, Schedule E rental, brokerage, retirement) is
+  // 1040-specific and would route the client into a personal-return
+  // sub-flow we just removed. Empty list + disabled Continue stops them.
+  const entityOnly = isEntityOnlyFiling(answers);
+  const visibleOptions = entityOnly ? [] : OPTIONS;
 
   const toggle = (id: IncomeId) => {
     void setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]);
   };
 
-  const canContinue = sel.length > 0;
+  // For entity-only filings the page renders no options, but stale `sel`
+  // values from before a service-path switch could otherwise let Continue
+  // route into /self-employment or /rental-detail. Hard-gate Continue so
+  // the persona must back out instead.
+  const canContinue = !entityOnly && sel.length > 0;
 
   // Branching (self → /self-employment, rental → /rental-detail, else →
   // /tax-questions) lives in intake-flow.ts. Adding a new income type that
@@ -102,7 +116,7 @@ export default function IncomePage() {
         </div>
 
         <Stack gap={10} style={{ padding: '20px 24px 16px', flex: 1 }}>
-          {OPTIONS.map((o) => {
+          {visibleOptions.map((o) => {
             const on = sel.includes(o.id);
             const Icon = o.Icon;
             return (
