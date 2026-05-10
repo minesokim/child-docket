@@ -168,6 +168,93 @@ Plus:
 - Authority hover (cite expands to full authority text + `effective_from` date)
 - Audit trail with cryptographic chaining
 
+### Intake Flow v2 + State Compliance Engine (Phase 2-expansion, Wks 3-8, 5/16 → 6/27)
+
+The 5/9 Antonio call surfaced a substantial expansion of Phase 2. Round-2 deep analysis added Tier 1/2/3 items that revise the timeline. **Substrate ships first, then content per-entity progressively** (the only honest path to Aug 1 with a pitch-ready product).
+
+#### Foundational substrate (Wks 3-4, 5/16 → 5/30)
+
+- **Filing-status-drives-downstream refactor** (~2d). Currently `intake-flow.ts` has the filing-status step but downstream doesn't condition on it. MFJ → spouse info next; MFS → community-property branch; HoH → qualifying-person sub-flow; Single → no spouse anything; QW → MFJ-shape with date-of-spouse-death.
+- **Entity-type intake substrate** (~3d). Per-entity Zod schemas + component registry + branched routing. Top-level "what brought you here?" fork: (1) get my taxes done; (2) help with IRS notice/audit; (3) incorporate a business; (4) bookkeeping setup; (5) tax planning/advisory. Each fork drives a distinct downstream flow.
+- **Generalized auto-fill substrate** (~2d). Not just state. ZIP → city + state. Routing number → bank name (free public APIs). EIN → expected entity name (IRS Pub via lookup). Address → USPS standardize. Antonio: *"thinking in the ways of lazy people."*
+- **CA SoS API integration prototype** (~2d). Real public API at `calicodev.sos.ca.gov` (verified 5/9 deep analysis). Subscription-key auth. Four products: Business Entity Search, UCC Filing Access, Document Retrieval, Status Verification. Returns entity name + B-prefix entity number + formation date + entity type + status (Active/Suspended/Dissolved/Forfeited/Surrendered) + registered agent + principal address + filing history. **FTB suspension surfaces in the Suspended status** (not directly via FTB, but reflected in CA SoS).
+
+#### Tier 1 must-haves — Intake side (Wks 4-6, 5/30 → 6/13)
+
+- **HoH qualification sub-flow + Form 8867 due diligence + Form 8332 release** (~5d). The compliance feature isn't "get HoH right"; it's **Form 8867** ($580/failure penalty for paid preparer due diligence). Sub-flow captures the four IRS tests (relationship, residency >6 months, support >50%, gross income test for qualifying relatives) + Form 8332 release-of-claim if non-custodial parent + actual cost-of-home expense breakdown (rent/mortgage + utilities + property tax + insurance + food eaten in home). Conservative routing: ambiguous answers route to "preparer review" not auto-qualify (auto-qualifying borderline cases creates MORE PTIN exposure than the generic intake).
+- **MFS spouse capture + Form 8958 community-property allocation** (~5-7d). Branch by state of residence:
+  - Non-community states → spouse name + SSN only (~0.5d).
+  - Community-property states (CA, AZ, ID, LA, NV, NM, TX, WA, WI; Wisconsin uses "marital property" terminology, federal-treats-as-community; Alaska is opt-in via marital agreement): full Form 8958 sub-flow. ~30 fields per spouse (W-2 split community/separate, 1099 split, deductions split). If spouse is a Vazant client too, auto-link both intakes. If not, branch: "upload spouse's tax return" + OCR + parse, OR detailed spouse-income data entry. Without it, IRS auto-flags via the matching system.
+- **Entity intake routing + S-corp 1120-S content** (~7-10d for content depth). Antonio: "we are doing routing entity specific question set for sure. we need to capture everything." S-corp 1120-S intake captures: officer comp + reasonable comp test + distributions + AAA + retained earnings + fixed assets register + Schedule L (if rev > $250K) + M-1/M-2/M-3 + state minimum tax (CA $800) + multi-state apportionment + BOI. Antonio's most common business type ships first; partnership 1065 + C-corp 1120 in V1.5 (per the substrate-first/content-progressive approach the user accepted).
+
+#### Tier 1 must-haves — Compliance Engine side (Wks 4-6, 5/30 → 6/13)
+
+- **Compliance Snapshot UI** (~3d). Red/yellow/green status pill in client workspace. Status mapping: 🟢 Active + SOI current + no FTB suspension; 🟡 SOI overdue OR within 90d of deadline OR minor data discrepancy; 🔴 Suspended/Forfeited/Dissolved OR > 1y SOI overdue. Conservative defaults: when data is uncertain, default to yellow ("verify manually") not red. False-positive red destroys credibility on a sales call.
+- **Action items with per-tenant pricing menu** (~2-3d). Compliance Snapshot becomes a SALES SURFACE for the firm's services. Build `firm_services` table per tenant: service offerings + prices + descriptions, surfaced as configurable add-ons. Snapshot links each action item to the firm's service. "Request this service" button creates a task on the firm's queue + sends notification.
+- **BOI reporting status surfaced** (~3d). All corps + LLCs MUST file BOI to FinCEN within 90 days of formation, 30 days of any beneficial-ownership change. $500/day penalty. Antonio sells this at ~$50-100/filing (recurring revenue stream). Compliance Snapshot must surface BOI status alongside SOI. FinCEN BOI E-Filing system has an API; intake of beneficial owners + auto-file.
+- **Hard deadline tracking layer** (~5d). Per-engagement filing deadlines per filing type per client per year. March 15 (1120-S, 1065), April 15 (1040, 1120, FBAR), May 15 (990), Sept 15 (extended S-corp/1065), Oct 15 (extended 1040/1120). State deadlines often differ (CA Form 568 quarterly LLC fee). BOI: 90 days new, 30 days for changes. Compliance Snapshot surfaces "next deadline + days remaining" per client. **Antonio's daily pain.**
+- **Name availability check** (~1d). For incorporation flow. Likely separate from CA SoS API per the third-party guide; may be in-API or a separate scrape path. Verify during prototype.
+
+#### Tier 1 must-haves — Adoption + revenue (Wks 6-8, 6/13 → 6/27)
+
+- **Existing client migration** (~3-5d). **Adoption blocker for Antonio.** ~200 clients in his current system; without bulk import, he doesn't switch. Need: CSV import + OLT export parser + (eventually) TaxDome API. Mapping: name + SSN/EIN + email + phone + prior-year return + engagement history.
+- **Prior-year return upload + parser** (~5d). P0 for any new client onboarding. OCR + extract: filing status, deductions, credits, AGI, prior-year tax, dependents. Roll-forward into current year saves 1-2 hours per client. Already partially in intake design (last-year tax return is one of the doc upload items) but no parser yet.
+- **White-label / firm branding** (~5d). Distribution unlock for Antonio's mentor's network (1000s+ preparers per project memory). Per-firm: logo, colors, custom domain (CNAME), client-facing copy ("powered by Vazant"), Twilio sender ID, DocuSign account, Square account, Gmail. Tenant_credentials substrate exists; needs UI + per-firm onboarding flow.
+- **Audit defense workspace** (~5-7d). **Antonio has TWO active audits THIS WEEK.** Per-audit workspace: timeline, IRS auditor contacts, requests, responses, deadlines, evidence collected. Auto-draft response packets via the notice-drafter agent (already built; extend to audit-letter-drafter). Pull/track transcripts as evidence. Track every interaction via the actions audit trail. **Tier 1 because Antonio needs it NOW** — not v1.5.
+- **Pre-filing IRS reconciliation substrate** (~5d substrate, then ~5d once Tax Pro Account integration lands). IRS Wage & Income (W&I) transcripts list every W-2/1099/1098 the IRS already knows about. Docket pulls W&I via Tax Pro Account, compares to client-uploaded docs, **flags missing forms BEFORE the IRS auto-letter fires**. Marquee invisible value-add. Substrate ships now (data model + UI surface for "missing forms"); full integration depends on Tax Pro Account browser-automation landing per CLAUDE.md M2+ build order — accelerate that work.
+- **Mask/unmask sensitive fields on outbound documents** (~1d). Per-document toggle. SSN/EIN/bank/address masked vs full reveal. IRS does this on transcripts; Antonio: "do unmask, unmask."
+- **Routing number → bank lookup** (~0.5d). On deposit/refund-method step.
+- **Photo upload → PDF + auto-rename** (~1d, partially shipped). `Mary_Jane_W2_2026.pdf`.
+
+#### Tier 2 candidates — schedule per Antonio's network demand (Wks 8-10, 6/27 → 7/11)
+
+- **Practitioner compliance tracking** (~3d). The firm itself: PTIN renewal, EA continuing education, $5K EA bond, state registration. Different rules per practitioner type (CPA / EA / attorney / unenrolled). Track deadlines + renewal docs + CE hours.
+- **Document template library** (~5-7d). Beyond engagement letter + §7216: Form 2848 (POA), Form 8821 (TIA), Form 8332 (release of claim), Form 8275 (disclosure), Form 8867 (due diligence), BOI report, Articles of Incorporation, Operating Agreement. Each templated with merge fields, sent via DocuSign with KBA where required.
+- **Multi-state income allocation for individuals** (~3d). Client moved CA → TX in October. Income earned before move = CA-source; after = TX-source. Federal is one return; CA Form 540NR is part-year resident. Currently intake doesn't ask "did you move during the year." Add the branch.
+- **K-1 income capture** (~3-5d). Client receives K-1 from passive partnership investment / family S-corp. 30+ line items each with tax treatment. Per-K-1 sub-flow.
+- **Quarterly estimated tax tracking** (~3d). 1040-ES (4x/year). Most clients miss these. Auto-calculate from prior-year + current-year income. Compliance Snapshot surfaces "Q3 due Sept 15." Recurring touch-point that justifies subscription pricing.
+- **Refund tracking** (~2d). After return filed, scrape IRS Where's-My-Refund (no public API). Surface refund status in client portal: "Refund $3,200 processing; expected July 15." Reduces support load.
+- **Year-round planning prompts** (~5d). Quarterly check-ins triggered by life events (marriage, kid, house, business). AI-driven: "You said you started an LLC last quarter; S-corp election by March 15?" Year-round wedge that justifies non-tax-season subscription.
+
+#### Tier 3 — positioning + polish (Wks 10-12, 7/11 → 8/1)
+
+- **Demo mode for Antonio's group-call presentation** (~3d). Mock data that looks impressive (many clients, varied work, AI insights surfacing). Hide developer metadata (action_class, JSONB blobs, debug fields). Pitch-ready smoke-tested flow. Defer until ~1 week before group call.
+- **Sales-shareable Compliance Snapshot link** (~2d). During sales call, Antonio opens prospect's Snapshot → shares ephemeral link. Login-free, expires in 24h, shows snapshot only. AHA-moment lead-magnet that converts on the call.
+- **Trust-building UX for older preparers** (cross-cutting, ~ongoing). Every AI suggestion shown as "proposed" not "applied." One-click reject/approve. Audit trail of AI accuracy ("AI was right 87% of the time over your last 30 days"). Bake in across all agent UI surfaces. NOT a feature; a principle.
+- **Junior-work-replacement marketing framing** (positioning copy, ~1d). "Save $36K/yr on junior staff per practitioner with $250/mo subscription." Junior preparer salary $40-60K. Docket replaces doc-chase + form-fill + workpaper-assembly + reconciliation + routine comms. Position THIS as the v1 sales pitch on the pricing/value page.
+- **Bookkeeping integration via Xero/QuickBooks** (~5d). On roadmap as Xero MCP server (deferred). Once integrated: P&L + BS auto-prefill into business intake. Antonio mentioned bookkeeping in passing — schedule per demand from his peer network.
+
+#### Intentionally deferred to V1.5 (post Aug 1)
+
+- Partnership 1065 intake content (capital accounts + distributive shares + guaranteed payments + K-1 generation per partner). Substrate ships in v1; content fills V1.5.
+- C-corp 1120 intake content (similar to S-corp + dividends complexity). Substrate ships in v1; content fills V1.5.
+- **Multi-state expansion of Compliance Engine**: TX (Comptroller HTML scrape), FL (sunbiz.org clean search), NY (DOS Search, no franchise visibility), NJ, IL. Each state takes 3-5d. Add states one at a time as Antonio's clients have entities there. Don't speculatively build provider for unused states.
+- Multi-state apportionment for businesses (sales-factor allocation across states for LLC/Corp operating in multiple jurisdictions).
+- Estate / trust intake (Form 1041, Form 706). Different sub-product.
+- Annual minutes / corporate compliance (board resolutions + ownership ledger for corporate liability shield). Antonio sells this; surfaces in extended Compliance Snapshot.
+- Notice-drafter expansion to audit-letter-drafter (the audit defense workspace ships v1; the AI auto-draft part lands V1.5 once notice-drafter pattern proves out at scale).
+- Insurance integration (affiliate revenue from liability/E&O insurance partners).
+- Voice-input intake mode (Whisper API + GPT extraction for "tell me about your year" → form fields). Especially powerful for older clients.
+
+#### Honest timeline check (8/1 VC application deadline)
+
+84 days. ~12 weeks. Phase 2-expansion above lands ~Wks 3-12 (May 16 → Aug 1). Layered on top of the existing Phase 2 production wiring (Twilio + DocuSign + Square real wiring + Gmail polling enable + Pub 17 ingestion + AAD-binding ✅ + KEK rotation ✅).
+
+Realistic ship cadence: ~1 substantive feature per 2-3 days at current velocity (with codex-review enforcement now baked in per [25]). 12 weeks × 5 days = 60 days of build × 2-3d/feature = 20-30 features. Phase 2-expansion lists ~25 substantive items. **Tight but achievable** if the substrate-first/content-progressive approach holds for entity intakes (= S-corp v1; partnership + C-corp V1.5).
+
+Items NOT in this section (already covered elsewhere or already shipped):
+- Cost outlier + spike alerts ✅ shipped af808e7
+- KEK rotation ✅ shipped 2d63206 + 3bd42b1
+- AAD-bound encryption ✅ shipped 2c5db11
+- DocuSign void-envelope + kba-failed enum + envelope idx ✅ shipped 6ecb672 + 78aa4f9 + 2b9949a
+- TCPA SMS consent ✅ shipped 73ee0db
+- Codex review + e2e cadence enforcement ✅ shipped 1386750 + 09d3f49 + 1d72f96
+- Gmail polling code ✅ already shipped (just needs ENABLE_GMAIL_POLL env on prod)
+- Documenso self-host migration (V1.5+ per existing roadmap)
+- IRS Tax Pro Account browser automation (M2+ per CLAUDE.md; Pre-filing IRS reconciliation accelerates this)
+- "Ask Antonio" feature (already in product per user direction)
+- "Humanizing everything" (already the design ethos per user direction)
+
 ### AI Tasks layer (Phase 4, Wks 7-8, 6/13 → 6/27)
 
 The user-composed agent orchestration that replaces "automations" entirely.
