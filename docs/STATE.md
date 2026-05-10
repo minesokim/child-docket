@@ -33,6 +33,7 @@ If you're unsure whether something has been done, run `/check-state` for an auth
 | **Neon (read replica)** | 🟡 Configured but not routed | env var (`DATABASE_URL_READ_REPLICA`) | Substrate exists (`getReadReplicaDb()`). Not yet routing reads. V1.5 wiring per CLAUDE.md `B3`. |
 | **Inngest** | ✅ Connected | env vars + Vercel integration | Cron jobs registered: `gmail-poll`, `classify-gmail-message`, `classify-document`, `classify-notice`, `finalize-document`, `verify-actions-chain`, `cost-runaway-alert`, `cost-outlier-alert` (`af808e7`), `cost-spike-alert` (`af808e7`). |
 | **Vercel deploys** | ✅ Both apps READY | Vercel dashboard | `docket-command-room` + `docket-portal`. Latest verified READY 2026-05-09 (~2h post-push at that time). |
+| **claude-mem** | ✅ Installed (v13.0.1, 2026-05-10) | `~/.claude-mem/` (per-machine, local-only) | Memory across Claude Code sessions. Worker NOT yet started — run `npx claude-mem start` to activate, then keep `http://localhost:37777` open. Memory injection begins on second session per project. Auto-memory currently disabled via `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`. Optional `/learn-codebase` to pre-ingest the repo. |
 
 ## 📦 Vendors NOT yet connected
 
