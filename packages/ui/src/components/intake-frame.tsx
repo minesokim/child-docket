@@ -1,3 +1,5 @@
+'use client';
+
 // Intake-flow framing primitives — header, bottom bars, route transitions,
 // and the SignOutProvider that connects the host app's sign-out handler
 // to the IntakeHeader's logout pill.
@@ -5,6 +7,15 @@
 // SignOutProvider lives here (not in layout.tsx) because the only consumer
 // of the context inside the package is IntakeHeader, and they share a
 // private React context that should not be re-exported beyond this file.
+//
+// 'use client' is REQUIRED at module top because this file calls
+// React.createContext at module scope. Next 15 / React 19 RSC enforces
+// that context creation must live in a client module — without this
+// directive, every route that imports this package (the whole intake
+// and portal trees) 500s with "createContext only works in a Client
+// Component" at dev-server startup. Pre-existing breakage; the spawned
+// task agents on commits faaa579 + 9975978 both flagged it as an
+// out-of-scope blocker; this commit closes that gap.
 
 import * as React from 'react';
 import type { Theme } from '../tokens.js';
