@@ -969,10 +969,10 @@ The client popup has its own billing tab. **Don't add BillingCard to popup overv
 
 ## 21. Open questions
 
-1. **Brand structure.** One name with two postures (Docket platform / Docket consulting), or two names (Docket + parent brand)? Decide before public launch.
+1. **Brand structure.** One name with two postures (Docket platform / Docket consulting), or two names (Docket + parent brand)? Decide before public launch. **Naming track open** — Linden, Linnea, June, Vera, Grace, Quill all rejected as of 2026-05-11. Currently paused; user will resume the search later. Until then, "Docket" remains the working codename.
 2. **The 30-second wedge demo.** What's the "holy shit" moment for Antonio prospects? Hypothesis: a return getting prepped through OLT via browser automation while the preparer watches.
 3. **Second design partner.** First is Antonio (CA EA, OLT/IRS Solutions/Xero). Who's #2 — small CPA firm, bilingual storefront, rep specialist?
-4. **Tax co-founder situation.** Recruiting target or existing relationship? Most important hire — gates the playbooks/ontology/review policies that make agents non-stupid.
+4. **Tax co-founder situation.** ~~Recruiting target or existing relationship?~~ **CLOSED 2026-05-11**: not pursuing a tax co-founder hire at this stage. Founder covers tax-domain work directly via Antonio (CA EA, on-platform partner) plus contracted tax-expert validation when Position Library content needs sign-off. Revisit if v1.5+ scale forces it. Earlier accelerator drafts (`docs/accelerator-applications/`) reference this hire as open — those need a docs-pass before submission to remove the dependency framing.
 5. **The wedge agent.** OLT prep handoff vs notice triage. Decide week 1 with Antonio.
 
 ---
