@@ -9,7 +9,7 @@
 
 ## One-line
 
-Docket is the AI-native operating system for a tax practice — Path 1 (vertical SaaS for solo + small + mid-market firms) + Path 2 (public orchestration platform with API + MCP server in v1). Forward-deployed embed model with first design partner in production by 5/30/2026. Bootstrap-feasible at our segment; capital accelerates the Path 2 swing.
+**Docket is the AI defense layer for tax practices.** Path 1 (vertical SaaS for solo + small + mid-market firms) + Path 2 (public orchestration platform with API + MCP server in v1). **$1K/mo MRR** from design partner #1 (Antonio at Vazant Consulting, CA EA, 200+ active clients); full client base onboarding to production substrate 2026-05-30. Bootstrap-feasible at our segment; capital accelerates the Path 2 swing.
 
 ---
 
@@ -18,7 +18,7 @@ Docket is the AI-native operating system for a tax practice — Path 1 (vertical
 Three reasons we're a fit:
 
 1. **Ali Partovi backs ambitious-vision founders.** The Path 2 orchestration play (public API + MCP server in v1, not v1.5) is the swing-for-unicorn bet. Most vertical SaaS founders ship the SaaS and add an API later; we're committing to the API + the SaaS in parallel. This is the bet Ali has historically funded.
-2. **Neo Network access compounds for an underserved-segment vertical.** Tax co-founder hire is the most important open hire (CLAUDE.md §21 question #4); Neo's network of operators + technical founders + tax-adjacent professionals is uniquely positioned to surface candidates faster than cold recruiting.
+2. **Neo Network access compounds at three high-leverage points**: (a) **Partner #2 candidate surface** (regional CPA firm, 20-100 staff, ideally different segment + different network from Antonio per L14 dependency-mitigation lock) — operators in Neo's network adjacent to accounting / legal / financial-services can warm-intro qualified firms; (b) **Engineer #2 candidate surface** — Neo's technical-founder network is a 10x multiplier over cold recruiting for the most-leveraged hire; (c) **Path 2 partner-tier customer surface** — other AI tax tools that could integrate with Docket's compliance + audit substrate via the public API + MCP server.
 3. **Less-conventional path.** Forward-deployed services + platform (Palantir/Foundry pattern, structurally identical to FluentOS' productized AI consulting template) is unusual for a vertical SaaS company. Most VCs see "consulting that becomes a platform" and either flinch (services revenue dilutes the platform thesis) or buy in (the Palantir comparison). Neo has historically been on the buy-in side. The non-snowflake discipline (every engagement runs on multi-tenant substrate; refuse out-of-thesis work) is what makes the model honest.
 
 ---
@@ -64,7 +64,8 @@ What's NOT been tried: AI-native operating system for the down + mid-market with
 
 ## Traction
 
-- **Substrate (year of work already done)**: 12 migrations applied; RLS at `ENABLE + FORCE`; per-tenant DEK + AAD-bound encryption; cryptographic audit chain (chain_seq + prev_hash + row_hash); KEK rotation runbook; Bedrock fallback (38/38 unit + 4/4 smoke); webhook signature verification (32/32); PII regex scrubber (32 tests); 2 production agents; Inngest workers running 8 cron functions.
+- **Substrate (year of work already done)**: **28 migrations live in PROD** (0026 + 0027 confirmed 2026-05-11); RLS at `ENABLE + FORCE`; per-tenant DEK + AAD-bound encryption; cryptographic audit chain (chain_seq + prev_hash + row_hash) + nightly tamper verifier; KEK rotation runbook + script; Bedrock fallback (38/38 unit + 4/4 smoke) tested in CI; webhook signature verification (32/32); PII regex scrubber (32 tests); 2 production agents + 6 specialist agents in design; Inngest workers running 8 cron functions. **/e2e PASS 8/8 at $0.012/run** against real Anthropic + Bedrock + Neon + R2. Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers (`/understand` audit 2026-05-11).
+- **Revenue**: $1K/mo MRR with Antonio (paying design partner #1). Two P0 bugs from 5/9 Antonio call shipped same week (faaa579 + 9975978).
 - **SOC 2 Type II posture**: 12-doc policy + procedure set in `docs/security/`. Drata or Vanta attestation when capital lands.
 - **Production deploys**: Both apps READY on Vercel Pro.
 - **Design partner #1**: Antonio at Vazant Consulting (CA EA, ~250 active clients), production onboarding 5/30/2026.
@@ -77,7 +78,7 @@ What's NOT been tried: AI-native operating system for the down + mid-market with
 
 **The capital deployment**:
 
-- **Tax co-founder hire** (~$100K signing + first 6 months partial): the most important hire. The Neo Network surface accelerates this from 6 months to 6 weeks.
+- **Engineer #2 hire** (~$100K signing + first 6 months partial): the most-leveraged hire given tax-domain coverage is in place via Antonio + contracted expert pipeline. Tax co-founder hire deferred per 2026-05-11 posture decision (revisit at v1.5+ scale). The Neo Network surface accelerates engineer #2 from 6 months to 6 weeks.
 - **Engineer #2 + first product hire** (~$200K, 12 months): frees David from solo-founder bandwidth ceiling. Phase 4-6 of v1 build benefits most.
 - **Antonio + first 5 founder-tier firms production infrastructure** (~$50K, 12 months): per-active-client target $1.39/mo at full tier × 5 firms × 200 clients = sustainable.
 - **Sales + marketing** (~$125K): Discovery Scan landing page + paid acquisition; NAEA chapter sponsorships; Latino Tax Pro partnership activation; r/taxpros + Tax Twitter earned-media work; Sales Navigator + outreach; first paid pilot conversion to subscription.
@@ -86,18 +87,18 @@ What's NOT been tried: AI-native operating system for the down + mid-market with
 
 **The Neo network compounds at three points**:
 
-1. **Tax co-founder candidate surface.** Operators in the Neo network adjacent to tax/legal/financial-services can warm-intro tax-domain candidates. EAs with deep technical instincts are rare; Neo's network is a 10x multiplier over cold recruiting.
-2. **Mid-market partner #2 candidate surface.** Phase 4 of v1 starts identifying mid-market partner #2 (regional firm, 20-100 staff). Neo's network of operators in adjacent verticals (legal-tech founders, fintech operators, accounting-firm-adjacent advisors) can warm-intro the right firms.
+1. **Mid-market partner #2 candidate surface** (the primary leverage). Phase 4 of v1 starts identifying mid-market partner #2 (regional CPA firm, 20-100 staff, ideally different segment + different network from Antonio per L14 dependency-mitigation lock). Neo's network of operators in adjacent verticals (legal-tech founders, fintech operators, accounting-firm-adjacent advisors) can warm-intro the right firms — 10x multiplier over cold outbound.
+2. **Engineer #2 candidate surface.** Solo-founder bandwidth ceiling is the binding constraint on Phase 4-6 v1 scope. Neo's technical-founder network surfaces engineers with the right vertical + stack instincts faster than YC/Triplebyte/cold.
 3. **Path 2 partner surface.** The API + MCP server tier needs other AI tools as Partner-tier customers. Neo Network has the connectivity to surface those Partner-tier candidates faster than cold outbound.
 
 ---
 
 ## Honest gaps
 
-- **Tax co-founder open** (most important hire). The Neo Network is uniquely positioned to accelerate this.
-- **Pre-revenue**. Discovery Scan ($1-5K/book) is the wedge; first reference scan from Antonio's 5/30 onboarding produces the artifact for first paid Scans by 6/15.
-- **One design partner committed** (Antonio). Partner #2 (mid-market) targeted Phase 4 of v1.
-- **Solo founder currently**. Engineer #2 is the urgent second hire.
+- **Tax-domain coverage via Antonio + contracted expert** (tax co-founder hire deferred per 2026-05-11 posture decision; revisit at v1.5+ scale).
+- **$1K/mo MRR**, single paying customer (Antonio). Discovery Scan ($1-5K/book) is the wedge; first reference scan from Antonio's 5/30 onboarding produces the artifact for first paid Scans by 6/15.
+- **One design partner committed** (Antonio). Partner #2 (mid-market regional CPA firm) targeted Phase 4 of v1 — the primary value-add Neo's network unlocks.
+- **Solo founder currently**. Engineer #2 is the urgent second hire (the Neo Network leverage point).
 
 We're not hiding any of these. Neo's value at this stage is exactly to bridge the runway gap + accelerate the hire surface during the 12-week sprint to v1.
 
@@ -107,7 +108,7 @@ We're not hiding any of these. Neo's value at this stage is exactly to bridge th
 
 **David Kim (legal: Minseo Kim)** — solo founder, software engineer. Built the substrate. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
-What I'd want a Neo conversation to surface: (1) tax-domain co-founder candidates in Neo Network; (2) the Path 2 orchestration thesis stress-tested by an Ali-shape investor (do we ship Path 2 in v1 or v1.5? Lock currently says v1, but a Neo conversation could move it); (3) the segment posture (down + mid-market only for 18-24 months) stress-tested.
+What I'd want a Neo conversation to surface: (1) partner #2 candidates in Neo Network (regional CPA firms, 20-100 staff, off-Antonio's-network per L14 dependency-mitigation lock); (2) the Path 2 orchestration thesis stress-tested by an Ali-shape investor (do we ship Path 2 in v1 or v1.5? Lock currently says v1, but a Neo conversation could move it); (3) the segment posture (down + mid-market only for 18-24 months) stress-tested; (4) the tax co-founder posture decision stress-tested — Antonio + contracted expert is the current frame; is that durable or does scale force the hire by v1.5?
 
 ---
 
@@ -117,7 +118,7 @@ What I'd want a Neo conversation to surface: (1) tax-domain co-founder candidate
 |---|---|
 | **Capital** | $625K (Neo standard) |
 | **Equity** | Neo's standard terms |
-| **Neo Network access** | Tax-domain co-founder candidate introductions; mid-market firm contacts for partner #2 candidates; Path 2 partner-tier customer introductions |
+| **Neo Network access** | Mid-market regional CPA firm contacts for partner #2 candidates (primary value-add per L14); engineer #2 candidate surface from Neo's technical-founder network; Path 2 partner-tier customer introductions (other AI tax tools that could integrate via Docket's public API + MCP server) |
 | **Ali Partovi office hours** | Stress-test on the Path 2 v1-vs-v1.5 lock + segment posture |
 | **Post-program priced round** | Investor introductions + LP relationships |
 

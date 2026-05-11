@@ -9,7 +9,7 @@
 
 ## One-line
 
-Docket is the AI-native operating system for a tax practice. Five-layer architecture (Knowledge / Data / Agent / Orchestration / Governance) with a public API + MCP server orchestration play (Path 2). Forward-deployed embed model with first design partner in production by 5/30/2026.
+**Docket is the AI defense layer for tax practices.** Five-layer architecture (Knowledge / Data / Agent / Orchestration / Governance) with a public API + MCP server orchestration play (Path 2). **$1K/mo MRR** with design partner #1 (Antonio at Vazant Consulting, CA EA, 200+ active clients); full client base onboarding to production substrate 2026-05-30.
 
 ---
 
@@ -68,7 +68,8 @@ Public API + MCP server ship in v1, NOT v1.5. Pricing: Developer free (1K calls/
 
 ## Traction
 
-- **Substrate**: 12 migrations applied; full RLS + DEK + audit chain + KEK rotation + Bedrock fallback + webhook verification + PII scrubber; 2 production agents.
+- **Substrate**: **28 migrations live in PROD** (0026 + 0027 confirmed 2026-05-11); full RLS + per-tenant DEK + audit chain + KEK rotation + Bedrock fallback + webhook verification + PII scrubber. **/e2e PASS 8/8 at $0.012/run.** Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers (`/understand` audit 2026-05-11). 2 production agents shipping + 6 specialist agents in design.
+- **Revenue**: $1K/mo MRR with Antonio (paying); first Discovery Scan revenue by 6/15.
 - **Production deploys**: Both apps READY on Vercel Pro.
 - **Design partner #1**: Antonio at Vazant Consulting (CA EA, ~250 active clients), production onboarding 5/30/2026.
 - **v1 launch**: 7/30/2026 (12-week phased plan; Antonio sub-milestone 5/30; mid-market partner #2 onboarding Phase 6).
@@ -97,15 +98,15 @@ Public API + MCP server ship in v1, NOT v1.5. Pricing: Developer free (1K calls/
 PearX cohorts run during summer + fall. The closest fit: a summer cohort 2026 mapping cleanly onto v1 launch (7/30/2026) + first 50 founder-tier firms onboarding (Aug-Oct 2026).
 
 - **Weeks 1-4**: Antonio production sub-milestone in flight; first Discovery Scan reference; founder-tier firms #2-#5 onboarded.
-- **Weeks 5-8**: v1 launch hardening + onboarding ramp. Sales motion iteration with Pear's GTM coaches. Tax co-founder hire confirmed.
+- **Weeks 5-8**: v1 launch hardening + onboarding ramp. Sales motion iteration with Pear's GTM coaches. Engineer #2 hire confirmed (tax-domain coverage via Antonio + contracted expert; tax co-founder hire deferred per 2026-05-11 posture decision).
 - **Weeks 9-12**: Founder-tier firms #6-#15 onboarded. Mid-market partner #2 closes. Path 2 (API + MCP server) external partners identified.
 - **Weeks 13-14**: Demo Day prep. Pitch + raise the priced round following PearX.
 
 ### The capital ($250K-$2M)
 
-At $250K minimum: tax co-founder + engineer #2 + 12 months runway. Bridges to first revenue + priced round.
+At $250K minimum: engineer #2 + 12 months runway + cyber insurance + ToS attorney. Bridges to partner #2 + priced round.
 
-At $2M maximum: full team (tax co-founder + engineer #2 + sales lead + customer success) + 18 months runway. Self-funds to v1.5 + Path 2 partner activation + SOC 2 Type II attestation. Priced round becomes optional, not mandatory.
+At $2M maximum: full team (engineer #2 + sales lead + customer success + contracted tax-domain advisory pipeline) + 18 months runway. Self-funds to v1.5 + Path 2 partner activation + SOC 2 Type II attestation. Priced round becomes optional, not mandatory.
 
 We're flexible on check size; we're inflexible on the milestones. Either size of check funds the same plan; the $2M version closes a Series A faster.
 
@@ -115,7 +116,7 @@ We're flexible on check size; we're inflexible on the milestones. Either size of
 
 **David Kim (legal: Minseo Kim)** — solo founder, software engineer. Built the substrate. Location: Los Angeles area. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
-**Honest gaps**: tax co-founder open (most important hire); pre-revenue; one design partner committed.
+**Honest gaps**: tax-domain coverage via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision); $1K/mo MRR from Antonio (paying); partner #2 targeted Phase 4 of v1.
 
 ---
 

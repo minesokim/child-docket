@@ -9,7 +9,7 @@
 
 ## One-line
 
-Docket is the AI-native operating system for a tax practice — built on Claude (Sonnet 4.6 default, Haiku 4.5 for triage, Opus 4.7 for hard reasoning) + ZDR + AWS Bedrock fallback, shipping a public API + MCP server in v1.
+**Docket is the AI defense layer for tax practices** — built on Claude (Sonnet 4.6 default, Haiku 4.5 for triage, Opus 4.7 for hard reasoning) + ZDR + AWS Bedrock fallback. Every position cited, every action audit-trailed, every output above Reasonable Basis refused by default. First revenue closed 2026-05 ($1K/mo MRR with Antonio at Vazant Consulting, CA EA, 200+ active clients). Public API + MCP server ship in v1.
 
 ---
 
@@ -65,11 +65,14 @@ If Anthropic has portfolio companies in tax/legal/regulated-services, we'd be a 
 
 ## Traction (compressed)
 
-- 12 migrations applied; RLS, per-tenant DEK + AAD-bound encryption, cryptographic audit chain, KEK rotation runbook all live.
-- 2 production agents shipping (triage classifier on Haiku, inbox drafter on Sonnet).
-- Bedrock fallback verified end-to-end.
-- Antonio at Vazant Consulting (CA EA, ~250 clients) committed as design partner #1; production onboarding 5/30/2026.
-- v1 launch 7/30/2026 (12-week phased plan).
+- **28 migrations live in PROD** (0026 + 0027 confirmed 2026-05-11); RLS at `ENABLE + FORCE`, per-tenant DEK + AAD-bound encryption, cryptographic audit chain with nightly tamper verifier, KEK rotation runbook + script all live.
+- 2 production agents shipping (triage-classifier on Haiku 4.5, inbox-drafter on Sonnet 4.6); 6 more specialist agents in design.
+- **Bedrock fallback verified end-to-end in CI** (38/38 unit + 4/4 smoke); orchestrator is provider-agnostic.
+- **/e2e PASS 8/8** against real Anthropic + Bedrock + Neon + R2 at $0.012/run, 16s wall-clock. Cadence-enforced via protocol-gate hook.
+- **Codebase knowledge graph**: 1,038 nodes / 1,182 edges / 10 architectural layers across 487 analyzed source files (via Understand-Anything 2026-05-11).
+- **First revenue closed**: $1K/mo MRR with Antonio at Vazant Consulting (CA EA, 200+ active clients on platform); full client base onboarding to production substrate 2026-05-30.
+- Two P0 bugs surfaced in 5/9 Antonio call, both fixed + shipped within 48h (faaa579 entity-filing W2 skip + 9975978 portal/docs Take-photo wire-up).
+- v1 launch 7/30/2026 (12-week phased plan; Antonio sub-milestone 5/30).
 - 12-doc SOC 2 Type II policy set in `docs/security/`.
 - Path 2 commitment locked: public API + MCP server in v1, NOT v1.5.
 
@@ -113,11 +116,11 @@ The differentiation is the combination, not any single piece.
 
 ## Honest gaps
 
-- **Tax co-founder open** (most important hire; CLAUDE.md §21 open question #4). 50 seeded positions in Position Library will be expert-validated before v1 launch.
-- **No revenue yet** (pre-revenue; Discovery Scan productized at $1-5K/book is the wedge once Antonio's onboarding produces a reference scan).
-- **One design partner currently** (Antonio); partner #2 (mid-market) targeted Phase 4 of v1.
+- **Tax-domain coverage via Antonio + contracted expert** (not a tax co-founder). Tax co-founder hire deferred per 2026-05-11 posture decision — Antonio (on-platform CA EA) reviews Position Library content; contracted tax expert engaged for scale-validation when bandwidth requires. Revisit at v1.5+ scale.
+- **Revenue: $1K/mo MRR**, single paying customer (Antonio). Path to $5-10K/mo MRR runs through partner #2 acquisition during the Anthropic Startup Program window.
+- **One design partner currently** (Antonio); partner #2 (mid-market regional CPA firm, 20-100 staff) targeted Phase 4 of v1, ideally surfaced via accelerator network.
 
-We're not hiding any of these. The Anthropic Startup Program's value at this stage is exactly to bridge the runway gap during the Antonio production push.
+We're not hiding any of these. The Anthropic Startup Program's value at this stage is exactly to fund the substrate ramp + technical advisory during the Antonio production push + partner #2 onboarding.
 
 ---
 

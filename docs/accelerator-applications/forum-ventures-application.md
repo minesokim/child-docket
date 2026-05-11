@@ -8,7 +8,7 @@
 
 ## One-line
 
-Docket is the AI-native operating system for a tax practice — vertical SaaS for solo EAs through mid-market firms (the floor), with a public API + MCP server orchestration layer (the swing). Forward-deployed embed model with first design partner in production by 5/30/2026.
+**Docket is the AI defense layer for tax practices.** Every position cited, every action audit-trailed, every output above Reasonable Basis refused by default. **$1K/mo MRR** from design partner #1 (Antonio at Vazant Consulting, CA EA, 200+ active clients). Vertical SaaS for solo EAs through mid-market firms is the floor; public API + MCP server orchestration is the swing.
 
 ---
 
@@ -41,7 +41,7 @@ Forum has likely seen pitches in the "AI for [vertical]" pattern. Three things m
 
 1. **The compliance-first frame is the moat.** Every other AI-tax tool either targets unregulated consumers or in-house tax counsel. EAs at our segment cannot adopt a loophole-finder tool — their PTIN is on every return. The Position Framework (4 confidence tiers + Reasonable Basis floor + cited authority on every position) is the only frame that solves the EA's risk equation. **Nobody at Antonio's segment is building this.**
 2. **Path 2 orchestration is the upside, not the headline.** The vertical SaaS floor stands alone. The API + MCP server creates a separate revenue stream + a network-effect moat as third-party AI tools build on Docket. Most "AI for [vertical]" apps don't have a Path 2.
-3. **The substrate is real.** 12 migrations applied. RLS at `ENABLE + FORCE`. Per-tenant DEK + AAD-bound encryption. Cryptographic audit chain. KEK rotation. Bedrock fallback verified. 2 production agents shipping. SOC 2 Type II posture documented. **This is a year of substrate work already done.** Forum's program time goes to GTM iteration, not engineering catch-up.
+3. **The substrate is real.** 28 migrations live in PROD. RLS at `ENABLE + FORCE`. Per-tenant DEK + AAD-bound encryption. Cryptographic audit chain with nightly tamper verifier. KEK rotation runbook + script. Bedrock fallback verified end-to-end in CI. 2 production agents shipping. **/e2e PASS 8/8 at $0.012/run** against real production stack. 12-doc SOC 2 Type II policy set. Codebase knowledge graph (1,038 nodes / 1,182 edges / 10 layers) audited 2026-05-11. **This is a year of substrate work already done.** Forum's program time goes to GTM iteration, not engineering catch-up.
 
 ---
 
@@ -49,7 +49,8 @@ Forum has likely seen pitches in the "AI for [vertical]" pattern. Three things m
 
 | Dimension | Status |
 |---|---|
-| Substrate | 12 migrations live; RLS, per-tenant DEK + AAD-bound encryption, audit chain (chain_seq + prev_hash + row_hash), KEK rotation runbook, Bedrock fallback (38/38 unit + 4/4 smoke), webhook signature verification (32/32), PII scrubber (32 tests). |
+| Substrate | **28 migrations live in PROD** (0026 + 0027 confirmed 2026-05-11); RLS, per-tenant DEK + AAD-bound encryption, audit chain (chain_seq + prev_hash + row_hash) + nightly tamper verifier, KEK rotation runbook + script, Bedrock fallback (38/38 unit + 4/4 smoke), webhook signature verification (32/32), PII scrubber (32 tests). **/e2e PASS 8/8 at $0.012/run.** Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers. |
+| Revenue | **$1K/mo MRR** with Antonio (first design partner, paying). Path to $5-10K/mo MRR runs through partner #2 acquisition during Forum cohort. |
 | Production deploys | Both apps READY on Vercel Pro (`docket-portal.vercel.app` for client portal; command-room on Vercel-assigned hostname). |
 | Agents | 2 in production: triage classifier (Haiku) + inbox drafter (Sonnet). Both call orchestrator with cost telemetry + audit hook. |
 | Inngest | Workers running 8 cron functions: gmail-poll, classify-gmail-message, classify-document, classify-notice, finalize-document, verify-actions-chain, cost-outlier-alert, cost-spike-alert. |
@@ -69,11 +70,10 @@ Forum has likely seen pitches in the "AI for [vertical]" pattern. Three things m
 - **Weeks 9-12 (7/6 → 8/3)**: Ship v1 launch (7/30 per CLAUDE.md §15 Phase 6). Onboard mid-market partner #2 in Phase 6. Hardening + smoke + load tests.
 
 **The $100K**:
-- Tax co-founder hire signing bonus (~$25K) to lock the most important hire (CLAUDE.md §21 open question #4).
-- Engineer #2 first-3-months runway (~$45K) to free David from solo-founder bandwidth ceiling.
-- Antonio production infrastructure costs ($5K).
-- Sales + marketing (~$15K): Discovery Scan landing page, NAEA sponsor fees, LinkedIn Sales Navigator + outreach, r/taxpros earned-media campaign, Tax Twitter presence.
-- Legal + insurance (~$10K): cyber-insurance, E&O, ToS + DPA + AUP from a tax-law-aware attorney.
+- Engineer #2 first-6-months runway (~$60K) — frees David from solo-founder bandwidth ceiling; the most-leveraged hire given tax-domain coverage is already in place via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision).
+- Antonio + partner #2 production infrastructure ($10K, 12 months: Vercel Pro + Neon Launch + R2 + Inngest + Sentry + Twilio + Anthropic + AWS Bedrock).
+- Sales + marketing (~$20K): Discovery Scan landing page, NAEA sponsor fees, LinkedIn Sales Navigator + outreach, r/taxpros earned-media campaign, Tax Twitter presence.
+- Legal + insurance (~$10K): cyber-insurance Tech E&O + Cyber bundle (Vouch primary at ~$2,500-3,500/yr per `docs/CYBER-INSURANCE-RECOMMENDATION.md`), ToS + DPA + AUP from a tax-law-aware attorney.
 
 ---
 
@@ -95,7 +95,7 @@ The funding window for vertical AI in regulated industries closes when the platf
 
 **David Kim (legal: Minseo Kim)** — solo founder, software engineer. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
-**Honest gaps**: tax co-founder hire is open (the most important hire); pre-revenue; one design partner currently (partner #2 targeted Phase 4 of v1). The Forum program is exactly when we'd close these gaps.
+**Honest gaps**: tax-domain coverage via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision); $1K/mo MRR from one paying design partner; partner #2 targeted Phase 4 of v1. The Forum program is exactly when we'd close partner #2.
 
 ---
 

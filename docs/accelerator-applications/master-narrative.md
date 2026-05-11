@@ -6,7 +6,7 @@
 
 ## One-line description
 
-Docket is the AI-native operating system for a tax practice. Top-tier preparer-grade AI animates every surface; orchestrates the firm's existing tax stack via API + browser automation. Two business models: vertical SaaS for solo EAs through mid-market firms (the floor) + public orchestration platform with API + MCP server for the entire AI tax stack (the swing).
+**Docket is the AI defense layer for tax practices.** Every position cited, every action audit-trailed, every output above Reasonable Basis refused by default. Vertical SaaS for solo EAs through mid-market firms is the floor; public orchestration platform with API + MCP server for the entire AI tax stack is the swing.
 
 ## What does your company do?
 
@@ -70,37 +70,47 @@ Per-active-client cost target $1.39/mo → 80%+ gross margin at peak tier.
 
 ## Why are you the right team?
 
-David Kim (legal: Minseo Kim) — solo founder, software engineer, builder. Has the substrate built (12 migrations, RLS, per-tenant DEK encryption, audit chain, agent fleet substrate, 2 production agents shipping). Operates the SDLC at codex-reviewed protocol-gate quality. Has Antonio (CA EA running OLT + IRS Solutions + Xero) as design partner #1 — a real preparer working on real clients with the substrate.
+David Kim (legal: Minseo Kim) — solo founder, software engineer, builder. Has the substrate built (28 migrations live in PROD, RLS at `ENABLE + FORCE`, per-tenant DEK encryption with AAD binding, cryptographic audit chain with nightly tamper verifier, Bedrock fallback at orchestrator, 12-doc SOC 2 Type II policy set, /e2e PASS 8/8 against real DB at $0.012/run). Operates the SDLC at codex-reviewed protocol-gate quality — every feat/fix commit blocked locally + in CI without trailers for Edge-Cases, Score≥95, Align, Craft, Codex-Reviewed, Compliance-Check. Has Antonio at Vazant Consulting (CA EA running OLT + IRS Solutions + Xero, 200+ active clients) as design partner #1 paying **$1K/mo**, real revenue.
 
-**Open**: tax co-founder hire (CLAUDE.md §21 open question #4). Currently the most important hire. The 50 seeded positions in the Position Library will be expert-validated before v1 launch.
+**Tax-domain coverage**: Antonio is the platform tax expert on every Position Framework validation pass. Contracted tax expert engaged for Position Library content sign-off when scale forces beyond Antonio's review bandwidth. Tax co-founder hire deferred — revisit at v1.5+ scale.
 
-**Honest representation**: technical depth is in place; tax-domain depth is the open hire that the accelerator's network could accelerate.
+**Honest representation**: technical depth shipped; tax-domain depth covered through Antonio + contracted expert pipeline; partner #2 acquisition is the next leverage point for accelerator network value-add.
 
 ## Traction
 
-**Substrate (built + tested)**:
-- 12 migrations applied; RLS at `ENABLE + FORCE` on every tenant-scoped table.
-- Per-tenant DEK encryption (AES-256-GCM, AAD-bound per `(tenant_id, client_id, path)`); 34/34 encryption tests + KEK rotation runbook.
-- Cryptographic audit chain (chain_seq + prev_hash + row_hash); nightly verifier cron.
+**Revenue**:
+- **$1K/mo MRR** from design partner #1 (Antonio at Vazant Consulting, CA EA, 200+ active clients on platform). First revenue closed 2026-05.
+- Discovery Scan productized at $1-5K/book (the wedge); first reference scan generates the v1 sales artifact for partners #2-#10.
+
+**Substrate (built + tested + audited)**:
+- **28 migrations live in PROD** (0026 signatures envelope_id index + 0027 kba-failed signature status confirmed via Vercel-pulled PROD `DATABASE_URL` 2026-05-11).
+- RLS at `ENABLE + FORCE` on every tenant-scoped table.
+- Per-tenant DEK encryption (AES-256-GCM, AAD-bound per `(tenant_id, client_id, path)`); 34/34 encryption tests + KEK rotation runbook + rotation script shipped.
+- Cryptographic audit chain (chain_seq + prev_hash + row_hash); nightly tamper verifier cron.
 - Webhook signature verification helper (32/32 tests).
 - PII regex scrubber (32 tests).
-- Bedrock fallback at orchestrator (38/38 unit + 4/4 smoke tests).
-- 2 production agents shipping: triage classifier (Haiku) + inbox drafter (Sonnet).
-- Both apps deployed to Vercel READY.
+- Bedrock fallback at orchestrator (38/38 unit + 4/4 smoke tests) — tested in CI.
+- 2 production agents in `services/workers/src/agents/` (triage-classifier on Haiku 4.5, inbox-drafter on Sonnet 4.6); 6 specialist agents in design (discovery, notice-drafter, doc-classifier, planning, return-drafting, review-agent).
+- **/e2e end-to-end PASS 8/8** against real Anthropic + Bedrock + Neon + R2 at $0.012/run, 16s wall-clock — cadence-enforced via protocol-gate hook (BLOCK at 6 commits since last pass).
+- Both Next.js apps deployed READY to Vercel Pro.
+- **Codebase knowledge graph** (`/understand` analysis 2026-05-11): **1,038 nodes / 1,182 edges / 10 architectural layers** across 487 analyzed source files. Graph file at `.understand-anything/knowledge-graph.json`.
 
 **Customer development**:
-- Antonio at Vazant Consulting (CA EA, ~250 active clients) committed as design partner #1. Onboarding to production by 5/30/2026.
+- Antonio at Vazant Consulting (CA EA, 200+ active clients) — paying $1K/mo, full client base onboarding to production-grade substrate 2026-05-30.
 - Antonio's mentor commands ~1000 EAs in her network — distribution unlock for partners #2-#10.
 - Field research with 5 EAs (CA, FL, TX) validated mental-load-first design constraint.
+- Two P0 bugs surfaced in 5/9 Antonio call, both fixed + shipped same week (entity-filing W2 skip `faaa579`; portal/docs Take-photo wire-up `9975978`).
 
 **Product**:
 - v0 demo (38-route walk-through) live at `docket-portal.vercel.app` — Marketing/Loom artifact.
 - v1 launch 7/30/2026 (12-week phased plan; Antonio sub-milestone 5/30).
-- 5 capability pillars specified with specific implementation paths.
+- 5 capability pillars specified with implementation paths (Position Framework / Ambient Operator / AI-native CRM / Review Automation / Multi-channel).
 
-**Compliance-readiness**:
-- SOC 2 Type II controls live in codebase (per-tenant DEK + audit chain + RLS + MFA + encryption + webhook verification + PII scrubbing + change management).
-- 12-doc SOC 2 policy + procedure set in `docs/security/`. Drata or Vanta attestation when capital lands.
+**Compliance + operational readiness**:
+- SOC 2 Type II controls live in codebase (per-tenant DEK + audit chain + RLS + MFA + encryption + webhook verification + PII scrubbing + change management + access reviews + incident response + business continuity + risk management + employee training + vendor management + controls matrix).
+- **12-doc SOC 2 policy + procedure set** in `docs/security/`. Drata or Vanta attestation when capital lands; the policy work is already done.
+- **Cyber insurance plan documented** (`docs/CYBER-INSURANCE-RECOMMENDATION.md`): Tech E&O + Cyber bundle with AI-affirmative rider, $1M aggregate, Vouch primary / Embroker backup, target ~$2,500–3,500/yr. Binding before 2026-05-30 prod cutover.
+- **Marketing framework locked** (`docs/MARKETING-FRAMES.md`): one-liner + 3 audience frames (compliance-first / closed-loop OS / orchestration / Path 2).
 
 ## Specific differentiation vs known competitors
 
@@ -118,13 +128,13 @@ David Kim (legal: Minseo Kim) — solo founder, software engineer, builder. Has 
 
 ## Generic ask
 
-- **Capital** to fund hire-1 (tax co-founder) + hire-2 (engineer #2) + 12 months of runway.
-- **Distribution access**: program-specific networks (Forum's B2B GTM playbook, Mucker's industry network, Pear's Bay Area network, Neo's Ali Partovi access).
-- **Reference customers**: program portfolios that include accounting/legal/financial-services firms that could become design partners #2-#5.
-- **Technical support**: API credits, vendor relationships, advisory.
+- **Capital** to fund engineer #2 + 12-18 months of runway through partner #2 onboarding + v1.5 expansion. Tax-domain coverage is in place via Antonio + contracted expert; the next-most-leveraged hire is engineering capacity, not tax counsel.
+- **Distribution access**: program-specific networks (Forum's B2B GTM playbook, Mucker's industry network for less-tech-savvy verticals, Pear's Bay Area network, Neo's Ali Partovi access). The primary leverage point is **partner #2 candidate surface** (regional CPA firm, 20-100 staff, ideally different segment + different network from Antonio per L14 dependency-mitigation lock).
+- **Reference customers**: program portfolios that include accounting/legal/financial-services firms that could become design partners #2-#5 or Path 2 API integration partners.
+- **Technical support**: API credits (especially for the Anthropic Startup Program path), vendor relationships, advisory.
 
 Customize per program below.
 
 ---
 
-*Last updated: 2026-05-09.*
+*Last updated: 2026-05-11. Revenue + substrate + co-founder + marketing framing all reflect post-prep-batch state.*

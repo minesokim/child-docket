@@ -9,7 +9,7 @@
 
 ## One-line
 
-Docket is the AI-native operating system for a tax practice. We replace the messy combination of practice management software + return-prep tool + email + SMS + spreadsheets running ~80,000 solo and small-firm tax practices in the US. Forward-deployed embed model, services-then-platform path (Palantir/Foundry pattern via FluentOS template).
+**Docket is the AI defense layer for tax practices.** Every position cited, every action audit-trailed, every output above Reasonable Basis refused by default. **$1K/mo MRR** with design partner #1 (Antonio at Vazant Consulting, CA EA, 200+ active clients). Forward-deployed embed model, services-then-platform path (Palantir/Foundry pattern via FluentOS template).
 
 ---
 
@@ -61,7 +61,8 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 
 ## Traction
 
-- **Substrate**: 12 migrations applied; RLS at `ENABLE + FORCE`; per-tenant DEK + AAD-bound encryption; cryptographic audit chain (chain_seq + prev_hash + row_hash); KEK rotation runbook + script; Bedrock fallback (38/38 unit + 4/4 smoke); webhook signature verification (32/32); PII regex scrubber (32 tests).
+- **Substrate**: **28 migrations live in PROD** (0026 + 0027 confirmed via Vercel-pulled URL 2026-05-11); RLS at `ENABLE + FORCE`; per-tenant DEK + AAD-bound encryption; cryptographic audit chain (chain_seq + prev_hash + row_hash) + nightly tamper verifier; KEK rotation runbook + script; Bedrock fallback (38/38 unit + 4/4 smoke); webhook signature verification (32/32); PII regex scrubber (32 tests). **/e2e PASS 8/8 at $0.012/run** end-to-end against real Anthropic + Bedrock + Neon + R2. Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers.
+- **Revenue**: $1K/mo MRR from Antonio (paying design partner #1). Full client base (200+) onboarding to production substrate 2026-05-30.
 - **Production agents**: triage classifier (Haiku) + inbox drafter (Sonnet), both calling orchestrator with cost telemetry + audit hook.
 - **Both apps deployed READY** to Vercel Pro.
 - **Design partner #1**: Antonio at Vazant Consulting (CA EA, ~250 active clients), production onboarding 5/30/2026.
@@ -93,7 +94,7 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 
 **The capital deployment:**
 
-- **Tax co-founder hire** (~$50K signing + first 3 months partial). The most important hire (CLAUDE.md §21 open question #4). 50 seeded positions in Position Library will be expert-validated before v1 launch.
+- **Engineer #2 hire** (~$50K signing + first 3 months partial). The most-leveraged hire given tax-domain coverage is in place via Antonio + contracted expert pipeline (tax co-founder hire deferred per 2026-05-11 posture decision, revisit at v1.5+ scale).
 - **Engineer #2 first-6-months runway** (~$60K). Frees David from solo-founder bandwidth ceiling. Phase 4 of v1 build benefits most.
 - **Antonio + partner #2 production infrastructure** (~$15K). 12 months of Vercel Pro + Neon Launch + R2 + Inngest + Sentry + Twilio + Anthropic + AWS Bedrock + DocuSign + Square. Per-active-client target $1.39/mo at full tier.
 - **Sales + marketing** (~$50K): Discovery Scan landing page, NAEA chapter sponsorships ($3-8K × 3 events), Latino Tax Pro partnership activation, r/taxpros earned-media work, Sales Navigator + outreach.
@@ -111,7 +112,7 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 ## What's specifically NOT a Mucker fit (and why we're applying anyway)
 
 - **Mucker has historically focused on consumer + horizontal B2B.** Our vertical depth is unusual for the portfolio. Counter: tax practices are the canonical "less-tech-savvy industry" Mucker invests in; the vertical depth is the moat.
-- **We're pre-revenue.** Counter: Antonio production by 5/30 + first Discovery Scan revenue by 6/15 is the path. Mucker's check sizes ($175-200K) bridge to that revenue date.
+- **Single paying customer.** Counter: Antonio is at $1K/mo MRR with full client base (200+) onboarding to prod substrate 2026-05-30. First Discovery Scan revenue by 6/15. Mucker's check size bridges to partner #2 acquisition.
 - **We have a Path 2 platform play.** Mucker may underweight platform-upside narratives. Counter: Path 1 (vertical SaaS floor) stands alone economically; Path 2 is upside, not the headline.
 
 ---
@@ -120,7 +121,7 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 
 **David Kim (legal: Minseo Kim)** — solo founder, software engineer. Located Los Angeles area (Mucker-adjacent geography). Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
-**Honest gaps**: tax co-founder open (most important hire); pre-revenue; one design partner committed (Antonio); partner #2 targeted Phase 4 of v1.
+**Honest gaps**: tax-domain coverage via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision); $1K/mo MRR from Antonio (paying); partner #2 targeted Phase 4 of v1, ideally surfaced via Mucker network.
 
 ---
 

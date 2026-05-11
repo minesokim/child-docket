@@ -1,0 +1,211 @@
+# Y Combinator Fall 2026 — Docket application draft
+
+> *YC Fall 2026 deadline ~early August 2026 per L15. Apply rolling alongside Forum / Mucker / Anthropic Startup Program / Pear / Neo.*
+> *This is the YC-specific draft. Pull canonical answers from `master-narrative.md`; YC's question set + cadence is the customization here.*
+
+**Submission target:** rolling, before early August 2026.
+**Founder:** David Kim (legal: Minseo Kim). Solo. Email: minseodavid@gmail.com.
+
+---
+
+## Company
+
+**Company name**: Docket (working codename — public-launch name TBD; naming track paused per CLAUDE.md §21 #1)
+**URL**: `docket-portal.vercel.app` (live demo) · GitHub `minesokim/child-docket` (private)
+**Location**: Los Angeles area; company would be based here.
+
+---
+
+## Founders
+
+**David Kim (legal: Minseo Kim)** — solo founder, software engineer.
+
+- Email: `minseodavid@gmail.com`
+- LinkedIn: [add]
+- GitHub: `github.com/minesokim`
+- Twitter / X: [add if active]
+- Age: [add]
+- Education / background: [add — software engineering background, prior work, tax-adjacent exposure if any]
+
+Solo founder. Tax co-founder hire deferred per 2026-05-11 posture decision — tax-domain coverage runs through Antonio (paying CA EA design partner, on-platform) plus contracted tax expert for Position Library validation. Engineer #2 is the most-leveraged hire and the primary use of YC capital.
+
+---
+
+## ❓ What does your company do? (one sentence, 70 chars)
+
+> **Docket is the AI defense layer for tax practices.**
+
+(50 chars. Has room. Alternate versions if YC prefers the descriptive form: *"AI defense layer for tax practices — every position cited, every action audit-trailed."* — 90 chars; may need trim.)
+
+---
+
+## ❓ What does your company do? (paragraph)
+
+Docket is the AI defense layer that sits between a tax firm's AI agents and the partner's PTIN. Every tax position the AI surfaces carries cited authority + a confidence-tier classification (Settled / Substantial / Reasonable Basis with 8275 / More Likely Than Not) + a refusal floor below Reasonable Basis. Every action lands in a cryptographic audit chain. Every preparer-AI interaction is reversible. The agent fleet — Discovery, Position, Strategy, Notice, Inbox-Drafter, Review — operates on real client state with the preparer at the edge approving outcomes, not chatting with a bot. We sell to solo EAs through mid-market firms (the lane the $235M+ in funded competitors at Black Ore / Accrual / Basis is economically forced out of). Path 1 is vertical SaaS for that segment (the floor); Path 2 is a public API + MCP server that turns Docket into the orchestration substrate other AI tax tools run through (the swing).
+
+---
+
+## ❓ Where do you live now, and where would the company be based?
+
+Los Angeles area. Company based here. Open to relocating temporarily for YC's 3-month batch in the Bay Area.
+
+---
+
+## ❓ How long have the founders known one another? How did you meet?
+
+Solo founder — N/A. Tax co-founder hire deferred per 2026-05-11 posture decision; tax-domain coverage runs through Antonio (paying design partner) + contracted tax expert. Will speak to the rationale for staying solo through v1 in §"Why are you the right team?" below.
+
+---
+
+## ❓ Why did you pick this idea to work on? Have you started? How much have you made?
+
+Picked this idea after watching the AI-tax stack split into three structural layers in late 2025 / early 2026:
+
+1. **Data layer** (K1x, $175M Apr 2026) — gets data into the stack
+2. **Return-prep agent layer** (Black Ore $60M, Accrual $75M, Basis $1.15B valuation, all Feb-Apr 2026) — autonomous prep for top-100 firms
+3. **Practice + relationship layer** — empty for AI-native at the down + mid-market segment, served only by aging practice-management incumbents (TaxDome / Canopy / Karbon) shipping shallow AI features
+
+Layer 3 is where the open lane is. The funded competitors can't serve it (economically forced up-market by their unit economics + 18-month enterprise sales cycles). The PM incumbents lack return intelligence and their substrates are aging. **The compliance-first frame (cited authority + refusal floor) is the structural moat at this segment because EAs at our segment cannot adopt a loophole-finder tool — their PTIN is on every return they sign.**
+
+**Have started**: 14+ months of build. ~28 migrations live in PROD. Per-tenant DEK encryption with AAD binding. Cryptographic audit chain with nightly tamper verifier. 12-doc SOC 2 Type II policy set. /e2e PASS 8/8 at $0.012/run against real Anthropic + Bedrock + Neon + R2. Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers.
+
+**How much have we made**: **$1,000 / month MRR** as of 2026-05, with Antonio Vazquez (EA, Vazant Consulting, CA, 200+ active tax-prep clients). First reference Discovery Scan ($1-5K productized service) lands by 6/15. Realistic 12-month MRR projection: $5-15K/mo through partner #2 acquisition during the YC batch + first 50 founder-tier firms onboarding (per L6 pricing locked at $250/mo founder tier).
+
+---
+
+## ❓ How do or will you make money? How much could you make?
+
+**Pricing locked per L6 (CLAUDE.md)**:
+
+- **Founder tier (first 50 firms, year 1)**: $250/mo. All agents included. 30% lifetime discount on year-2 standard-tier reversion.
+- **Standard tiers (year 2+)**: Solo $499 / Small $1,499 / Growing $4,499 / Mid-market $14,999, all with active-client overage metering.
+- **Add-on agents** (Solo + Small): Discovery $199, Strategy/Planning $299, Audit Defense $99, Multi-Entity Optimization $199.
+- **Per-event**: notice $50, rep engagement $99, incorporation $25 + state, BOI $15.
+- **API tier (Path 2)**: Developer free (1K calls/mo) / Partner $999/mo (1M calls + $0.001 overage) / Platform custom.
+- **Discovery Scan** (productized service, v1 wedge): $1-5K per book scan.
+
+**Per-active-client cost target**: $1.39/mo (per L7). Drives 80%+ gross margin at peak tier.
+
+**TAM math**:
+
+- US tax practices: ~150K firms. ~80K solo or 1-3 staff. ~70K with 4+ staff.
+- Path 1 (vertical SaaS floor): At 5-15% segment penetration × tiered pricing → **$25-50M ARR achievable**.
+- Path 2 (orchestration): TAM is the entire AI-tax stack. Year-3+ revenue $10M+ ARR plausible if Path 2 lands; Year-5+ potentially $50-200M ARR as orchestration becomes plumbing for the industry.
+
+**Why this is unicorn-shaped**: Path 1 floor alone is a $25-50M ARR business (good outcome, not great). Path 2 is the swing — orchestration economics resemble Stripe-for-tax-AI rather than vertical SaaS. The combination — vertical SaaS funded by the floor, orchestration as the swing — is the Palantir/Foundry pattern (services-then-platform, see FluentOS as the productized template we're following).
+
+---
+
+## ❓ Which of the 13 YC startup ideas in the RFS are you working on, if any?
+
+[Check current YC Requests for Startups before submission. Likely fits 2026 RFS categories: "AI agents that do real work," "vertical AI for regulated industries," "developer tools for AI," depending on YC's then-current list. If none match cleanly, leave blank.]
+
+---
+
+## ❓ Other companies in your space
+
+**Three structural layers of the AI-tax stack:**
+
+| Layer | Who's there | Docket's stance |
+|---|---|---|
+| Data layer (K-1, K-3, 1099 ingestion) | K1x ($175M growth Apr 2026; 44 of top-100 institutional investors) | Integrate, don't compete |
+| Return-prep agent layer (autonomous prep + review for top-100 firms) | Accrual ($75M Feb 2026), Basis ($1.15B valuation Feb 2026), Black Ore Tax Autopilot ($60M GA Apr 2026), TaxGPT, Filed, Grove, StanfordTax, SmartRequestAI, Soraban, Juno ($12M seed) | Don't compete head-on. Orchestrate via browser automation (Path 2). |
+| Practice + relationship layer (the day, the comms, the ledger, the rep loop) | **Empty for AI-native.** PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI features. | **Docket's lane.** |
+
+**Notable adjacencies (not direct competitors)**:
+- Gelt (Series A Sep 2025, $13M) — year-round wealth optimization for HNW; consumer-side
+- Deduction / Taylor CPAI ($2.8M pre-seed Nov 2025) — consumer agent
+- Rally Tax (YC) — year-round HNW consumer subscription
+- April ($38M Series B Jul 2025) — embedded B2B2C tax for wealth/payroll (different segment)
+- Perplexity Computer for Taxes (Apr 2026) — $17/mo consumer
+- Practiq — horizontal multi-vertical AI workspace (accounting, law, HR, consulting); no tax-vertical depth; no return intelligence; no portal; no rep work pillar — they're 12-18 months from reaching our depth
+
+---
+
+## ❓ Who are your competitors? Why are you better?
+
+The competitive question splits two ways depending on segment.
+
+**At the down + mid-market segment** (solo EAs through 100-staff regional firms): **No AI-native competitor.** The funded autonomous-prep players target top-100 firms (Black Ore, Accrual, Basis = $235M+ combined, 18-month enterprise sales cycles, can't economically come down-market for at least 12-18 months). The PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI bolt-ons on aging substrates. We're alone in the lane.
+
+**Why we win at this segment**:
+
+1. **The compliance-first frame (Position Framework + cited authority + refusal floor) is the structural moat.** EAs at our segment cannot adopt a loophole-finder tool — their PTIN is on every return. Big-4-targeted competitors sidestep this because in-house tax counsel handles the compliance line. We're the only company building compliance-first AI for the segment that needs it most.
+
+2. **Path 2 (orchestration) is the upside.** Public API + MCP server in v1, NOT v1.5. Other AI tax tools embed Docket's compliance + audit substrate. This is what turns a $25-50M ARR vertical SaaS into a potentially unicorn-shaped orchestration play.
+
+3. **Substrate already shipped.** 28 migrations live in PROD. SOC 2 Type II controls in codebase. /e2e validated end-to-end at $0.012/run. Most accelerator applications from our stage have slides, not running code.
+
+4. **Real revenue from a real preparer.** Antonio is paying $1K/mo. His 200+ active clients onboard to production substrate 2026-05-30. The first reference Discovery Scan hits by 6/15. Sales cycle artifact in hand.
+
+---
+
+## ❓ Why are you the right team to do this?
+
+**Solo founder, technical depth + customer development discipline + shipping cadence.**
+
+- **Built the substrate end-to-end**: 28 migrations live in PROD, per-tenant DEK with AAD-bound encryption, cryptographic audit chain with nightly tamper verifier, Bedrock fallback at orchestrator (CI-verified), 12-doc SOC 2 Type II policy set, /e2e PASS 8/8 against real production stack. This is a year of substrate work most pre-revenue solo founders can't claim.
+- **Shipping cadence under protocol-gate discipline**: every feat/fix commit blocked locally + in CI without trailers for Edge-Cases, Score≥95, Align, Craft, Codex-Reviewed (via OpenAI Codex CLI), Compliance-Check. Two P0 bugs from Antonio's 5/9 call shipped within 48 hours (entity-filing W2 skip + portal/docs Take-photo wire-up). That's the operating tempo.
+- **Customer development through Antonio**: 14+ months of field work with a real CA EA running both prep + representation. Antonio's pain (mental load > research depth) drove the L9 lock (no AI-as-chat-character) + the entire ambient-operator architecture.
+- **Tax-domain coverage strategy is explicit**: tax co-founder hire deferred per 2026-05-11 posture decision. Coverage via Antonio (paying design partner, on-platform CA EA reviewing every Position Library entry) + contracted tax expert engaged for scale-validation. Not a gap — a deliberate post-decision posture. Revisit at v1.5+ scale.
+- **What I'd add with YC**: engineer #2 hire (the most-leveraged additional capacity), partner #2 sales-cycle iteration with YC's network, Path 2 customer surface (other YC AI companies that could integrate via the public API).
+
+---
+
+## ❓ Have you incorporated? Where? When?
+
+[Add: yes/no, state of incorporation, date. Standard Delaware C-Corp recommended pre-Series-A.]
+
+---
+
+## ❓ If you've raised money, how much, and what's the post-money valuation?
+
+[Add. Likely bootstrapped to date. SAFE round may be in flight by YC application time depending on close timing on Forum / Mucker / Neo conversations.]
+
+---
+
+## ❓ Have you applied to YC before?
+
+[Add. If yes, with what idea, when, and what's changed since.]
+
+---
+
+## ❓ Tell us about an interesting problem you've solved that wasn't your job.
+
+[Add. YC pattern: technical-founder anecdote that demonstrates problem-solving + scope-finding. Examples that would land for this profile:
+- "Built X open-source tool that Y people now use" (if applicable)
+- "Reverse-engineered the OLT browser-automation interface to prove the integration was technically feasible before committing to the build"
+- "Investigated and fixed a multi-hour outage in [previous role's system] that the on-call team hadn't been able to root-cause"
+- Any technical-craft story that shows curiosity + persistence + judgment
+]
+
+---
+
+## ❓ Anything else we should know?
+
+A few things YC's standard questions don't capture cleanly:
+
+1. **Codebase is auditable.** We ran an automated codebase analysis (`/understand` via the open-source Understand-Anything plugin) and produced a 1,038-node / 1,182-edge knowledge graph across 10 architectural layers, validated 2026-05-11. You can explore the substrate independently — we'll grant batch-time read access to YC partners if useful.
+
+2. **The cyber insurance work is in flight.** Tech E&O + Cyber bundle with AI-affirmative rider, $1M aggregate, targeting Vouch primary / Embroker backup, $2,500-3,500/yr expected premium per `docs/CYBER-INSURANCE-RECOMMENDATION.md`. Binding before 2026-05-30 (Antonio production-substrate sub-milestone). Most early-stage AI SaaS founders don't have this scoped before YC; we do.
+
+3. **Marketing positioning is locked**, not still being figured out. `docs/MARKETING-FRAMES.md` codifies the one-liner ("Docket is the AI defense layer for tax practices") + 3 audience frames (compliance-first / closed-loop OS / orchestration / Path 2) + use/never-say lists. This is sales-cycle ready, not iteration-stage.
+
+4. **We have an explicit, written list of things we WON'T do.** CLAUDE.md §14 (Explicit NOs): no consumer tax filer, no fighting Black Ore / Accrual / Basis at top-100 firms for 18-24 months, no F500 in-house tax department for 18-24 months, no Python backend, no Bloomberg/CCH editorial year 1, no shadcn aesthetic, no AI-as-chat-character (L9 lock). The discipline is the moat as much as the product is.
+
+5. **Antonio's mentor commands ~1000 EAs** in her professional network. She's the distribution unlock for partners #2 through #10 once we have a reference Discovery Scan in hand from Antonio (target 6/15).
+
+---
+
+## Specific ask of YC
+
+| | |
+|---|---|
+| **Capital** | $500K SAFE on standard YC terms |
+| **YC batch (3 months)** | Full participation — relocate temporarily for batch; partner network leverage for engineer #2 hire + partner #2 sales cycle |
+| **Demo Day** | Tax-vertical positioning + Path 2 orchestration thesis presented to the YC investor audience |
+| **Post-batch network** | YC's enterprise-sales network for mid-market partner #2 acquisition + the YC AI portfolio for Path 2 API integration partners |
+
+---
+
+*Created 2026-05-11. Voice + tone: this draft reads as a YC application, not a marketing brief — favor concrete numbers + customer evidence + honest gap-naming over hype. David's voice pass before submission should keep it that way.*
