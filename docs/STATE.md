@@ -59,10 +59,10 @@ If you're unsure whether something has been done, run `/check-state` for an auth
 | Migration | Dev | Prod |
 |---|---|---|
 | 0000 → 0025 | ✅ | ✅ (per CLAUDE.md previous status) |
-| 0026 (signatures envelope_id idx) | ✅ (applied 2026-05-09 via `apply-26-27.ts`) | ⚠️ **NOT YET — waiting on user OK** |
-| 0027 (kba-failed signature status) | ✅ (applied 2026-05-09 via `apply-26-27.ts`) | ⚠️ **NOT YET — waiting on user OK** |
+| 0026 (signatures envelope_id idx) | ✅ (applied 2026-05-09 via `apply-26-27.ts`) | ✅ (confirmed 2026-05-11 via `apply-26-27.ts` against PROD DATABASE_URL pulled from Vercel) |
+| 0027 (kba-failed signature status) | ✅ (applied 2026-05-09 via `apply-26-27.ts`) | ✅ (confirmed 2026-05-11 — Postgres NOTICE "enum label kba-failed already exists, skipping") |
 
-To apply pending prod migrations: user authorizes → run `bun run packages/db/scripts/apply-26-27.ts` against PROD `DATABASE_URL`. Idempotent (IF NOT EXISTS guards).
+**Important discovery 2026-05-11**: PROD `DATABASE_URL` (pulled from Vercel via `vercel env pull --environment=production`) and local `.env.local` `DATABASE_URL` point to the **same Neon endpoint** (`ep-twilight-violet-anb70ud4`), only differing by pooler suffix. So the 2026-05-09 "dev" application was effectively against the same database as prod. The 2026-05-11 re-run via the Vercel-pulled URL is now the formal confirmation. STATE.md previously called this a "dev vs prod" delta — that was inaccurate. There's only one Neon branch active.
 
 ---
 
