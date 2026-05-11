@@ -12,7 +12,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.717.0",
     "@aws-sdk/s3-request-presigner": "^3.717.0",
-    "@clerk/nextjs": "^7.2.9",
+    "@clerk/nextjs": "^7.3.3",
     "@docket/db": "workspace:*",
     "@docket/docusign-shared": "workspace:*",
     "@docket/document-processing": "workspace:*",
