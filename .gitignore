@@ -34,6 +34,11 @@ pnpm-debug.log*
 coverage/
 .memsearch/
 
+# Understand-Anything codebase knowledge graph cache. Machine-specific +
+# regenerable + can be large (full repo graph is JSON in the megabyte range).
+# Rebuild via /understand on the Saturday-evening cadence per L4 + STATE.md.
+.understand-anything/
+
 # Local IDE scratch — Claude Code launch file is per-machine
 .claude/launch.json
 
