@@ -14,6 +14,7 @@
 //   - context      the intake answer that triggered the entry (debug)
 
 import type { IntakeState, IncomeType } from './intake.js';
+import { isEntityOnlyFiling } from './intake.js';
 
 /** Subset of doc-classifier kinds that the checklist slots match against. */
 export type ExpectedDocKind =
@@ -80,7 +81,23 @@ export type ExpectedDoc = {
 
 export function requiredDocsFor(state: IntakeState): ExpectedDoc[] {
   const docs: ExpectedDoc[] = [];
-  const incomeTypes: IncomeType[] = state.income?.types ?? [];
+  // Entity-only filings (Corp / S-Corp / Partnership / LLC-elected-corp)
+  // don't have 1040 income — they file 1120 / 1120-S / 1065. Suppress
+  // the 1040-relevant income/asset doc slots even if `state.income.types`
+  // still carries stale values from a prior personal-path intake session
+  // (e.g., user picked W-2 in personal mode, then switched to biz mode).
+  //
+  // This is the read-time enforcement of the entity-filing gate; the
+  // forward-flow gate landed in commit faaa579 (intake-flow.ts skips
+  // /income for entity-only). Without this read-time guard a corp client
+  // whose intake started on personal and flipped to biz would still see
+  // "Upload your W-2" on /docs (the 5/9 Antonio bug, follow-up half).
+  //
+  // Identity docs (DL, SSN) still fire because the signing officer of
+  // any return needs to be identified.
+  const incomeTypes: IncomeType[] = isEntityOnlyFiling(state)
+    ? []
+    : (state.income?.types ?? []);
 
   // ─── Identity (always) ───
   // Driver's License + SSN card for the primary taxpayer. Required for
