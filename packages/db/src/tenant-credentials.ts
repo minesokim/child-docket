@@ -24,7 +24,12 @@
 
 import { eq, and } from 'drizzle-orm';
 import { tenantCredentials } from './schema.js';
-import { encryptFieldForTenant, decryptFieldForTenant, isEncrypted } from './encryption.js';
+import {
+  decryptIfMarkedForTenantWithAAD,
+  deriveAAD,
+  encryptFieldForTenantWithAAD,
+  isEncrypted,
+} from './encryption.js';
 import { getTenantDek } from './dek-cache.js';
 import type { DocketDb } from './client.js';
 import type { TenantId } from '@docket/shared';
@@ -249,7 +254,16 @@ export async function getTenantCredential<K extends CredentialKind>(
   }
 
   const dek = await getTenantDek(db, tenantId);
-  const plaintext = decryptFieldForTenant(row.data, dek);
+  // AAD-aware decrypt: tenant_credentials rows are keyed by
+  // (tenant_id, kind), so we bind AAD to that tuple. The 3-tier
+  // fallback inside decryptIfMarkedForTenantWithAAD covers:
+  //   1. AAD-bound writes (post-C2 setTenantCredential)
+  //   2. Pre-AAD per-tenant-DEK writes (between batch 9 and C2)
+  //   3. Master-KEK legacy writes (pre-batch-9)
+  // The `path` AAD field carries the `kind` here because tenant_credentials
+  // has no JSONB path — `kind` IS the row's per-tenant identity component.
+  const aad = deriveAAD({ tenantId, path: kind });
+  const plaintext = decryptIfMarkedForTenantWithAAD(row.data, dek, aad) as string;
 
   let parsed: unknown;
   try {
@@ -285,7 +299,13 @@ export async function setTenantCredential<K extends CredentialKind>(
   CRED_VALIDATORS[kind](plaintext as unknown);
 
   const dek = await getTenantDek(db, tenantId);
-  const encrypted = encryptFieldForTenant(JSON.stringify(plaintext), dek);
+  // AAD-bound write: bind ciphertext to (tenantId, kind). An attacker
+  // with DB write access can't move a Twilio authToken into the same
+  // tenant's docusign row and have it decrypt — the AAD wouldn't match
+  // on the next read. Pairs with decryptIfMarkedForTenantWithAAD in
+  // getTenantCredential.
+  const aad = deriveAAD({ tenantId, path: kind });
+  const encrypted = encryptFieldForTenantWithAAD(JSON.stringify(plaintext), dek, aad);
   const now = new Date();
 
   await db
