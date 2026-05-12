@@ -51,7 +51,7 @@
 
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { inngest } from '../inngest-client.js';
-import { schema, withTenant, decryptTree, getTenantDek } from '@docket/db';
+import { schema, withTenant, decryptTreeWithAAD, deriveAAD, getTenantDek } from '@docket/db';
 import { asTenantId } from '@docket/shared';
 import { getObjectBytes, putObject } from '@docket/storage';
 import {
@@ -209,8 +209,15 @@ export const finalizeDocumentFn = inngest.createFunction(
           // Pull the intake answers blob — desc(taxYear) so we get the
           // MOST RECENT year's name, not the earliest. Earlier code
           // had ASC and silently picked stale names from prior years.
+          // Pull taxYear too so the AAD builder below can bind to it
+          // (intake writes by saveIntakeField are AAD-bound to
+          // (tenantId, clientId, taxYear, path); the reader must
+          // mirror that tuple).
           const [intake] = await db
-            .select({ answers: schema.intakeResponses.answers })
+            .select({
+              answers: schema.intakeResponses.answers,
+              taxYear: schema.intakeResponses.taxYear,
+            })
             .from(schema.intakeResponses)
             .where(
               and(
@@ -225,9 +232,17 @@ export const finalizeDocumentFn = inngest.createFunction(
           if (intake?.answers) {
             try {
               const dek = await getTenantDek(db, asTenantId(tenantId));
-              answers = decryptTree(
+              const intakeTaxYear = intake.taxYear;
+              answers = decryptTreeWithAAD(
                 intake.answers as Record<string, unknown>,
                 dek,
+                (leafPath) =>
+                  deriveAAD({
+                    tenantId,
+                    clientId,
+                    taxYear: intakeTaxYear,
+                    path: leafPath,
+                  }),
               ) as Record<string, unknown>;
             } catch (decryptErr) {
               // Don't fail finalization on decrypt — just skip the

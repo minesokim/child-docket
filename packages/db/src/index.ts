@@ -37,6 +37,7 @@ export {
   decryptIfMarkedForTenantWithAAD,
   deriveAAD,
   decryptTree,
+  decryptTreeWithAAD,
   // Master-KEK helpers (internal — used by dek-cache)
   encryptDek,
   decryptDek,

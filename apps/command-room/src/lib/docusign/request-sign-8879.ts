@@ -48,7 +48,8 @@
 import { eq, and, desc } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import {
-  decryptIfMarkedForTenant,
+  decryptIfMarkedForTenantWithAAD,
+  deriveAAD,
   getTenantCredential,
   getTenantDek,
   isEncrypted,
@@ -299,7 +300,18 @@ export async function requestSign8879(
       if (storedSsn) {
         let plaintext: string;
         if (isEncrypted(storedSsn)) {
-          plaintext = (decryptIfMarkedForTenant(storedSsn, dek) as string) ?? '';
+          // AAD-aware decrypt with the same (tenantId, clientId,
+          // taxYear, path) tuple saveIntakeField uses on write. The
+          // 3-tier fallback inside decryptIfMarkedForTenantWithAAD
+          // covers AAD-bound + AAD-less + master-KEK legacy values
+          // during the migration window.
+          const aad = deriveAAD({
+            tenantId: user.tenantId,
+            clientId: input.clientId,
+            taxYear: input.taxYear,
+            path: 'personal.ssn',
+          });
+          plaintext = (decryptIfMarkedForTenantWithAAD(storedSsn, dek, aad) as string) ?? '';
         } else if (typeof storedSsn === 'string') {
           plaintext = storedSsn;
         } else {

@@ -32,7 +32,8 @@
 import { eq, desc } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import {
-  decryptIfMarkedForTenant,
+  decryptIfMarkedForTenantWithAAD,
+  deriveAAD,
   getTenantDek,
   isEncrypted,
   schema,
@@ -131,14 +132,27 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
       }
       console.log('[unlockClientPII] concrete paths=', concretePaths.length);
 
-      // Decrypt every concrete path.
+      // Decrypt every concrete path. Use the AAD-aware decryptor so
+      // saves written by saveIntakeField (which encrypts with
+      // deriveAAD({tenantId, clientId, taxYear, path})) decrypt
+      // cleanly here. The 3-tier fallback inside
+      // decryptIfMarkedForTenantWithAAD covers AAD-bound writes,
+      // pre-AAD DEK writes, and legacy master-KEK writes — all three
+      // exist during the migration window. taxYear comes from the
+      // intake row we just loaded so the binding matches the writer.
       const plaintext: Record<string, string> = {};
       for (const path of concretePaths) {
         const stored = getAtPath(answers, path);
         if (stored == null) continue;
         try {
           if (isEncrypted(stored)) {
-            plaintext[path] = decryptIfMarkedForTenant(stored, dek) as string;
+            const aad = deriveAAD({
+              tenantId: user.tenantId,
+              clientId,
+              taxYear: row.taxYear,
+              path,
+            });
+            plaintext[path] = decryptIfMarkedForTenantWithAAD(stored, dek, aad) as string;
           } else if (typeof stored === 'string') {
             // Legacy plaintext (pre-encryption rollout). Surface anyway;
             // the field would otherwise just be the plain string already.

@@ -22,7 +22,8 @@
 import { eq, and } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import {
-  decryptIfMarkedForTenant,
+  decryptIfMarkedForTenantWithAAD,
+  deriveAAD,
   getTenantDek,
   isEncrypted,
   schema,
@@ -86,11 +87,24 @@ export async function revealIntakeField(path: string): Promise<RevealIntakeField
       // Resolve to plaintext. Sensitive paths are normally encrypted
       // markers; if the value was somehow stored plain (e.g., legacy
       // data from before encryption shipped), accept that too.
+      //
+      // Use the AAD-aware decryptor so saves written by saveIntakeField
+      // (which encrypts with deriveAAD({tenantId, clientId, taxYear,
+      // path})) decrypt cleanly here. The 3-tier fallback inside
+      // decryptIfMarkedForTenantWithAAD covers AAD-bound writes,
+      // pre-AAD DEK writes, and legacy master-KEK writes — all three
+      // states exist during the migration window.
       let plaintext = '';
       if (stored == null) {
         plaintext = '';
       } else if (isEncrypted(stored)) {
-        plaintext = decryptIfMarkedForTenant(stored, dek) as string;
+        const aad = deriveAAD({
+          tenantId: authed.tenantId,
+          clientId: authed.clientId,
+          taxYear,
+          path,
+        });
+        plaintext = decryptIfMarkedForTenantWithAAD(stored, dek, aad) as string;
       } else if (typeof stored === 'string') {
         plaintext = stored;
       } else {

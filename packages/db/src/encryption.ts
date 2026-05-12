@@ -213,15 +213,25 @@ export function decryptDek(marker: EncryptedMarker): Buffer {
  * fails. Empty / undefined components are skipped (so callers can
  * pass partial context — e.g., for a credentials write where the
  * client_id isn't known, just pass tenantId).
+ *
+ * For intake_responses (keyed by (tenant_id, client_id, tax_year)),
+ * callers MUST include taxYear so a sensitive leaf encrypted in TY
+ * 2024 can't be relocated into the same client's TY 2025 row and
+ * still authenticate. Per-row binding (not just per-tenant) is the
+ * point of AAD.
  */
 export function deriveAAD(input: {
   tenantId?: string;
   clientId?: string | null;
+  taxYear?: number;
   path?: string;
 }): Buffer {
   const parts: string[] = [];
   if (input.tenantId) parts.push(`tenant:${input.tenantId}`);
   if (input.clientId) parts.push(`client:${input.clientId}`);
+  if (input.taxYear !== undefined && input.taxYear !== null) {
+    parts.push(`year:${input.taxYear}`);
+  }
   if (input.path) parts.push(`path:${input.path}`);
   return Buffer.from(parts.join(';'), 'utf8');
 }
@@ -286,6 +296,55 @@ export function decryptIfMarkedForTenantWithAAD(
       }
     }
   }
+}
+
+/**
+ * Walk a JSONB tree and decrypt every encrypted leaf with AAD verification.
+ * Path-aware variant of decryptTree.
+ *
+ * The aadBuilder callback is invoked with the dotted JSONB path of each
+ * encrypted leaf (matching the same convention setAtPath in @docket/shared
+ * uses for writes). It returns the AAD bytes the leaf was encrypted with —
+ * typically deriveAAD({tenantId, clientId, path}).
+ *
+ * Each leaf goes through decryptIfMarkedForTenantWithAAD's 3-tier
+ * fallback (AAD-bound → AAD-less DEK → master-KEK legacy), so a tree
+ * with a mix of new (AAD-bound), older (DEK-only), and legacy
+ * (master-KEK) leaves all decrypt correctly. That mix is exactly the
+ * state of production data during the AAD-migration window.
+ *
+ * RELOCATION DEFENSE
+ *   A leaf encrypted at path A with AAD-A cannot be decrypted at path B
+ *   with AAD-B: AAD-bound decrypt fails (AAD mismatch), AAD-less decrypt
+ *   also fails (the GCM tag was generated with AAD bytes folded in),
+ *   master-KEK decrypt fails (wrong key). All three fallbacks throw.
+ *   This is the security property the AAD provides over relocating
+ *   ciphertext blobs within JSONB.
+ */
+export function decryptTreeWithAAD(
+  node: unknown,
+  dek: Buffer,
+  aadBuilder: (path: string) => Buffer,
+  currentPath: string = '',
+): unknown {
+  if (node == null || typeof node !== 'object') return node;
+  if (isEncrypted(node)) {
+    return decryptIfMarkedForTenantWithAAD(node, dek, aadBuilder(currentPath));
+  }
+  if (Array.isArray(node)) {
+    return node.map((item, idx) =>
+      decryptTreeWithAAD(item, dek, aadBuilder, joinPath(currentPath, String(idx))),
+    );
+  }
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    out[k] = decryptTreeWithAAD(v, dek, aadBuilder, joinPath(currentPath, k));
+  }
+  return out;
+}
+
+function joinPath(base: string, key: string): string {
+  return base ? `${base}.${key}` : key;
 }
 
 /**

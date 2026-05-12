@@ -34,6 +34,7 @@ import { eq, sql } from 'drizzle-orm';
 import { asTenantId, type TenantId } from '@docket/shared';
 import { getAdminDb, withTenant, disconnect } from '../src/client.js';
 import { getTenantDek } from '../src/dek-cache.js';
+import { deriveAAD } from '../src/encryption.js';
 import { walkAndRewrite } from '../src/reencrypt-legacy-walker.js';
 import { tenants, intakeResponses } from '../src/schema.js';
 
@@ -71,16 +72,36 @@ async function rewriteTenantData(
     const dek = await getTenantDek(db, tenantId);
 
     // ── intake_responses ─────────────────────────────────────────
+    // intake_responses leaves are AAD-bound to (tenantId, clientId,
+    // taxYear, path) since the C1 commit that migrated saveIntakeField
+    // to encryptFieldForTenantWithAAD. Pass an aadBuilder so the
+    // walker recognizes AAD-bound leaves (counts them as already-tenant
+    // and doesn't misclassify them as errors). Legacy master-KEK
+    // leaves still get migrated to the AAD-LESS tenant DEK format
+    // here — a follow-up commit (C3) will optionally re-encrypt those
+    // legacy leaves with AAD in one pass; until then the read-side
+    // 3-tier fallback covers them.
     const intakeRows = await db
       .select({
         id: intakeResponses.id,
+        clientId: intakeResponses.clientId,
+        taxYear: intakeResponses.taxYear,
         answers: intakeResponses.answers,
       })
       .from(intakeResponses);
 
     for (const row of intakeRows) {
       stats.rowsScanned += 1;
-      const result = walkAndRewrite(row.answers, dek);
+      const rowClientId = row.clientId;
+      const rowTaxYear = row.taxYear;
+      const aadBuilder = (leafPath: string): Buffer =>
+        deriveAAD({
+          tenantId,
+          clientId: rowClientId,
+          taxYear: rowTaxYear,
+          path: leafPath,
+        });
+      const result = walkAndRewrite(row.answers, dek, aadBuilder);
       stats.leavesScanned += result.total;
       stats.legacyMigrated += result.changed;
       stats.alreadyTenant += result.alreadyTenant;

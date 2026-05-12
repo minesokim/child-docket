@@ -27,8 +27,9 @@
 import { eq, and } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
 import {
-  encryptFieldForTenant,
-  decryptTree,
+  decryptTreeWithAAD,
+  deriveAAD,
+  encryptFieldForTenantWithAAD,
   getTenantDek,
   schema,
   withTenant,
@@ -104,11 +105,25 @@ export async function saveIntakeField(
       }
 
       // 5. Compute the storage value. Sensitive paths get encrypted
-      // with the tenant DEK; everything else stores plain. Mixed
-      // encrypted/plain in the same JSONB tree is fine - decryptTree()
-      // handles both on read.
+      // with the tenant DEK + AAD bound to (tenantId, clientId, path)
+      // so the ciphertext can't be relocated across rows; everything
+      // else stores plain. Mixed encrypted/plain in the same JSONB
+      // tree is fine — decryptTreeWithAAD() handles both on read,
+      // and falls back through AAD-less + master-KEK paths for
+      // pre-migration data.
       const valueToStore =
-        sensitive && dek ? encryptFieldForTenant(String(validatedValue), dek) : validatedValue;
+        sensitive && dek
+          ? encryptFieldForTenantWithAAD(
+              String(validatedValue),
+              dek,
+              deriveAAD({
+                tenantId: authed.tenantId,
+                clientId: authed.clientId,
+                taxYear,
+                path,
+              }),
+            )
+          : validatedValue;
 
       const currentStorage = (existing.answers as unknown) ?? {};
       const updatedStorage = setAtPath(currentStorage, path, valueToStore);
@@ -162,8 +177,20 @@ export async function saveIntakeField(
       // 8. Return decrypted-then-masked view for the client's local
       // state. Need the DEK either way now, so resolve if not already
       // cached. Cache hit on the second call when sensitive=true.
+      // The AAD builder mirrors what the writer above passes — same
+      // (tenantId, clientId, path) tuple — so AAD-bound leaves
+      // recently written by this same call decrypt cleanly. Pre-AAD
+      // leaves still in the tree fall through to the AAD-less DEK
+      // path inside decryptIfMarkedForTenantWithAAD.
       const dekForRead = dek ?? (await getTenantDek(db, asTenantId(authed.tenantId)));
-      const decrypted = decryptTree(updatedStorage, dekForRead) as IntakeState;
+      const decrypted = decryptTreeWithAAD(updatedStorage, dekForRead, (leafPath) =>
+        deriveAAD({
+          tenantId: authed.tenantId,
+          clientId: authed.clientId,
+          taxYear,
+          path: leafPath,
+        }),
+      ) as IntakeState;
       const masked = maskSensitiveFields(decrypted);
       return { ok: true, answers: masked };
     });

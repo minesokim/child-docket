@@ -431,3 +431,262 @@ describe('AAD-bound encryption — ciphertext relocation defense', () => {
     expect(d.toString('utf8')).toBe('tenant:tx;path:p');
   });
 });
+
+// ────────────────────────────────────────────────────────────────
+// decryptTreeWithAAD — path-aware JSONB walker with AAD verification.
+// Pairs with encryptFieldForTenantWithAAD on writes: the writer passes
+// deriveAAD({tenantId, clientId, path}); the reader rebuilds the same
+// AAD per leaf via the aadBuilder callback. AAD verification fails
+// when ciphertext is relocated within the tree.
+// ────────────────────────────────────────────────────────────────
+
+describe('decryptTreeWithAAD — path-aware tree decryption', () => {
+  const TENANT = 'tenant-aaaa-bbbb-cccc-dddd-eeeeeeeeee01';
+  const CLIENT = 'client-aaaa-bbbb-cccc-dddd-22222222ee02';
+
+  function aadFor(path: string): Buffer {
+    const { deriveAAD } = require('../src/encryption.ts');
+    return deriveAAD({ tenantId: TENANT, clientId: CLIENT, path });
+  }
+
+  test('decrypts AAD-bound leaves correctly when AAD matches path', async () => {
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const ssnPath = 'personal.ssn';
+    const tree = {
+      personal: {
+        fullName: 'David Kim',
+        ssn: encryptFieldForTenantWithAAD(
+          '123-45-6789',
+          dek,
+          deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: ssnPath }),
+        ),
+      },
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out.personal.fullName).toBe('David Kim');
+    expect(out.personal.ssn).toBe('123-45-6789');
+  });
+
+  test('walks arrays + decrypts AAD-bound items with index-based paths', async () => {
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const dep0Path = 'dependents.0.ssn';
+    const dep1Path = 'dependents.1.ssn';
+    const tree = {
+      dependents: [
+        {
+          fullName: 'Kid A',
+          ssn: encryptFieldForTenantWithAAD(
+            '111-22-3333',
+            dek,
+            deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: dep0Path }),
+          ),
+        },
+        {
+          fullName: 'Kid B',
+          ssn: encryptFieldForTenantWithAAD(
+            '444-55-6666',
+            dek,
+            deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: dep1Path }),
+          ),
+        },
+      ],
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out.dependents[0]?.ssn).toBe('111-22-3333');
+    expect(out.dependents[1]?.ssn).toBe('444-55-6666');
+  });
+
+  test('decrypts deeply nested AAD-bound leaf with full dotted path', async () => {
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const deepPath = 'dependents.0.identity.ssn';
+    const tree = {
+      dependents: [
+        {
+          identity: {
+            ssn: encryptFieldForTenantWithAAD(
+              '999-88-7777',
+              dek,
+              deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: deepPath }),
+            ),
+          },
+        },
+      ],
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out.dependents[0]?.identity.ssn).toBe('999-88-7777');
+  });
+
+  test('falls back to AAD-less decrypt for pre-AAD (legacy DEK) leaves', async () => {
+    // Mixed tree: one leaf written WITH AAD, one written WITHOUT (the
+    // older code path). The walker handles each independently via the
+    // 3-tier fallback in decryptIfMarkedForTenantWithAAD.
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, encryptFieldForTenant, deriveAAD } =
+      await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      personal: {
+        ssn: encryptFieldForTenantWithAAD(
+          '123-45-6789',
+          dek,
+          deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: 'personal.ssn' }),
+        ),
+        ein: encryptFieldForTenant('12-3456789', dek), // legacy AAD-less write
+      },
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out.personal.ssn).toBe('123-45-6789');
+    expect(out.personal.ein).toBe('12-3456789');
+  });
+
+  test('falls back to master-KEK for pre-tenant-DEK legacy leaves', async () => {
+    // Even older legacy: the master-KEK was used to encrypt the value
+    // directly (pre-batch-9 production data). The 3-tier fallback should
+    // surface the plaintext via path 3.
+    const { decryptTreeWithAAD, encryptField } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      legacy: {
+        value: encryptField('master-encrypted-legacy'),
+      },
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out.legacy.value).toBe('master-encrypted-legacy');
+  });
+
+  test('relocated ciphertext (moved to wrong path) fails decrypt', async () => {
+    // This is the security property the AAD provides over relocation
+    // attacks. An attacker with DB write access who moves an encrypted
+    // SSN from personal.ssn into bank.routingNumber can't recover the
+    // plaintext at the new location because the AAD-bound auth tag
+    // doesn't match the new path. AAD-less fallback also fails because
+    // the GCM tag was generated WITH AAD bytes folded in.
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const ssnAtRightPath = encryptFieldForTenantWithAAD(
+      '123-45-6789',
+      dek,
+      deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: 'personal.ssn' }),
+    );
+    // Move it.
+    const relocated = {
+      bank: { routingNumber: ssnAtRightPath },
+    };
+    expect(() => decryptTreeWithAAD(relocated, dek, aadFor)).toThrow();
+  });
+
+  test('passes plain values through unchanged', async () => {
+    const { decryptTreeWithAAD } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      personal: { fullName: 'David', count: 3, opt: null },
+      flags: [true, false],
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out).toEqual(tree);
+  });
+
+  test('handles null + undefined + empty containers', async () => {
+    const { decryptTreeWithAAD } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    expect(decryptTreeWithAAD(null, dek, aadFor)).toBe(null);
+    expect(decryptTreeWithAAD(undefined, dek, aadFor)).toBe(undefined);
+    expect(decryptTreeWithAAD({}, dek, aadFor)).toEqual({});
+    expect(decryptTreeWithAAD([], dek, aadFor)).toEqual([]);
+  });
+
+  test('does NOT mutate the input tree', async () => {
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const tree = {
+      personal: {
+        ssn: encryptFieldForTenantWithAAD(
+          '123-45-6789',
+          dek,
+          deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: 'personal.ssn' }),
+        ),
+      },
+    };
+    const before = JSON.stringify(tree);
+    decryptTreeWithAAD(tree, dek, aadFor);
+    expect(JSON.stringify(tree)).toBe(before);
+  });
+
+  test('wrong DEK (different tenant) fails all 3 fallback paths', async () => {
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dekA = randomBytes(32);
+    const dekB = randomBytes(32);
+    const tree = {
+      personal: {
+        ssn: encryptFieldForTenantWithAAD(
+          '123-45-6789',
+          dekA,
+          deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: 'personal.ssn' }),
+        ),
+      },
+    };
+    expect(() => decryptTreeWithAAD(tree, dekB, aadFor)).toThrow();
+  });
+
+  test('corrupted ciphertext (tampered byte) fails decrypt', async () => {
+    const { decryptTreeWithAAD, encryptFieldForTenantWithAAD, deriveAAD } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const ct = encryptFieldForTenantWithAAD(
+      'corruptme',
+      dek,
+      deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: 'personal.ssn' }),
+    );
+    // Flip the last byte of the encoded marker.
+    const buf = Buffer.from(ct.__enc, 'base64');
+    buf[buf.length - 1] = buf[buf.length - 1]! ^ 0xff;
+    const tampered = { __enc: buf.toString('base64') };
+    const tree = { personal: { ssn: tampered } };
+    expect(() => decryptTreeWithAAD(tree, dek, aadFor)).toThrow();
+  });
+
+  test('mixed tree (AAD-bound + AAD-less + plaintext) decrypts each leaf correctly', async () => {
+    const {
+      decryptTreeWithAAD,
+      encryptFieldForTenantWithAAD,
+      encryptFieldForTenant,
+      encryptField,
+      deriveAAD,
+    } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const tree = {
+      personal: {
+        fullName: 'David', // plaintext
+        ssn: encryptFieldForTenantWithAAD(
+          '123-45-6789',
+          dek,
+          deriveAAD({ tenantId: TENANT, clientId: CLIENT, path: 'personal.ssn' }),
+        ), // AAD-bound
+        ein: encryptFieldForTenant('12-3456789', dek), // AAD-less (legacy)
+      },
+      legacy: {
+        value: encryptField('master-only'), // master-KEK (pre-batch-9)
+      },
+    };
+    const out = decryptTreeWithAAD(tree, dek, aadFor) as typeof tree;
+    expect(out.personal.fullName).toBe('David');
+    expect(out.personal.ssn).toBe('123-45-6789');
+    expect(out.personal.ein).toBe('12-3456789');
+    expect(out.legacy.value).toBe('master-only');
+  });
+});

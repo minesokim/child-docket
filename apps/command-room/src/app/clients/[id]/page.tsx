@@ -12,7 +12,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
-import { decryptTree, getTenantDek } from '@docket/db';
+import { decryptTreeWithAAD, deriveAAD, getTenantDek } from '@docket/db';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { requireRole } from '@/lib/require-role';
 import { CommandShell } from '@/components/command-shell';
@@ -98,7 +98,22 @@ export default async function ClientDetailPage({ params }: PageProps) {
       completedAt: Date | null;
     } | null = null;
     if (intakeRow) {
-      const decrypted = decryptTree(intakeRow.answers ?? {}, dek) as IntakeState;
+      // AAD-aware tree decrypt: mirrors what saveIntakeField writes.
+      // (tenantId, clientId, taxYear, path) tuple. Pre-AAD + master-KEK
+      // legacy leaves fall through the 3-tier fallback inside
+      // decryptIfMarkedForTenantWithAAD.
+      const intakeTaxYear = intakeRow.taxYear;
+      const decrypted = decryptTreeWithAAD(
+        intakeRow.answers ?? {},
+        dek,
+        (leafPath) =>
+          deriveAAD({
+            tenantId: user.tenantId,
+            clientId: id,
+            taxYear: intakeTaxYear,
+            path: leafPath,
+          }),
+      ) as IntakeState;
       intake = {
         taxYear: intakeRow.taxYear,
         status: intakeRow.status,

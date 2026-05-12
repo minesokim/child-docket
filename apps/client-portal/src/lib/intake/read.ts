@@ -20,7 +20,7 @@
 import { cache } from 'react';
 import { eq, and } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
-import { decryptTree, getTenantDek, schema, withTenant } from '@docket/db';
+import { decryptTreeWithAAD, deriveAAD, getTenantDek, schema, withTenant } from '@docket/db';
 import {
   type IntakeState,
   asTenantId,
@@ -90,7 +90,22 @@ export const getOrCreateIntakeAnswers = cache(async (): Promise<IntakeBundle | n
     // crosses the server-client boundary by default - the client must
     // call revealIntakeField for each path it wants in plaintext, which
     // is audit-logged.
-    const decrypted = decryptTree(row.answers ?? {}, dek) as IntakeState;
+    //
+    // decryptTreeWithAAD tracks the JSONB path through recursion and
+    // builds the same (tenantId, clientId, taxYear, path) AAD the
+    // writer used. The taxYear binding prevents relocation across
+    // years for the same client. Mixed AAD-bound + AAD-less +
+    // master-KEK legacy leaves each take their own 3-tier fallback
+    // path inside decryptIfMarkedForTenantWithAAD; the tree as a
+    // whole decrypts.
+    const decrypted = decryptTreeWithAAD(row.answers ?? {}, dek, (leafPath) =>
+      deriveAAD({
+        tenantId: authed.tenantId,
+        clientId: authed.clientId,
+        taxYear,
+        path: leafPath,
+      }),
+    ) as IntakeState;
     const masked = maskSensitiveFields(decrypted);
     return {
       clientId: authed.clientId,

@@ -187,4 +187,145 @@ describe('walkAndRewrite — legacy → tenant DEK migration', () => {
     expect(pass2.errors).toBe(0);
     expect(pass2.tree).toEqual(pass1.tree);
   });
+
+  // ────────────────────────────────────────────────────────────────
+  // AAD-aware walking — when intake writes go AAD-bound, the walker
+  // must recognize the new format (count as `alreadyTenant`) rather
+  // than misclassify it as an error. The aadBuilder callback mirrors
+  // what saveIntakeField passes on writes: deriveAAD({tenantId,
+  // clientId, taxYear, path}). The walker calls it per leaf using
+  // the JSONB path it tracks through recursion.
+  // ────────────────────────────────────────────────────────────────
+
+  test('AAD-bound leaves count as alreadyTenant when aadBuilder provided', async () => {
+    const { encryptFieldForTenantWithAAD, deriveAAD } = await import('../src/encryption.js');
+    const aadFor = (path: string) =>
+      deriveAAD({
+        tenantId: 'tenant-a',
+        clientId: 'client-a',
+        taxYear: 2024,
+        path,
+      });
+
+    const tree = {
+      personal: {
+        ssn: encryptFieldForTenantWithAAD('123-45-6789', TENANT_DEK, aadFor('personal.ssn')),
+        ein: encryptFieldForTenantWithAAD('12-3456789', TENANT_DEK, aadFor('personal.ein')),
+      },
+    };
+
+    const result = walkAndRewrite(tree, TENANT_DEK, aadFor);
+    expect(result.total).toBe(2);
+    expect(result.alreadyTenant).toBe(2);
+    expect(result.changed).toBe(0);
+    expect(result.errors).toBe(0);
+    // Tree returned unchanged (no rewrite).
+    expect(result.tree).toEqual(tree);
+  });
+
+  test('mixed tree (AAD-bound + AAD-less DEK + legacy master) counts each correctly', async () => {
+    const { encryptFieldForTenantWithAAD, deriveAAD } = await import('../src/encryption.js');
+    const aadFor = (path: string) =>
+      deriveAAD({
+        tenantId: 'tenant-a',
+        clientId: 'client-a',
+        taxYear: 2024,
+        path,
+      });
+
+    const tree = {
+      personal: {
+        ssn: encryptFieldForTenantWithAAD(
+          '123-45-6789',
+          TENANT_DEK,
+          aadFor('personal.ssn'),
+        ), // AAD-bound (newest)
+        ein: encryptFieldForTenant('12-3456789', TENANT_DEK), // AAD-less DEK
+      },
+      legacy: {
+        value: encryptField('legacy-master-encrypted'), // master-KEK
+      },
+    };
+
+    const result = walkAndRewrite(tree, TENANT_DEK, aadFor);
+    expect(result.total).toBe(3);
+    // AAD-bound + AAD-less DEK both already-tenant; only master-KEK
+    // gets migrated.
+    expect(result.alreadyTenant).toBe(2);
+    expect(result.changed).toBe(1);
+    expect(result.errors).toBe(0);
+  });
+
+  test('idempotent on AAD-bound tree (re-running with aadBuilder finds nothing to change)', async () => {
+    const { encryptFieldForTenantWithAAD, deriveAAD } = await import('../src/encryption.js');
+    const aadFor = (path: string) =>
+      deriveAAD({
+        tenantId: 'tenant-a',
+        clientId: 'client-a',
+        taxYear: 2024,
+        path,
+      });
+
+    const tree = {
+      personal: {
+        ssn: encryptFieldForTenantWithAAD('123-45-6789', TENANT_DEK, aadFor('personal.ssn')),
+      },
+    };
+
+    const pass1 = walkAndRewrite(tree, TENANT_DEK, aadFor);
+    const pass2 = walkAndRewrite(pass1.tree, TENANT_DEK, aadFor);
+    expect(pass2.total).toBe(1);
+    expect(pass2.alreadyTenant).toBe(1);
+    expect(pass2.changed).toBe(0);
+    expect(pass2.errors).toBe(0);
+    expect(pass2.tree).toEqual(pass1.tree);
+  });
+
+  test('relocated AAD-bound leaf (moved to wrong path) counts as error, not silently passes', async () => {
+    // If an attacker (or buggy code) moves an AAD-bound ciphertext to a
+    // different path in the JSONB, the walker should NOT silently
+    // re-classify it — neither the AAD-bound path (wrong AAD) nor the
+    // AAD-less path (tag includes AAD bytes) nor the master-KEK path
+    // can decrypt it. Counts as an error so the operator can triage.
+    const { encryptFieldForTenantWithAAD, deriveAAD } = await import('../src/encryption.js');
+    const aadFor = (path: string) =>
+      deriveAAD({
+        tenantId: 'tenant-a',
+        clientId: 'client-a',
+        taxYear: 2024,
+        path,
+      });
+
+    const ssnAtRightPath = encryptFieldForTenantWithAAD(
+      '123-45-6789',
+      TENANT_DEK,
+      aadFor('personal.ssn'),
+    );
+
+    // Move the ciphertext into bank.routingNumber.
+    const tree = {
+      bank: { routingNumber: ssnAtRightPath },
+    };
+
+    const result = walkAndRewrite(tree, TENANT_DEK, aadFor);
+    expect(result.total).toBe(1);
+    expect(result.alreadyTenant).toBe(0);
+    expect(result.changed).toBe(0);
+    expect(result.errors).toBe(1);
+  });
+
+  test('walker without aadBuilder still works on pre-AAD trees (backward compatible)', () => {
+    // Existing callers (non-intake) should not need to pass an aadBuilder.
+    // Behavior matches the v0 walker: AAD-less DEK leaves are
+    // already-tenant; legacy master-KEK leaves get migrated.
+    const ssnTenant = encryptFieldForTenant('111-22-3333', TENANT_DEK);
+    const legacy = encryptField('999-88-7777');
+    const tree = { personal: { ssn: ssnTenant, ein: legacy } };
+
+    const result = walkAndRewrite(tree, TENANT_DEK); // no aadBuilder
+    expect(result.total).toBe(2);
+    expect(result.alreadyTenant).toBe(1);
+    expect(result.changed).toBe(1);
+    expect(result.errors).toBe(0);
+  });
 });
