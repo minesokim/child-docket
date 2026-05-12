@@ -4,7 +4,7 @@
 > *Read at session start. Updated when integrations or env state change.*
 > *Solves the Twilio-keys-forgetfulness problem — checks here BEFORE asking.*
 
-**Last verified**: 2026-05-11 (rolling sync — 5/10 added the 12-doc SOC 2 set + PRODUCT-ROADMAP grand-vision update + BUILD-KICKOFF-2026-05-11 + 7-doc accelerator-applications draft batch + Understand-Anything Saturday-evening cadence; 5/11 added two P0 fixes from Antonio call (entity-filing W2 skip faaa579 + portal/docs Take-photo wire-up 9975978) + intake-frame.tsx 'use client' unblocker 961857b + /e2e PASS 8/8 at 961857b + claude-mem worker started + Understand-Anything plugin built + OVERNIGHT-HANDOFF-2026-05-10.md)
+**Last verified**: 2026-05-11 evening (rolling sync — 5/10 added the 12-doc SOC 2 set + PRODUCT-ROADMAP grand-vision update + BUILD-KICKOFF-2026-05-11 + 7-doc accelerator-applications draft batch + Understand-Anything Saturday-evening cadence; 5/11 morning added two P0 fixes from Antonio call (entity-filing W2 skip faaa579 + portal/docs Take-photo wire-up 9975978) + intake-frame.tsx 'use client' unblocker 961857b + /e2e PASS 8/8 at 961857b + claude-mem worker started + Understand-Anything plugin built + OVERNIGHT-HANDOFF-2026-05-10.md; 5/11 afternoon added Haokun co-founder lock + Antonio 1% advisor + Option B positioning + §6695(g) penalty-anchored pricing + Coverage Map + SOC 2 Type I outreach + Contracted Expert Outreach + Cyber Insurance Recommendation + 5 audience-segmented pitch decks + Vory founder video scripts + ICP wedge specification + 6 accelerator applications refreshed + YC Fall 2026 application; 5/11 evening added L16 lock for 100-customers-by-8/1 + DESIGN-PARTNER-ACQUISITION-PLAN.md + cold-outreach playbook + DISCOVERY-SCAN-OPERATIONAL.md (fe01250) + landing page copy x3 + email template suite + Discovery Scan sample PDF + PRICING-PAGE-SPEC + WISP draft + OVERNIGHT-HANDOFF-2026-05-11.md)
 
 ---
 
@@ -111,9 +111,16 @@ If you're unsure whether something has been done, run `/check-state` for an auth
 
 | Task | Status | Spawned where |
 |---|---|---|
-| Intake "Take photo" + upload-arrow dead links (P0 from Antonio call) | 🟡 Spawned task in flight | session-spawn-task chip; touching `apps/client-portal/src/app/portal/docs/page.tsx` |
-| Entity-type branching (Corp showing W2) (P0 from Antonio call) | 🟡 Spawned task in flight | session-spawn-task chip |
-| Background codex-rescue on prior 8 commits | 🟡 Running (long-running agent) | spawned at start of 2026-05-09 session |
+| Intake "Take photo" + upload-arrow dead links (P0 from Antonio call) | ✅ Shipped 9975978 | session-spawn-task chip |
+| Entity-type branching (Corp showing W2) (P0 from Antonio call) | ✅ Shipped faaa579 | session-spawn-task chip |
+| Background codex-rescue on prior 8 commits | ✅ Closed | 2026-05-09 |
+| **100-by-8/1 acquisition sprint** | 🟢 ACTIVE (L16-locked) | DESIGN-PARTNER-ACQUISITION-PLAN.md + cold-outreach playbook + landing-pages/ + email-templates + Discovery Scan operational + PRICING-PAGE-SPEC + WISP |
+| Discovery Scan landing page (`/scan` route in client-portal) | ⬜ Spec'd, Haokun queue | DISCOVERY-SCAN-OPERATIONAL.md + discovery-scan-landing-copy.md — target 5/25 |
+| Discovery agent (`services/workers/src/agents/discovery-agent.ts`) | ⬜ Spec'd, Haokun queue | DISCOVERY-SCAN-OPERATIONAL.md Discovery agent tech spec — target 6/8 |
+| Cost-of-Not-Using calculator widget (`/pricing`) | ⬜ Spec'd, Haokun queue | PRICING-PAGE-SPEC.md — target 6/8 |
+| Voice-pass on 9 new docs (landing pages + emails + Discovery sample PDF + WISP) | ⬜ David action | This week before production deploy |
+| Sales VA hire ($20-40/hr, 10-20 hrs/wk) | ⬜ David action | Target hire: 5/31 |
+| Boney-Henderson presentation (Antonio's mentor network, 1000+ preparers) | ⬜ Antonio + David action | Target delivery: Week 4 (~6/1) |
 
 ---
 
@@ -133,15 +140,25 @@ If you're unsure whether something has been done, run `/check-state` for an auth
 - PII regex scrubber (`8f0c2d5`, 32 tests)
 - Anti-tampering hooks (protocol-gate, codex review enforcement)
 
-⏳ Documentation work (`docs/security/` stub coming):
-- Information security policy (formal doc)
-- Access control policy
-- Change management policy
-- Incident response plan
-- Vendor management policy
-- Business continuity plan
-- Employee training cadence
-- Cyber insurance certificate
+✅ Documentation work shipped (in `docs/security/`):
+- Information security policy ✅ shipped 5/9 (f4e8c2e)
+- Access control policy ✅ shipped 5/9
+- Change management policy ✅ shipped 5/9
+- Incident response plan ✅ shipped 5/9
+- Vendor management policy ✅ shipped 5/9
+- Business continuity plan ✅ shipped 5/9
+- Employee training cadence ✅ shipped 5/9
+- Data classification and handling ✅ shipped 5/9
+- Logging and monitoring ✅ shipped 5/9
+- Risk management policy ✅ shipped 5/9
+- Controls matrix (SOC 2 criterion → control → file mapping) ✅ shipped 5/9
+- **WISP (Written Information Security Plan)** ✅ shipped 5/11 (this session) — IRS Pub 4557 + FTC Safeguards Rule + MA 201 CMR 17 compliant
+
+⏳ Still pending (operational, not documentation):
+- Cyber insurance certificate — target 5/16 binding via Vouch primary + Embroker backup per `docs/CYBER-INSURANCE-RECOMMENDATION.md`
+- Drata or Vanta vendor engagement — target within 5 business days per `docs/SOC2-TYPE-I-OUTREACH.md` (Q4 2026 Type I attestation goal)
+- David + Haokun WISP signature acknowledgment
+- Legal counsel review of WISP (optional but recommended)
 
 When capital arrives, Drata/Vanta reads existing posture + documentation; we pay for attestation, not re-architecture.
 
