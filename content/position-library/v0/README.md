@@ -42,7 +42,7 @@ Every position entry maps to one or more preparer penalty risks. The Discovery a
 | §6695(a)-(e) procedural | $60-$650 each | Sign return, furnish copy, retain copies, EIN, etc. |
 | §6701 aiding understatement | $1,000 / $10,000 corp | Knew or should have known |
 
-### v0 entry list (13 drafted; 7 queued — as of 2026-05-11 evening)
+### v0 entry list (20 of 20 drafted — as of 2026-05-11 evening)
 
 | # | Position | File | Status | Tier (typical) | Penalty exposure |
 |---|---|---|---|---|---|
@@ -56,18 +56,18 @@ Every position entry maps to one or more preparer penalty risks. The Discovery a
 | 8 | EITC due-diligence checklist (Form 8867) | [p008-eitc-due-diligence-form-8867.md](positions/p008-eitc-due-diligence-form-8867.md) | DRAFT-DAVID | Tier 1 (procedural) | **§6695(g) primary — load-bearing** |
 | 9 | CTC + ODC due-diligence checklist | [p009-ctc-odc-due-diligence.md](positions/p009-ctc-odc-due-diligence.md) | DRAFT-DAVID | Tier 1 (procedural) | §6695(g) primary |
 | 10 | AOTC due-diligence checklist | [p010-aotc-due-diligence.md](positions/p010-aotc-due-diligence.md) | DRAFT-DAVID | Tier 1 (procedural) | §6695(g) primary |
-| 11 | HOH filing status due-diligence checklist | (queued) | — | Tier 1 (procedural) | §6695(g) primary |
-| 12 | CA AB-150 Pass-Through Entity Tax (PTET) election | (queued) | — | Tier 1 (CA-specific) | CA preparer penalty |
-| 13 | Real estate professional status under §469(c)(7) | (queued) | — | Tier 2-3 | §6694(a) if hours not documented |
-| 14 | Roth IRA backdoor conversion (Notice 2014-54) | (queued) | — | Tier 1 (Settled) | §6694(a) if pro-rata mis-applied |
-| 15 | Mega backdoor Roth (after-tax 401(k) → Roth) | (queued) | — | Tier 2 | §6694(a) edge cases |
-| 16 | Self-rental rules under §469(c)(2) + §1.469-2(f)(6) | (queued) | — | Tier 2-3 | §6694(a) + §469 grouping |
+| 11 | HOH filing status due-diligence checklist | [p011-hoh-filing-status-due-diligence.md](positions/p011-hoh-filing-status-due-diligence.md) | DRAFT-DAVID | Tier 1 (procedural) | §6695(g) primary |
+| 12 | CA AB-150 Pass-Through Entity Tax (PTET) election | [p012-ca-ab-150-ptet-election.md](positions/p012-ca-ab-150-ptet-election.md) | DRAFT-DAVID | Tier 1 (CA-specific) | CA preparer penalty if election missed |
+| 13 | Real estate professional status under §469(c)(7) | [p013-real-estate-professional-status.md](positions/p013-real-estate-professional-status.md) | DRAFT-DAVID | Tier 2-3 | §6694(a) if hours not documented |
+| 14 | Roth IRA backdoor conversion (Notice 2014-54) | [p014-roth-backdoor-conversion.md](positions/p014-roth-backdoor-conversion.md) | DRAFT-DAVID | Tier 1 (Settled) | §6694(a) if pro-rata mis-applied |
+| 15 | Mega backdoor Roth (after-tax 401(k) → Roth) | [p015-mega-backdoor-roth.md](positions/p015-mega-backdoor-roth.md) | DRAFT-DAVID | Tier 2 | §6694(a) edge cases |
+| 16 | Self-rental rules under §469(c)(2) + §1.469-2(f)(6) | [p016-self-rental-rules.md](positions/p016-self-rental-rules.md) | DRAFT-DAVID | Tier 2-3 | §6694(a) + §469 grouping |
 | 17 | Augusta Rule abusive variant (REFUSED template) | [p017-augusta-rule-abusive-refused.md](positions/p017-augusta-rule-abusive-refused.md) | DRAFT-DAVID | **REFUSED below RB** | §6694(b) trigger if claimed |
 | 18 | Conservation easement charitable deduction (REFUSED; Notice 2017-10) | [p018-conservation-easement-refused.md](positions/p018-conservation-easement-refused.md) | DRAFT-DAVID | **REFUSED below RB** | §6662(h) 40% penalty if claimed |
 | 19 | Hobby loss §183 reclassification (REFUSED template) | [p019-hobby-loss-183-refused.md](positions/p019-hobby-loss-183-refused.md) | DRAFT-DAVID | **REFUSED below RB** | §6662 + §183 reclass |
-| 20 | Cost segregation study acceleration on rental property | (queued) | — | Tier 1-2 | §6694(a) edge cases |
+| 20 | Cost segregation study acceleration on rental property | [p020-cost-segregation-study.md](positions/p020-cost-segregation-study.md) | DRAFT-DAVID | Tier 1-2 | §6694(a) edge cases |
 
-**Cadence (updated 2026-05-11 evening)**: 13 drafted 5/11. Antonio reviews entries 1-5 (substantive Tier 1-3) starting 5/12. Entries 6-10 (substantive + due-diligence procedural) reviewed 5/15-5/22. REFUSED entries 17-19 reviewed 5/19-5/26. Next 7 queued (#11, #12, #13, #14, #15, #16, #20) drafted 5/19-5/26. All 20 Antonio-validated by 5/30 to support the Antonio production sub-milestone + 6/15 reference Discovery Scan delivery.
+**Cadence (updated 2026-05-11 evening, FINAL)**: All 20 entries drafted 5/11. Antonio reviews in tranches: tranche 1 (entries 1-5, substantive Tier 1-3) starts 5/12 with deadline 5/16. Tranche 2 (entries 6-10, substantive + due-diligence procedural) deadline 5/22. Tranche 3 (entries 11-16 + 20, edge cases + CA-specific + retirement-account mechanics) deadline 5/26. Tranche 4 (REFUSED entries 17-19) deadline 5/26. All 20 Antonio-validated by 5/30 to support the Antonio production sub-milestone + 6/15 reference Discovery Scan delivery.
 
 ---
 

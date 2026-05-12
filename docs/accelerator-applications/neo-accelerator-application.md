@@ -125,3 +125,33 @@ What I'd want a Neo conversation to surface: (1) partner #2 candidates in Neo Ne
 ---
 
 *Last updated: 2026-05-09 (initial draft, Claude autopilot).*
+
+---
+
+## 2026-05-11 evening update — current operational state
+
+Posture pivots + new artifacts shipped since initial draft:
+
+**Strategic anchor (L16 locked CLAUDE.md)**: **100 paying customers by 2026-08-01** — the 12-week sprint from 5/11. ~$31-67K/mo MRR / $370-810K ARR target. Full plan at `docs/DESIGN-PARTNER-ACQUISITION-PLAN.md`.
+
+**Product substrate locked**:
+- Position Library v0: **20 of 20 entries drafted, Antonio-validated by 5/30** (`content/position-library/v0/`). The substrate the Discovery agent retrieves from.
+- Discovery Scan operational spec complete; Discovery agent target ship 6/8/2026. First Antonio reference scan 6/15.
+- Antonio audit case studies pre-baked; published versions ship 5/20 across all surfaces.
+- WISP per IRS Pub 4557; SOC 2 Type I Q4 2026.
+- Codex review framework integrated into every `feat(`/`fix(` commit per protocol-gate.
+
+**Distribution motion**:
+- Boney-Henderson presentation locked Week 4 — ~1000 EA audience.
+- 20-EA validation sprint with WEDGE filter running 5/12-5/18.
+- 4-week social cadence pre-written.
+
+**Posture deferrals**: cyber insurance + landing page + sales VA deferred until product closer to complete.
+
+**What Neo network can specifically unblock**:
+- Mid-market regional CPA firm partner #2 candidates (primary value-add per L14)
+- Engineer #2 candidate surface from Neo's technical-founder network
+- Path 2 partner-tier customer introductions (other AI tax tools that could integrate via Docket's public API + MCP server)
+- Ali Partovi office-hours: stress-test on the L1 v1-vs-v1.5 lock + segment posture + Path 2 swing timing
+
+*Updated 2026-05-11 evening, Claude autopilot.*

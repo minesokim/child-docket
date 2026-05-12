@@ -138,3 +138,35 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 ---
 
 *Last updated: 2026-05-09 (initial draft, Claude autopilot).*
+
+---
+
+## 2026-05-11 evening update — current operational state
+
+Posture pivots + new artifacts shipped since initial draft:
+
+**Strategic anchor (L16 locked CLAUDE.md)**: **100 paying customers by 2026-08-01** — the 12-week sprint from 5/11. ~$31-67K/mo MRR / $370-810K ARR target depending on tiered-scarcity pricing strategy. Full plan at `docs/DESIGN-PARTNER-ACQUISITION-PLAN.md` (250 lines). 5 distribution channels with channel-specific expected outputs + weekly milestones.
+
+**Product substrate locked**:
+- Position Library v0: **20 of 20 entries drafted, Antonio-validated by 5/30** (`content/position-library/v0/`). Each entry: 4-tier confidence + cited authority + draft 8275 + audit-defense framing. The substrate the Discovery agent retrieves from.
+- Discovery Scan operational spec complete (`docs/DISCOVERY-SCAN-OPERATIONAL.md`). Discovery agent target ship 6/8/2026. First Antonio reference scan target 6/15.
+- Antonio audit case studies drafted (pre-baked at `docs/antonio-case-study-template-pre-baked.md`); Antonio interview returns ~5/16; published versions land across all surfaces 5/20.
+- WISP (`docs/security/WISP.md`) compliant with IRS Pub 4557 + FTC Safeguards Rule + MA 201 CMR 17. SOC 2 Type I attestation targeted Q4 2026.
+- Codex review framework (`docs/CODEX-REVIEW-FRAMEWORK.md`): every `feat(`/`fix(` commit goes through full protocol-gate (edge-cases → code-quality → codex review → /score >= 95 → /align → /craft → /smoke-test).
+
+**Distribution motion**:
+- Antonio's mentor (Dr. Boney-Henderson) network presentation locked for Week 4 (~6/1) — ~1000 EA + small-CPA audience. Expected: 15-25 customers from this single event. Deck ready (`docs/pitch-decks/boney-henderson-presentation-deck.md`).
+- 20-EA validation sprint with WEDGE filter (2-10 preparer firms, audit-exposed, EA/CPA-led) running 5/12-5/18.
+- Tax Twitter + r/taxpros + LinkedIn cadence locked: 3 weeks of posts pre-written (`docs/social-content/founder-voice-posts-2026-05-{12,19,26,06-02}.md`).
+
+**Posture deferrals (2026-05-11 call)**:
+- Cyber insurance applications (Vouch + Embroker) deferred until product closer to complete (~6/15). No premium burn pre-revenue.
+- Landing page / website build deferred. Cold outreach runs through David's inbox + DM channel; no Lemlist/Apollo until website is back.
+- Sales VA hire deferred until Discovery agent + landing page ship.
+
+**What Mucker network can specifically unblock now**:
+- Mid-market partner #2 candidate intros (CA + Pacific Northwest 20-100 staff regional firms)
+- Latino Tax Pro warm intro if Mucker has the relationship
+- Founder-network connections for the 25 founder-tier slots reserved post-Boney-Henderson
+
+*Updated 2026-05-11 evening, Claude autopilot.*

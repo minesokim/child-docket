@@ -133,3 +133,33 @@ We're flexible on check size; we're inflexible on the milestones. Either size of
 ---
 
 *Last updated: 2026-05-09 (initial draft, Claude autopilot).*
+
+---
+
+## 2026-05-11 evening update — current operational state
+
+Posture pivots + new artifacts shipped since initial draft:
+
+**Strategic anchor (L16 locked CLAUDE.md)**: **100 paying customers by 2026-08-01** — the 12-week sprint from 5/11. ~$31-67K/mo MRR / $370-810K ARR target. Full plan at `docs/DESIGN-PARTNER-ACQUISITION-PLAN.md`.
+
+**Product substrate locked**:
+- Position Library v0: **20 of 20 entries drafted, Antonio-validated by 5/30** (`content/position-library/v0/`). Substrate the Discovery agent retrieves from.
+- Discovery Scan operational spec complete; Discovery agent target ship 6/8/2026. First Antonio reference scan 6/15.
+- Antonio audit case studies pre-baked (`docs/antonio-case-study-template-pre-baked.md`); published versions ship across all surfaces 5/20.
+- WISP compliant with IRS Pub 4557 + FTC Safeguards Rule; SOC 2 Type I attestation targeted Q4 2026.
+- Codex review framework: every `feat(`/`fix(` commit through full protocol-gate.
+
+**Distribution motion**:
+- Boney-Henderson network presentation locked Week 4 (~6/1) — ~1000 EA audience.
+- 20-EA validation sprint with WEDGE filter running 5/12-5/18.
+- 4-week social cadence pre-written (Tax Twitter + r/taxpros + LinkedIn).
+
+**Posture deferrals**: cyber insurance + landing page + sales VA deferred until product closer to complete.
+
+**What PearX network can specifically unblock**:
+- Demo Day audience for the YC-following round
+- Pre-seed VC introductions for the priced round following PearX
+- AI-portfolio companies for Path 2 partner integration
+- Bay Area deep-tech engineers for the post-AAD-binding scale phase
+
+*Updated 2026-05-11 evening, Claude autopilot.*
