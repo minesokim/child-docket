@@ -81,6 +81,25 @@ export interface AuthoritySearchOptions {
    * include superseded for historical lookups.
    */
   excludeSuperseded?: boolean;
+  /**
+   * Include unreviewed `firm_memo` drafts in search results. Default
+   * `false` — only `firm_memo` authorities whose
+   * `metadata->>'reviewStatus'` is `'ANTONIO-VALIDATED'` or
+   * `'BACKUP-VALIDATED'` surface to callers. Non-`firm_memo`
+   * authorities (IRS / FTB / Treas Regs / etc.) are unaffected because
+   * their authority comes from the issuing body, not internal review.
+   *
+   * Set `true` ONLY in dev / test / admin tooling where surfacing
+   * `DRAFT-DAVID` (or any non-validated) entries is intentional.
+   *
+   * Safety rationale: the Position Library v0 ingest writes every
+   * markdown draft as a globally visible `firm_memo` row (tenant_id
+   * NULL). Without this gate, an unreviewed position would appear in
+   * Discovery / chat / audit-defense output for any tenant. The gate
+   * defaults to safe-mode so a forgotten reviewStatus check at the
+   * caller can't leak draft guidance to a prospect.
+   */
+  includeDrafts?: boolean;
 }
 
 /**
@@ -98,6 +117,7 @@ export async function searchAuthorities(
   if (trimmed.length < 2) return [];
   const limit = opts.limit ?? 10;
   const excludeSuperseded = opts.excludeSuperseded !== false;
+  const includeDrafts = opts.includeDrafts === true;
 
   const kindsLiteral =
     opts.kinds && opts.kinds.length > 0
@@ -129,6 +149,11 @@ export async function searchAuthorities(
              OR cardinality(a.applicable_tax_years) = 0
              OR ${taxYear}::int = ANY(a.applicable_tax_years))
         AND (${excludeSuperseded ? sql`a.superseded_date IS NULL` : sql`TRUE`})
+        AND (
+          ${includeDrafts}::boolean = true
+          OR a.kind::text != 'firm_memo'
+          OR (a.metadata->>'reviewStatus') IN ('ANTONIO-VALIDATED', 'BACKUP-VALIDATED')
+        )
       ORDER BY rank DESC, ac.ordinal ASC
       LIMIT ${limit}
     `);
@@ -146,10 +171,32 @@ export async function searchAuthorities(
  *   1. Exact citation_label match (case-insensitive)
  *   2. Slug match (case-insensitive)
  *   3. NULL (caller decides whether to surface as hallucination)
+ *
+ * Review-status gate: identical to `searchAuthorities()`. A draft
+ * `firm_memo` row resolves to NULL unless `includeDrafts: true` is
+ * passed. Earlier reasoning treated this lookup as hallucination
+ * detection only — but `services/workers/src/agents/discovery-agent.ts`
+ * and `services/workers/src/agents/notice-drafter.ts` both treat ANY
+ * resolved citation as "verified" and promote it past the citation
+ * gate. A draft cite injected via prior context (RAG snippet outside
+ * `searchAuthorities`, hand-typed by a tester, leaked from a prior
+ * chat) would otherwise smuggle unreviewed guidance into agent
+ * output. Defense-in-depth: both lookup paths gate by default;
+ * dev/test callers pass `{ includeDrafts: true }` explicitly.
  */
+export interface LookupAuthorityByCitationOptions {
+  /**
+   * Include unreviewed `firm_memo` drafts. Default `false`.
+   * See `AuthoritySearchOptions.includeDrafts` for the full safety
+   * rationale — same posture, same default-deny semantics.
+   */
+  includeDrafts?: boolean;
+}
+
 export async function lookupAuthorityByCitation(
   tenantId: string,
   citation: string,
+  opts: LookupAuthorityByCitationOptions = {},
 ): Promise<{
   id: string;
   citation_label: string;
@@ -159,6 +206,7 @@ export async function lookupAuthorityByCitation(
 } | null> {
   const trimmed = citation.trim();
   if (trimmed.length < 2) return null;
+  const includeDrafts = opts.includeDrafts === true;
   return await withTenant(tenantId as TenantId, async (db) => {
     const rows = await db.execute<{
       id: string;
@@ -174,8 +222,13 @@ export async function lookupAuthorityByCitation(
         external_url,
         kind::text AS kind
       FROM authorities
-      WHERE LOWER(citation_label) = LOWER(${trimmed})
-         OR LOWER(slug) = LOWER(${trimmed})
+      WHERE (LOWER(citation_label) = LOWER(${trimmed})
+             OR LOWER(slug) = LOWER(${trimmed}))
+        AND (
+          ${includeDrafts}::boolean = true
+          OR kind::text != 'firm_memo'
+          OR (metadata->>'reviewStatus') IN ('ANTONIO-VALIDATED', 'BACKUP-VALIDATED')
+        )
       LIMIT 1
     `);
     return (rows as unknown as Array<{
