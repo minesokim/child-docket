@@ -95,7 +95,7 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 **The capital deployment:**
 
 - **Engineer #2 hire** (~$50K signing + first 3 months partial). The most-leveraged hire given tax-domain coverage is in place via Antonio + contracted expert pipeline (tax co-founder hire deferred per 2026-05-11 posture decision, revisit at v1.5+ scale).
-- **Engineer #2 first-6-months runway** (~$60K). Frees David from solo-founder bandwidth ceiling. Phase 4 of v1 build benefits most.
+- **Engineer #3 first-6-months runway** (~$60K). Adds capacity beyond the existing David (CEO) + Haokun (CTO) team. Phase 4 of v1 build benefits most.
 - **Antonio + partner #2 production infrastructure** (~$15K). 12 months of Vercel Pro + Neon Launch + R2 + Inngest + Sentry + Twilio + Anthropic + AWS Bedrock + DocuSign + Square. Per-active-client target $1.39/mo at full tier.
 - **Sales + marketing** (~$50K): Discovery Scan landing page, NAEA chapter sponsorships ($3-8K × 3 events), Latino Tax Pro partnership activation, r/taxpros earned-media work, Sales Navigator + outreach.
 - **Legal + insurance** (~$25K): cyber-insurance, E&O, ToS + DPA + AUP from a tax-law-aware attorney; first SOC 2 attestation prep cost.
@@ -119,7 +119,7 @@ The window: 12-18 months before either (a) a funded competitor figures out how t
 
 ## Founder
 
-**David Kim (legal: Minseo Kim)** — solo founder, software engineer. Located Los Angeles area (Mucker-adjacent geography). Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder, 5+ year partnership). Tax-domain via **Antonio Vazquez, EA** (on-platform advisor, 1% equity) + contracted backup advisor pipeline. Located Los Angeles area (Mucker-adjacent geography). Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
 **Honest gaps**: tax-domain coverage via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision); $1K/mo MRR from Antonio (paying); partner #2 targeted Phase 4 of v1, ideally surfaced via Mucker network.
 

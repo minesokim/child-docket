@@ -4,7 +4,7 @@
 > *This is the YC-specific draft. Pull canonical answers from `master-narrative.md`; YC's question set + cadence is the customization here.*
 
 **Submission target:** rolling, before early August 2026.
-**Founder:** David Kim (legal: Minseo Kim). Solo. Email: minseodavid@gmail.com.
+**Founders:** David Kim (CEO, legal: Minseo Kim, minseodavid@gmail.com) + Haokun Yang (CTO, technical co-founder, 5+ year partnership pre-Docket). On-platform tax advisor: Antonio Vazquez, EA (Vazant Consulting, CA, 1% equity).
 
 ---
 
@@ -18,16 +18,29 @@
 
 ## Founders
 
-**David Kim (legal: Minseo Kim)** — solo founder, software engineer.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder).
 
+**David Kim, CEO**
 - Email: `minseodavid@gmail.com`
 - LinkedIn: [add]
 - GitHub: `github.com/minesokim`
 - Twitter / X: [add if active]
 - Age: [add]
-- Education / background: [add — software engineering background, prior work, tax-adjacent exposure if any]
+- Background: [add — CS, prior projects, tax-adjacent exposure if any]
 
-Solo founder. Tax co-founder hire deferred per 2026-05-11 posture decision — tax-domain coverage runs through Antonio (paying CA EA design partner, on-platform) plus contracted tax expert for Position Library validation. Engineer #2 is the most-leveraged hire and the primary use of YC capital.
+**Haokun Yang, CTO**
+- Technical co-founder. 5+ year working relationship with David pre-Docket. On the project from inception. Owns the codebase end-to-end: 13-table Drizzle schema with RLS, per-tenant DEK encryption with AAD binding to `(tenant_id, client_id, path)`, cryptographic audit chain with nightly tamper verifier, agent fleet substrate, two Next.js apps in production, /e2e PASS 8/8 at $0.012/run.
+- LinkedIn: [add]
+- GitHub: [add]
+- UCR CS.
+
+**Antonio Vazquez, EA — On-platform tax advisor** (1% equity)
+- Vazant Consulting, Montclair, CA. 25-year EA practice. 200+ active clients on Docket. Defending two active 2026 IRS audits using Docket's audit defense workspace in real time. Every Position Library entry routes through Antonio's sign-off. **This is the structural answer to "where does your tax-domain depth come from" — it's not an open hire, it's a 25-year EA carrying equity in the company who reviews every tax-position claim we make.**
+
+**Contracted backup tax advisors** (per `docs/CONTRACTED-EXPERT-OUTREACH.md`)
+- $200-400/hr, 5-10 hrs/wk, sourced from AICPA + NAEA networks. Provide scale-validation for the Position Library when Antonio's bandwidth is constrained.
+
+The team is two co-founders + advisor + contractor pipeline. Engineer #3 is the next-most-leveraged hire and the primary use of YC capital.
 
 ---
 
@@ -53,7 +66,7 @@ Los Angeles area. Company based here. Open to relocating temporarily for YC's 3-
 
 ## ❓ How long have the founders known one another? How did you meet?
 
-Solo founder — N/A. Tax co-founder hire deferred per 2026-05-11 posture decision; tax-domain coverage runs through Antonio (paying design partner) + contracted tax expert. Will speak to the rationale for staying solo through v1 in §"Why are you the right team?" below.
+David Kim and Haokun Yang have known each other for 5+ years, working together long before Docket. Haokun has been on Docket from inception as technical co-founder + CTO. We met [add specifics — UCR, prior project, mutual friend, etc.]. Antonio Vazquez (on-platform tax advisor, 1% equity) joined as founding design partner after [add specifics — how the introduction happened, ~6 months pre-launch / how long ago].
 
 ---
 
@@ -85,6 +98,8 @@ Layer 3 is where the open lane is. The funded competitors can't serve it (econom
 - **Discovery Scan** (productized service, v1 wedge): $1-5K per book scan.
 
 **Per-active-client cost target**: $1.39/mo (per L7). Drives 80%+ gross margin at peak tier.
+
+**Pricing is itself part of the positioning.** Founder tier $250/mo is **less than half the §6695(g) IRS due-diligence penalty** ($650 per failure for 2026 returns, per Rev. Proc. 2025-32). The price signals the buyer's actual cost framework: EAs don't budget on subscription cost, they budget on PTIN risk. Existing AI tax tools price at $1,500-$5,000/mo because their buyers are firms with controllers and procurement processes. We priced for the firm owner whose personal liability is on the line. Full marketing math at `docs/MARKETING-FRAMES.md` (penalty-anchored pricing section).
 
 **TAM math**:
 
@@ -142,13 +157,13 @@ The competitive question splits two ways depending on segment.
 
 ## ❓ Why are you the right team to do this?
 
-**Solo founder, technical depth + customer development discipline + shipping cadence.**
+**Two co-founders + on-platform tax advisor with equity + contracted backup advisor pipeline. Technical depth + customer development discipline + shipping cadence + tax-domain depth all structurally in place.**
 
-- **Built the substrate end-to-end**: 28 migrations live in PROD, per-tenant DEK with AAD-bound encryption, cryptographic audit chain with nightly tamper verifier, Bedrock fallback at orchestrator (CI-verified), 12-doc SOC 2 Type II policy set, /e2e PASS 8/8 against real production stack. This is a year of substrate work most pre-revenue solo founders can't claim.
-- **Shipping cadence under protocol-gate discipline**: every feat/fix commit blocked locally + in CI without trailers for Edge-Cases, Score≥95, Align, Craft, Codex-Reviewed (via OpenAI Codex CLI), Compliance-Check. Two P0 bugs from Antonio's 5/9 call shipped within 48 hours (entity-filing W2 skip + portal/docs Take-photo wire-up). That's the operating tempo.
-- **Customer development through Antonio**: 14+ months of field work with a real CA EA running both prep + representation. Antonio's pain (mental load > research depth) drove the L9 lock (no AI-as-chat-character) + the entire ambient-operator architecture.
-- **Tax-domain coverage strategy is explicit**: tax co-founder hire deferred per 2026-05-11 posture decision. Coverage via Antonio (paying design partner, on-platform CA EA reviewing every Position Library entry) + contracted tax expert engaged for scale-validation. Not a gap — a deliberate post-decision posture. Revisit at v1.5+ scale.
-- **What I'd add with YC**: engineer #2 hire (the most-leveraged additional capacity), partner #2 sales-cycle iteration with YC's network, Path 2 customer surface (other YC AI companies that could integrate via the public API).
+- **Two co-founders shipping at codex-reviewed quality.** David (CEO) + Haokun (CTO), 5+ year partnership pre-Docket. Haokun owns the codebase end-to-end: 13-table Drizzle schema with RLS at `ENABLE + FORCE`, per-tenant DEK encryption with AAD binding, cryptographic audit chain with nightly tamper verifier, agent fleet substrate, two Next.js apps in production. 28 migrations live in PROD. Bedrock fallback CI-verified (38/38 unit + 4/4 smoke). 12-doc SOC 2 Type II policy set. /e2e PASS 8/8 against real production stack at $0.012/run. Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers (audited 2026-05-11). This is a year of substrate work most pre-revenue applicants don't have.
+- **Shipping cadence under protocol-gate discipline.** Every feat/fix commit blocked locally + in CI without trailers for Edge-Cases, Score≥95, Align, Craft, Codex-Reviewed (via OpenAI Codex CLI), Compliance-Check. Two P0 bugs from Antonio's 5/9 call shipped within 48 hours (faaa579 entity-filing W2 skip + 9975978 portal/docs Take-photo wire-up). That's the operating tempo against real customer pressure.
+- **Tax-domain depth via Antonio Vazquez, EA** (Vazant Consulting, 25-year practice, 1% equity, on-platform). Every Position Library entry routes through Antonio's sign-off — that's the structural answer to "your AI tool is making tax claims, who verifies them?" The verifier is a 25-year EA with equity in the company. Contracted backup advisor pipeline ($200-400/hr from AICPA + NAEA networks per published doc) handles scale-validation. **This is not an open tax co-founder seat — it's a deliberate structural choice.**
+- **Customer development through Antonio.** 14+ months of field work with a real CA EA running both prep + representation. Antonio's pain (mental load > research depth) drove the L9 lock (no AI-as-chat-character) + the entire ambient-operator architecture. Antonio is currently defending two IRS audits using Docket's audit defense workspace in real time.
+- **What I'd add with YC**: engineer #3 hire (additional capacity beyond David + Haokun), partner #2 sales-cycle iteration with YC's network (regional CPA firm, off-Antonio's network per L14), Path 2 customer surface (other YC AI tax + accounting companies that could integrate via Docket's public API + MCP server).
 
 ---
 
@@ -189,7 +204,9 @@ A few things YC's standard questions don't capture cleanly:
 
 2. **The cyber insurance work is in flight.** Tech E&O + Cyber bundle with AI-affirmative rider, $1M aggregate, targeting Vouch primary / Embroker backup, $2,500-3,500/yr expected premium per `docs/CYBER-INSURANCE-RECOMMENDATION.md`. Binding before 2026-05-30 (Antonio production-substrate sub-milestone). Most early-stage AI SaaS founders don't have this scoped before YC; we do.
 
-3. **Marketing positioning is locked**, not still being figured out. `docs/MARKETING-FRAMES.md` codifies the one-liner ("Docket is the AI defense layer for tax practices") + 3 audience frames (compliance-first / closed-loop OS / orchestration / Path 2) + use/never-say lists. This is sales-cycle ready, not iteration-stage.
+3. **Marketing positioning is locked**, not still being figured out. `docs/MARKETING-FRAMES.md` codifies the audience-segmented positioning hierarchy: "operating system" for category language (investor/press/YC), "AI defense layer" for cold-outreach hook (the emotional adjective), "the only AI built for the tax pro's side of the desk" for homepage hero, "closed-loop AI" for technical/product description. Use/never-say lists locked. Pricing is itself a positioning lever (the $250/mo founder tier is < half the $650 §6695(g) penalty). This is sales-cycle ready.
+
+3a. **Coverage is published transparently** at `docs/COVERAGE-MAP.md`. Every other AI tax tool markets "find every deduction" without ever telling buyers what their AI catches or doesn't. We publish it: 5-layer Minimum-Viable Shield, 4-tier coverage classification (Algorithmic 100% / Pattern Industry-Best / Judgment Cited-Support / External Honest-About-Limits), 20-position v1 Position Library list, every compliance surface tagged Live / Pending / Out-of-Scope. This is the category-defining liability-boundary move — no tax software has ever done it.
 
 4. **We have an explicit, written list of things we WON'T do.** CLAUDE.md §14 (Explicit NOs): no consumer tax filer, no fighting Black Ore / Accrual / Basis at top-100 firms for 18-24 months, no F500 in-house tax department for 18-24 months, no Python backend, no Bloomberg/CCH editorial year 1, no shadcn aesthetic, no AI-as-chat-character (L9 lock). The discipline is the moat as much as the product is.
 
@@ -202,7 +219,7 @@ A few things YC's standard questions don't capture cleanly:
 | | |
 |---|---|
 | **Capital** | $500K SAFE on standard YC terms |
-| **YC batch (3 months)** | Full participation — relocate temporarily for batch; partner network leverage for engineer #2 hire + partner #2 sales cycle |
+| **YC batch (3 months)** | Full participation — relocate temporarily for batch; partner network leverage for engineer #3 hire + partner #2 sales cycle |
 | **Demo Day** | Tax-vertical positioning + Path 2 orchestration thesis presented to the YC investor audience |
 | **Post-batch network** | YC's enterprise-sales network for mid-market partner #2 acquisition + the YC AI portfolio for Path 2 API integration partners |
 

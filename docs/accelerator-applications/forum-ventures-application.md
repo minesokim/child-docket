@@ -70,7 +70,7 @@ Forum has likely seen pitches in the "AI for [vertical]" pattern. Three things m
 - **Weeks 9-12 (7/6 → 8/3)**: Ship v1 launch (7/30 per CLAUDE.md §15 Phase 6). Onboard mid-market partner #2 in Phase 6. Hardening + smoke + load tests.
 
 **The $100K**:
-- Engineer #2 first-6-months runway (~$60K) — frees David from solo-founder bandwidth ceiling; the most-leveraged hire given tax-domain coverage is already in place via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision).
+- Engineer #3 first-6-months runway (~$60K) — adds capacity beyond the existing David (CEO) + Haokun (CTO) team. Tax-domain coverage is structurally in place via Antonio (on-platform advisor, 1% equity) + contracted backup advisor pipeline; the tax co-founder hire is closed per 2026-05-11. Engineer #3 is the most-leveraged use of accelerator capital.
 - Antonio + partner #2 production infrastructure ($10K, 12 months: Vercel Pro + Neon Launch + R2 + Inngest + Sentry + Twilio + Anthropic + AWS Bedrock).
 - Sales + marketing (~$20K): Discovery Scan landing page, NAEA sponsor fees, LinkedIn Sales Navigator + outreach, r/taxpros earned-media campaign, Tax Twitter presence.
 - Legal + insurance (~$10K): cyber-insurance Tech E&O + Cyber bundle (Vouch primary at ~$2,500-3,500/yr per `docs/CYBER-INSURANCE-RECOMMENDATION.md`), ToS + DPA + AUP from a tax-law-aware attorney.
@@ -93,9 +93,11 @@ The funding window for vertical AI in regulated industries closes when the platf
 
 ## Founder
 
-**David Kim (legal: Minseo Kim)** — solo founder, software engineer. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder, 5+ year partnership pre-Docket, owns codebase end-to-end). Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
-**Honest gaps**: tax-domain coverage via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision); $1K/mo MRR from one paying design partner; partner #2 targeted Phase 4 of v1. The Forum program is exactly when we'd close partner #2.
+**Tax-domain coverage**: **Antonio Vazquez, EA** (Vazant Consulting, CA, 25-year EA practice) as on-platform tax advisor (1% equity) + contracted backup advisor pipeline per `docs/CONTRACTED-EXPERT-OUTREACH.md`.
+
+**Honest gaps**: $1K/mo MRR from one paying design partner; partner #2 (regional CPA firm, off-Antonio's network per L14) targeted Phase 4 of v1. The Forum program is exactly when we'd close partner #2.
 
 ---
 

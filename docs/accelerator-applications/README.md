@@ -41,7 +41,7 @@
 - **Every draft below is FACTUAL.** No inflation. Every number cited can be verified in the codebase or cited authority. If a number isn't yet measured, it's marked "estimate."
 - **No "AI revolution" boilerplate.** Every program has heard 1000 of those. Lead with what's specific to Docket: forward-deployed services + Position Framework + Path 2 commitment.
 - **Antonio is a real design partner, not "talking to potential customers."** He will be on production-grade substrate by 5/30 per Phase 2 of v1 plan.
-- **No hype on team.** David Kim is the solo founder. Tax-domain coverage via Antonio (paying design partner, on-platform CA EA) + contracted tax expert for Position Library validation. Tax co-founder hire deferred (CLOSED in CLAUDE.md §21 #4 as of 2026-05-11); not a gap, a deliberate posture decision. Engineer #2 is the next-most-leveraged hire.
+- **No hype on team.** Two co-founders: **David Kim (CEO) + Haokun Yang (CTO, technical co-founder, 5+ year partnership)**. Tax-domain coverage via **Antonio Vazquez, EA** (Vazant Consulting, CA) as on-platform tax advisor (paying customer + 1% equity) + contracted backup advisors for scale-validation. Tax co-founder hire is explicitly closed because the company already has its tax-domain depth from Antonio + advisor pipeline (CLAUDE.md §21 #4); not a gap, a structural choice. Engineer #3 (after Haokun) is the next-most-leveraged hire.
 - **Path 2 commitment** is the differentiator. Programs that fund "vertical SaaS for tax" are common; programs that fund "orchestration platform with vertical SaaS as the floor" are rarer and bigger upside.
 
 ---

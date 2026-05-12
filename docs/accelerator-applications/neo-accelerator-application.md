@@ -79,7 +79,7 @@ What's NOT been tried: AI-native operating system for the down + mid-market with
 **The capital deployment**:
 
 - **Engineer #2 hire** (~$100K signing + first 6 months partial): the most-leveraged hire given tax-domain coverage is in place via Antonio + contracted expert pipeline. Tax co-founder hire deferred per 2026-05-11 posture decision (revisit at v1.5+ scale). The Neo Network surface accelerates engineer #2 from 6 months to 6 weeks.
-- **Engineer #2 + first product hire** (~$200K, 12 months): frees David from solo-founder bandwidth ceiling. Phase 4-6 of v1 build benefits most.
+- **Engineer #3 + first product hire** (~$200K, 12 months): adds capacity beyond the existing David (CEO) + Haokun (CTO) team. Phase 4-6 of v1 build benefits most.
 - **Antonio + first 5 founder-tier firms production infrastructure** (~$50K, 12 months): per-active-client target $1.39/mo at full tier × 5 firms × 200 clients = sustainable.
 - **Sales + marketing** (~$125K): Discovery Scan landing page + paid acquisition; NAEA chapter sponsorships; Latino Tax Pro partnership activation; r/taxpros + Tax Twitter earned-media work; Sales Navigator + outreach; first paid pilot conversion to subscription.
 - **Legal + insurance** (~$50K): cyber-insurance, E&O, ToS + DPA + AUP; SOC 2 Type II first-year attestation prep.
@@ -88,7 +88,7 @@ What's NOT been tried: AI-native operating system for the down + mid-market with
 **The Neo network compounds at three points**:
 
 1. **Mid-market partner #2 candidate surface** (the primary leverage). Phase 4 of v1 starts identifying mid-market partner #2 (regional CPA firm, 20-100 staff, ideally different segment + different network from Antonio per L14 dependency-mitigation lock). Neo's network of operators in adjacent verticals (legal-tech founders, fintech operators, accounting-firm-adjacent advisors) can warm-intro the right firms — 10x multiplier over cold outbound.
-2. **Engineer #2 candidate surface.** Solo-founder bandwidth ceiling is the binding constraint on Phase 4-6 v1 scope. Neo's technical-founder network surfaces engineers with the right vertical + stack instincts faster than YC/Triplebyte/cold.
+2. **Engineer #3 candidate surface.** Two-founder bandwidth (David CEO + Haokun CTO) is the binding constraint on Phase 4-6 v1 scope. Neo's technical-founder network surfaces engineers with the right vertical + stack instincts faster than YC/Triplebyte/cold.
 3. **Path 2 partner surface.** The API + MCP server tier needs other AI tools as Partner-tier customers. Neo Network has the connectivity to surface those Partner-tier candidates faster than cold outbound.
 
 ---
@@ -98,7 +98,7 @@ What's NOT been tried: AI-native operating system for the down + mid-market with
 - **Tax-domain coverage via Antonio + contracted expert** (tax co-founder hire deferred per 2026-05-11 posture decision; revisit at v1.5+ scale).
 - **$1K/mo MRR**, single paying customer (Antonio). Discovery Scan ($1-5K/book) is the wedge; first reference scan from Antonio's 5/30 onboarding produces the artifact for first paid Scans by 6/15.
 - **One design partner committed** (Antonio). Partner #2 (mid-market regional CPA firm) targeted Phase 4 of v1 — the primary value-add Neo's network unlocks.
-- **Solo founder currently**. Engineer #2 is the urgent second hire (the Neo Network leverage point).
+- **Two-founder team currently** (David CEO + Haokun CTO). Engineer #3 is the most-leveraged next hire (the Neo Network leverage point).
 
 We're not hiding any of these. Neo's value at this stage is exactly to bridge the runway gap + accelerate the hire surface during the 12-week sprint to v1.
 
@@ -106,7 +106,7 @@ We're not hiding any of these. Neo's value at this stage is exactly to bridge th
 
 ## Founder
 
-**David Kim (legal: Minseo Kim)** — solo founder, software engineer. Built the substrate. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder, 5+ year partnership pre-Docket; Haokun owns the codebase end-to-end). Tax-domain via **Antonio Vazquez, EA** (on-platform advisor, 1% equity, 25-year practice) + contracted backup advisor pipeline. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
 What I'd want a Neo conversation to surface: (1) partner #2 candidates in Neo Network (regional CPA firms, 20-100 staff, off-Antonio's-network per L14 dependency-mitigation lock); (2) the Path 2 orchestration thesis stress-tested by an Ali-shape investor (do we ship Path 2 in v1 or v1.5? Lock currently says v1, but a Neo conversation could move it); (3) the segment posture (down + mid-market only for 18-24 months) stress-tested; (4) the tax co-founder posture decision stress-tested — Antonio + contracted expert is the current frame; is that durable or does scale force the hire by v1.5?
 

@@ -110,7 +110,7 @@ The differentiation is the combination, not any single piece.
 
 ## Founder
 
-**David Kim (legal: Minseo Kim)** — solo founder, software engineer. Built the substrate that's currently in production. Pre-revenue. Operating from Los Angeles area. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder). 5+ year partnership pre-Docket. Haokun owns the codebase end-to-end; David runs CEO + product + Antonio relationship + customer development. Both UCR CS. Operating from Los Angeles area. **Tax-domain depth via Antonio Vazquez, EA (Vazant Consulting, CA)** — paying design partner + on-platform tax advisor (1% equity) + 25 years EA practice. Contracted backup advisor pipeline specified at `docs/CONTRACTED-EXPERT-OUTREACH.md`. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
 ---
 

@@ -114,9 +114,9 @@ We're flexible on check size; we're inflexible on the milestones. Either size of
 
 ## Founder
 
-**David Kim (legal: Minseo Kim)** — solo founder, software engineer. Built the substrate. Location: Los Angeles area. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder, 5+ year partnership pre-Docket, owns codebase end-to-end). Tax-domain via **Antonio Vazquez, EA** (Vazant Consulting, CA, 25-year EA practice; on-platform advisor with 1% equity) + contracted backup advisor pipeline per `docs/CONTRACTED-EXPERT-OUTREACH.md`. Location: Los Angeles area. Email: minseodavid@gmail.com. Repo (private): github.com/minesokim/child-docket.
 
-**Honest gaps**: tax-domain coverage via Antonio + contracted expert (tax co-founder hire deferred per 2026-05-11 posture decision); $1K/mo MRR from Antonio (paying); partner #2 targeted Phase 4 of v1.
+**Honest gaps**: $1K/mo MRR from Antonio (paying); partner #2 (regional CPA firm, off-Antonio's network per L14) targeted Phase 4 of v1.
 
 ---
 

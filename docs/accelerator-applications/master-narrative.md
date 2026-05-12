@@ -70,11 +70,13 @@ Per-active-client cost target $1.39/mo → 80%+ gross margin at peak tier.
 
 ## Why are you the right team?
 
-David Kim (legal: Minseo Kim) — solo founder, software engineer, builder. Has the substrate built (28 migrations live in PROD, RLS at `ENABLE + FORCE`, per-tenant DEK encryption with AAD binding, cryptographic audit chain with nightly tamper verifier, Bedrock fallback at orchestrator, 12-doc SOC 2 Type II policy set, /e2e PASS 8/8 against real DB at $0.012/run). Operates the SDLC at codex-reviewed protocol-gate quality — every feat/fix commit blocked locally + in CI without trailers for Edge-Cases, Score≥95, Align, Craft, Codex-Reviewed, Compliance-Check. Has Antonio at Vazant Consulting (CA EA running OLT + IRS Solutions + Xero, 200+ active clients) as design partner #1 paying **$1K/mo**, real revenue.
+**David Kim** (CEO, legal: Minseo Kim) + **Haokun Yang** (CTO, technical co-founder). 5+ year working relationship pre-Docket; Haokun has been on the project from inception. Haokun owns the codebase end-to-end — 13-table Drizzle schema with RLS at `ENABLE + FORCE`, per-tenant DEK encryption with AAD binding to `(tenant_id, client_id, path)`, cryptographic audit chain with nightly tamper verifier, agent fleet substrate, both Next.js apps deployed to production. David runs CEO + product + customer development + Antonio relationship. Both UCR CS background.
 
-**Tax-domain coverage**: Antonio is the platform tax expert on every Position Framework validation pass. Contracted tax expert engaged for Position Library content sign-off when scale forces beyond Antonio's review bandwidth. Tax co-founder hire deferred — revisit at v1.5+ scale.
+**Substrate built**: 28 migrations live in PROD (0026 + 0027 confirmed via Vercel-pulled URL 2026-05-11). 12-doc SOC 2 Type II policy set. Bedrock fallback at orchestrator with 38/38 unit + 4/4 smoke tests. /e2e PASS 8/8 against real Anthropic + Bedrock + Neon + R2 at $0.012/run. Codebase knowledge graph: 1,038 nodes / 1,182 edges / 10 architectural layers. Operates the SDLC at codex-reviewed protocol-gate quality — every feat/fix commit blocked locally + in CI without trailers for Edge-Cases, Score≥95, Align, Craft, Codex-Reviewed, Compliance-Check. Two P0 Antonio-call bugs shipped within 48h (faaa579 entity-filing W2 skip + 9975978 portal/docs Take-photo wire-up).
 
-**Honest representation**: technical depth shipped; tax-domain depth covered through Antonio + contracted expert pipeline; partner #2 acquisition is the next leverage point for accelerator network value-add.
+**Tax-domain coverage runs through Antonio Vazquez, EA** (Vazant Consulting, CA). Founding design partner + paying customer ($1K/mo MRR) + **on-platform tax advisor (1% equity)**. Every Position Library entry, every cited-authority decision, every tier classification routes through Antonio's sign-off. **Contracted backup advisors** ($200-400/hr, 5-10 hrs/week, sourced from AICPA + NAEA networks per `docs/CONTRACTED-EXPERT-OUTREACH.md`) provide scale-validation when Antonio's bandwidth is constrained (e.g., during his two active 2026 IRS audits). This is the structural answer to "where does the tax-domain depth come from" — it's not an open tax co-founder seat, it's Antonio + a budgeted advisor pipeline.
+
+**Honest representation**: two co-founders shipping substrate at codex-reviewed quality; on-platform tax advisor with 25 years of EA practice; contracted backup advisor pipeline already specified for scale-validation; partner #2 (regional CPA firm, off-Antonio's network per L14) is the next leverage point accelerator networks can accelerate.
 
 ## Traction
 
@@ -128,7 +130,7 @@ David Kim (legal: Minseo Kim) — solo founder, software engineer, builder. Has 
 
 ## Generic ask
 
-- **Capital** to fund engineer #2 + 12-18 months of runway through partner #2 onboarding + v1.5 expansion. Tax-domain coverage is in place via Antonio + contracted expert; the next-most-leveraged hire is engineering capacity, not tax counsel.
+- **Capital** to fund engineer #3 hire (after David CEO + Haokun CTO) + 12-18 months of runway through partner #2 onboarding + v1.5 expansion + cyber insurance + SOC 2 Type I bridge engagement. Tax-domain coverage is structurally in place via Antonio (on-platform advisor, 1% equity) + contracted backup advisor pipeline (`docs/CONTRACTED-EXPERT-OUTREACH.md`); the next-most-leveraged hire is engineering capacity, not tax counsel.
 - **Distribution access**: program-specific networks (Forum's B2B GTM playbook, Mucker's industry network for less-tech-savvy verticals, Pear's Bay Area network, Neo's Ali Partovi access). The primary leverage point is **partner #2 candidate surface** (regional CPA firm, 20-100 staff, ideally different segment + different network from Antonio per L14 dependency-mitigation lock).
 - **Reference customers**: program portfolios that include accounting/legal/financial-services firms that could become design partners #2-#5 or Path 2 API integration partners.
 - **Technical support**: API credits (especially for the Anthropic Startup Program path), vendor relationships, advisory.
