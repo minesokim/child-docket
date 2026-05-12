@@ -62,17 +62,50 @@ const CHUNK_HARD_MAX_CHARS = 2400;
 
 const VOYAGE_API = 'https://api.voyageai.com/v1/embeddings';
 const VOYAGE_MODEL = 'voyage-3-large';
-// Default batch size: 10 inputs/request to stay under free-tier 10K TPM
-// (10 chunks × ~600 tokens average = ~6K tokens/request). Standard
-// (paid-account) limits are 2000 RPM / 3M TPM, so this number is
-// conservative. Override per-call when known-safe.
-const VOYAGE_BATCH_SIZE = 10;
+// Rate-limit profile. Switchable via `VOYAGE_RATE_TIER` env var so a
+// fresh dev clone without paid billing still works without code change.
+//
+//   VOYAGE_RATE_TIER=free  : 3 RPM / 10K TPM  → batch=10, sleep=21s
+//   VOYAGE_RATE_TIER=paid  : 2000 RPM / 1M TPM → batch=128 (Voyage max),
+//                                                sleep=500ms (polite),
+//                                                effectively single-call
+//                                                for our 115-chunk library
+//
+// Cost ceiling: a full re-ingest is $0.006. Even 1000 re-ingests/month
+// is $6, well under the user's "don't let it cost so much" mandate.
+// Idempotent path: if every position's source-file sha256 matches what's
+// stored in `authorities.metadata.sourceHash` AND no chunk under that
+// position has NULL embedding, we skip the Voyage call AND the DB
+// transaction entirely. Implemented inline at step 1.5 of main(); see
+// the "Skip-if-unchanged check" block before the Voyage embed call.
+//
+// DEFAULT IS `free` (codex C5-overnight P2). A fresh dev clone or fork
+// without paid billing must work out-of-the-box; the free-tier 10K TPM
+// cap would 429 on the first batch of 128 inputs (~75K tokens for the
+// current library). Operators with paid billing opt in via env var:
+//
+//   echo 'VOYAGE_RATE_TIER=paid' >> .env.local
+//
+// The Docket production env has VOYAGE_RATE_TIER=paid set; this default
+// only affects fresh clones and CI environments that haven't been
+// reconfigured.
+const VOYAGE_RATE_TIER: 'free' | 'paid' = (() => {
+  const env = (process.env.VOYAGE_RATE_TIER || '').toLowerCase();
+  if (env === 'paid') return 'paid';
+  return 'free';
+})();
+const VOYAGE_BATCH_SIZE = VOYAGE_RATE_TIER === 'paid' ? 128 : 10;
+const VOYAGE_INTER_BATCH_MS = VOYAGE_RATE_TIER === 'paid' ? 500 : 21_000;
 const VOYAGE_TIMEOUT_MS = 30_000;
-// Free-tier RPM = 3, so ~21s between batches. Paid accounts hit higher
-// rate limits well above what we send; the sleep is harmless when not
-// rate-limited.
-const VOYAGE_INTER_BATCH_MS = 21_000;
 const VOYAGE_MAX_RETRIES = 3;
+// 429 retry backoff is DECOUPLED from inter-batch pacing (codex
+// C5-overnight round 4 P2 #2). Reusing VOYAGE_INTER_BATCH_MS as the
+// fallback worked on free tier (21s base) but breaks on paid tier
+// (500ms × 2^attempt = 0.5/1/2s → exhausts retries before a
+// minute-bucket throttle resets). Use a fixed 15s base regardless of
+// tier; Voyage's Retry-After header still takes precedence when
+// present.
+const VOYAGE_429_FALLBACK_BACKOFF_MS = 15_000;
 
 // ────────────────────────────────────────────────────────────────
 // Markdown parsing — extract structured fields from each position file.
@@ -97,6 +130,75 @@ type ParsedPosition = {
   bodyChunks: string[];          // Pre-chunked body text
   fullText: string;              // For metadata reference
 };
+
+// INGEST_VERSION — bumped manually whenever the script's parsing,
+// chunking, embedding, or metadata-shaping logic changes in a way that
+// would produce different DB rows from the same source markdown. The
+// skip-check folds this into the source hash so an upgrade automatically
+// invalidates all prior sourceHash values and forces a full refresh
+// (codex C5-overnight round 3 P2 #1).
+//
+// Bump triggers (non-exhaustive):
+//   - parseApplicableTaxYears semantics change
+//   - parseEffectiveStartDate semantics change
+//   - chunkBody algorithm or CHUNK_TARGET_CHARS / CHUNK_HARD_MAX_CHARS
+//   - Voyage model swap (voyage-3-large → voyage-3.5 etc.)
+//   - INSERT shape changes (new metadata field, new column)
+//   - computeSourceHash() hash-input changes (always bump on edit)
+//
+// Format: vN-YYYY-MM-DD. Increment N on logic change; the date is
+// informational and helps `git log -S 'INGEST_VERSION'` archaeology.
+const INGEST_VERSION = 'v3-2026-05-12';
+
+// computeSourceHash — stable per-position content hash used by both
+// the INSERT path (stored as metadata.sourceHash) and the skip-check
+// (compared against stored sourceHash). Must be called from both
+// places via this single helper so the two hashes can never drift.
+//
+// HASH ONLY PERSISTED FIELDS (codex C5-overnight round 4 P2 #1).
+// Earlier versions hashed the raw `fullText`, which over-triggered:
+// `chunkBody()` drops the "Pending Antonio review" footer and
+// normalizes some formatting before any DB write, so a footer-only
+// edit changed the raw-text hash even though the stored rows would
+// be identical. The correct semantics: hash exactly what the INSERT
+// statement persists.
+//
+// Inputs to the hash (canonical JSON over):
+//   - INGEST_VERSION             (parser/chunker/model version gate)
+//   - meta.positionId            (p###)
+//   - meta.filename              (rename detection)
+//   - meta.title                 (authorities.title)
+//   - meta.slug                  (authorities.slug)
+//   - meta.tierClassification    (metadata.tierClassification)
+//   - meta.reviewStatus          (metadata.reviewStatus — the gate)
+//   - meta.lastReviewed          (metadata.lastReviewed)
+//   - meta.nextRefresh           (metadata.nextRefresh)
+//   - meta.effectiveDateRange    (metadata.effectiveDateRange)
+//   - meta.penaltyExposure       (metadata.penaltyExposure)
+//   - meta.effectiveStartDate    (authorities.effective_date)
+//   - bodyChunks with CRLF→LF    (authority_chunks.text per ordinal)
+//
+// The bodyChunks come from `chunkBody()`, which already strips the
+// version-history block and footer. Cross-OS line-ending stability
+// preserved by `.replace(/\r\n/g, '\n')` per chunk.
+function computeSourceHash(meta: PositionMeta, bodyChunks: string[]): string {
+  const payload = JSON.stringify({
+    INGEST_VERSION,
+    positionId: meta.positionId,
+    filename: meta.filename,
+    title: meta.title,
+    slug: meta.slug,
+    tierClassification: meta.tierClassification,
+    reviewStatus: meta.reviewStatus,
+    lastReviewed: meta.lastReviewed,
+    nextRefresh: meta.nextRefresh,
+    effectiveDateRange: meta.effectiveDateRange,
+    penaltyExposure: meta.penaltyExposure,
+    effectiveStartDate: meta.effectiveStartDate,
+    bodyChunks: bodyChunks.map((c) => c.replace(/\r\n/g, '\n')),
+  });
+  return createHash('sha256').update(payload).digest('hex');
+}
 
 function extractPositionId(filename: string): string {
   const m = filename.match(/^(p\d{3})-/);
@@ -272,7 +374,14 @@ function chunkBody(body: string): string[] {
 }
 
 async function parsePositionFile(filename: string, fullPath: string): Promise<ParsedPosition> {
-  const text = await fs.readFile(fullPath, 'utf8');
+  // CRLF→LF normalization at parse time (codex C5-overnight round 9
+  // P2). All downstream consumers — chunker, sourceHash, INSERT into
+  // authority_chunks.text, content_hash — see the same canonical
+  // bytes. Previously the hash was normalized but INSERT wrote raw
+  // bytes, so an LF→CRLF worktree switch would skip incorrectly
+  // (hash matches, persisted bytes don't).
+  const rawText = await fs.readFile(fullPath, 'utf8');
+  const text = rawText.replace(/\r\n/g, '\n');
   const lines = text.split('\n');
   const h1 = lines.find((l) => l.startsWith('# ')) ?? '';
 
@@ -372,7 +481,7 @@ async function voyageEmbedOne(
         const retryAfter = response.headers.get('retry-after');
         const waitMs = retryAfter
           ? Math.max(1000, Number.parseInt(retryAfter, 10) * 1000)
-          : VOYAGE_INTER_BATCH_MS * Math.pow(2, attempt);
+          : VOYAGE_429_FALLBACK_BACKOFF_MS * Math.pow(2, attempt);
         console.log(
           `  ${YELLOW}RETRY${RESET}  Voyage 429 — sleeping ${Math.round(waitMs / 1000)}s (attempt ${attempt + 1}/${VOYAGE_MAX_RETRIES})`,
         );
@@ -429,6 +538,80 @@ type IngestStats = {
   voyageTokens: number;
   errors: number;
 };
+
+// Retrieval smoke — BM25 + cosine queries against ingested Position
+// Library content. Extracted from main() so both the full-ingest path
+// AND the SKIP path can validate retrieval health (codex C5-overnight
+// round 6 P3). Pass `apiKey === null` to skip the cosine arm (used
+// by --no-embeddings).
+//
+// Returns the Voyage token count consumed by the smoke (0 if apiKey is
+// null). Codex C5-overnight round 7 P3: the SKIP path was reporting
+// `Voyage tokens: 0` while still spending ~10 tokens on the cosine
+// probe — under-reports cost. Return the real number so the caller
+// can surface it in the summary.
+async function runRetrievalSmoke(
+  sqlClient: postgres.Sql,
+  apiKey: string | null,
+): Promise<{ voyageTokensUsed: number }> {
+  console.log(`${DIM}Smoke: BM25 + cosine queries against ingested content...${RESET}`);
+
+  const bm25Hits = await sqlClient<{ citation_label: string; rank: number }[]>`
+    SELECT a.citation_label, ts_rank(c.tsv, plainto_tsquery('english', '§199A QBI deduction')) AS rank
+      FROM authorities a
+      JOIN authority_chunks c ON c.authority_id = a.id
+     WHERE a.tenant_id IS NULL
+       AND a.kind = 'firm_memo'
+       AND c.tsv @@ plainto_tsquery('english', '§199A QBI deduction')
+     ORDER BY rank DESC
+     LIMIT 3
+  `;
+  if (bm25Hits.length === 0) {
+    throw new Error('BM25 smoke: no hits for §199A QBI deduction');
+  }
+  if (!bm25Hits[0]!.citation_label.includes('p001')) {
+    console.warn(
+      `  ${YELLOW}WARN${RESET}  BM25 top hit was ${bm25Hits[0]!.citation_label} (expected p001-prefixed)`,
+    );
+  } else {
+    console.log(`  ${GREEN}PASS${RESET}  BM25 top hit: ${bm25Hits[0]!.citation_label}`);
+  }
+
+  let voyageTokensUsed = 0;
+  if (apiKey) {
+    // Cosine smoke: embed a query phrase, query top-K.
+    const { embeddings: queryEmbedArr, totalTokens } = await voyageEmbed(
+      ['What is the Section 199A QBI deduction?'],
+      apiKey,
+    );
+    voyageTokensUsed = totalTokens;
+    const queryVec = `[${queryEmbedArr[0]!.join(',')}]`;
+    const cosineHits = await sqlClient<{ citation_label: string; distance: number }[]>`
+      SELECT a.citation_label,
+             (c.embedding <=> ${sqlClient.unsafe(`'${queryVec}'::vector`)}) AS distance
+        FROM authorities a
+        JOIN authority_chunks c ON c.authority_id = a.id
+       WHERE a.tenant_id IS NULL
+         AND a.kind = 'firm_memo'
+         AND c.embedding IS NOT NULL
+       ORDER BY c.embedding <=> ${sqlClient.unsafe(`'${queryVec}'::vector`)}
+       LIMIT 3
+    `;
+    if (cosineHits.length === 0) {
+      throw new Error('cosine smoke: no embedded chunks returned');
+    }
+    if (!cosineHits[0]!.citation_label.includes('p001')) {
+      console.warn(
+        `  ${YELLOW}WARN${RESET}  cosine top hit was ${cosineHits[0]!.citation_label} (expected p001-prefixed)`,
+      );
+    } else {
+      console.log(
+        `  ${GREEN}PASS${RESET}  cosine top hit: ${cosineHits[0]!.citation_label}  ${DIM}distance=${cosineHits[0]!.distance.toFixed(6)}${RESET}`,
+      );
+    }
+  }
+  return { voyageTokensUsed };
+}
 
 async function main(): Promise<void> {
   console.log(`${YELLOW}━━ ingest-position-library ━━${RESET}`);
@@ -492,6 +675,190 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // ─── 1.5 — Skip-if-unchanged check (overnight cost discipline) ────
+  //
+  // Hash each parsed position's FULL raw markdown (sha256 of fullText).
+  // Query the DB for `authorities.metadata->>'sourceHash'` on every
+  // existing global firm_memo row whose positionId matches p###. If
+  // every incoming source hash matches its existing counterpart 1:1
+  // AND no chunk under any matching position has a NULL embedding,
+  // skip the entire pipeline — no Voyage calls, no DB writes.
+  //
+  // sourceHash (codex C5-overnight P1) covers EVERYTHING the ingest
+  // writes: H1 title, slug, status block (reviewStatus, tier,
+  // penalty exposure, effective date range), AND body chunks. The
+  // previous version only hashed body chunks, so a position whose
+  // reviewStatus flipped from DRAFT-DAVID to ANTONIO-VALIDATED while
+  // the body stayed identical would skip — leaving stale reviewStatus
+  // in the DB. That's exactly the gate C5 added; the skip-check has
+  // to honor it.
+  //
+  // Why: overnight mode may pick this ingest as a queued task. The
+  // founder's mandate is "don't let it cost so much." Re-running the
+  // 115-chunk ingest is $0.006 + ~3-5s — cheap, but compounding over
+  // 100 overnight loops = $0.60. The skip path costs 2 short queries
+  // and 0 Voyage tokens.
+  //
+  // Idempotent semantics: identical content → no-op. Any drift on any
+  // position → full refresh (DELETE + INSERT in transaction). Partial
+  // overlap is NOT optimized because the transactional refresh is
+  // atomic + cheap, and partial-embedding logic adds correctness risk
+  // for marginal savings.
+  if (!NO_EMBEDDINGS) {
+    const dbUrlEarly = process.env.DATABASE_URL;
+    if (dbUrlEarly) {
+      const incomingSourceHashes = new Map<string, string>();
+      for (const p of parsed) {
+        const sourceHash = computeSourceHash(p.meta, p.bodyChunks);
+        incomingSourceHashes.set(p.meta.positionId, sourceHash);
+      }
+      const checkSql = postgres(dbUrlEarly, { max: 1, prepare: false });
+      try {
+        const existing = await checkSql<{
+          position_id: string;
+          source_hash: string | null;
+        }[]>`
+          SELECT a.metadata->>'positionId' AS position_id,
+                 a.metadata->>'sourceHash' AS source_hash
+            FROM authorities a
+           WHERE a.tenant_id IS NULL
+             AND a.kind = 'firm_memo'::authority_kind
+             AND a.metadata ? 'positionId'
+             AND a.metadata->>'positionId' SIMILAR TO 'p[0-9]{3}'
+        `;
+        const existingSourceHashes = new Map(
+          existing
+            .filter((r) => r.source_hash !== null)
+            .map((r) => [r.position_id, r.source_hash!] as const),
+        );
+        const allHashesMatch =
+          incomingSourceHashes.size === existingSourceHashes.size &&
+          incomingSourceHashes.size > 0 &&
+          [...incomingSourceHashes.entries()].every(
+            ([id, h]) => existingSourceHashes.get(id) === h,
+          );
+        if (allHashesMatch) {
+          // Two safety checks before declaring the skip valid (codex
+          // C5-overnight round 3 P2 #2). The hash match alone proves
+          // the source agrees with what we ingested; we still have to
+          // verify the DB state is COMPLETE for each matched position:
+          //
+          //   (a) No chunk on any matched position has a NULL
+          //       embedding. Catches partial-Voyage-failure state.
+          //   (b) Every matched position has the EXACT chunk count we
+          //       just parsed from its markdown. Catches partial-delete
+          //       / manual-repair state where rows disappeared.
+          //
+          // If either check fails for any matched position, fall through
+          // to a full DELETE+INSERT refresh which restores the state
+          // atomically inside the existing transaction.
+          const nullCount = await checkSql<{ count: number }[]>`
+            SELECT COUNT(*)::int AS count
+              FROM authorities a
+              JOIN authority_chunks c ON c.authority_id = a.id
+             WHERE a.tenant_id IS NULL
+               AND a.kind = 'firm_memo'::authority_kind
+               AND a.metadata ? 'positionId'
+               AND a.metadata->>'positionId' SIMILAR TO 'p[0-9]{3}'
+               AND c.embedding IS NULL
+          `;
+          const nullEmbeddings = nullCount[0]?.count ?? 0;
+
+          // Per-position chunk-count tally — must equal bodyChunks.length
+          // from the just-parsed markdown for every position.
+          const chunkCounts = await checkSql<{
+            position_id: string;
+            chunk_count: number;
+          }[]>`
+            SELECT a.metadata->>'positionId' AS position_id,
+                   COUNT(c.id)::int AS chunk_count
+              FROM authorities a
+              LEFT JOIN authority_chunks c ON c.authority_id = a.id
+             WHERE a.tenant_id IS NULL
+               AND a.kind = 'firm_memo'::authority_kind
+               AND a.metadata ? 'positionId'
+               AND a.metadata->>'positionId' SIMILAR TO 'p[0-9]{3}'
+             GROUP BY a.metadata->>'positionId'
+          `;
+          const dbChunkCounts = new Map(
+            chunkCounts.map((r) => [r.position_id, r.chunk_count] as const),
+          );
+          const mismatchedPositions: string[] = [];
+          for (const p of parsed) {
+            const expected = p.bodyChunks.length;
+            const actual = dbChunkCounts.get(p.meta.positionId) ?? 0;
+            if (expected !== actual) {
+              mismatchedPositions.push(
+                `${p.meta.positionId}: expected ${expected} chunks, found ${actual}`,
+              );
+            }
+          }
+
+          if (nullEmbeddings === 0 && mismatchedPositions.length === 0) {
+            console.log(
+              `\n${GREEN}━━ SKIP ━━${RESET} Position Library content unchanged since last ingest`,
+            );
+            console.log(
+              `  ${DIM}${incomingSourceHashes.size} positions match by sourceHash; chunk counts match parse; no NULL embeddings.${RESET}`,
+            );
+            // Codex C5-overnight round 6 P3: run smoke even on SKIP.
+            // Costs ~1 Voyage embed call for the cosine probe and 2
+            // cheap DB queries. Catches the case where the source
+            // hashes match (DB looks healthy) but the retrieval path
+            // is broken for unrelated reasons (HNSW index dropped,
+            // tsv config swapped, vector dim drift). Without this,
+            // a no-op re-run reports success while retrieval is dead.
+            //
+            // Codex round 7 P3: capture actual smoke token cost and
+            // report it (was hardcoded 0 before; under-reported by
+            // ~10 tokens / $0.000001 per skip).
+            //
+            // Codex round 8 P2: REQUIRE VOYAGE_API_KEY in full mode
+            // (i.e., when --no-embeddings is NOT set). The full ingest
+            // path fails fast on missing key; the SKIP path must match
+            // that contract or a broken embedding/index path can hide
+            // until the next forced re-ingest. Only --no-embeddings
+            // mode permits a null apiKey (then the cosine arm of the
+            // smoke is intentionally skipped).
+            if (!NO_EMBEDDINGS && !process.env.VOYAGE_API_KEY) {
+              console.error(
+                `${RED}FATAL${RESET}: VOYAGE_API_KEY not set in .env.local. SKIP path still requires it to validate cosine retrieval (use --no-embeddings to bypass).`,
+              );
+              await checkSql.end();
+              process.exit(2);
+            }
+            const apiKeyForSmoke = NO_EMBEDDINGS ? null : process.env.VOYAGE_API_KEY!;
+            const smokeResult = await runRetrievalSmoke(checkSql, apiKeyForSmoke);
+            const smokeCost = (smokeResult.voyageTokensUsed * 0.12) / 1_000_000;
+            console.log(`  Positions parsed:   ${parsed.length}`);
+            console.log(
+              `  Voyage tokens:      ${smokeResult.voyageTokensUsed}  ${DIM}(skipped ingest — only smoke cosine probe, ~$${smokeCost.toFixed(6)})${RESET}`,
+            );
+            console.log(`  Errors:             0`);
+            await checkSql.end();
+            process.exit(0);
+          }
+          if (nullEmbeddings > 0) {
+            console.log(
+              `${DIM}sourceHash match but ${nullEmbeddings} chunk(s) have NULL embedding — proceeding with full refresh to fix partial state${RESET}`,
+            );
+          }
+          if (mismatchedPositions.length > 0) {
+            console.log(
+              `${DIM}sourceHash match but chunk counts drift on ${mismatchedPositions.length} position(s): ${mismatchedPositions.join('; ')} — proceeding with full refresh${RESET}`,
+            );
+          }
+        } else {
+          console.log(
+            `${DIM}sourceHash skip check: ${existingSourceHashes.size} existing positions hashed, ${incomingSourceHashes.size} incoming — drift detected, proceeding with full refresh${RESET}`,
+          );
+        }
+      } finally {
+        await checkSql.end();
+      }
+    }
+  }
+
   // 2. Embed (unless --no-embeddings).
   const chunkEmbeddings: Map<string, number[]> = new Map(); // key: positionId|ordinal
   if (!NO_EMBEDDINGS) {
@@ -510,8 +877,9 @@ async function main(): Promise<void> {
       });
     }
     const batches = Math.ceil(allChunks.length / VOYAGE_BATCH_SIZE);
+    const tierLabel = VOYAGE_RATE_TIER === 'paid' ? 'paid tier' : 'free-tier RPM';
     console.log(
-      `${DIM}Embedding ${allChunks.length} chunks via voyage-3-large (${batches} batches, ~${Math.round((batches * VOYAGE_INTER_BATCH_MS) / 1000)}s on free-tier RPM)...${RESET}`,
+      `${DIM}Embedding ${allChunks.length} chunks via voyage-3-large (${batches} batch${batches === 1 ? '' : 'es'}, batch_size=${VOYAGE_BATCH_SIZE}, sleep=${VOYAGE_INTER_BATCH_MS}ms, ~${Math.max(3, Math.round((batches * VOYAGE_INTER_BATCH_MS) / 1000))}s on ${tierLabel})...${RESET}`,
     );
 
     try {
@@ -577,6 +945,11 @@ async function main(): Promise<void> {
       // throw and the transaction rolls back.
       for (const p of parsed) {
         const applicableTaxYears = parseApplicableTaxYears(p.meta.effectiveDateRange);
+        // sourceHash via computeSourceHash() helper — see the helper's
+        // doc-block at the top of this file for the full rationale.
+        // INSERT and skip-check MUST use the same helper to stay in
+        // sync; codex caught two earlier versions where they drifted.
+        const sourceHash = computeSourceHash(p.meta, p.bodyChunks);
         const metadata = {
           positionId: p.meta.positionId,
           reviewStatus: p.meta.reviewStatus,
@@ -586,6 +959,7 @@ async function main(): Promise<void> {
           nextRefresh: p.meta.nextRefresh,
           effectiveDateRange: p.meta.effectiveDateRange,
           sourceFile: p.meta.filename,
+          sourceHash,
         };
 
         const citationLabel = `Position ${p.meta.positionId}: ${p.meta.title}`;
@@ -656,61 +1030,15 @@ async function main(): Promise<void> {
     // Transaction committed by here.
 
     // 4. Smoke verification — query for §199A and confirm we get p001 back first.
-    console.log(`${DIM}Smoke: BM25 + cosine queries against ingested content...${RESET}`);
-
-    const bm25Hits = await sql<{ citation_label: string; rank: number }[]>`
-      SELECT a.citation_label, ts_rank(c.tsv, plainto_tsquery('english', '§199A QBI deduction')) AS rank
-        FROM authorities a
-        JOIN authority_chunks c ON c.authority_id = a.id
-       WHERE a.tenant_id IS NULL
-         AND a.kind = 'firm_memo'
-         AND c.tsv @@ plainto_tsquery('english', '§199A QBI deduction')
-       ORDER BY rank DESC
-       LIMIT 3
-    `;
-    if (bm25Hits.length === 0) {
-      throw new Error('BM25 smoke: no hits for §199A QBI deduction');
-    }
-    if (!bm25Hits[0]!.citation_label.includes('p001')) {
-      console.warn(
-        `  ${YELLOW}WARN${RESET}  BM25 top hit was ${bm25Hits[0]!.citation_label} (expected p001-prefixed)`,
-      );
-    } else {
-      console.log(`  ${GREEN}PASS${RESET}  BM25 top hit: ${bm25Hits[0]!.citation_label}`);
-    }
-
-    if (!NO_EMBEDDINGS && chunkEmbeddings.size > 0) {
-      // Cosine smoke: embed a query phrase, query top-K.
-      const apiKey = process.env.VOYAGE_API_KEY!;
-      const { embeddings: queryEmbedArr } = await voyageEmbed(
-        ['What is the Section 199A QBI deduction?'],
-        apiKey,
-      );
-      const queryVec = `[${queryEmbedArr[0]!.join(',')}]`;
-      const cosineHits = await sql<{ citation_label: string; distance: number }[]>`
-        SELECT a.citation_label,
-               (c.embedding <=> ${sql.unsafe(`'${queryVec}'::vector`)}) AS distance
-          FROM authorities a
-          JOIN authority_chunks c ON c.authority_id = a.id
-         WHERE a.tenant_id IS NULL
-           AND a.kind = 'firm_memo'
-           AND c.embedding IS NOT NULL
-         ORDER BY c.embedding <=> ${sql.unsafe(`'${queryVec}'::vector`)}
-         LIMIT 3
-      `;
-      if (cosineHits.length === 0) {
-        throw new Error('cosine smoke: no embedded chunks returned');
-      }
-      if (!cosineHits[0]!.citation_label.includes('p001')) {
-        console.warn(
-          `  ${YELLOW}WARN${RESET}  cosine top hit was ${cosineHits[0]!.citation_label} (expected p001-prefixed)`,
-        );
-      } else {
-        console.log(
-          `  ${GREEN}PASS${RESET}  cosine top hit: ${cosineHits[0]!.citation_label}  ${DIM}distance=${cosineHits[0]!.distance.toFixed(6)}${RESET}`,
-        );
-      }
-    }
+    //    Extracted into runRetrievalSmoke() so the SKIP path can run
+    //    the same checks (codex C5-overnight round 6 P3). Smoke
+    //    Voyage tokens fold into stats so the summary reflects total
+    //    spend (codex round 7 P3).
+    const smokeResult = await runRetrievalSmoke(
+      sql,
+      NO_EMBEDDINGS ? null : process.env.VOYAGE_API_KEY!,
+    );
+    stats.voyageTokens += smokeResult.voyageTokensUsed;
 
     console.log(`\n${GREEN}━━ ingest complete ━━${RESET}`);
     console.log(`Positions parsed:   ${stats.positionsParsed}`);

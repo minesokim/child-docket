@@ -1022,7 +1022,8 @@ When loading this project cold, in this order:
 12. **Cost rules:** [`COSTS.md`](COSTS.md) — $50/mo discipline.
 13. **Design source (legacy):** `C:\Users\minse\Downloads\docket-portal-design\` — the 36-screen prototype we ported from. Mostly historical now; tokens + components live in `packages/ui/`.
 14. **Verify gstack:** `test -d ~/.claude/skills/gstack/bin && echo OK`
-15. **Confirm with David:** any decisions reversed since last session? Any new slices to capture?
+15. **If user has invoked `/overnight`** (the hands-off autonomous mode — see §23 + [`.claude/skills/overnight/SKILL.md`](.claude/skills/overnight/SKILL.md)): **RE-READ the overnight skill at every task boundary**, not just session start. The skill is load-bearing per founder mandate 2026-05-12. Hard rules (NEVER `--no-verify` / `Protocol-Skip` on feat|fix / skip codex / mark `Craft: N/A` on UI / skip /e2e past cadence / commit with Score<95 / commit MISALIGNED) are immutable for the duration of overnight mode. If a rule cannot be satisfied on a given commit, STOP and surface to the user. Stopping is fine; skipping is not.
+16. **Confirm with David:** any decisions reversed since last session? Any new slices to capture?
 
 ---
 
@@ -1047,11 +1048,13 @@ When the user's request matches an available skill, invoke it via the Skill tool
 | Independent code review | `/codex` |
 | Security audit | `/cso` |
 | End-to-end verify a feature | `/smoke-test` (project-local; see `.claude/skills/smoke-test/`) |
+| **Hands-off autonomous overnight mode** | **`/overnight`** (project-local; load-bearing; see `.claude/skills/overnight/SKILL.md` — LOCKED 2026-05-12) |
 
 ### Project-local skills
 
-Beyond gstack, this repo ships four project skills that together form the autonomous build cycle:
+Beyond gstack, this repo ships ten project skills that together form the autonomous build cycle:
 
+- **[`/overnight`](.claude/skills/overnight/SKILL.md)** — **LOAD-BEARING.** The hands-off autonomous mode contract. Same protocol-gate cycle as face-to-face work, but with HARD rules around `--no-verify`, `Protocol-Skip`, codex skipping, `Craft: N/A` on UI, /e2e cadence, Score floor (95), and a $5-per-session cost ceiling. Picks the next task via a scored algorithm (unblocks-other-work + Antonio-demo-dependency + hard-deadline + substrate-low-risk minus PROD-credential-required / schema-migration-approval). Comprehensive stop conditions enumerated. User-codified 2026-05-12: *"if its overnight mode dont just make it a skill you glance over and forget. make it higher in power so that you actually listen."* Re-read at every task boundary, not just session start.
 - [`/edge-cases`](.claude/skills/edge-cases/SKILL.md) — runs BEFORE implementation. Forces explicit enumeration of 8-15 edge cases (input / state / failure-mode / time / permission / domain-specific) with handle-vs-document-vs-out-of-scope status. Catches "shipping happy path, finding edge cases in prod" drift.
 - [`/code-quality`](.claude/skills/code-quality/SKILL.md) — runs BEFORE commit. Pre-commit gate that BLOCKS AI-sloppenheimer. Forces structural checks (typecheck, tests, no console.log, no undocumented `any`, lockfile-package.json sync) + substantive checks (pattern adherence, error handling, comment quality, atomicity) + post-push deploy verification (curl + Vercel state must be READY before next item). Reference exemplar: `packages/shared/src/webhook-verification.ts`.
 - [`/smoke-test`](.claude/skills/smoke-test/SKILL.md) — runs AFTER implementation. Required after any change touching Inngest workers, document processing, storage helpers, server actions firing events, encryption, or new /api/* routes. Reference template: [`services/workers/scripts/smoke-finalize.ts`](services/workers/scripts/smoke-finalize.ts).
