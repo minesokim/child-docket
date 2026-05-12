@@ -46,6 +46,27 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   },
 });
 
+// vector(1024) — pgvector column for embedding storage. Used by
+// authority_chunks.embedding (migration 0028). The driver round-trips
+// as the canonical "[f1,f2,...]" text format pgvector emits; we serialize
+// number[] → bracketed string on insert and parse on read. Keeps the
+// schema portable across postgres drivers (node-postgres, postgres.js)
+// that don't all bind vector natively. NULL is permitted — pre-ingest
+// rows have it; the retriever filters via `WHERE embedding IS NOT NULL`
+// when running cosine queries.
+const vector1024 = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(1024)';
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+  fromDriver(value: string): number[] {
+    if (typeof value !== 'string') return value as unknown as number[];
+    return value.replace(/^\[|\]$/g, '').split(',').map(Number);
+  },
+});
+
 // ──────────────────────────────────────────────────────────────
 // v0 schema. Multi-tenant via RLS on tenant_id (added in migration).
 // Every table touching tenant data has tenant_id NOT NULL.
@@ -898,6 +919,13 @@ export const authorityChunks = pgTable(
     charEnd: integer('char_end'),
     /** Sha256 of `text` for dedup + change-detection. */
     contentHash: text('content_hash').notNull(),
+    /**
+     * Voyage-3-lite embedding (1024 dims) — added in migration 0028.
+     * NULL on every row until C5 ingestion fills it. The retriever
+     * filters `WHERE embedding IS NOT NULL` for cosine queries; BM25
+     * via the tsv index works regardless.
+     */
+    embedding: vector1024('embedding'),
     /**
      * Generated tsvector — populated by Postgres GENERATED ALWAYS AS.
      * Drizzle-side, treat as read-only. Not in the insert shape.
