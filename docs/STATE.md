@@ -4,7 +4,7 @@
 > *Read at session start. Updated when integrations or env state change.*
 > *Solves the Twilio-keys-forgetfulness problem — checks here BEFORE asking.*
 
-**Last verified**: 2026-05-11 evening (rolling sync — 5/10 added the 12-doc SOC 2 set + PRODUCT-ROADMAP grand-vision update + BUILD-KICKOFF-2026-05-11 + 7-doc accelerator-applications draft batch + Understand-Anything Saturday-evening cadence; 5/11 morning added two P0 fixes from Antonio call (entity-filing W2 skip faaa579 + portal/docs Take-photo wire-up 9975978) + intake-frame.tsx 'use client' unblocker 961857b + /e2e PASS 8/8 at 961857b + claude-mem worker started + Understand-Anything plugin built + OVERNIGHT-HANDOFF-2026-05-10.md; 5/11 afternoon added Haokun co-founder lock + Antonio 1% advisor + Option B positioning + §6695(g) penalty-anchored pricing + Coverage Map + SOC 2 Type I outreach + Contracted Expert Outreach + Cyber Insurance Recommendation + 5 audience-segmented pitch decks + Vory founder video scripts + ICP wedge specification + 6 accelerator applications refreshed + YC Fall 2026 application; 5/11 evening added L16 lock for 100-customers-by-8/1 + DESIGN-PARTNER-ACQUISITION-PLAN.md + cold-outreach playbook + DISCOVERY-SCAN-OPERATIONAL.md (fe01250) + landing page copy x3 + email template suite + Discovery Scan sample PDF + PRICING-PAGE-SPEC + WISP draft + OVERNIGHT-HANDOFF-2026-05-11.md)
+**Last verified**: 2026-05-11 late evening (rolling sync — 5/10 added the 12-doc SOC 2 set + PRODUCT-ROADMAP grand-vision update + BUILD-KICKOFF-2026-05-11 + 7-doc accelerator-applications draft batch + Understand-Anything Saturday-evening cadence; 5/11 morning added two P0 fixes from Antonio call (entity-filing W2 skip faaa579 + portal/docs Take-photo wire-up 9975978) + intake-frame.tsx 'use client' unblocker 961857b + /e2e PASS 8/8 at 961857b + claude-mem worker started + Understand-Anything plugin built + OVERNIGHT-HANDOFF-2026-05-10.md; 5/11 afternoon added Haokun co-founder lock + Antonio 1% advisor + Option B positioning + §6695(g) penalty-anchored pricing + Coverage Map + SOC 2 Type I outreach + Contracted Expert Outreach + Cyber Insurance Recommendation + 5 audience-segmented pitch decks + Vory founder video scripts + ICP wedge specification + 6 accelerator applications refreshed + YC Fall 2026 application; 5/11 evening added L16 lock for 100-customers-by-8/1 + DESIGN-PARTNER-ACQUISITION-PLAN.md + cold-outreach playbook + DISCOVERY-SCAN-OPERATIONAL.md (fe01250) + landing page copy x3 + email template suite + Discovery Scan sample PDF + PRICING-PAGE-SPEC + WISP draft + OVERNIGHT-HANDOFF-2026-05-11.md; **5/11 late evening: C1 production-coding commit 851894c — feat(intake) AAD-bound encryption on intake-write + all 8 readers migrated + reencrypt-walker AAD-aware + script threads aadBuilder + 17 new tests; 3 rounds of codex review (5 findings + clean round 3); /e2e PASS 8/8 at 851894c1; closes CLAUDE.md §15 Phase 2 AAD-binding gap**)
 
 ---
 
@@ -121,13 +121,20 @@ If you're unsure whether something has been done, run `/check-state` for an auth
 | Voice-pass on 9 new docs (landing pages + emails + Discovery sample PDF + WISP) | ⬜ David action | This week before production deploy |
 | Sales VA hire ($20-40/hr, 10-20 hrs/wk) | ⬜ David action | Target hire: 5/31 |
 | Boney-Henderson presentation (Antonio's mentor network, 1000+ preparers) | ⬜ Antonio + David action | Target delivery: Week 4 (~6/1) |
+| **C1 AAD on intake-write** | ✅ Shipped 851894c (2026-05-11 late evening) | All 8 readers migrated to AAD-aware decrypt; walker AAD-aware; script threads aadBuilder; 17 new tests; 3 rounds codex (5 findings + clean round 3); /e2e PASS at 851894c1 |
+| C2 AAD on tenant-credentials (Twilio/DocuSign/Square OAuth tokens) | ⬜ Queued | Same pattern as C1; smaller scope (one writer, one reader). Target: this week |
+| C3 reencrypt-legacy-walker run against PROD + remove master-KEK fallback | ⬜ Queued (gated on C1 + C2 complete) | Operational + 1 code commit. Closes the master-KEK SOC 2 audit smell |
+| C4 embedding column migration 0028 (vector(1024) + IVF index) | ⬜ Queued | Unlocks Discovery agent retrieval substrate |
+| C5 Position Library v0 ingestion script | ⬜ Queued | Reads `content/position-library/v0/positions/*.md` (20 entries) → `authority_chunks` rows |
+| C6 PostgresRetriever (BM25 + cosine + score fusion) | ⬜ Queued | Implements `KnowledgeRetriever` interface in `packages/tax-graph` |
+| C7-C12 Discovery agent + PDF + Resend delivery | ⬜ Queued | Target 6/8 per Phase 3 production coding plan |
 
 ---
 
 ## 🔐 SOC 2 controls — currently in codebase
 
 ✅ Already built (architecturally):
-- Per-tenant DEK encryption (AES-256-GCM, two-tier KEK + DEK, AAD-bound)
+- Per-tenant DEK encryption (AES-256-GCM, two-tier KEK + DEK, **AAD-bound on intake_responses since 851894c — tenant_credentials AAD migration queued as C2**)
 - Cryptographic audit chain (chain_seq + prev_hash + row_hash, `0680874`+`5b4ef92`)
 - RLS policies on every tenant-scoped table (migration 0001)
 - KEK rotation runbook + script (`2d63206` + `3bd42b1`)
