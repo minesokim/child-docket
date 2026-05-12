@@ -54,7 +54,7 @@ The team is two co-founders + advisor + contractor pipeline. Engineer #3 is the 
 
 ## ❓ What does your company do? (paragraph)
 
-Docket is the AI defense layer that sits between a tax firm's AI agents and the partner's PTIN. Every tax position the AI surfaces carries cited authority + a confidence-tier classification (Settled / Substantial / Reasonable Basis with 8275 / More Likely Than Not) + a refusal floor below Reasonable Basis. Every action lands in a cryptographic audit chain. Every preparer-AI interaction is reversible. The agent fleet — Discovery, Position, Strategy, Notice, Inbox-Drafter, Review — operates on real client state with the preparer at the edge approving outcomes, not chatting with a bot. We sell to solo EAs through mid-market firms (the lane the $235M+ in funded competitors at Black Ore / Accrual / Basis is economically forced out of). Path 1 is vertical SaaS for that segment (the floor); Path 2 is a public API + MCP server that turns Docket into the orchestration substrate other AI tax tools run through (the swing).
+Docket is the AI operating system for the US tax profession. The wedge is **2-10 preparer firms** (~40,000 firms, $300M-$700M wedge TAM at standard tier pricing) where personal PTIN risk is highest and incumbents offer no AI built for that side of the desk. Every tax position the AI surfaces carries cited authority + a confidence-tier classification (Settled / Substantial / Reasonable Basis with 8275 / More Likely Than Not) + a refusal floor below Reasonable Basis. Every action lands in a cryptographic audit chain. Every preparer-AI interaction is reversible. The agent fleet — Discovery, Position, Strategy, Notice, Inbox-Drafter, Review — operates on real client state with the preparer at the edge approving outcomes, not chatting with a bot. From the 2-10 preparer wedge, we expand both directions on the same product: solo EAs (founder + Solo tier) below and mid-market regional firms (Growing + Mid-market tier) above. The funded competitors at Black Ore / Accrual / Basis ($235M+ combined) are economically forced up-market by their unit economics and 18-month enterprise sales cycles — they cannot economically reach the wedge or below. Path 1 is vertical SaaS for the wedge + expansion ladder (the floor); Path 2 is a public API + MCP server that turns Docket into the compliance + audit substrate other AI tax tools run through (the swing).
 
 ---
 
@@ -71,6 +71,8 @@ David Kim and Haokun Yang have known each other for 5+ years, working together l
 ---
 
 ## ❓ Why did you pick this idea to work on? Have you started? How much have you made?
+
+The pattern that gets vertical-AI SaaS funded by YC has been Stripe, Toast, ServiceTitan, Gusto, Ramp — a category-defining primitive with the right-sized firm as the wedge, expansion ladder visible from day 1. None of them pitched "we sell to small businesses." They pitched the operating system for an industry, starting where the incumbents were structurally weakest. **Our equivalent: AI defense layer for the US tax profession (~700K EAs, CPAs, unenrolled preparers), starting with 2-10 preparer firms where compliance exposure is highest and incumbents offer no AI for the PTIN-carrying side of the desk.**
 
 Picked this idea after watching the AI-tax stack split into three structural layers in late 2025 / early 2026:
 
@@ -101,11 +103,13 @@ Layer 3 is where the open lane is. The funded competitors can't serve it (econom
 
 **Pricing is itself part of the positioning.** Founder tier $250/mo is **less than half the §6695(g) IRS due-diligence penalty** ($650 per failure for 2026 returns, per Rev. Proc. 2025-32). The price signals the buyer's actual cost framework: EAs don't budget on subscription cost, they budget on PTIN risk. Existing AI tax tools price at $1,500-$5,000/mo because their buyers are firms with controllers and procurement processes. We priced for the firm owner whose personal liability is on the line. Full marketing math at `docs/MARKETING-FRAMES.md` (penalty-anchored pricing section).
 
-**TAM math**:
+**TAM math (Stripe / Toast / ServiceTitan pattern: wedge + expansion ladder)**:
 
-- US tax practices: ~150K firms. ~80K solo or 1-3 staff. ~70K with 4+ staff.
-- Path 1 (vertical SaaS floor): At 5-15% segment penetration × tiered pricing → **$25-50M ARR achievable**.
-- Path 2 (orchestration): TAM is the entire AI-tax stack. Year-3+ revenue $10M+ ARR plausible if Path 2 lands; Year-5+ potentially $50-200M ARR as orchestration becomes plumbing for the industry.
+- **The wedge (2-10 preparer firms with active audit exposure)**: ~40,000 firms × $499-$1,499/mo standard tier = **$300M-$700M wedge TAM**.
+- **Down-ladder expansion (solo EAs, 1-preparer firms)**: ~50,000 firms × $499/mo Solo tier = ~$300M addressable.
+- **Up-ladder expansion (Growing + Mid-market)**: ~15,000 firms × $4,499-$14,999/mo = ~$800M-$2.7B addressable.
+- **Path 1 (vertical SaaS, all tiers combined)**: Total addressable ~$2.8-4.3B at full penetration. **At 5-15% penetration over 5 years, $140-650M ARR achievable.**
+- **Path 2 (orchestration)**: TAM is the entire AI-tax stack. Year-3+ revenue $10M+ ARR plausible if Path 2 lands; Year-5+ potentially $50-200M ARR as orchestration becomes plumbing for the industry.
 
 **Why this is unicorn-shaped**: Path 1 floor alone is a $25-50M ARR business (good outcome, not great). Path 2 is the swing — orchestration economics resemble Stripe-for-tax-AI rather than vertical SaaS. The combination — vertical SaaS funded by the floor, orchestration as the swing — is the Palantir/Foundry pattern (services-then-platform, see FluentOS as the productized template we're following).
 
@@ -141,7 +145,7 @@ Layer 3 is where the open lane is. The funded competitors can't serve it (econom
 
 The competitive question splits two ways depending on segment.
 
-**At the down + mid-market segment** (solo EAs through 100-staff regional firms): **No AI-native competitor.** The funded autonomous-prep players target top-100 firms (Black Ore, Accrual, Basis = $235M+ combined, 18-month enterprise sales cycles, can't economically come down-market for at least 12-18 months). The PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI bolt-ons on aging substrates. We're alone in the lane.
+**At the 2-10 preparer wedge** (with expansion ladder above to mid-market regional firms and below to solo EAs): **No AI-native competitor.** The funded autonomous-prep players target top-100 firms (Black Ore, Accrual, Basis = $235M+ combined, 18-month enterprise sales cycles, can't economically come down-market for at least 12-18 months). The PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI bolt-ons on aging substrates that don't solve the position-framework + audit-defense workflow specifically. We're alone in the wedge — and the founder-50 cohort acceptance filter biases toward 2-10 preparer firms with active audit exposure, not the cheapest-to-acquire solo-seasonal preparers.
 
 **Why we win at this segment**:
 

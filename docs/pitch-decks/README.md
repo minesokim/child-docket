@@ -9,11 +9,12 @@
 
 | File | Audience | When to use | Length |
 |---|---|---|---|
-| [`ea-cpa-sales-deck.md`](ea-cpa-sales-deck.md) | Solo EAs + small-firm CPAs (Antonio segment) | NAEA chapter dinners · Dr. Boney-Henderson network presentations · cold-outbound Zoom demos · the 20-EA validation sprint | 10 slides |
+| [`ea-cpa-sales-deck.md`](ea-cpa-sales-deck.md) | EAs + small-firm CPAs (2-10 preparer wedge; solo as expansion) | NAEA chapter dinners · Dr. Boney-Henderson network presentations · cold-outbound Zoom demos · the 20-EA/CPA validation sprint | 10 slides |
 | [`yc-interview-deck.md`](yc-interview-deck.md) | YC partners (if invited to interview post-application) | YC interview (10 min Q&A, 0-3 slides max during interview but full deck ready for offline reference) | 12 slides |
 | [`vc-preseed-deck.md`](vc-preseed-deck.md) | Pre-seed / Seed VCs (SAFE round outside YC) | Investor meetings, dataroom uploads | 16 slides |
 | [`mid-market-firm-deck.md`](mid-market-firm-deck.md) | Regional CPA firm owners / managing partners (20-100 staff; partner #2 candidates) | Partner #2 candidate pitches · AICPA ENGAGE booth conversations | 12 slides |
 | [`path2-partner-deck.md`](path2-partner-deck.md) | Other AI tax tool companies integrating via Docket's public API + MCP server | Path 2 Partner-tier customer acquisition · developer-to-developer technical conversations | 10 slides |
+| [`founder-video-scripts.md`](founder-video-scripts.md) | **YC application video (60-sec)** + general pitching (2-min) | YC Fall 2026 application + Anthropic Startup Program + Forum / Mucker / Pear / Neo | 2 scripts (60-sec + 2-min) |
 
 ---
 
@@ -23,12 +24,14 @@ Same product, different doors. The hierarchy:
 
 | Audience | Lead-with framing | Why |
 |---|---|---|
-| YC / VC / press | "**Operating system** that runs the tax practice" | Platform potential, Path 2 upside, sounds like infrastructure |
-| EA / solo CPA cold | "**AI defense layer** for tax practices" | Emotionally hot. Fits the IRS-AI-audit moment + ChatGPT-armed-clients reality |
+| YC / VC / press | "**AI operating system for the US tax profession**" + wedge specification (2-10 preparer firms) | Platform potential, Path 2 upside, infrastructure-language. Stripe/Toast/ServiceTitan pattern: category-defining primitive with wedge visible. |
+| EA / small CPA cold | "**AI defense layer** for tax practices" | Emotionally hot. Fits the IRS-AI-audit moment + ChatGPT-armed-clients reality. Penalty-anchored pricing. |
 | Mid-market firm owner | "**Closed-loop OS** that replaces 80% of junior preparer work" | Cost-discipline + risk-reduction math; FTE replacement framing |
 | Path 2 partner | "**Compliance + audit substrate** for the AI tax stack" | Technical infrastructure language; for buyers who already adopted an AI tool and want the audit layer underneath it |
 
 Use the right lead-with for the audience reading. Mixing them costs conversion.
+
+**Wedge vs expansion ladder (2026-05-11 specification)**: every YC/VC/press surface should surface both — "AI operating system for the US tax profession (~700K EAs + CPAs), wedge is 2-10 preparer firms with active audit exposure (~40K firms, $300-700M wedge TAM)." Solo EA cold outreach is operational (funnel-top), not the ICP avatar. Antonio is the **founding firm** + 1% advisor, validation story regardless of his preparer count.
 
 ---
 

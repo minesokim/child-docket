@@ -518,14 +518,23 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 | **No Big 4 / top-100 firm pivot for 18-24 months** | Decided 5/2/2026 CEO review. Fortress market with $235M+ funded competitors holding 2-year head starts. Brand maturity gap that 12 weeks of building cannot close. 18-month sales cycles. Bootstrap option dies. Mid+down lane is the structurally open one. |
 | **No F500 in-house tax department pivot for 18-24 months** | Same compliance + ERP integration timelines as Big 4 without the partner-network distribution upside. Underexplored but not by accident. |
 
-### Segment posture (decided 5/2/2026 CEO review)
+### Segment posture (decided 5/2/2026 CEO review, **wedge clarified 2026-05-11**)
+
+- **The wedge (2026-05-11 specification — the YC-legible frame)**: **2-10 preparer firms with active audit exposure, EA/CPA-led, $300K-$3M revenue.** ~40,000 firms in segment. **$300M-$700M wedge TAM** at standard tier pricing ($499-$1,499/mo). This is the *narrative frame for the YC application + investor decks + founder-50 cohort acceptance filter*, not a roadmap change.
+  - Why the wedge isn't solo EAs alone: solo seasonal preparers are price-sensitive, part-time, high-churn, gettable by any incumbent that bolts on AI. Pitching "we sell $250/mo to solo seasonals" pattern-matches to feature-not-company for a YC reviewer. The 2-10 preparer firms have audit exposure pain that single-preparer solos don't carry at the same scale, growing-firm dynamics that compound ACV, and resistance to PM-tool feature-additions because they actually pay the §6694 penalty themselves. Same outreach motion, **4-6x Year-2 ARR** at the same cohort headcount.
+  - **Antonio is the founding firm + 1% advisor**, not the ICP avatar. His two active 2026 IRS audits are the validation story regardless of his preparer count.
+  - Solo EAs remain part of the **expansion ladder** (founder tier $250 / Solo $499) — addressable, not the wedge. The standard tier rollout post-founder-50 surfaces solo demand naturally.
+  - **Stripe / Toast / ServiceTitan / Gusto / Ramp pattern**: category-defining primitive with the right-sized firm as wedge, expansion ladder visible. Toast didn't pitch "Boston restaurants" — they pitched "operating system for the $900B restaurant industry, starting with underserved independents." Same product, different framing.
 
 - **v1 (7/30):** Mid-market and down-market only.
-  - **Down-market** = solo EAs, storefront tax shops, 1-10 staff firms (Antonio's segment). Zero AI-native competitors here.
-  - **Mid-market** = 20-100 staff regional firms. Only PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI here. AI-native players are economically forced up-market by their funding rounds.
+  - **Wedge (down-market within v1)** = 2-10 preparer firms (per above). Antonio's segment.
+  - **Down-market expansion** = solo EAs, storefront tax shops, 1-preparer firms. Part of addressable; come in post-founder-50 via standard-tier rollout.
+  - **Mid-market** = 20-100 staff regional firms. Phase 6 partner #2 onboarding territory; arrives via warm intros + AICPA ENGAGE 6/2027. Only PM incumbents (TaxDome, Canopy, Karbon) ship shallow AI here. AI-native players are economically forced up-market by their funding rounds.
 - **v1.5 door open:** Tax franchise networks (Liberty Tax, Jackson Hewitt, JTH-aligned, smaller franchise networks). Storefront workflow is identical to the current mid+down product. Corporate licensee model = single deal could yield $1-5M ARR. Activate once mid-market reference customer is in hand to point at.
 - **NOT pursuing for 18-24 months:** Big 4 / top-100 firms. F500 in-house tax departments. See §14 NOs above for reasoning.
 - **Architecture posture:** Five-layer + RLS + per-tenant DEK + audit-trail + governance is enterprise-compatible by accident-of-good-decisions. No special enterprise-readiness work needed in v1. Door stays open for later segments without rework.
+
+**Operational filter (founder-50 cohort acceptance, 2026-05-11)**: bias acceptance toward 2-10 preparer firms that are actively growing or carry active audit exposure. Don't reject solos who fit founder-tier criteria — but don't preferentially accept them either. The 20-EA validation sprint targeting criteria gets the same filter applied at funnel-top.
 
 ---
 

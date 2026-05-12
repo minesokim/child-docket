@@ -13,7 +13,7 @@
 > **The AI operating system that runs the tax practice.**
 
 **Sub-headline:**
-> 70,000 enrolled agents + 670,000 CPAs in the US file returns under their personal PTIN. Docket is the only AI safe for them to use.
+> The category-defining primitive for the US tax profession (~700K EAs + CPAs). Wedge: 2-10 preparer firms with active audit exposure. Expansion ladder visible from day 1.
 
 **Visual notes:**
 - Editorial cream background. Fraunces serif. Forest green primary.
@@ -38,10 +38,10 @@
 | **Practice + relationship layer** | **Empty for AI-native.** PM incumbents ship shallow AI bolt-ons (TaxDome, Canopy, Karbon). | **Docket's structural lane.** |
 
 **Sub-line:**
-> *The funded competitors are economically forced up-market by their unit economics + 18-month enterprise sales cycles. The third layer at the down + mid-market segment is open. ~80K firms in segment. Zero AI-native competitors.*
+> *The funded competitors are economically forced up-market by their unit economics + 18-month enterprise sales cycles. **The wedge — 2-10 preparer firms with active audit exposure — has ~40,000 firms and $300M-$700M wedge TAM at standard tier pricing.** Solo EAs are part of the expansion ladder below the wedge. Mid-market regional firms (Phase 6 partner #2 territory) are the expansion ladder above. Same product, expanding ACV. Stripe / Toast / ServiceTitan pattern.*
 
 **Speaker notes:**
-> "Three structural layers of the AI tax stack are forming. Data layer is K1x — they integrate, we don't compete. Return-prep agent layer is where $235M+ in funding went — they target top-100 firms whose in-house counsel handles compliance. We can't compete head-on. But the third layer — practice and relationship — is empty for AI-native, and the PM incumbents ship shallow features on aging substrates. That's our lane. And the funded competitors can't reach into it for at least 12-18 months without breaking their unit economics."
+> "Three structural layers of the AI tax stack are forming. Data layer is K1x — they integrate, we don't compete. Return-prep agent layer is where $235M+ in funding went — they target top-100 firms whose in-house counsel handles compliance. We can't compete head-on. But the third layer — practice and relationship — is empty for AI-native, and the PM incumbents ship shallow features on aging substrates. The wedge inside that lane is 2-10 preparer firms with active audit exposure — 40,000 firms, $300-700M wedge TAM. Solo EAs are the expansion ladder below; mid-market regional firms are the expansion ladder above. Same product, ACV grows with customer maturity. The funded competitors can't reach into our wedge for at least 12-18 months without breaking their unit economics."
 
 ---
 

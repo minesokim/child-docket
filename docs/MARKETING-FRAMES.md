@@ -7,6 +7,37 @@ This doc is the canonical voice + framing reference. Pitch decks, landing pages,
 
 ---
 
+## ⭐ Wedge vs expansion ladder (2026-05-11 clarification — the YC-legible frame)
+
+The pattern Stripe, Toast, ServiceTitan, Gusto, and Ramp all used to get funded: **category-defining primitive with the right-sized firm as the wedge, expansion ladder visible**. Not "we sell to small businesses." That pattern-matches to feature-not-company in 90 seconds.
+
+**The wedge (where we land first)**:
+> 2-10 preparer firms with active audit exposure. EA/CPA-led. $300K-$3M revenue. ~40,000 firms in segment. **$300M-$700M wedge TAM** at standard tier pricing.
+
+Why the wedge isn't solo EAs alone:
+- Solo seasonal preparers are price-sensitive, part-time, high-churn, gettable by any incumbent that bolts on AI
+- 2-10 preparer firms have audit-exposure pain at scale; growing-firm dynamics compound ACV; they actually pay the §6694 penalty themselves so the Compliance Moat lands harder
+- Same outreach motion as solos, **4-6x Year-2 ARR** at the same cohort headcount
+
+**The expansion ladder (visible from day 1, ACV-grows-with-customer-maturity)**:
+
+| Tier | ACV | Where the customer is |
+|---|---|---|
+| Founder ($250/mo first 50 firms) | $3K/yr | Wedge-fit firms in the first 50 — biased toward 2-10 preparer growing or audit-exposed |
+| Solo ($499/mo) | $6-9K/yr | Solo EAs / 1-preparer firms — *part of addressable, not the wedge* |
+| Small ($1,499/mo) | $18-24K/yr | **The core wedge: 2-10 preparer firms** |
+| Growing ($4,499/mo) | $54-66K/yr | 10-50 staff growing firms |
+| Mid-market ($14,999/mo) | $180-288K/yr | 20-100 staff regional CPA firms (Phase 6 partner #2 territory) |
+| API tier — Path 2 ($999/mo Partner; Platform custom) | varies | Other AI tax tools + tax software vendors integrating |
+
+**For YC-shaped narratives**: never say "we sell to solo EAs." Say "we're building the AI defense layer for the US tax profession (~700K EAs, CPAs, and unenrolled preparers), starting with 2-10 preparer firms where compliance exposure is highest and incumbents offer no AI."
+
+**For cold-outreach narratives (EA / small CPA Zoom demos)**: the wedge framing is internal; the customer-facing language stays "AI defense layer for tax practices" + penalty-anchored pricing. The wedge is who we *bias toward accepting* into the founder 50, not who we *cold-pitch to*.
+
+**Antonio's framing**: he's the **founding firm + 1% advisor + on-platform tax advisor**. His two active 2026 IRS audits are the validation story regardless of his preparer count. He's not the ICP avatar in pitches; the 5-preparer firm down the street from him is.
+
+---
+
 ## ⭐ The category lock (per L2)
 
 **Top-line category** — what Docket IS, structurally:

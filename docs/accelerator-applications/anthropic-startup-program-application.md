@@ -15,7 +15,7 @@
 
 ## What the company does
 
-We're building the third layer of the AI-tax stack: not the data layer (K1x), not the autonomous return prep layer (Black Ore / Accrual / Basis target the top-100 firms), but the **practice + relationship + representation layer** for solo EAs through mid-market firms. The lane is empty because the funded competitors are economically forced up-market and the practice-management incumbents (TaxDome / Canopy / Karbon) lack return intelligence.
+We're building the third layer of the AI-tax stack: not the data layer (K1x), not the autonomous return prep layer (Black Ore / Accrual / Basis target the top-100 firms), but the **practice + relationship + representation layer** for the US tax profession (~700K EAs + CPAs). **Wedge: 2-10 preparer firms with active audit exposure** (~40K firms, $300-700M wedge TAM). Solo EAs are the expansion ladder below; mid-market regional firms above. The lane is empty because the funded competitors are economically forced up-market and the practice-management incumbents (TaxDome / Canopy / Karbon) lack return intelligence + AI-native substrate.
 
 Top-tier preparer-grade Claude animates every surface; orchestrates the firm's existing tax stack via API + browser automation; surfaces decisions with cited authority; refuses below Reasonable Basis; generates the audit defense file as a side effect of normal work.
 

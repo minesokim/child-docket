@@ -8,7 +8,7 @@
 
 ## One-line
 
-**Docket is the AI defense layer for tax practices.** Every position cited, every action audit-trailed, every output above Reasonable Basis refused by default. **$1K/mo MRR** from design partner #1 (Antonio at Vazant Consulting, CA EA, 200+ active clients). Vertical SaaS for solo EAs through mid-market firms is the floor; public API + MCP server orchestration is the swing.
+**Docket is the AI operating system for the US tax profession.** Wedge: 2-10 preparer firms with active audit exposure (~40K firms, $300-700M wedge TAM). Expansion ladder visible: solo EAs below, mid-market regional firms above. **$1K/mo MRR** from founding firm (Antonio Vazquez, EA at Vazant Consulting; 200+ active clients; 1% advisor; defending two active 2026 IRS audits using Docket). Path 1 vertical SaaS is the floor; public API + MCP server orchestration is the swing.
 
 ---
 

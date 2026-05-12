@@ -46,20 +46,23 @@
 
 ---
 
-## Slide 3 — The market (size + structural moat)
+## Slide 3 — The market (wedge + expansion ladder, Stripe/Toast pattern)
 
 **Headline:**
-> ~150,000 tax practices in the US. ~80,000 in our segment. Each one a PTIN-carrying personal-liability buyer.
+> ~150,000 tax practices in the US. The wedge: 2-10 preparer firms with active audit exposure ($300-700M TAM). Expansion ladder visible from day 1.
 
-**Top half — TAM math:**
+**Top half — TAM math (the wedge specification):**
 
-| Segment | Firm count | Typical ACV | Path 1 TAM |
-|---|---|---|---|
-| Solo EAs (founder tier $250 → Solo $499) | ~50,000 | $6-9K/yr | $300-450M |
-| Small firm (1-10 staff, Small $1,499) | ~25,000 | $18-24K/yr | $450-600M |
-| Growing firm (10-50 staff, Growing $4,499) | ~5,000 | $54-66K/yr | $270-330M |
-| Mid-market regional (20-100 staff, Mid $14,999) | ~10,000 | $180-288K/yr | $1.8-2.9B |
-| **Total Path 1 TAM** | **~90,000 firms** | | **$2.8-4.3B** |
+| Segment | Firm count | Typical ACV | Path 1 TAM | Wedge/Expansion |
+|---|---|---|---|---|
+| **Wedge: 2-10 preparer firms** (Small $1,499 standard tier) | **~40,000** | **$18-24K/yr** | **$720M-960M** | **The wedge** |
+| Solo EAs (Solo $499 expansion below) | ~50,000 | $6-9K/yr | $300-450M | Down-ladder expansion |
+| Growing firm (10-50 staff, Growing $4,499) | ~5,000 | $54-66K/yr | $270-330M | Up-ladder expansion |
+| Mid-market regional (20-100 staff, Mid $14,999) | ~10,000 | $180-288K/yr | $1.8-2.9B | Up-ladder expansion (Phase 6) |
+| **Total Path 1 TAM (all tiers)** | **~105,000 firms** | | **$3.1-4.6B** | |
+
+**Sub-line under table:**
+> *The Stripe / Toast / ServiceTitan / Gusto / Ramp pattern: category-defining primitive with the right-sized firm as wedge, expansion ladder visible from day 1. We pitch "AI operating system for the US tax profession, starting with 2-10 preparer firms where compliance exposure is highest" — not "we sell to solo EAs." Same product. Different framing. **Antonio's two active 2026 IRS audits are the wedge validation story regardless of his preparer count — he's the founding firm, not the ICP avatar.***
 
 **Bottom half — Path 2 TAM:**
 - API tier: Developer (free) / Partner ($999/mo) / Platform (custom)

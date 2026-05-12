@@ -6,7 +6,7 @@
 
 ## One-line description
 
-**Docket is the AI defense layer for tax practices.** Every position cited, every action audit-trailed, every output above Reasonable Basis refused by default. Vertical SaaS for solo EAs through mid-market firms is the floor; public orchestration platform with API + MCP server for the entire AI tax stack is the swing.
+**Docket is the AI operating system for the US tax profession.** Category-defining primitive (~700K EAs + CPAs + unenrolled preparers TAM). **Wedge: 2-10 preparer firms with active audit exposure** (~40,000 firms, $300-700M wedge TAM at standard tier). Expansion ladder visible from day 1: solo EAs below (Solo $499 tier), mid-market regional firms above (Growing + Mid-market). Path 1 is vertical SaaS for the wedge + ladder (the floor); Path 2 is a public API + MCP server that turns Docket into the compliance + audit substrate other AI tax tools run through (the swing). For cold-outreach surfaces: "AI defense layer for tax practices" + penalty-anchored pricing. For investor/YC surfaces: "AI operating system that runs the tax practice" + the wedge + expansion ladder.
 
 ## What does your company do?
 
@@ -14,7 +14,7 @@ We replace the messy combination of practice management software + return-prep t
 
 The EA sits at the edge approving outcomes, not routing information. The agent fleet does the routing. Compliance-first: AI never auto-files a return position above the most defensible tier; refuses anything below Reasonable Basis (IRC standard); generates the audit defense file as a side effect of normal work.
 
-We sell to tax firms (~150K firms in US, ~80K of them solo or 1-3 staff). We're not a consumer tax product.
+We sell to tax firms (~150K firms in US; **wedge is the ~40K firms in the 2-10 preparer band**; solo and mid-market are expansion ladder). We're not a consumer tax product. The wedge is where compliance exposure is highest, growing-firm dynamics compound ACV, and incumbents offer no AI built for the PTIN-carrying side of the desk. Antonio (founding firm + 1% advisor) is the validation story regardless of his preparer count — his two active 2026 IRS audits make the Compliance Moat real.
 
 ## Why now?
 
