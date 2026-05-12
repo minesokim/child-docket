@@ -42,7 +42,7 @@ Every position entry maps to one or more preparer penalty risks. The Discovery a
 | §6695(a)-(e) procedural | $60-$650 each | Sign return, furnish copy, retain copies, EIN, etc. |
 | §6701 aiding understatement | $1,000 / $10,000 corp | Knew or should have known |
 
-### v0 entry list (5 drafted; 15 queued)
+### v0 entry list (13 drafted; 7 queued — as of 2026-05-11 evening)
 
 | # | Position | File | Status | Tier (typical) | Penalty exposure |
 |---|---|---|---|---|---|
@@ -51,23 +51,23 @@ Every position entry maps to one or more preparer penalty risks. The Discovery a
 | 3 | SE health insurance for S-Corp 2% shareholder | [p003-se-health-insurance-s-corp.md](positions/p003-se-health-insurance-s-corp.md) | DRAFT-DAVID | Tier 1 (Settled) | §6695(a)-(e) procedural |
 | 4 | Augusta Rule §280A(g) 14-day rental | [p004-augusta-rule-280a-g.md](positions/p004-augusta-rule-280a-g.md) | DRAFT-DAVID | Tier 2 (Substantial Authority) | §6694(a) if rate not FMV |
 | 5 | Home office accountable plan reimbursement for S-Corp shareholder | [p005-home-office-accountable-plan.md](positions/p005-home-office-accountable-plan.md) | DRAFT-DAVID | Tier 3 (Reasonable Basis + 8275) | §6694(a) if 8275 not filed |
-| 6 | S-Corp reasonable compensation (Watson v. Comm'r framework) | (queued) | — | Tier 2 | §6694(a) + §3121 reclassification |
-| 7 | Accountable plan vehicle mileage reimbursement (standard rate) | (queued) | — | Tier 1 / Tier 3 (substantiation) | §6694(a) if substantiation gap |
-| 8 | EITC due-diligence checklist (Form 8867) | (queued) | — | Tier 1 (procedural) | §6695(g) primary |
-| 9 | CTC + ODC due-diligence checklist | (queued) | — | Tier 1 (procedural) | §6695(g) primary |
-| 10 | AOTC due-diligence checklist | (queued) | — | Tier 1 (procedural) | §6695(g) primary |
+| 6 | S-Corp reasonable compensation (Watson v. Comm'r framework) | [p006-s-corp-reasonable-compensation.md](positions/p006-s-corp-reasonable-compensation.md) | DRAFT-DAVID | Tier 2 | §6694(a) + §3121 reclassification |
+| 7 | Accountable plan vehicle mileage reimbursement (standard rate) | [p007-accountable-plan-vehicle-mileage.md](positions/p007-accountable-plan-vehicle-mileage.md) | DRAFT-DAVID | Tier 1 / Tier 3 (substantiation) | §6694(a) if substantiation gap |
+| 8 | EITC due-diligence checklist (Form 8867) | [p008-eitc-due-diligence-form-8867.md](positions/p008-eitc-due-diligence-form-8867.md) | DRAFT-DAVID | Tier 1 (procedural) | **§6695(g) primary — load-bearing** |
+| 9 | CTC + ODC due-diligence checklist | [p009-ctc-odc-due-diligence.md](positions/p009-ctc-odc-due-diligence.md) | DRAFT-DAVID | Tier 1 (procedural) | §6695(g) primary |
+| 10 | AOTC due-diligence checklist | [p010-aotc-due-diligence.md](positions/p010-aotc-due-diligence.md) | DRAFT-DAVID | Tier 1 (procedural) | §6695(g) primary |
 | 11 | HOH filing status due-diligence checklist | (queued) | — | Tier 1 (procedural) | §6695(g) primary |
 | 12 | CA AB-150 Pass-Through Entity Tax (PTET) election | (queued) | — | Tier 1 (CA-specific) | CA preparer penalty |
 | 13 | Real estate professional status under §469(c)(7) | (queued) | — | Tier 2-3 | §6694(a) if hours not documented |
 | 14 | Roth IRA backdoor conversion (Notice 2014-54) | (queued) | — | Tier 1 (Settled) | §6694(a) if pro-rata mis-applied |
 | 15 | Mega backdoor Roth (after-tax 401(k) → Roth) | (queued) | — | Tier 2 | §6694(a) edge cases |
 | 16 | Self-rental rules under §469(c)(2) + §1.469-2(f)(6) | (queued) | — | Tier 2-3 | §6694(a) + §469 grouping |
-| 17 | Augusta Rule abusive variant (refused position template) | (queued) | — | REFUSED below RB | §6694(b) trigger if claimed |
-| 18 | Conservation easement charitable deduction (refused; Notice 2017-10) | (queued) | — | REFUSED below RB | §6662(h) 40% penalty if claimed |
-| 19 | Hobby loss §183 classification (refused position template) | (queued) | — | REFUSED below RB | §6662 + §183 reclass |
+| 17 | Augusta Rule abusive variant (REFUSED template) | [p017-augusta-rule-abusive-refused.md](positions/p017-augusta-rule-abusive-refused.md) | DRAFT-DAVID | **REFUSED below RB** | §6694(b) trigger if claimed |
+| 18 | Conservation easement charitable deduction (REFUSED; Notice 2017-10) | [p018-conservation-easement-refused.md](positions/p018-conservation-easement-refused.md) | DRAFT-DAVID | **REFUSED below RB** | §6662(h) 40% penalty if claimed |
+| 19 | Hobby loss §183 reclassification (REFUSED template) | [p019-hobby-loss-183-refused.md](positions/p019-hobby-loss-183-refused.md) | DRAFT-DAVID | **REFUSED below RB** | §6662 + §183 reclass |
 | 20 | Cost segregation study acceleration on rental property | (queued) | — | Tier 1-2 | §6694(a) edge cases |
 
-**Cadence**: 5 done 5/11. Antonio reviews these by 5/18. Next 5 drafted 5/12-5/19. Next 5 by 5/26. Final 5 by 6/2. All 20 Antonio-validated by 5/30 to support the Antonio production sub-milestone + 6/15 reference Discovery Scan delivery.
+**Cadence (updated 2026-05-11 evening)**: 13 drafted 5/11. Antonio reviews entries 1-5 (substantive Tier 1-3) starting 5/12. Entries 6-10 (substantive + due-diligence procedural) reviewed 5/15-5/22. REFUSED entries 17-19 reviewed 5/19-5/26. Next 7 queued (#11, #12, #13, #14, #15, #16, #20) drafted 5/19-5/26. All 20 Antonio-validated by 5/30 to support the Antonio production sub-milestone + 6/15 reference Discovery Scan delivery.
 
 ---
 
