@@ -56,6 +56,7 @@ These are decisions the founder + AI locked in deliberate sessions. They are NOT
 | L13 | **Knowledge layer corpus**: Tier 1 federal (IRC, Treasury Regs, IRS Pubs, IRB, IRM, Tax Court, district/circuit/SCOTUS, CCAs, PLRs, TAMs) + Tier 1 state (CA first; FTB Residency Manual; CDTFA; EDD; OTA decisions). Effective-date versioning. ~100K documents, ~5-10M chunks. 4-week one-engineer ingestion project. NOT building Bloomberg Tax / Checkpoint / CCH editorial layer in year 1. | 2026-05-09 | Be the position-framework specialist, not a generic Accordance competitor. |
 | L14 | **Antonio dependency mitigation**: land partner #2 within 90 days, ideally from a different segment AND different network than Antonio. | 2026-05-09 | Concentrated risk. JBH non-conversion is a real failure mode. |
 | L15 | **YC target = Fall 2026** (deadline ~early August). NOT Summer 2026 (which has already passed). Apply Forum Ventures + Mucker + Anthropic Startup Program rolling this week alongside. | 2026-05-09 | Earlier session corrected Summer-vs-Fall confusion. |
+| L16 | **100 paying customers by 2026-08-01** is the strategic anchor for the 12 weeks from 2026-05-11. From 1 (Antonio) today to 100 by the YC application week. Target MRR ~$31-67K depending on pricing-strategy choice (see Option C tiered scarcity recommendation in `docs/DESIGN-PARTNER-ACQUISITION-PLAN.md`). Five distribution channels (Boney-Henderson warm intro, Discovery Scan cold outreach, NAEA events, earned media, referrals) running in parallel. Five must-ship operational items gate the goal: Discovery Scan landing page (5/25), cold outreach automation (5/18), sales VA hired (5/31), CRM tracking (5/18), Boney-Henderson presentation (5/30). | 2026-05-11 | The traction story for YC + pre-seed SAFE round + mid-market partner #2 procurement signal. Aggressive but realistic; 65% confidence band on hitting 100 specifically, 90% confidence on hitting 80+. |
 
 If you need to ADD to this list, do it via a /decisions-log entry first, then mirror the lock here. Don't lock things in this section without going through the decisions log.
 
@@ -539,6 +540,17 @@ Per-return / per-notice usage on top of a low monthly base. Storefront and small
 ---
 
 ## 15. Build order — Docket OS v1 by 7/30 (Antonio sub-milestone 5/30)
+
+> **Acquisition anchor (locked 2026-05-11):** alongside the v1 product build below,
+> the company is running a parallel 12-week acquisition sprint targeting
+> **100 paying customers by 2026-08-01**. Strategy + funnel math + channels +
+> pricing + weekly milestones in
+> [`docs/DESIGN-PARTNER-ACQUISITION-PLAN.md`](docs/DESIGN-PARTNER-ACQUISITION-PLAN.md).
+> Operational kits in [`docs/pitch-decks/cold-outreach-templates.md`](docs/pitch-decks/cold-outreach-templates.md)
+> and [`docs/DISCOVERY-SCAN-OPERATIONAL.md`](docs/DISCOVERY-SCAN-OPERATIONAL.md). The acquisition sprint and the product
+> phased plan are tightly coupled: Phase 5 work (Discovery agent) gets pulled
+> forward to support 6/15 Antonio reference scan; Phase 6 onboarding of mid-market
+> partner #2 stays on track. The 100-customer goal IS the YC traction story.
 
 > **CEO review 5/2/2026:** Original 5/15 plan was production scaffolding for
 > down-market only. Real goal is the tax-native OS for mid-market AND
@@ -1127,6 +1139,11 @@ Beyond this CLAUDE.md, six docs anchor product + ops decisions and SHOULD NOT be
 - [`docs/MEMORY-ARCHITECTURE.md`](docs/MEMORY-ARCHITECTURE.md) — six-layer memory model + cost-optimized prompt caching strategy. Re-read before changing prompt assembly order or the agent fleet's context-loading pattern.
 - [`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md) — punch list of resilience / observability / security / dev-process gaps with priority tiers. Re-read every Friday during v1 build. Items get crossed out, not deleted.
 - [`docs/POST-5-15.md`](docs/POST-5-15.md) — what's deferred. (Earlier-version "what's not in the demo cohort" doc; see PRODUCTION-READINESS for current deferred list.)
+- [`docs/DESIGN-PARTNER-ACQUISITION-PLAN.md`](docs/DESIGN-PARTNER-ACQUISITION-PLAN.md) — **100-customers-by-8/1 sprint** (per L16). Strategy + funnel math + 5 distribution channels + 3 pricing options + 5 must-ship operational items + weekly milestones. Re-read every Friday during the sprint. Drift between this plan and reality is the bug.
+- [`docs/pitch-decks/cold-outreach-templates.md`](docs/pitch-decks/cold-outreach-templates.md) — operational outreach kit. 5 cold email variants + LinkedIn DMs + voicemail + qualifying scripts + CRM schema. Re-read on every Friday during the sprint.
+- [`docs/DISCOVERY-SCAN-OPERATIONAL.md`](docs/DISCOVERY-SCAN-OPERATIONAL.md) — Discovery Scan landing page copy + onboarding email + PDF template + Discovery agent technical spec for Haokun's queue. Ship target: landing page 5/25, Antonio reference scan 6/15.
+- [`docs/COVERAGE-MAP.md`](docs/COVERAGE-MAP.md) — published transparent compliance scope. 4-tier classification + 5-layer Minimum-Viable Shield + 20-position v1 Position Library list. Re-read every demo, every cold-outreach reply with "what does it cover" questions, every Coverage Map update commit.
+- [`docs/MARKETING-FRAMES.md`](docs/MARKETING-FRAMES.md) — Option B audience-segmented hierarchy. Per-surface lead language + penalty-anchored pricing math + canonical copy variants. Re-read before writing any external surface copy (landing page, deck, email, video script, social post).
 
 **Vendor resilience posture (locked 2026-05-08 after Neon Cell 6 outage)**: Anthropic + Bedrock fallback at orchestrator layer (V1). Neon read replica us-east-2 (V1). Status-aware UX everywhere (V1). R2 cross-region replication (V1.5, before Feb 2027 tax season). Multi-cloud DB hot standby (V1.5). Read-only mode for DB write failures (V1). Detailed plan in PRODUCTION-READINESS §A.
 
