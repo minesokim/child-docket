@@ -76,6 +76,131 @@ describe('isTransientAnthropicError', () => {
       ).toBe(true);
     });
 
+    // Edge case 16 (2026-05-12 addition): Anthropic returns
+    //   400 + invalid_request_error + message="credit balance too low"
+    // when the workspace runs out of credits. Structurally a 400 but
+    // semantically transient — same request succeeds via Bedrock (different
+    // billing relationship) and via Anthropic once topped up.
+    test('billing 400: "Your credit balance is too low" → transient', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          error: {
+            type: 'invalid_request_error',
+            message: 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.',
+          },
+        }),
+      ).toBe(true);
+    });
+
+    test('billing 400: case-insensitive "Credit Balance" match', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          error: {
+            type: 'invalid_request_error',
+            message: 'CREDIT BALANCE exhausted',
+          },
+        }),
+      ).toBe(true);
+    });
+
+    // The Anthropic SDK's APIError populates `e.type` at the top level
+    // from `body.error.type`, and wraps the raw JSON body in `e.error`
+    // as `{ type: 'error', error: { type, message } }`. So `e.error.type`
+    // is ALWAYS 'error' (the wire wrapper) — the semantic type lives at
+    // `e.type` or `e.error.error.type`. These tests cover the real SDK
+    // shape so the classifier doesn't silently miss live errors.
+    test('SDK shape: e.type === overloaded_error (top-level)', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 529,
+          type: 'overloaded_error',
+          error: { type: 'error', error: { type: 'overloaded_error' } },
+        }),
+      ).toBe(true);
+    });
+
+    test('SDK shape: e.type === rate_limit_error (top-level)', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 429,
+          type: 'rate_limit_error',
+          error: { type: 'error', error: { type: 'rate_limit_error' } },
+        }),
+      ).toBe(true);
+    });
+
+    test('SDK shape: billing 400 with e.type at top + nested message', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          type: 'invalid_request_error',
+          message:
+            '400 Your credit balance is too low to access the Anthropic API.',
+          error: {
+            type: 'error',
+            error: {
+              type: 'invalid_request_error',
+              message:
+                'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.',
+            },
+          },
+        }),
+      ).toBe(true);
+    });
+
+    test('SDK shape: billing 400 message check uses top-level e.message when nested missing', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          type: 'invalid_request_error',
+          message: '400 Your credit balance is too low',
+          error: { type: 'error', error: { type: 'invalid_request_error' } },
+        }),
+      ).toBe(true);
+    });
+
+    // Raw body shape: caller passes the response body directly (not
+    // wrapped in an APIError). The outer `type: 'error'` wrapper must
+    // not lock the classifier — it should look through to the nested
+    // semantic type. Codex round 1 caught a regression here when
+    // earlier code used `??` (which picks the first truthy value).
+    test('raw body shape: outer type:"error" wrapper does not mask inner overloaded_error', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 529,
+          type: 'error',
+          error: { type: 'error', error: { type: 'overloaded_error' } },
+        }),
+      ).toBe(true);
+    });
+
+    test('raw body shape: outer type:"error" wrapper does not mask billing 400', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          type: 'error',
+          error: {
+            type: 'error',
+            error: {
+              type: 'invalid_request_error',
+              message: 'Your credit balance is too low to access the Anthropic API.',
+            },
+          },
+        }),
+      ).toBe(true);
+    });
+
+    test('raw body shape: outer type:"error" wrapper does not mask api_error without status', () => {
+      expect(
+        isTransientAnthropicError({
+          type: 'error',
+          error: { type: 'error', error: { type: 'api_error' } },
+        }),
+      ).toBe(true);
+    });
+
     test('Node ETIMEDOUT network error', () => {
       expect(isTransientAnthropicError({ code: 'ETIMEDOUT' })).toBe(true);
     });
@@ -126,11 +251,32 @@ describe('isTransientAnthropicError', () => {
       expect(isTransientAnthropicError({ status: 422 })).toBe(false);
     });
 
-    test('invalid_request_error from Anthropic SDK', () => {
+    test('invalid_request_error from Anthropic SDK (no message)', () => {
       expect(
         isTransientAnthropicError({
           status: 400,
           error: { type: 'invalid_request_error' },
+        }),
+      ).toBe(false);
+    });
+
+    test('invalid_request_error with non-billing message → caller bug, NOT transient', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          error: {
+            type: 'invalid_request_error',
+            message: 'messages.0.content: must be a string or array',
+          },
+        }),
+      ).toBe(false);
+    });
+
+    test('invalid_request_error with empty message → NOT transient', () => {
+      expect(
+        isTransientAnthropicError({
+          status: 400,
+          error: { type: 'invalid_request_error', message: '' },
         }),
       ).toBe(false);
     });

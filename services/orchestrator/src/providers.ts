@@ -23,7 +23,7 @@
 //   2. Anthropic 5xx        → fall back to Bedrock                ← HANDLED
 //   3. Anthropic timeout    → abort + fall back                   ← HANDLED (15s timeout)
 //   4. Anthropic 401        → DO NOT fall back, throw immediately ← HANDLED (config error)
-//   5. Anthropic 400        → DO NOT fall back, throw immediately ← HANDLED (caller bug)
+//   5. Anthropic 400 caller-bug → DO NOT fall back, throw         ← HANDLED (bad prompt / model ID)
 //   6. Bedrock also fails   → throw aggregated error              ← HANDLED
 //   7. Model ID per tier    → BEDROCK_MODEL_IDS table             ← HANDLED
 //   8. Cost telemetry tag   → result.provider field               ← HANDLED
@@ -34,6 +34,7 @@
 //   13. Streaming           → defer; no agent streams today       ← DOCUMENTED
 //   14. Bedrock cost ~+5-10% → tagged in telemetry                ← DOCUMENTED
 //   15. Idempotency rare-dup → both calls non-mutating, ok        ← DOCUMENTED
+//   16. Anthropic 400 billing → "credit balance too low" → fall back ← HANDLED (2026-05-12)
 
 import Anthropic from '@anthropic-ai/sdk';
 import {
@@ -267,9 +268,38 @@ async function callViaBedrock(input: CallClaudeInput): Promise<CallClaudeResult>
  */
 function isTransientAnthropicError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
+  // Anthropic SDK error shape (APIError from @anthropic-ai/sdk):
+  //   e.status         — HTTP status
+  //   e.type           — top-level error type set by APIError constructor
+  //                      from body.error.type (e.g. 'invalid_request_error',
+  //                      'rate_limit_error', 'overloaded_error')
+  //   e.error          — the raw JSON body, which Anthropic returns as
+  //                      { type: 'error', error: { type, message } }.
+  //                      So e.error.type is always 'error' (the wire
+  //                      wrapper) — DO NOT use e.error.type to detect the
+  //                      semantic error type. Use e.type (or e.error.error.type
+  //                      as a fallback for non-SDK error shapes / direct
+  //                      fetch responses).
+  //   e.message        — Error.message string, prefixed with status code,
+  //                      e.g. "400 Your credit balance is too low..."
+  //   e.code           — Node-level network error code (ETIMEDOUT etc.)
+  //                      ONLY when the failure is a network-layer error.
+  //   e.name           — 'APIError' for SDK errors; 'AbortError' / 'TimeoutError'
+  //                      for fetch-layer abort.
+  //
+  // Tests in providers.test.ts use `error: { type: ... }` (one level
+  // nested) which is the legacy shape the classifier was written for.
+  // We accept BOTH shapes:
+  //   - e.error.type === 'rate_limit_error'        (legacy / test fixture)
+  //   - e.type === 'rate_limit_error'              (real Anthropic SDK)
+  //   - e.error.error.type === 'rate_limit_error'  (raw body when caller
+  //                                                 passes the response body
+  //                                                 directly, not the SDK error)
   const e = err as {
     status?: number;
-    error?: { type?: string };
+    type?: string;
+    error?: { type?: string; message?: string; error?: { type?: string; message?: string } };
+    message?: string;
     name?: string;
     code?: string;
   };
@@ -281,14 +311,58 @@ function isTransientAnthropicError(err: unknown): boolean {
   // 429 rate limit / overload — transient.
   if (e.status === 429) return true;
 
-  // Anthropic-specific error types that indicate transient state.
+  // Anthropic semantic error types that indicate transient state.
+  // Check all three possible paths to the inner type (see above).
+  //
+  // CRITICAL: skip the outer wire-wrapper literal value `'error'`.
+  // When the function is given the raw Anthropic response body
+  // (not wrapped in an APIError), `e.type` is the outer `'error'`
+  // wrapper, not the semantic inner type. A naive `??` chain that
+  // picks the first truthy value would lock onto `'error'` and
+  // never reach the inner `error.error.type`. Codex C5-overnight
+  // round 1 caught this regression — without the wrapper skip,
+  // raw-body credit-balance / overloaded / api_error inputs would
+  // be classified as permanent and not fall over to Bedrock.
   const transientTypes = new Set([
     'api_error',
     'overloaded_error',
     'service_unavailable',
     'rate_limit_error',
   ]);
-  if (e.error?.type && transientTypes.has(e.error.type)) return true;
+  const candidates: Array<string | undefined> = [
+    typeof e.type === 'string' ? e.type : undefined,
+    typeof e.error?.error?.type === 'string' ? e.error.error.type : undefined,
+    typeof e.error?.type === 'string' ? e.error.type : undefined,
+  ];
+  // Pick the first non-empty value that isn't the wire-wrapper literal.
+  const innerType = candidates.find(
+    (c): c is string => typeof c === 'string' && c.length > 0 && c !== 'error',
+  );
+  if (innerType && transientTypes.has(innerType)) return true;
+
+  // Billing-condition 400: Anthropic returns
+  //   status=400, error.type="invalid_request_error",
+  //   message="Your credit balance is too low to access the Anthropic API."
+  // This is structurally a 400 but semantically transient — the same
+  // request will succeed against Bedrock (different billing relationship)
+  // and against Anthropic once the user tops up. Treating it as
+  // permanent meant a real outage in 2026-05-12 (Docket's Anthropic
+  // balance ran out mid-day → every /e2e and agent run failed hard
+  // instead of falling through to Bedrock). Real-world vendor
+  // resilience requires recognizing billing 400s as transient.
+  //
+  // Detection: status 400 + invalid_request_error (at any of the three
+  // paths above) + message contains "credit balance" (case-insensitive,
+  // checked across both nested message and the SDK-flattened top-level
+  // message). The narrow message match avoids treating legitimate
+  // caller-bug 400s (malformed prompts, bad model IDs) as transient.
+  if (e.status === 400 && innerType === 'invalid_request_error') {
+    const innerMessage =
+      e.error?.error?.message ?? e.error?.message ?? e.message ?? '';
+    if (typeof innerMessage === 'string' && /credit balance/i.test(innerMessage)) {
+      return true;
+    }
+  }
 
   // Network-layer errors (timeout, ECONNRESET, etc.) — transient.
   if (e.code === 'ETIMEDOUT' || e.code === 'ECONNRESET' || e.code === 'ECONNREFUSED') {
@@ -296,7 +370,7 @@ function isTransientAnthropicError(err: unknown): boolean {
   }
   if (e.name === 'AbortError' || e.name === 'TimeoutError') return true;
 
-  // 401, 400, 403, 404 — config / caller errors. NOT transient.
+  // 401, 400 (non-billing), 403, 404 — config / caller errors. NOT transient.
   // Explicitly exclude even though the default-false path handles them.
   return false;
 }
