@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@docket/shared": "workspace:*",
+    "@docket/tax-graph": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5"
   },

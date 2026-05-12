@@ -67,9 +67,19 @@ export interface AuthoritySearchOptions {
   >;
   /**
    * Restrict to a single jurisdiction. 'federal' / 'CA' / 'firm'.
-   * Undefined = no filter.
+   * Undefined = no filter. Mutually exclusive with `jurisdictions`;
+   * if both are passed, `jurisdictions` wins.
    */
   jurisdiction?: 'federal' | 'CA' | 'firm';
+  /**
+   * Restrict to multiple jurisdictions (e.g., federal + CA for a
+   * taxpayer with California-source income). Empty array = no filter.
+   * Mutually exclusive with `jurisdiction`; if both are passed,
+   * `jurisdictions` wins. PostgresRetriever uses this path so
+   * documented `['federal', 'CA']` queries don't degrade to no-filter
+   * (codex C6 round 1 P2).
+   */
+  jurisdictions?: ReadonlyArray<'federal' | 'CA' | 'firm'>;
   /**
    * Filter by applicable_tax_years overlap. If the authority's
    * applicable_tax_years is empty (evergreen), it's always
@@ -123,8 +133,39 @@ export async function searchAuthorities(
     opts.kinds && opts.kinds.length > 0
       ? `{${opts.kinds.map((k) => `"${k}"`).join(',')}}`
       : null;
-  const jurisdiction = opts.jurisdiction ?? null;
+  // jurisdictions array wins when both are passed (codex C6 round 1 P2).
+  // Single-jurisdiction callers keep using `jurisdiction`; multi-
+  // jurisdiction callers (PostgresRetriever) use `jurisdictions`.
+  //
+  // Empty `jurisdictions: []` is an EXPLICIT "no filter" signal — it
+  // wins over a still-set `jurisdiction`, so callers can clear the
+  // filter via option-object merging without removing the legacy
+  // field (codex C6 round 6 P2). `jurisdictions: undefined` falls
+  // through to the legacy single-jurisdiction path.
+  const jurisdictionsLiteral = opts.jurisdictions
+    ? opts.jurisdictions.length > 0
+      ? `{${opts.jurisdictions.map((j) => `"${j}"`).join(',')}}`
+      : null
+    : opts.jurisdiction
+      ? `{"${opts.jurisdiction}"}`
+      : null;
   const taxYear = opts.taxYear ?? null;
+  // Hoist conditional supersession filters. Codex C6 round 3 fixes:
+  //   P1: when taxYear is set, supersession is "outdated for TY N if
+  //       superseded on or before 12/31/N" — matches tax-graph's
+  //       citation status logic. Use `superseded_date > 12/31/N`
+  //       (strict greater-than end-of-year).
+  //   P2: when includeSuperseded:true the caller wants the full
+  //       historical set; the tax-year supersession check below
+  //       MUST be skipped in that mode (was always-on before).
+  const taxYearSupersededFilter = !excludeSuperseded
+    ? sql`TRUE`
+    : sql`(${taxYear}::int IS NULL
+           OR a.superseded_date IS NULL
+           OR a.superseded_date > make_date(${taxYear}::int, 12, 31))`;
+  const noTaxYearSupersededFilter = excludeSuperseded
+    ? sql`(${taxYear}::int IS NOT NULL OR a.superseded_date IS NULL)`
+    : sql`TRUE`;
 
   return await withTenant(tenantId as TenantId, async (db) => {
     const rows = await db.execute<AuthoritySearchHit>(sql`
@@ -144,11 +185,66 @@ export async function searchAuthorities(
       JOIN authorities a ON a.id = ac.authority_id
       WHERE ac.tsv @@ websearch_to_tsquery('english', ${trimmed})
         AND (${kindsLiteral}::text[] IS NULL OR a.kind::text = ANY(${kindsLiteral}::text[]))
-        AND (${jurisdiction}::text IS NULL OR a.jurisdiction::text = ${jurisdiction}::text)
+        AND (${jurisdictionsLiteral}::text[] IS NULL
+             OR a.jurisdiction::text = ANY(${jurisdictionsLiteral}::text[]))
+        -- taxYear is the REFERENCE TAX YEAR for "in effect" filtering.
+        -- An authority is "in effect for tax year N" via TWO branches
+        -- (codex C6 round 2 P1):
+        --
+        -- Branch A (applicable_tax_years populated): trust the array.
+        --   N ∈ applicable_tax_years is sufficient. Don't additionally
+        --   filter on effective_date — year-versioned pubs (IRS Pub 17
+        --   (2024)) have effective_date='2025-01-01' (publication
+        --   date) but applicable_tax_years=[2024], so an
+        --   effective_date <= 12/31/N filter would incorrectly
+        --   drop them.
+        --
+        -- Branch B (applicable_tax_years empty = evergreen): use
+        --   effective_date <= 12/31/N (took effect by year-end). The
+        --   IRC, Treas Regs, etc. live in this branch.
+        --
+        -- Supersession: applies to BOTH branches. An authority is out
+        -- of scope for TY N if it was superseded strictly BEFORE the
+        -- start of TY N (codex C6 round 2 P2 — a row superseded ON
+        -- 1/1/N was already replaced by then; tax-graph status logic
+        -- treats it as superseded for N). Strict greater-than below.
+        -- Applicability: applicable_tax_years is the AUTHORITATIVE
+        -- WHICH-year signal for year-versioned rows. effective_date
+        -- is the WHEN-took-effect signal — relevant for evergreen
+        -- rows (no applicable_tax_years) and tax-year-less retrieval.
+        --
+        -- Year-versioned rows (applicable_tax_years populated): trust
+        -- applicable_tax_years; do NOT also gate on effective_date.
+        -- Year publications (Pub 17 (2024), FTB Pub 1031 (2024)) are
+        -- typically published at the start of N+1 with effective_date
+        -- ~2025-01-01 even though they apply to TY 2024. Filtering
+        -- those out with effective_date <= 12/31/N would drop the
+        -- very rows the caller asked for (codex C6 round 5 P1).
+        --
+        -- Evergreen rows (applicable_tax_years empty): require
+        -- effective_date <= 12/31/N — IRC sections, Treas Regs, court
+        -- opinions live here; the date check rules out future
+        -- amendments that take effect in N+1.
         AND (${taxYear}::int IS NULL
              OR cardinality(a.applicable_tax_years) = 0
              OR ${taxYear}::int = ANY(a.applicable_tax_years))
-        AND (${excludeSuperseded ? sql`a.superseded_date IS NULL` : sql`TRUE`})
+        AND (${taxYear}::int IS NULL
+             OR cardinality(a.applicable_tax_years) > 0
+             OR a.effective_date <= make_date(${taxYear}::int, 12, 31))
+        -- Tax-year-less retrieval defaults to "in effect today" per
+        -- the KnowledgeRetriever contract. Always applies when no
+        -- taxYear, regardless of includeSuperseded — that flag
+        -- widens the SUPERSEDED set, not the FUTURE-DATED set
+        -- (codex C6 round 5 P2). A row published for TY 2026 but
+        -- effective 2027-01-15 should never surface in today's view.
+        AND (${taxYear}::int IS NOT NULL
+             OR a.effective_date <= CURRENT_DATE)
+        -- Supersession: applied when excludeSuperseded is true.
+        -- With taxYear: outdated if superseded on or before 12/31/N
+        -- (tax-graph citation status convention). Without taxYear:
+        -- outdated if superseded at all (today's view).
+        AND ${taxYearSupersededFilter}
+        AND ${noTaxYearSupersededFilter}
         AND (
           ${includeDrafts}::boolean = true
           OR a.kind::text != 'firm_memo'

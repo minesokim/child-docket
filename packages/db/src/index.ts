@@ -91,3 +91,13 @@ export {
   type AuthoritySearchHit,
   type AuthoritySearchOptions,
 } from './authority-search.js';
+
+// PostgresRetriever — the production KnowledgeRetriever
+// implementation (hybrid BM25 + cosine + RRF over authority_chunks).
+// Per-tenant via RLS, default-denies DRAFT firm_memo rows, falls
+// back to BM25-only on Voyage outage. Used by the Discovery agent
+// + audit-defense + any RAG-shaped agent call.
+export {
+  PostgresRetriever,
+  type PostgresRetrieverOpts,
+} from './postgres-retriever.js';
