@@ -22,9 +22,11 @@ Per MARKETING-FRAMES.md Option B locked 2026-05-11 + CLAUDE.md §19 anti-AI-slop
 
 ---
 
-## The 5 cold email variants
+## The 6 cold email variants
 
 Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free Discovery Scan. No PDF attachments (deliverability kills). One link max, plus the P.S. link.
+
+> **Update 2026-05-13**: Variant F (the canonical-pitch capacity-doubling lead) added after Slant.app benchmarking. Variant A remains the highest-converting on the Antonio-analog audit-defense angle; Variant F is the new lead-with-vision opener for prospects who haven't felt the §6695(g) pain yet but are mentally exploring AI tools.
 
 ### Variant A — "The audit-defense" angle (highest-converting per Antonio analog)
 
@@ -104,6 +106,27 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 
 ---
 
+### Variant F — "The capacity-doubling vision" angle (canonical-pitch lead; for AI-curious prospects)
+
+Derived from the 30-second hook of the canonical pitch script (PRODUCT-ROADMAP §6). Works best on prospects who are exploring AI tools but haven't yet had the §6695(g) audit conversation. Pairs with Variant A on Day 4 follow-up if Variant F lands a soft maybe.
+
+> **Subject:** double your tax-pro capacity (Antonio went from 200 to 400 clients)
+>
+> Hi [First name],
+>
+> Quick note from a tax-OS founder. Over the next decade, 60 million Americans will face an IRS notice, audit, or filing deadline without a tax professional. Hundreds of billions in misallocated refunds, missed deductions, and uncontested penalties. Tax pros have the expertise to help. They do not have the capacity to reach everyone.
+>
+> Docket doubles a tax pro's capacity. Antonio Vazquez, EA at Vazant Consulting, went from 200 clients to 400 with the same compliance posture and the same audit-defense file on every return. We are onboarding 100 firms by August 1st. Founder rate is $250/mo for life on the first 50.
+>
+> 20 minutes next week, or a free Discovery Scan on one of your returns?
+>
+> David Kim
+> CEO, Docket
+>
+> *P.S. The §6695(g) penalty is $650 per failure. Docket is $250/mo founder rate — one prevented penalty pays for half a year. Pricing math at docket.com/pricing.*
+
+---
+
 ### Variant E — "The bootstrap reframe" angle (for EAs who have ignored AI tools entirely)
 
 > **Subject:** the AI tax tools aren't built for you yet
@@ -129,7 +152,7 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 
 | Day | Touch | Channel | Template |
 |---|---|---|---|
-| Day 0 | Opening send | Email | Pick one variant (rotate A → B → C → D → E across batches) |
+| Day 0 | Opening send | Email | Pick one variant (rotate A → B → C → D → E → F across batches). Variant F leads on AI-curious lists; Variant A on §6695(g)-pained lists. |
 | Day 4 | Bump-up #1 | Email reply ("bumping this up") | "Bumping this up — saw you opened the email. Quick yes/no on whether a Discovery Scan would be useful?" |
 | Day 7 | LinkedIn connect | LinkedIn DM (see below) | LinkedIn DM variant + connect request |
 | Day 10 | Bump-up #2 | Email | "Last bump on this — I know season's brutal. If now's not the time, who in your network would benefit from a free scan?" |
