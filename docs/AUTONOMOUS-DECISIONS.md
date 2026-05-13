@@ -1099,5 +1099,61 @@ already mandated but I kept skipping)
 
 ---
 
-*Last updated: 2026-05-09. Backfilled from session start; subsequent
+## [26] 2026-05-12 — Replica probe: accept 6s response time on cold-start + replica outage
+
+**Decision**: `/api/health` response time is bounded by the replica
+probe (`REPLICA_TIMEOUT_MS=6000`) when the replica is configured.
+During a Neon read-replica cold-start (2-5s) or genuine outage, the
+endpoint blocks up to 6s before returning. Codex flagged this as
+P1 in R2 + R11 across two distinct review sessions.
+
+**Reasoning**: The original issue was a user-visible "Replica DB
+unavailable" banner triggered by a 1.5s probe timeout vs. Neon's
+2-5s cold-start. Three constants (`REPLICA_TIMEOUT_MS=6000`,
+`REPLICA_DEGRADED_MS=2500`, in-flight + stamp-after-probe cache)
+solve the false-banner problem cleanly. I iterated on the
+"primary-outage detection delayed by 6s" concern across 8 rounds
+(soft-budget race, deadline + cooldown, late-completion closures)
+and EACH layer introduced new races (stale cache replay, pool
+exhaustion, false-readonly-pin). After R8, I reverted to the simple
+3-constant approach.
+
+The remaining trade-off: when primary goes down AND replica is
+cold-starting AT THE SAME TIME, `HealthStatusGate`'s 30s poll sees
+the 503 up to 6s later than it would have. After that single poll,
+the result is cached for 5s and subsequent polls are fast. Real
+user impact: read-only banner shows up at second 31 instead of
+second 30 in the worst case — bounded, self-recovering.
+
+**Alternative considered**:
+1. Soft-budget race (return 'degraded' at 1.5s if probe still in
+   flight) — R3 caught that 'degraded' replays as stale 'healthy',
+   masking real outages. R5-R7 added background completion handlers
+   and cooldowns that introduced pool-exhaustion + false-readonly
+   pinning bugs. Net: 6 codex rounds of cascading complexity.
+2. Background replica probe with last-known-state on every request
+   — same stale-replay concern as (1); requires explicit cache
+   invalidation on probe completion which is what (1) tried.
+3. Decouple replica reporting into a separate slower endpoint —
+   architectural change; deferred.
+4. Postgres `statement_timeout` on the connection pool — kills any
+   query that exceeds N seconds server-side. Right long-term fix,
+   but affects ALL queries (not just health probes); riskier to
+   land in the same commit. Queued as PRODUCTION-READINESS work.
+
+**How to reverse**: revert this commit. Or: implement the
+background-probe pattern in route.ts with explicit AbortController
+on `postgres-js` queries so timed-out probes don't accumulate.
+
+**Severity**: medium (user-visible behavior change in a bounded
+edge case; observable as ≤6s delay on first 503 after replica goes
+cold during primary outage; auto-recovers within one poll cycle)
+
+**Commit**: this commit
+
+**User-review status**: pending
+
+---
+
+*Last updated: 2026-05-12. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*

@@ -35,6 +35,14 @@ type CombinedResult = {
 
 let cachedAt = 0;
 let cachedResult: CombinedResult | null = null;
+// In-flight de-duplication. The replica probe can take up to 6s during
+// a Neon read-replica cold-start (REPLICA_TIMEOUT_MS in health-probe.ts).
+// Without this, concurrent /api/health hits during the wake-up window
+// each fire their own probe — and worse, the cache TTL (5s) is shorter
+// than the probe (6s) so subsequent polls also miss the cache. The
+// shared-promise pattern + stamp-after-probe (below) keeps the cache
+// honest for the full TTL after probes complete (codex C6-replica R1).
+let inflightProbe: Promise<CombinedResult> | null = null;
 
 async function checkSchema(): Promise<SchemaResult | null> {
   try {
@@ -85,19 +93,35 @@ async function checkSchema(): Promise<SchemaResult | null> {
 }
 
 async function checkAll(): Promise<CombinedResult> {
-  const now = Date.now();
-  if (cachedResult && now - cachedAt < CACHE_TTL_MS) {
+  if (cachedResult && Date.now() - cachedAt < CACHE_TTL_MS) {
     return cachedResult;
   }
-  const [db, replica, schema] = await Promise.all([
-    checkPrimaryDb(),
-    checkReadReplica(),
-    checkSchema(),
-  ]);
-  const result: CombinedResult = { db, replica, schema };
-  cachedResult = result;
-  cachedAt = now;
-  return result;
+  // Share one probe across concurrent callers — replica cold-start
+  // (up to 6s) is longer than the 5s cache TTL, so without this
+  // every request during a cold-start window fires its own probe.
+  if (inflightProbe) {
+    return inflightProbe;
+  }
+  inflightProbe = (async () => {
+    try {
+      const [db, replica, schema] = await Promise.all([
+        checkPrimaryDb(),
+        checkReadReplica(),
+        checkSchema(),
+      ]);
+      const result: CombinedResult = { db, replica, schema };
+      cachedResult = result;
+      // Stamp AFTER probes complete so the cache covers the full TTL
+      // post-probe rather than (TTL - probe_duration). With a 6s
+      // replica probe, pre-probe stamping would make the result stale
+      // on arrival (codex C6-replica R10 P1).
+      cachedAt = Date.now();
+      return result;
+    } finally {
+      inflightProbe = null;
+    }
+  })();
+  return inflightProbe;
 }
 
 export async function GET(_req: NextRequest) {

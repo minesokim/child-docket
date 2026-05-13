@@ -38,8 +38,40 @@ export type ReplicaStatusResult =
   | { configured: false }
   | { configured: true; status: ServiceStatus; latencyMs: number };
 
+// Primary timeout stays tight (1.5s). On Neon Launch tier the primary
+// has auto-suspend OFF so it is never cold; a 1.5s timeout is plenty.
 const DB_TIMEOUT_MS = 1500;
+
+// Replica timeout is larger because Neon read-replica branches DO
+// auto-suspend after idle, and a cold-start takes 2-5 seconds. The
+// previous 1.5s cap caused the probe to time out and report `down`
+// during the wake-up window, even though the replica was just
+// resuming. (Fix surfaced after a user-visible "Replica DB
+// unavailable" dashboard banner despite the replica being healthy
+// on direct probe; 2026-05-12.)
+//
+// TRADE-OFF: when the replica is GENUINELY unreachable, /api/health
+// now blocks for up to 6s before reporting `down`. Cached for 5s so
+// concurrent polls share the result. HealthStatusGate polls every
+// 30s; the user-visible impact is the FIRST poll after a replica
+// outage takes 6s instead of 1.5s. Acceptable for v0; future work
+// can run the replica probe in the background with last-known-state
+// fallback if this delay matters.
+const REPLICA_TIMEOUT_MS = 6000;
+
+// Primary degraded threshold (500ms) reflects normal Neon p99 spikes
+// of 200-400ms — anything beyond starts to feel laggy in the UI.
 const DB_DEGRADED_MS = 500;
+
+// Replica degraded threshold is HIGHER than primary's because a
+// Neon read-replica cold-start commonly takes 500-2000ms even on
+// success. Reporting that wake-up as `degraded` would still trigger
+// the UI's "Replica DB unavailable" banner (health-gate.tsx maps
+// replica `degraded` and `down` to the same neonReplicaDegradedBanner
+// copy in v0). A 2500ms threshold lets normal cold-starts read as
+// `healthy` while still flagging genuinely-slow probes — the
+// operational signal we want to keep alive (codex C6-replica R9 P2).
+const REPLICA_DEGRADED_MS = 2500;
 
 /**
  * Probe the primary DB. Returns 'down' on any error including
@@ -86,13 +118,13 @@ export async function checkReadReplica(): Promise<ReplicaStatusResult> {
       return { configured: true, status: 'down', latencyMs: Date.now() - t0 };
     }
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('replica_check_timeout')), DB_TIMEOUT_MS),
+      setTimeout(() => reject(new Error('replica_check_timeout')), REPLICA_TIMEOUT_MS),
     );
     await Promise.race([db.execute(sql`SELECT 1`), timeout]);
     const latencyMs = Date.now() - t0;
     return {
       configured: true,
-      status: latencyMs > DB_DEGRADED_MS ? 'degraded' : 'healthy',
+      status: latencyMs > REPLICA_DEGRADED_MS ? 'degraded' : 'healthy',
       latencyMs,
     };
   } catch {
