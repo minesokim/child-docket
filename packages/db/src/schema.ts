@@ -1943,6 +1943,122 @@ export const nudges = pgTable(
 );
 
 /**
+ * projects (migration 0034) — third organizing primitive.
+ *
+ * Per CLAUDE.md §4 Command Room Projects: a project is a recurring
+ * workflow type the firm runs many clients through (Annual Return
+ * Prep / Discovery Scan / Audit Defense Engagement / Notice Response
+ * / Quarterly Estimates Cycle / Incorporation / BOI Annual / etc.).
+ *
+ * Two-mode table:
+ *   is_template = true  → canonical template; firms customize + clone
+ *   is_template = false → instance attached to engagements via the
+ *                         engagement_projects join
+ */
+export const projects = pgTable(
+  'projects',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /**
+     * Canonical project kind. Free-form text (no enum) so firms
+     * can add custom kinds; v0 vocabulary lives in
+     * apps/command-room/src/app/settings/projects/actions.ts seeder.
+     */
+    kind: text('kind').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    isTemplate: boolean('is_template').notNull().default(false),
+    sourceTemplateId: uuid('source_template_id').references(
+      (): AnyPgColumn => projects.id,
+      { onDelete: 'set null' },
+    ),
+    isActive: boolean('is_active').notNull().default(true),
+    taxYear: integer('tax_year'),
+    colorHint: text('color_hint'),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantKindNameYearUnique: uniqueIndex(
+      'projects_tenant_kind_name_year_unique',
+    ).on(t.tenantId, t.kind, t.name, t.taxYear),
+    tenantActiveIdx: index('projects_tenant_active_idx')
+      .on(t.tenantId, t.kind)
+      .where(sql`is_active AND NOT is_template`),
+    tenantTemplatesIdx: index('projects_tenant_templates_idx')
+      .on(t.tenantId, t.kind)
+      .where(sql`is_template`),
+    sourceTemplateIdx: index('projects_source_template_idx')
+      .on(t.sourceTemplateId)
+      .where(sql`source_template_id IS NOT NULL`),
+    taxYearRange: check(
+      'projects_tax_year_range',
+      sql`${t.taxYear} IS NULL OR (${t.taxYear} >= 2000 AND ${t.taxYear} <= 2100)`,
+    ),
+  }),
+);
+
+/**
+ * engagement_projects (migration 0034) — many-to-many join.
+ *
+ * One engagement can belong to multiple projects (e.g., a 1040
+ * engagement in both "Annual Return Prep 2026" + "Q4 Year-End
+ * Planning"). is_primary flag preferred when filtering.
+ */
+export const engagementProjects = pgTable(
+  'engagement_projects',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    engagementId: uuid('engagement_id').notNull(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    addedAt: timestamp('added_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    isPrimary: boolean('is_primary').notNull().default(false),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantEngagementFk: foreignKey({
+      name: 'engagement_projects_tenant_engagement_fk',
+      columns: [t.tenantId, t.engagementId],
+      foreignColumns: [engagements.tenantId, engagements.id],
+    }).onDelete('cascade'),
+    engagementProjectUnique: uniqueIndex(
+      'engagement_projects_engagement_project_unique',
+    ).on(t.engagementId, t.projectId),
+    projectIdx: index('engagement_projects_project_idx').on(
+      t.projectId,
+      sql`added_at DESC`,
+    ),
+    engagementIdx: index('engagement_projects_engagement_idx').on(
+      t.engagementId,
+    ),
+    tenantPrimaryIdx: index('engagement_projects_tenant_primary_idx')
+      .on(t.tenantId, t.engagementId)
+      .where(sql`is_primary`),
+  }),
+);
+
+/**
  * Generic per-tenant JSONB k/v store. Holds instance-scoped
  * configuration that doesn't earn its own column:
  *   - theme_pref          (firm-wide theme default)
