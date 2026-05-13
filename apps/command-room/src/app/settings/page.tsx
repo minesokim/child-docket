@@ -311,6 +311,22 @@ export default async function SettingsPage() {
                 </li>
                 <li className="settings-integ">
                   <div className="settings-integ-main">
+                    <div className="settings-integ-name">Nudges</div>
+                    <div className="settings-integ-purpose">
+                      Proactive outreach rules: life events, time windows, drift
+                      signals, milestones, compliance risks. Catalog of ~13 rules
+                      across 6 trigger classes.
+                    </div>
+                  </div>
+                  <Link
+                    href="/settings/nudges"
+                    className="settings-section-link"
+                  >
+                    Configure →
+                  </Link>
+                </li>
+                <li className="settings-integ">
+                  <div className="settings-integ-main">
                     <div className="settings-integ-name">Notifications</div>
                     <div className="settings-integ-purpose">
                       Four event categories (deadlines, AI alerts, client activity,
