@@ -1331,3 +1331,84 @@ export const discoveryScans = pgTable(
     }),
   }),
 );
+
+// ────────────────────────────────────────────────────────────────
+// prospects (migration 0030) — pre-tenant Discovery Scan leads.
+//
+// Captures inbound /scan landing-page submissions. Prospects are
+// PRE-TENANT (no tenant_id, no RLS) — they exist before signup.
+// Once a prospect converts, lifecycle fields link to the new
+// tenant + scan delivery.
+//
+// The Sentry scrubber redacts email/phone from event.extra (PII
+// discipline), making Sentry alone unusable for lead capture
+// (codex C12 R3 P1). This table is the structured persistence
+// layer. Reads come from admin tooling.
+// ────────────────────────────────────────────────────────────────
+
+export const prospects = pgTable(
+  'prospects',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    firstName: text('first_name').notNull(),
+    lastName: text('last_name').notNull(),
+    firmName: text('firm_name').notNull(),
+    designation: text('designation').notNull(),
+    firmSize: text('firm_size').notNull(),
+    taxSoftware: text('tax_software').notNull(),
+    email: text('email').notNull(),
+    phone: text('phone'),
+    linkedinUrl: text('linkedin_url'),
+    source: text('source').notNull(),
+    redactedConfirmed: boolean('redacted_confirmed').notNull(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    /**
+     * Lifecycle status. CHECK constraint enforced in migration:
+     * submitted | contacted | scan_sent | converted | rejected.
+     */
+    status: text('status').notNull().default('submitted'),
+    /**
+     * Tenant linkage on conversion. NOT a FK — tenants may be
+     * pruned (trial cleanup) without losing the conversion record.
+     */
+    convertedTenantId: uuid('converted_tenant_id'),
+    /**
+     * Discovery Scan delivery linkage. Plain FK with SET NULL —
+     * the scan row may be retention-pruned without losing the
+     * prospect record.
+     */
+    scanId: uuid('scan_id').references(() => discoveryScans.id, {
+      onDelete: 'set null',
+    }),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    submittedAt: timestamp('submitted_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    contactedAt: timestamp('contacted_at', { withTimezone: true }),
+    scanSentAt: timestamp('scan_sent_at', { withTimezone: true }),
+    convertedAt: timestamp('converted_at', { withTimezone: true }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('prospects_status_idx').on(t.status),
+    submittedAtIdx: index('prospects_submitted_at_idx').on(
+      sql`${t.submittedAt} DESC`,
+    ),
+    emailIdx: index('prospects_email_idx').on(sql`lower(${t.email})`),
+    firmNameIdx: index('prospects_firm_name_idx').on(sql`lower(${t.firmName})`),
+    statusCheck: check(
+      'prospects_status_check',
+      sql`${t.status} IN ('submitted', 'contacted', 'scan_sent', 'converted', 'rejected')`,
+    ),
+  }),
+);

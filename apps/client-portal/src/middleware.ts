@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server';
 // Public routes a client can hit without an active session:
 //   - /login + /otp     → the auth flow itself
 //   - /                 → root, redirects to /login
+//   - /scan             → cold-traffic Discovery Scan landing
+//   - /api/scan-intake-stub → form-submit endpoint for /scan; v0 stub
+//     until C12b lands the prospects table + Resend flow
 //   - root assets       → favicons etc.
 //   - /api/sentry-test  → Sentry capture verification endpoint.
 //     Deliberately throws; needs to be reachable via curl during
@@ -15,6 +18,14 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/login(.*)',
   '/otp(.*)',
+  // /scan is the cold-traffic Discovery Scan landing page. Anonymous
+  // visitors land here from email, LinkedIn, and direct outreach.
+  // The page itself is a marketing surface; the form-submit lives at
+  // /api/scan-intake-stub (also public) and captures prospects.
+  // Pattern matches both `/scan` and `/scan/` (trailing slash) —
+  // middleware runs before Next.js URL normalization (codex C12 R6 P2).
+  '/scan(.*)',
+  '/api/scan-intake-stub',
   '/api/sentry-test(.*)',
   // /api/health is the vendor-status probe polled by HealthStatusGate
   // (packages/ui). Public so the gate works for unauthenticated routes.

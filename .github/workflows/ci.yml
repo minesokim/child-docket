@@ -203,6 +203,23 @@ jobs:
       - name: Apply migrations 0017-0022 (post-journal)
         run: bun run packages/db/scripts/apply-migrations-17-22.ts
 
+      # apply-N.ts scripts for each post-22 migration. The Drizzle
+      # journal stopped at 0016 long ago; each new migration ships
+      # its own hand-applied SQL + script. All are idempotent (use
+      # IF NOT EXISTS + DO $$ EXCEPTION patterns), so re-running on
+      # already-applied DBs is a no-op.
+      - name: Apply migrations 0026-0027 (signatures hardening)
+        run: bun run packages/db/scripts/apply-26-27.ts
+
+      - name: Apply migration 0028 (authority_chunks.embedding)
+        run: bun run packages/db/scripts/apply-28.ts
+
+      - name: Apply migration 0029 (discovery_scans audit trail)
+        run: bun run packages/db/scripts/apply-29.ts
+
+      - name: Apply migration 0030 (prospects)
+        run: bun run packages/db/scripts/apply-30.ts
+
       # Integration smoke. Proves:
       #   - Composite FK rejects cross-tenant client_id binding
       #   - Audit chain trigger fires with chain_seq + prev_hash + row_hash
