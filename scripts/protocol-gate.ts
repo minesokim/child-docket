@@ -259,7 +259,28 @@ function parseArgs(argv: string[]): { mode: string; arg?: string } {
 // Bypassable via Protocol-Skip trailer for genuine emergencies.
 // ────────────────────────────────────────────────────────────────
 
-const E2E_STATE_FILE = '.gstack/last-e2e-sha';
+// Resolve E2E_STATE_FILE relative to the GIT repo root, not the
+// process cwd. The `/e2e` script runs via `pnpm --filter @docket/workers e2e`
+// with cwd = services/workers/, while the commit-msg hook runs from
+// the repo root. Using a bare relative path caused them to read/write
+// different files (services/workers/.gstack/... vs .gstack/...), so
+// /e2e runs successfully recorded the pass but the commit-msg
+// validator never saw it and false-blocked at the cadence threshold.
+// Surfaced 2026-05-12 on C10 ship — burned ~10 min diagnosing
+// "/e2e recorded but commit-msg says ab46c057 was the last pass."
+const E2E_STATE_FILE = (() => {
+  try {
+    const repoRoot = execSync('git rev-parse --show-toplevel', {
+      encoding: 'utf8',
+    }).trim();
+    return `${repoRoot}/.gstack/last-e2e-sha`;
+  } catch {
+    // Fallback to the legacy relative path if we're not inside a
+    // git work tree (CI artifact stages, etc.). Behavior matches
+    // pre-fix in that environment.
+    return '.gstack/last-e2e-sha';
+  }
+})();
 const E2E_WARN_THRESHOLD = 3;
 const E2E_BLOCK_THRESHOLD = 6;
 
