@@ -224,6 +224,36 @@ describe('isTransientAnthropicError', () => {
       err.name = 'TimeoutError';
       expect(isTransientAnthropicError(err)).toBe(true);
     });
+
+    test('APIConnectionError from Anthropic SDK (e.name path)', () => {
+      const err = new Error('Connection error.');
+      err.name = 'APIConnectionError';
+      expect(isTransientAnthropicError(err)).toBe(true);
+    });
+
+    test('APIConnectionTimeoutError from Anthropic SDK (e.name path)', () => {
+      const err = new Error('Request timed out.');
+      err.name = 'APIConnectionTimeoutError';
+      expect(isTransientAnthropicError(err)).toBe(true);
+    });
+
+    test('APIConnectionTimeoutError via constructor.name (real SDK shape — Discovery RAG smoke 2026-05-12)', () => {
+      // Mimic the SDK: subclass that doesn't set this.name in
+      // constructor. The class IDENTITY lives on constructor.name,
+      // not on name (which inherits Error's default 'Error').
+      class APIConnectionTimeoutError extends Error {}
+      const err = new APIConnectionTimeoutError('Request timed out.');
+      expect(err.name).toBe('Error');
+      expect(err.constructor.name).toBe('APIConnectionTimeoutError');
+      expect(isTransientAnthropicError(err)).toBe(true);
+    });
+
+    test('APIConnectionError via constructor.name (real SDK shape)', () => {
+      class APIConnectionError extends Error {}
+      const err = new APIConnectionError('Connection error.');
+      expect(err.constructor.name).toBe('APIConnectionError');
+      expect(isTransientAnthropicError(err)).toBe(true);
+    });
   });
 
   describe('permanent cases — should propagate, NOT fall back', () => {

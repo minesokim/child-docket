@@ -32,7 +32,11 @@ import type { AgentId, ClientId, TenantId, TrustLevel } from '@docket/shared';
 import { assertTrustGate, type PositionTier } from '@docket/shared';
 import { runDocketAgent } from '@docket/orchestrator';
 import { getPrompt } from '@docket/prompts';
-import { lookupAuthorityByCitation } from '@docket/db';
+import { lookupAuthorityByCitation, PostgresRetriever } from '@docket/db';
+import {
+  type KnowledgeRetriever,
+  type RetrievalHit,
+} from '@docket/tax-graph';
 
 // ────────────────────────────────────────────────────────────────
 // Input shape — what the Discovery agent needs to scan a client.
@@ -145,6 +149,54 @@ export type DiscoverOptions = {
   input: DiscoveryInput;
   modelTier?: 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
   onAction?: Parameters<typeof runDocketAgent>[0]['onAction'];
+  /**
+   * Optional knowledge retriever override. Default: a freshly
+   * constructed `PostgresRetriever` scoped to
+   * `input.context.tenantId`, using `VOYAGE_API_KEY` from the
+   * environment for hybrid BM25 + cosine. Tests pass an explicit
+   * retriever (real PostgresRetriever, NullRetriever, or stub) to
+   * avoid touching the DB.
+   *
+   * Per CLAUDE.md L4: hybrid BM25 + cosine retrieval grounds Discovery
+   * citations in the authority library — Antonio's PTIN is on every
+   * return, so we minimize the model's reliance on training-data
+   * cite-recall (which can hallucinate) by injecting real library
+   * chunks into the user prompt. Defaulting to a real retriever
+   * (rather than NullRetriever) ensures the eval + future production
+   * callers get grounding automatically, not silently (codex C7 round
+   * 2 P2).
+   */
+  retriever?: KnowledgeRetriever;
+  /**
+   * Surface DRAFT-DAVID firm_memo authorities (un-validated by
+   * Antonio yet) during retrieval AND during citation verification.
+   * Default: false — production callers must NEVER surface drafts
+   * because the reviewStatus gate is the structural separation
+   * between Antonio's validated work and David's drafts.
+   *
+   * Set true ONLY for: smoke harnesses, eval suites, admin tooling
+   * where the operator explicitly wants to see the draft pipeline.
+   * MUST be applied consistently to BOTH the retriever AND the
+   * citation verifier — mismatched flags cause the verifier to
+   * mark every injected draft cite as unresolved (codex C7 round
+   * 2 P3).
+   */
+  includeDrafts?: boolean;
+  /**
+   * Top-K authority chunks to retrieve and inject into the prompt.
+   * Default 10 — calibrated for ~5K tokens of authority context
+   * (each chunk ~500 tokens). Set 0 to disable retrieval augmentation
+   * (model falls back to training-only citations; citation verifier
+   * still runs).
+   */
+  retrievalTopK?: number;
+  /**
+   * Tax year to use for in-effect filtering on the retrieval call.
+   * Defaults to undefined ("in effect today") which is correct for
+   * most ad-hoc Discovery runs. Set explicitly when running a
+   * Discovery scan for a prior tax year.
+   */
+  taxYear?: number;
 };
 
 /**
@@ -200,13 +252,77 @@ export async function runDiscovery(opts: DiscoverOptions): Promise<{
   costUsd: number;
   latencyMs: number;
   modelUsed: 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
+  retrievalHitCount: number;
 }> {
   assertDiscoveryEnabled();
+
+  // ──────────────────────────────────────────────────────────────
+  // Retrieval-augmented prompt construction. Pull relevant authority
+  // chunks from the library before the model runs so its citations
+  // are grounded in actual seeded authorities rather than recalled
+  // from training. The citation verifier below catches anything the
+  // model still hallucinates; the retrieval step is the FIRST line
+  // of defense against PTIN-risk citations (per CLAUDE.md L4).
+  // ──────────────────────────────────────────────────────────────
+  const retrievalTopK = opts.retrievalTopK ?? 10;
+  const includeDrafts = opts.includeDrafts === true;
+  // Default to a real PostgresRetriever scoped to the call's tenant.
+  // The previous `getRetriever()` default returned NullRetriever
+  // unless a process-wide `setRetriever()` had been called — and no
+  // such call existed, so every default-path caller (including the
+  // hallucination eval) ran without grounding (codex C7 round 2 P2).
+  // Constructing per-call is cheap (no DB connection until first
+  // retrieve() fires).
+  const retriever =
+    opts.retriever ??
+    new PostgresRetriever(opts.input.context.tenantId, {
+      apiKey: process.env.VOYAGE_API_KEY,
+      includeDrafts,
+      fallbackToBM25: true,
+    });
+  const retrievalQuery = buildRetrievalQuery(opts.input);
+  let retrievalHits: RetrievalHit[] = [];
+  if (retrievalTopK > 0 && retrievalQuery.length >= 2) {
+    try {
+      retrievalHits = await retriever.retrieve(retrievalQuery, {
+        topK: retrievalTopK,
+        jurisdictions: mapJurisdictionsForRetrieval(opts.input.jurisdictions),
+        taxYear: opts.taxYear,
+      });
+    } catch (err) {
+      // Retrieval failure is non-fatal — the model still has its
+      // training-data citations and the verifier runs after. Log
+      // for observability but don't fail the Discovery run; that
+      // would block Antonio's wedge demo on an upstream Voyage or
+      // pgvector hiccup.
+      console.error('[discovery] retrieval failed (non-fatal):', err);
+      retrievalHits = [];
+    }
+  }
 
   const userPrompt = JSON.stringify({
     intakeAnswers: opts.input.intakeAnswers,
     documentSummaries: opts.input.documentSummaries ?? [],
     jurisdictions: opts.input.jurisdictions ?? ['federal'],
+    // Authority context: pass retrieved chunks to the model so its
+    // citations resolve against the library. Empty when retriever is
+    // NullRetriever or when retrievalTopK === 0; in those cases the
+    // model falls back to training-only citations + verifier flags.
+    //
+    // We DO NOT pass `h.authority.kind` here — the DB enum uses
+    // snake_case (`treas_reg`, `irs_revrul`, `ca_ftb_pub`) while
+    // the public Discovery schema uses hyphenated values
+    // (`treas-reg`, `rev-rul`, `ftb-pub`). Injecting the DB form
+    // pollutes the model's source-enum choice and causes schema
+    // validation rejection when the model echoes the wrong form back
+    // (codex C7 round 3 P2). The citation label + heading + text are
+    // sufficient context for grounding without exposing the kind.
+    authorityContext: retrievalHits.map((h) => ({
+      citation: h.authority.citationLabel,
+      jurisdiction: h.authority.jurisdiction,
+      heading: h.chunk.heading ?? null,
+      text: h.chunk.text,
+    })),
   });
 
   const prompt = await getPrompt('discovery-agent');
@@ -218,25 +334,39 @@ export async function runDiscovery(opts: DiscoverOptions): Promise<{
     userPrompt,
     modelTier: opts.modelTier ?? 'sonnet-4-6',
     cachedSystem: true,
-    maxTokens: 4096,
+    // 8192 not 4096: with retrieval-augmented prompts the model writes
+    // verbose rationales + multiple citations per position. 4096 was
+    // enough pre-RAG but truncates the response mid-string under the
+    // new prompt shape (Bedrock smoke surfaced this 2026-05-12).
+    maxTokens: 8192,
     onAction: opts.onAction,
     promptId: prompt.id,
     promptVersion: prompt.version,
   });
 
-  // Extract first JSON object from response.
-  const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  // Extract JSON from response. Different providers wrap differently:
+  //   - Anthropic direct: usually raw {...} (no fence)
+  //   - Bedrock Converse: often wraps in ```json ... ``` markdown
+  //     fence, sometimes with a preamble like "Here's the JSON:".
+  //
+  // Strategy: prefer balanced-brace extraction starting from the
+  // first `{`. That handles both wrapped and bare cases without
+  // relying on the greedy regex `/\{[\s\S]*\}/` which can match
+  // past the JSON's closing `}` if the response includes trailing
+  // narrative text containing another `}` (Bedrock surfaced this
+  // 2026-05-12 with a fenced-JSON response that broke greedy match).
+  const jsonString = extractBalancedJson(result.text);
+  if (jsonString === null) {
     throw new Error(
       `discovery-agent: model returned no JSON. Raw text: ${result.text.slice(0, 500)}`,
     );
   }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch {
+    parsed = JSON.parse(jsonString);
+  } catch (err) {
     throw new Error(
-      `discovery-agent: JSON.parse failed. Raw text: ${result.text.slice(0, 500)}`,
+      `discovery-agent: JSON.parse failed (${(err as Error).message}). Extracted: ${jsonString.slice(0, 500)}. Raw text: ${result.text.slice(0, 500)}`,
     );
   }
   const validation = DiscoveryOutputSchema.safeParse(parsed);
@@ -262,9 +392,17 @@ export async function runDiscovery(opts: DiscoverOptions): Promise<{
     const unverified: string[] = [];
     for (const cite of position.authority) {
       try {
+        // Pass includeDrafts through to the verifier so DRAFT-DAVID
+        // citations the model picked up from retrieval-injected draft
+        // memos can resolve. Without this, retrieval surfaces a draft
+        // memo → model cites it → verifier (with default
+        // includeDrafts:false) marks it unresolved → position
+        // downgraded → false regression on the very draft this run
+        // asked retrieval to surface (codex C7 round 2 P3).
         const found = await lookupAuthorityByCitation(
           opts.input.context.tenantId,
           cite.cite,
+          { includeDrafts },
         );
         if (!found) unverified.push(cite.cite);
       } catch (err) {
@@ -319,5 +457,145 @@ export async function runDiscovery(opts: DiscoverOptions): Promise<{
     costUsd: result.costUsd,
     latencyMs: result.latencyMs,
     modelUsed: result.modelUsed,
+    retrievalHitCount: retrievalHits.length,
   };
+}
+
+// ────────────────────────────────────────────────────────────────
+// extractBalancedJson — find the first `{`-rooted balanced object in
+// `raw` and return it as a string. Handles markdown-fenced output
+// (```json ... ```) and bare-JSON output uniformly because it walks
+// from the first `{` and tracks brace depth, ignoring text inside
+// JSON string literals (so a `}` character inside a string value
+// doesn't false-balance the count). Returns null if no balanced
+// object is found.
+// ────────────────────────────────────────────────────────────────
+function extractBalancedJson(raw: string): string | null {
+  const start = raw.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === '\\') {
+        escapeNext = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return raw.slice(start, i + 1);
+      }
+    }
+  }
+  // Unbalanced — return null so caller surfaces the parse failure
+  // with the actual raw text rather than parsing a truncated chunk.
+  return null;
+}
+
+// ────────────────────────────────────────────────────────────────
+// buildRetrievalQuery — compose a natural-language retrieval string
+// from the structured intake. Hybrid BM25 + cosine retrieval reads
+// best when the query is a few keywords + a short phrase rather
+// than the full intake JSON; we extract the high-signal facts
+// (filing status, state, income types, life events) and concatenate.
+//
+// Example output:
+//   "single CA self-employment 1099-NEC home office charitable QBI deduction"
+//
+// Empty if there's nothing extractable — caller skips retrieval in
+// that case (no signal to ground on).
+// ────────────────────────────────────────────────────────────────
+function buildRetrievalQuery(input: DiscoveryInput): string {
+  const parts: string[] = [];
+  const intake = input.intakeAnswers as Record<string, unknown>;
+
+  // Filing status + state — primary disambiguators for which body
+  // of law applies (filing-status thresholds, CA residency rules).
+  if (typeof intake.filingStatus === 'string') parts.push(intake.filingStatus);
+  if (typeof intake.state === 'string') parts.push(intake.state);
+
+  // Income types — surfaces the relevant deduction families.
+  // Schedule C (self-employment), Schedule E (rental), W-2, etc.
+  if (intake.income && typeof intake.income === 'object') {
+    const income = intake.income as Record<string, unknown>;
+    for (const [key, val] of Object.entries(income)) {
+      if (typeof val === 'number' && val > 0) {
+        // "selfEmployment1099NEC" → "selfEmployment 1099 NEC"
+        parts.push(key.replace(/([A-Z0-9]+)/g, ' $1').trim());
+      }
+    }
+  }
+
+  // Self-employment details — home office, vehicle, retirement
+  // unlock specific deductions (§280A, §62, §401, §199A).
+  if (intake.selfEmploymentDetails && typeof intake.selfEmploymentDetails === 'object') {
+    const se = intake.selfEmploymentDetails as Record<string, unknown>;
+    if (se.homeOffice) parts.push('home office');
+    if (se.vehicleMiles) parts.push('vehicle business miles');
+    if (se.retirementContributions) parts.push('retirement contributions SEP IRA Solo 401k');
+    parts.push('Schedule C self-employment QBI section 199A');
+  }
+
+  // Itemized deductions hint surfaces §163, §164, §170 chunks.
+  if (intake.itemizedDeductions && typeof intake.itemizedDeductions === 'object') {
+    parts.push('itemized deductions mortgage SALT charitable');
+  }
+
+  // Life events — marriage, divorce, dependents, sale of home all
+  // shift the law that applies.
+  if (Array.isArray(intake.lifeEvents) && intake.lifeEvents.length > 0) {
+    parts.push('life events', ...intake.lifeEvents.map(String));
+  }
+
+  // Document kinds — 1099-NEC, K-1, etc. each tag a body of law.
+  if (input.documentSummaries) {
+    for (const doc of input.documentSummaries) {
+      if (doc.kind) parts.push(doc.kind);
+    }
+  }
+
+  return parts.join(' ').slice(0, 800);
+}
+
+// ────────────────────────────────────────────────────────────────
+// mapJurisdictionsForRetrieval — DiscoveryInput's jurisdictions
+// include {federal, CA, NY, TX, FL, WA}, but PostgresRetriever only
+// supports {federal, CA, firm} in v0 (the only seeded jurisdictions).
+// Non-CA states fall back to federal-only until ingestion expands.
+//
+// ALWAYS include 'firm' so Antonio-validated position memos surface
+// alongside federal/state authorities. Without 'firm' the retriever's
+// jurisdiction filter EXCLUDES firm_memo rows entirely, so the seeded
+// position library (the differentiator vs Big-4-targeted competitors
+// per CLAUDE.md L3) never reaches Discovery's context (codex C7 round
+// 1 P2). DRAFT-DAVID memos are still default-denied by the
+// reviewStatus gate in searchAuthorities — `includeDrafts:true` is
+// required upstream to surface those.
+// ────────────────────────────────────────────────────────────────
+function mapJurisdictionsForRetrieval(
+  inputJurisdictions: DiscoveryInput['jurisdictions'],
+): Array<'federal' | 'CA' | 'firm'> {
+  const supported: Array<'federal' | 'CA' | 'firm'> = ['federal', 'firm'];
+  if (!inputJurisdictions || inputJurisdictions.length === 0) {
+    return supported;
+  }
+  if (inputJurisdictions.includes('CA')) supported.push('CA');
+  // NY/TX/FL/WA omitted: no rows in the v0 authority seed. Caller
+  // can extend this map once state ingestion lands.
+  return supported;
 }

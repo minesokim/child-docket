@@ -26,9 +26,23 @@
 //   - Maybe: SEP/Solo-401k contributions (IRC §401(a))
 //   - CA-specific: PTET election if S-corp; SDI/EDD considerations
 
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config as loadEnv } from 'dotenv';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Load env from BOTH .env.local (preferred — most contributors store
+// secrets here) AND .env (fallback for setups that only have a
+// non-local file). .env.local wins when both exist because we load
+// it second with `override: true` (codex C7 round 3 P3). Without
+// .env fallback, contributors running with only `.env` would see
+// missing ANTHROPIC_API_KEY / DATABASE_URL / DISCOVERY_AGENT_ENABLED.
+const repoRoot = path.resolve(__dirname, '../../..');
+loadEnv({ path: path.join(repoRoot, '.env') });
+loadEnv({ path: path.join(repoRoot, '.env.local'), override: true });
+
 import { runDiscovery } from '../src/agents/discovery-agent.js';
 import { asTenantId, asClientId } from '@docket/shared';
+import { PostgresRetriever } from '@docket/db';
 
 const SYNTHETIC_INTAKE = {
   filingStatus: 'single',
@@ -62,11 +76,27 @@ async function main() {
   console.log('  180 sq ft home office, health insurance, no retirement contributions.');
   console.log();
 
+  // Wire the production retriever (PostgresRetriever — hybrid BM25 +
+  // cosine + RRF fusion). Ungated mode: includeDrafts:true so the seeded
+  // DRAFT-DAVID position memos surface during smoke. Production callers
+  // leave includeDrafts:false (default) so prospects never see drafts.
+  //
+  // Constructor shape is (tenantId, opts) — codex C7 round 1 P2.
+  // Smoke runs against the seeded global authorities + Vazant firm
+  // memos; in production each tenant gets its own retriever scoped to
+  // that tenant's authorities via RLS.
+  const smokeTenantId = asTenantId('00000000-0000-0000-0000-000000000001');
+  const retriever = new PostgresRetriever(smokeTenantId, {
+    apiKey: process.env.VOYAGE_API_KEY,
+    includeDrafts: true,
+    fallbackToBM25: true,
+  });
+
   const t0 = Date.now();
   const result = await runDiscovery({
     input: {
       context: {
-        tenantId: asTenantId('00000000-0000-0000-0000-000000000001'),
+        tenantId: smokeTenantId,
         clientId: asClientId('00000000-0000-0000-0000-000000000002'),
         trustLevel: 1, // Conservative L1 — should yield "human-approval" verdict
       },
@@ -74,6 +104,12 @@ async function main() {
       jurisdictions: ['federal', 'CA'],
     },
     modelTier: 'sonnet-4-6',
+    retriever,
+    retrievalTopK: 12,
+    // Match the retriever — verifier must surface drafts too,
+    // otherwise injected DRAFT-DAVID cites get false-flagged as
+    // unresolved and the trust gate downgrades (codex C7 round 2 P3).
+    includeDrafts: true,
   });
   const elapsedMs = Date.now() - t0;
 
@@ -115,6 +151,10 @@ async function main() {
     console.log(`requires:      ${result.trustGate.requires}`);
     console.log(`reason:        ${result.trustGate.reason}`);
   }
+  console.log();
+  console.log('--- retrieval ---');
+  console.log(`hits injected: ${result.retrievalHitCount} authority chunk(s) grounded the model`);
+
   console.log();
   console.log('--- cost / latency ---');
   console.log(`cost:          $${result.costUsd.toFixed(4)}`);

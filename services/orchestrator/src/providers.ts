@@ -370,6 +370,36 @@ function isTransientAnthropicError(err: unknown): boolean {
   }
   if (e.name === 'AbortError' || e.name === 'TimeoutError') return true;
 
+  // Anthropic SDK connection failures — APIConnectionError and its
+  // subclass APIConnectionTimeoutError. The SDK throws these when the
+  // request can't establish or complete a connection to Anthropic's
+  // edge (most commonly on large prompts where the edge takes a long
+  // time to start streaming). Without this branch, an SDK timeout
+  // would short-circuit out of the fallover path — exactly what
+  // callClaudeWithFallover exists to prevent. Discovery RAG smoke
+  // surfaced this 2026-05-12 with a 12K-token retrieval-augmented
+  // prompt that consistently timed out at the SDK layer while Bedrock
+  // (different transport, AWS SDK) handled the same request fine.
+  //
+  // GOTCHA: the Anthropic SDK does NOT set `this.name = '...'` in its
+  // error subclasses, so `e.name` inherits Error's default `'Error'`.
+  // The real class identity lives on `e.constructor.name`. Check both
+  // paths — `name` for custom errors that follow the JS convention,
+  // and constructor.name for SDK errors that don't.
+  const ctorName =
+    typeof (err as { constructor?: { name?: string } })?.constructor?.name ===
+    'string'
+      ? (err as { constructor: { name: string } }).constructor.name
+      : '';
+  if (
+    e.name === 'APIConnectionError' ||
+    e.name === 'APIConnectionTimeoutError' ||
+    ctorName === 'APIConnectionError' ||
+    ctorName === 'APIConnectionTimeoutError'
+  ) {
+    return true;
+  }
+
   // 401, 400 (non-billing), 403, 404 — config / caller errors. NOT transient.
   // Explicitly exclude even though the default-false path handles them.
   return false;
