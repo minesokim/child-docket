@@ -1161,3 +1161,173 @@ export const clientFacts = pgTable(
     ),
   }),
 );
+
+// ────────────────────────────────────────────────────────────────
+// discovery_scans (migration 0029) — Discovery Scan deliverable audit.
+//
+// One row per scan delivered. Tracks the full lifecycle from rendered
+// → delivered → opened → downloaded so cold-outreach has a paper
+// trail. NOT the cryptographic actions audit chain (that's the
+// `actions` table); discovery_scans tracks DELIVERABLE state, not
+// agent-action state. Linked to the agent action that produced the
+// underlying DiscoveryOutput via `actions_row_id`.
+//
+// RLS-scoped to tenant via withTenant. status enum lives at DB
+// level (discovery_scan_status). Webhook lookup uses email_id
+// (Resend's global identifier).
+// ────────────────────────────────────────────────────────────────
+
+export const discoveryScanStatusEnum = pgEnum('discovery_scan_status', [
+  'rendered',
+  'delivered',
+  'opened',
+  'downloaded',
+  'bounced',
+  'failed',
+]);
+
+export const discoveryScans = pgTable(
+  'discovery_scans',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /**
+     * Optional client linkage. NULL for prospect-only scans
+     * delivered before a client record exists (the common case for
+     * cold-outreach Discovery Scans per the acquisition plan).
+     *
+     * Composite FK on (tenantId, clientId) — see the table-level
+     * `tenantClientFk` below. Prevents cross-tenant references.
+     */
+    clientId: uuid('client_id'),
+    /**
+     * The agent action that produced the underlying DiscoveryOutput.
+     * NULL for scans that ran outside the audit chain (evals, dry
+     * runs). Composite FK on (tenantId, actionsRowId) below.
+     */
+    actionsRowId: uuid('actions_row_id'),
+    /** R2 key: discovery-scans/<tenant>/<ulid>.pdf */
+    storageKey: text('storage_key').notNull(),
+    pdfBytes: integer('pdf_bytes').notNull(),
+    recipientEmail: text('recipient_email').notNull(),
+    /** Firm name at delivery time (denormalized for retention). */
+    firmName: text('firm_name').notNull(),
+    taxYear: integer('tax_year').notNull(),
+    /** Sum of estimatedImpact.dollars across all surfaced positions. */
+    totalSurfacedDollars: integer('total_surfaced_dollars').notNull().default(0),
+    positionsCount: integer('positions_count').notNull().default(0),
+    refusedCount: integer('refused_count').notNull().default(0),
+    /**
+     * 1-4 for the position framework tier of the highest-tier
+     * surfaced position. NULL when positions_count === 0 (zero-
+     * surfaced scans are a valid Discovery outcome per
+     * docs/DISCOVERY-SCAN-OPERATIONAL.md — "if the return is already
+     * tight, that's the answer"). A cross-column CHECK in the
+     * migration enforces the invariant (codex C11 R4 P1).
+     */
+    highestTier: integer('highest_tier'),
+    trustGateAllowed: boolean('trust_gate_allowed').notNull(),
+    /** Resend email ID (FK for webhook → row lookup). */
+    emailId: text('email_id'),
+    status: discoveryScanStatusEnum('status').notNull().default('rendered'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    openedAt: timestamp('opened_at', { withTimezone: true }),
+    downloadedAt: timestamp('downloaded_at', { withTimezone: true }),
+    urlExpiresAt: timestamp('url_expires_at', { withTimezone: true }).notNull(),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('discovery_scans_tenant_idx').on(t.tenantId),
+    tenantStatusIdx: index('discovery_scans_tenant_status_idx').on(
+      t.tenantId,
+      t.status,
+    ),
+    /**
+     * Tenant-scoped recent-scans lookup. created_at DESC matches the
+     * SQL migration's `(tenant_id, created_at DESC)` — codex C11 R5
+     * P3 (avoid Drizzle schema-diff churn that would rebuild the
+     * index on every drizzle-kit generate run).
+     */
+    tenantCreatedAtIdx: index('discovery_scans_tenant_created_at_idx').on(
+      t.tenantId,
+      sql`${t.createdAt} DESC`,
+    ),
+    /**
+     * UNIQUE partial index on non-NULL email_id — enforces
+     * one-row-per-Resend-message-ID so webhook lookups
+     * (`WHERE email_id = $1`) are unambiguous. NULL values are
+     * excluded so multiple still-rendered rows without an email_id
+     * are allowed (codex C11 R4 P2).
+     */
+    emailIdUniq: uniqueIndex('discovery_scans_email_id_uniq')
+      .on(t.emailId)
+      .where(sql`email_id IS NOT NULL`),
+    /**
+     * Child-side indexes for the composite FKs to clients + actions.
+     * Without these, DELETE on the parent tables triggers a full
+     * scan of discovery_scans to find rows whose FK columns need
+     * nulling under ON DELETE SET NULL (client_id / actions_row_id).
+     * Partial WHERE keeps the indexes tight — most scans are
+     * prospect-only / outside-audit-chain (codex C11 R6 P2).
+     */
+    tenantClientIdx: index('discovery_scans_tenant_client_idx')
+      .on(t.tenantId, t.clientId)
+      .where(sql`client_id IS NOT NULL`),
+    tenantActionsIdx: index('discovery_scans_tenant_actions_idx')
+      .on(t.tenantId, t.actionsRowId)
+      .where(sql`actions_row_id IS NOT NULL`),
+    /**
+     * Cross-column CHECK: highest_tier MUST be 1-4 when at least
+     * one position surfaced; MUST be NULL when zero surfaced. The
+     * zero-position outcome is valid per
+     * docs/DISCOVERY-SCAN-OPERATIONAL.md (codex C11 R4 P1).
+     */
+    highestTierRange: check(
+      'discovery_scans_highest_tier_range',
+      sql`(${t.highestTier} IS NULL AND ${t.positionsCount} = 0)
+        OR (${t.highestTier} BETWEEN 1 AND 4 AND ${t.positionsCount} > 0)`,
+    ),
+    /**
+     * Composite FK to clients — enforces tenant consistency.
+     * Cross-tenant binding is blocked at the DB layer (FK checks
+     * bypass RLS otherwise). Same pattern as client_facts.
+     *
+     * NOTE: NO `.onDelete()` declaration here. The actual DELETE
+     * action lives in `migrations/0029_discovery_scans.sql` as
+     * `ON DELETE SET NULL (client_id)` — a column-specific SET NULL
+     * (Postgres 15+) required because tenant_id is NOT NULL. Drizzle
+     * has no representation for column-specific SET NULL, so
+     * declaring `.onDelete('set null')` here would emit bare
+     * `SET NULL` in any auto-generated diff and conflict with the
+     * migration's actual DDL (codex C11 R3 P2). The SQL migration
+     * is the source of truth for the DELETE semantics.
+     */
+    tenantClientFk: foreignKey({
+      name: 'discovery_scans_tenant_client_fk',
+      columns: [t.tenantId, t.clientId],
+      foreignColumns: [clients.tenantId, clients.id],
+    }),
+    /**
+     * Composite FK to actions — same-tenant audit-chain link.
+     * Same column-specific SET NULL caveat as the client FK above.
+     * The migration SQL is the source of truth for delete behavior.
+     */
+    tenantActionsFk: foreignKey({
+      name: 'discovery_scans_tenant_actions_fk',
+      columns: [t.tenantId, t.actionsRowId],
+      foreignColumns: [actions.tenantId, actions.id],
+    }),
+  }),
+);
