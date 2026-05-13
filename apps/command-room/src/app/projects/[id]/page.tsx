@@ -16,6 +16,7 @@ import { withTenant } from '@docket/db';
 import type { TenantId } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
 import { CommandShell } from '@/components/command-shell';
+import { EngagementProjectNotes } from '@/components/engagement-project-notes';
 import { getCanonicalTemplateMetadata } from '../metadata';
 
 export const runtime = 'nodejs';
@@ -556,7 +557,13 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                   }}
                 >
                   {engagements.map((e) => (
-                    <EngagementRow key={e.engagement_id} engagement={e} color={color} />
+                    <EngagementRow
+                      key={e.engagement_id}
+                      engagement={e}
+                      color={color}
+                      projectId={id}
+                      canEdit={canViewInstance}
+                    />
                   ))}
                 </ul>
               )}
@@ -638,26 +645,42 @@ function DerivedInstanceRow({
 function EngagementRow({
   engagement,
   color,
+  projectId,
+  canEdit,
 }: {
   engagement: AttachedEngagement;
   color: string;
+  projectId: string;
+  canEdit: boolean;
 }) {
+  // C26: notes moved from an inline ` · ${engagement.notes}` suffix
+  // on the secondary text line to a dedicated EngagementProjectNotes
+  // component rendered as a sibling below the Link. The notes UI is
+  // interactive (textarea + save/cancel) and cannot live inside the
+  // wrapping Link without breaking nested-interactive-element
+  // accessibility. Visual: card-like grouping via the flex column.
   return (
-    <li>
+    <li
+      style={{
+        background: 'oklch(99% 0.005 85)',
+        border: '1px solid oklch(93% 0.008 85)',
+        borderLeft: engagement.is_primary
+          ? `3px solid ${color}`
+          : '1px solid oklch(93% 0.008 85)',
+        borderRadius: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '10px 14px',
+      }}
+    >
       <Link
         href={`/clients/${engagement.client_id}`}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '10px 14px',
-          background: 'oklch(99% 0.005 85)',
-          border: '1px solid oklch(93% 0.008 85)',
-          borderLeft: engagement.is_primary
-            ? `3px solid ${color}`
-            : '1px solid oklch(93% 0.008 85)',
-          borderRadius: 8,
           textDecoration: 'none',
+          color: 'inherit',
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -700,10 +723,15 @@ function EngagementRow({
             {STATUS_LABELS[engagement.engagement_status] ??
               engagement.engagement_status}
             {engagement.tax_year && ` · TY ${engagement.tax_year}`}
-            {engagement.notes && ` · ${engagement.notes}`}
           </div>
         </div>
       </Link>
+      <EngagementProjectNotes
+        engagementId={engagement.engagement_id}
+        projectId={projectId}
+        initialNotes={engagement.notes}
+        canEdit={canEdit}
+      />
     </li>
   );
 }

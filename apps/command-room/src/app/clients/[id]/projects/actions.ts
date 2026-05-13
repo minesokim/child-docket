@@ -1,13 +1,20 @@
 // /clients/[id]/projects server actions.
 //
-// Three actions for the ClientProjectPicker on the per-client page:
+// Four actions for the engagement_projects join table:
 //   - attachEngagementToProject(engagementId, projectId, isPrimary?)
+//     [ClientProjectPicker on /clients/[id]]
 //   - detachEngagementFromProject(engagementId, projectId)
+//     [ClientProjectPicker on /clients/[id]]
 //   - setPrimaryProject(engagementId, projectId)
+//     [ClientProjectPicker on /clients/[id]]
+//   - setEngagementProjectNotes(engagementId, projectId, notes)
+//     [EngagementProjectNotes on /projects/[id] instance view]
 //
 // Each is role-gated (firm_owner / preparer / reviewer), RLS-
 // scoped via withTenant, idempotent where the operation has
-// reasonable identity (attach UNIQUE catches dups).
+// reasonable identity (attach UNIQUE catches dups). All four
+// revalidate '/clients/[id]' AND '/projects/[id]' since the notes
+// field surfaces on both routes.
 
 'use server';
 
@@ -297,6 +304,7 @@ export async function attachEngagementToProject(
     };
   }
   revalidatePath(`/clients/[id]`, 'page');
+  revalidatePath(`/projects/[id]`, 'page');
   return { ok: true, alreadyAttached };
 }
 
@@ -335,6 +343,7 @@ export async function detachEngagementFromProject(
     return { ok: false, error: 'Attachment not found.' };
   }
   revalidatePath(`/clients/[id]`, 'page');
+  revalidatePath(`/projects/[id]`, 'page');
   return { ok: true };
 }
 
@@ -447,5 +456,85 @@ export async function setPrimaryProject(
     };
   }
   revalidatePath(`/clients/[id]`, 'page');
+  revalidatePath(`/projects/[id]`, 'page');
+  return { ok: true };
+}
+
+/**
+ * Set or clear notes on an engagement_projects row. Notes are
+ * the per-attachment context preparers leave for themselves —
+ * "this client wants paper-only delivery" / "schedule next year's
+ * estimate review at the kickoff meeting" / "do not pull
+ * dependents from prior year." Surfaces inline on
+ * /projects/[id] instance view (where the engagement list lives)
+ * and is editable from the same surface.
+ *
+ * Trim + null-coerce empty strings so we don't accumulate empty-
+ * string rows (semantic equivalent to no notes). Cap at 500 chars
+ * to keep the row legible; longer notes belong in client memos
+ * or engagement.notes (per-engagement, not per-attachment).
+ */
+export type NotesResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+const NOTES_MAX_LENGTH = 500;
+
+export async function setEngagementProjectNotes(
+  engagementId: string,
+  projectId: string,
+  notes: string,
+): Promise<NotesResult> {
+  const auth = await authorize();
+  if (!auth.ok) return auth;
+  if (!UUID_REGEX.test(engagementId)) {
+    return { ok: false, error: 'Engagement ID is invalid.' };
+  }
+  if (!UUID_REGEX.test(projectId)) {
+    return { ok: false, error: 'Project ID is invalid.' };
+  }
+  if (typeof notes !== 'string') {
+    return { ok: false, error: 'Notes must be a string.' };
+  }
+  const trimmed = notes.trim();
+  if (trimmed.length > NOTES_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `Notes too long (max ${NOTES_MAX_LENGTH} characters).`,
+    };
+  }
+  // Empty / whitespace-only collapses to NULL so the column never
+  // accumulates empty-string rows that look "set" but render
+  // identically to no notes.
+  const persistValue: string | null = trimmed.length === 0 ? null : trimmed;
+
+  let updated = false;
+  await withTenant(auth.ctx.tenantId as TenantId, async (db) => {
+    // Use Drizzle's eq+and for parameter safety on a nullable
+    // text column. RETURNING id confirms the row existed before
+    // the UPDATE — "attachment not found" branch surfaces the
+    // stale-page case (engagement detached between page-load and
+    // notes-save) as a friendly error rather than silent success.
+    const result = await db
+      .update(schema.engagementProjects)
+      .set({ notes: persistValue })
+      .where(
+        and(
+          eq(schema.engagementProjects.engagementId, engagementId),
+          eq(schema.engagementProjects.projectId, projectId),
+        ),
+      )
+      .returning({ id: schema.engagementProjects.id });
+    updated = result.length > 0;
+  });
+
+  if (!updated) {
+    return {
+      ok: false,
+      error: 'Attachment not found. Attach the project first.',
+    };
+  }
+  revalidatePath(`/clients/[id]`, 'page');
+  revalidatePath(`/projects/[id]`, 'page');
   return { ok: true };
 }
