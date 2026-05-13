@@ -19,6 +19,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentDocketUser } from '@/lib/current-user';
 import { CommandShell } from '@/components/command-shell';
 import { NeedYouQueue } from '@/components/need-you-queue';
+import { NudgesFeed, type NudgeFeedItem } from '@/components/nudges-feed';
 import {
   loadHomeData,
   formatRelativeTime,
@@ -201,6 +202,30 @@ export default async function HomePage() {
 
             {/* Need You workflow primitive — 4 lanes between brief and stats */}
             <NeedYouQueue data={data.needYou} />
+
+            {/* Nudges feed — proactive outreach surface, between Need You
+                queue + stats. Renders only if there are pending nudges; the
+                empty state is shown when nothing pending. The feed reads
+                from the nudges table populated by the Nudge agent daily
+                cron (C21+ wiring). */}
+            <NudgesFeed
+              nudges={data.nudges.map((n) => ({
+                id: n.id,
+                clientId: n.client_id,
+                clientName: n.client_name,
+                triggerClass: n.trigger_class,
+                triggerKey: n.trigger_key,
+                title: n.title,
+                body: n.body,
+                draftOutreach: n.draft_outreach,
+                recommendedChannel: n.recommended_channel,
+                confidence: n.confidence,
+                status: n.status,
+                expiresAt: n.expires_at,
+                createdAt: n.created_at,
+              })) as NudgeFeedItem[]}
+              canEdit={['firm_owner', 'preparer', 'reviewer'].includes(user.role)}
+            />
 
             {/* Stats-card row */}
             <section className="home-stats" aria-label="Practice summary">

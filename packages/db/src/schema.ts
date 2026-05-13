@@ -1760,6 +1760,189 @@ export const clientMemories = pgTable(
 );
 
 /**
+ * nudge_rules (migration 0033) — per-tenant Nudges trigger config.
+ *
+ * Each row defines whether a specific (trigger_class, trigger_key)
+ * combination fires as a Nudge for this tenant. Default rule set
+ * seeded per tenant; firms customize. The Nudge agent reads enabled
+ * rules + client_facts + engagement state + calendar_events daily.
+ */
+export const nudgeRules = pgTable(
+  'nudge_rules',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    triggerClass: text('trigger_class')
+      .$type<
+        | 'life_event'
+        | 'time_window'
+        | 'drift'
+        | 'milestone'
+        | 'drift_from_prior'
+        | 'compliance_risk'
+      >()
+      .notNull(),
+    triggerKey: text('trigger_key').notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    maxPerClientPerDays: integer('max_per_client_per_days').notNull().default(7),
+    respectQuietHours: boolean('respect_quiet_hours').notNull().default(true),
+    confidenceFloor: real('confidence_floor').notNull().default(0.7),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantClassKeyUnique: uniqueIndex('nudge_rules_tenant_class_key_unique').on(
+      t.tenantId,
+      t.triggerClass,
+      t.triggerKey,
+    ),
+    tenantEnabledIdx: index('nudge_rules_tenant_idx')
+      .on(t.tenantId)
+      .where(sql`enabled`),
+    classIdx: index('nudge_rules_class_idx')
+      .on(t.tenantId, t.triggerClass)
+      .where(sql`enabled`),
+    triggerClassCheck: check(
+      'nudge_rules_trigger_class_check',
+      sql`${t.triggerClass} IN ('life_event', 'time_window', 'drift', 'milestone', 'drift_from_prior', 'compliance_risk')`,
+    ),
+    maxPerClientRange: check(
+      'nudge_rules_max_per_client_range',
+      sql`${t.maxPerClientPerDays} > 0 AND ${t.maxPerClientPerDays} <= 365`,
+    ),
+    confidenceFloorRange: check(
+      'nudge_rules_confidence_floor_range',
+      sql`${t.confidenceFloor} >= 0 AND ${t.confidenceFloor} <= 1`,
+    ),
+  }),
+);
+
+/**
+ * nudges (migration 0033) — pending preparer-to-client outreach queue.
+ *
+ * Each row = one suggestion the Nudge agent generated. Lifecycle:
+ * pending → approved → sent OR pending → dismissed OR pending →
+ * expired. Title pre-composed in canonical alert format per
+ * CLAUDE.md §8: "{ClientName}'s {situation} · {quantified impact}".
+ */
+export const nudges = pgTable(
+  'nudges',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').notNull(),
+    ruleId: uuid('rule_id').references(() => nudgeRules.id, {
+      onDelete: 'set null',
+    }),
+    triggerClass: text('trigger_class')
+      .$type<
+        | 'life_event'
+        | 'time_window'
+        | 'drift'
+        | 'milestone'
+        | 'drift_from_prior'
+        | 'compliance_risk'
+      >()
+      .notNull(),
+    triggerKey: text('trigger_key').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    draftOutreach: text('draft_outreach'),
+    recommendedChannel: text('recommended_channel').$type<
+      'sms' | 'email' | 'portal_chat' | 'phone_call' | null
+    >(),
+    confidence: real('confidence').notNull().default(0.7),
+    status: text('status')
+      .$type<
+        | 'pending'
+        | 'approved'
+        | 'sent'
+        | 'edited'
+        | 'dismissed'
+        | 'expired'
+      >()
+      .notNull()
+      .default('pending'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    approvedBy: uuid('approved_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+    dismissedBy: uuid('dismissed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    dismissedReason: text('dismissed_reason'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    sourceActionId: uuid('source_action_id').references(() => actions.id, {
+      onDelete: 'set null',
+    }),
+    reasoningTrail: jsonb('reasoning_trail')
+      .$type<Array<{ kind: string; label: string; detail?: string }>>()
+      .notNull()
+      .default([]),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantClientFk: foreignKey({
+      name: 'nudges_tenant_client_fk',
+      columns: [t.tenantId, t.clientId],
+      foreignColumns: [clients.tenantId, clients.id],
+    }).onDelete('cascade'),
+    pendingIdx: index('nudges_pending_idx')
+      .on(t.tenantId, sql`created_at DESC`)
+      .where(sql`status = 'pending'`),
+    clientIdx: index('nudges_client_idx').on(
+      t.tenantId,
+      t.clientId,
+      sql`created_at DESC`,
+    ),
+    ruleClientIdx: index('nudges_rule_client_idx')
+      .on(t.ruleId, t.clientId, sql`created_at DESC`)
+      .where(sql`rule_id IS NOT NULL`),
+    sourceActionIdx: index('nudges_source_action_idx')
+      .on(t.sourceActionId)
+      .where(sql`source_action_id IS NOT NULL`),
+    expiresIdx: index('nudges_expires_idx')
+      .on(t.expiresAt)
+      .where(sql`status = 'pending' AND expires_at IS NOT NULL`),
+    triggerClassCheck: check(
+      'nudges_trigger_class_check',
+      sql`${t.triggerClass} IN ('life_event', 'time_window', 'drift', 'milestone', 'drift_from_prior', 'compliance_risk')`,
+    ),
+    recommendedChannelCheck: check(
+      'nudges_recommended_channel_check',
+      sql`${t.recommendedChannel} IS NULL OR ${t.recommendedChannel} IN ('sms', 'email', 'portal_chat', 'phone_call')`,
+    ),
+    confidenceRange: check(
+      'nudges_confidence_range',
+      sql`${t.confidence} >= 0 AND ${t.confidence} <= 1`,
+    ),
+    statusCheck: check(
+      'nudges_status_check',
+      sql`${t.status} IN ('pending', 'approved', 'sent', 'edited', 'dismissed', 'expired')`,
+    ),
+    titleLength: check(
+      'nudges_title_length',
+      sql`char_length(${t.title}) > 0 AND char_length(${t.title}) <= 500`,
+    ),
+    bodyLength: check(
+      'nudges_body_length',
+      sql`char_length(${t.body}) > 0`,
+    ),
+  }),
+);
+
+/**
  * Generic per-tenant JSONB k/v store. Holds instance-scoped
  * configuration that doesn't earn its own column:
  *   - theme_pref          (firm-wide theme default)

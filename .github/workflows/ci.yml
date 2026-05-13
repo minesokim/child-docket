@@ -226,6 +226,9 @@ jobs:
       - name: Apply migration 0032 (client_memories)
         run: bun run packages/db/scripts/apply-32.ts
 
+      - name: Apply migration 0033 (nudges + nudge_rules)
+        run: bun run packages/db/scripts/apply-33.ts
+
       # Integration smoke. Proves:
       #   - Composite FK rejects cross-tenant client_id binding
       #   - Audit chain trigger fires with chain_seq + prev_hash + row_hash

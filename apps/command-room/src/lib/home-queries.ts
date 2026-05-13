@@ -77,16 +77,40 @@ export interface NeedYouLanes {
   };
 }
 
+export interface NudgeFeedRow {
+  id: string;
+  client_id: string;
+  client_name: string;
+  trigger_class: string;
+  trigger_key: string;
+  title: string;
+  body: string;
+  draft_outreach: string | null;
+  recommended_channel: 'sms' | 'email' | 'portal_chat' | 'phone_call' | null;
+  confidence: number;
+  status: 'pending' | 'approved' | 'sent' | 'edited' | 'dismissed' | 'expired';
+  expires_at: string | null;
+  created_at: string;
+  [key: string]: unknown;
+}
+
 export interface HomeData {
   brief: BriefIssueRow[];
   stats: PracticeStats;
   activity: ActivityRow[];
   needYou: NeedYouLanes;
+  /**
+   * Pending nudges for the home feed. Per CLAUDE.md §8 Nudges:
+   * proactive outreach surface, distinct from Discovery (positions)
+   * and Reminders (client-facing chase). Capped at 10 for the
+   * home page; full list at /nudges.
+   */
+  nudges: NudgeFeedRow[];
 }
 
 export async function loadHomeData(tenantId: string): Promise<HomeData> {
   return await withTenant(tenantId as TenantId, async (db) => {
-    const [briefRows, statsRows, activityRows, needYouRows, needYouCountRows] =
+    const [briefRows, statsRows, activityRows, needYouRows, needYouCountRows, nudgeRows] =
       await Promise.all([
       // Top unresolved issues by severity, capped at 5. high > medium > low,
       // most-recently-created tie-breaker.
@@ -235,6 +259,32 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
           COUNT(*) FILTER (WHERE status::text = 'signature')::int AS sign_and_file
         FROM engagements
       `),
+
+      // Pending Nudges feed — capped at 10 for home page. Per
+      // CLAUDE.md §8 Nudges: proactive outreach surface. Tenant-RLS
+      // scoped via withTenant. Status filter includes 'edited'
+      // (preparer touched the draft but hasn't approved yet).
+      db.execute<NudgeFeedRow>(sql`
+        SELECT
+          n.id::text AS id,
+          n.client_id::text AS client_id,
+          c.full_name AS client_name,
+          n.trigger_class,
+          n.trigger_key,
+          n.title,
+          n.body,
+          n.draft_outreach,
+          n.recommended_channel,
+          n.confidence,
+          n.status,
+          to_char(n.expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS expires_at,
+          to_char(n.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+        FROM nudges n
+        JOIN clients c ON c.id = n.client_id
+        WHERE n.status IN ('pending', 'edited')
+        ORDER BY n.confidence DESC, n.created_at DESC
+        LIMIT 10
+      `),
     ]);
 
     const stats = (statsRows as unknown as Array<PracticeStats>)[0] ?? {
@@ -272,6 +322,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
       stats,
       activity: activityRows as unknown as ActivityRow[],
       needYou: needYouLanes,
+      nudges: nudgeRows as unknown as NudgeFeedRow[],
     };
   });
 }
