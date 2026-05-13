@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { buildTheme } from '@docket/ui';
 import { withTenant, schema } from '@docket/db/client';
 import { decryptTreeWithAAD, deriveAAD, getTenantDek } from '@docket/db';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/require-role';
 import { CommandShell } from '@/components/command-shell';
 import { IntakeSummary } from '@/components/intake-summary';
@@ -26,6 +26,11 @@ import { DeleteClientButton } from '@/components/delete-client-button';
 import { PIIUnlockProvider } from '@/components/pii-unlock-provider';
 import { PIIUnlockButton } from '@/components/pii-unlock-button';
 import { ClientMemoriesSection, type ClientMemory } from '@/components/client-memories-section';
+import {
+  ClientProjectPicker,
+  type AttachedProject,
+  type AvailableProject,
+} from '@/components/client-project-picker';
 import { hasRole } from '@/lib/require-role';
 import type { TenantId, IntakeState } from '@docket/shared';
 import { asTenantId, maskSensitiveFields } from '@docket/shared';
@@ -206,6 +211,98 @@ export default async function ClientDetailPage({ params }: PageProps) {
     const hasSquareCred = credKinds.has('square');
     const hasDocuSignCred = credKinds.has('docusign');
 
+    // Projects attached to the current engagement + the broader
+    // pool of non-template active projects this engagement could
+    // attach to. Picker hides entirely when there's no engagement.
+    // Two queries (one JOIN, one filtered SELECT) — both RLS-scoped
+    // via withTenant so cross-tenant rows can never surface.
+    // LIMIT 200 on available is the v0 cap: firms with more than
+    // 200 active project instances will need pagination in V1.5.
+    let attachedProjects: AttachedProject[] = [];
+    let availableProjects: AvailableProject[] = [];
+    if (engagement) {
+      const attachedRows = await db.execute<{
+        id: string;
+        kind: string;
+        name: string;
+        taxYear: number | null;
+        colorHint: string | null;
+        isPrimary: boolean;
+        addedAt: string;
+      }>(sql`
+        SELECT
+          p.id::text AS id,
+          p.kind,
+          p.name,
+          p.tax_year AS "taxYear",
+          p.color_hint AS "colorHint",
+          ep.is_primary AS "isPrimary",
+          to_char(ep.added_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "addedAt"
+        FROM engagement_projects ep
+        JOIN projects p ON p.id = ep.project_id
+        WHERE ep.engagement_id = ${engagement.id}::uuid
+        ORDER BY ep.is_primary DESC, ep.added_at DESC
+      `);
+      attachedProjects = attachedRows as unknown as AttachedProject[];
+
+      // v0: templates are valid attachment targets. Codex round 1
+      // caught that without this, the picker was unreachable — the
+      // only in-product way to create projects today is the
+      // /projects seed-button which inserts is_template=true rows.
+      // V1.5 will add a "clone template → instance" flow; until
+      // then, an engagement attaching to "Annual Return Prep" (a
+      // template) is the natural verb. Templates sort first so
+      // the most-common attachment targets surface at the top.
+      //
+      // Codex round 3 P2: exclude already-attached projects in SQL
+      // BEFORE LIMIT, not after. Without this, tenants with >200
+      // active projects whose engagement is attached to the first
+      // 200 sorted rows would see candidates.length === 0 and the
+      // "All available projects are attached" empty state even
+      // though projects 201+ are still unattached.
+      //
+      // Codex round 5 P2: also exclude templates whose derived
+      // instance is already attached to this engagement. After
+      // clone-on-attach (round 4 fix), the engagement_projects
+      // row points at the instance, not the template. The naive
+      // anti-join would still surface the template as available,
+      // and another attach would just re-find the same derived
+      // instance — a confusing repeat-attach no-op. The added
+      // EXISTS-via-source_template_id branch closes that loop.
+      const availableRows = await db.execute<{
+        id: string;
+        kind: string;
+        name: string;
+        taxYear: number | null;
+        colorHint: string | null;
+      }>(sql`
+        SELECT
+          p.id::text AS id,
+          p.kind,
+          p.name,
+          p.tax_year AS "taxYear",
+          p.color_hint AS "colorHint"
+        FROM projects p
+        WHERE p.is_active
+          AND NOT EXISTS (
+            SELECT 1
+              FROM engagement_projects ep
+             WHERE ep.engagement_id = ${engagement.id}::uuid
+               AND (
+                 ep.project_id = p.id
+                 OR ep.project_id IN (
+                   SELECT pi.id
+                     FROM projects pi
+                    WHERE pi.source_template_id = p.id
+                 )
+               )
+          )
+        ORDER BY p.is_template DESC, p.name
+        LIMIT 200
+      `);
+      availableProjects = availableRows as unknown as AvailableProject[];
+    }
+
     return {
       client,
       engagement,
@@ -217,6 +314,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
       payments,
       hasSquareCred,
       hasDocuSignCred,
+      attachedProjects,
+      availableProjects,
       memories: memoriesRaw.map((m) => ({
         id: m.id,
         text: m.text,
@@ -232,7 +331,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
   });
 
   if (!data) notFound();
-  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred, hasDocuSignCred, memories } = data;
+  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred, hasDocuSignCred, attachedProjects, availableProjects, memories } = data;
+  const canEditProjects = hasRole(user, ['firm_owner', 'preparer', 'reviewer']);
 
   const initials = client.fullName
     .split(/\s+/)
@@ -425,6 +525,18 @@ export default async function ClientDetailPage({ params }: PageProps) {
                 </div>
               ) : (
                 <EmptyCard t={t} text="No engagement yet" />
+              )}
+              {/* Project assignment — attach the current engagement
+                  to one or more projects (the third organizing primitive
+                  per CLAUDE.md §4). Picker hides entirely without an
+                  engagement to anchor against. */}
+              {engagement && (
+                <ClientProjectPicker
+                  engagementId={engagement.id}
+                  attached={attachedProjects}
+                  available={availableProjects}
+                  canEdit={canEditProjects}
+                />
               )}
             </Section>
 

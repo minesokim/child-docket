@@ -2055,6 +2055,16 @@ export const engagementProjects = pgTable(
     tenantPrimaryIdx: index('engagement_projects_tenant_primary_idx')
       .on(t.tenantId, t.engagementId)
       .where(sql`is_primary`),
+    // Codex round 2 P2 (C25): enforce at-most-one primary per
+    // engagement at the DB layer. Without this, two concurrent
+    // set-primary calls across preparer tabs could both succeed
+    // and leave the engagement with multiple primaries. Migration
+    // 0035 creates the matching unique partial index.
+    onePrimaryPerEngagement: uniqueIndex(
+      'engagement_projects_one_primary_per_engagement_uniq_idx',
+    )
+      .on(t.engagementId)
+      .where(sql`is_primary`),
   }),
 );
 
