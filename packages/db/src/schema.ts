@@ -256,6 +256,9 @@ export const users = pgTable(
     // so client portal pages — which surface the firm owner's avatar
     // to taxpayers — don't need to fetch a Clerk session per request.
     avatarUrl: text('avatar_url'),
+    // Per-user theme override. NULL = inherit firm default from
+    // tenant_settings.theme_pref. Added migration 0031.
+    themePref: text('theme_pref').$type<'light' | 'dark' | 'system' | null>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ tenantIdx: index('users_tenant_idx').on(t.tenantId) }),
@@ -1412,3 +1415,315 @@ export const prospects = pgTable(
     ),
   }),
 );
+
+// ────────────────────────────────────────────────────────────────
+// Migration 0031: settings + calendar layer.
+//
+// Five tenant-scoped tables added 2026-05-13 from the v3 dashboard
+// IA integration. See CLAUDE.md §4 Calendar / §8 AI Preferences +
+// Automated Reminders + Notifications + Refund Policy, and §11
+// Design Theme. Schema-of-record details live in
+// migrations/0031_settings_calendar.sql.
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Per-tenant AI behavior configuration. One row per tenant. Drives
+ * every agent's system-prompt assembly + insight-suppression filter.
+ *
+ * Tone is an enum-style text column so prompt fragments can be
+ * pre-compiled. Personality is free-text appended to system prompts.
+ * Quiet Hours stored as integer minute-of-day pair (0-1440), local
+ * to tenants.timezone.
+ */
+export const tenantAiPreferences = pgTable(
+  'tenant_ai_preferences',
+  {
+    tenantId: uuid('tenant_id')
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    tone: text('tone')
+      .$type<'professional' | 'warm' | 'direct'>()
+      .notNull()
+      .default('warm'),
+    discoveryInsights: boolean('discovery_insights').notNull().default(true),
+    complianceFlags: boolean('compliance_flags').notNull().default(true),
+    riskTierClassification: boolean('risk_tier_classification')
+      .notNull()
+      .default(true),
+    deadlineAlerts: boolean('deadline_alerts').notNull().default(true),
+    pricingInconsistencyAlerts: boolean('pricing_inconsistency_alerts')
+      .notNull()
+      .default(true),
+    churnRiskAlerts: boolean('churn_risk_alerts').notNull().default(true),
+    capacityWarnings: boolean('capacity_warnings').notNull().default(true),
+    personality: text('personality').notNull().default(''),
+    quietHoursStartMin: integer('quiet_hours_start_min').notNull().default(1140),
+    quietHoursEndMin: integer('quiet_hours_end_min').notNull().default(420),
+    quietHoursEnabled: boolean('quiet_hours_enabled').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    toneCheck: check(
+      'tenant_ai_preferences_tone_check',
+      sql`${t.tone} IN ('professional', 'warm', 'direct')`,
+    ),
+    quietStartCheck: check(
+      'tenant_ai_preferences_quiet_start_check',
+      sql`${t.quietHoursStartMin} >= 0 AND ${t.quietHoursStartMin} <= 1440`,
+    ),
+    quietEndCheck: check(
+      'tenant_ai_preferences_quiet_end_check',
+      sql`${t.quietHoursEndMin} >= 0 AND ${t.quietHoursEndMin} <= 1440`,
+    ),
+  }),
+);
+
+/**
+ * Per-(tenant, trigger) reminder rule. Five canonical triggers
+ * per CLAUDE.md §8 Automated Reminders. App seeds defaults on first
+ * Settings → Reminders page visit; absence of a row = "use code
+ * defaults" is also a valid state.
+ */
+export const reminderRules = pgTable(
+  'reminder_rules',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    trigger: text('trigger')
+      .$type<
+        | 'missing_documents'
+        | 'engagement_letter_unsigned'
+        | 'eightyseventynine_pending'
+        | 'outstanding_balance'
+        | 'year_round_planning'
+      >()
+      .notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    intervalHours: integer('interval_hours').notNull().default(72),
+    maxAttempts: integer('max_attempts').notNull().default(5),
+    channel: text('channel')
+      .$type<'auto' | 'sms' | 'email' | 'portal' | 'all'>()
+      .notNull()
+      .default('auto'),
+    respectQuietHours: boolean('respect_quiet_hours').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('reminder_rules_tenant_idx').on(t.tenantId),
+    tenantTriggerUnique: uniqueIndex('reminder_rules_tenant_trigger_unique').on(
+      t.tenantId,
+      t.trigger,
+    ),
+    triggerCheck: check(
+      'reminder_rules_trigger_check',
+      sql`${t.trigger} IN ('missing_documents', 'engagement_letter_unsigned', 'eightyseventynine_pending', 'outstanding_balance', 'year_round_planning')`,
+    ),
+    channelCheck: check(
+      'reminder_rules_channel_check',
+      sql`${t.channel} IN ('auto', 'sms', 'email', 'portal', 'all')`,
+    ),
+    intervalCheck: check(
+      'reminder_rules_interval_check',
+      sql`${t.intervalHours} > 0 AND ${t.intervalHours} <= 2160`,
+    ),
+    attemptsCheck: check(
+      'reminder_rules_attempts_check',
+      sql`${t.maxAttempts} > 0 AND ${t.maxAttempts} <= 20`,
+    ),
+  }),
+);
+
+/**
+ * Per-(tenant, category) notification preference. Four canonical
+ * event categories × three channels per CLAUDE.md §8 Notifications.
+ */
+export const notificationPrefs = pgTable(
+  'notification_prefs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    category: text('category')
+      .$type<'deadlines' | 'ai_alerts' | 'client_activity' | 'system'>()
+      .notNull(),
+    sms: boolean('sms').notNull().default(false),
+    email: boolean('email').notNull().default(true),
+    inApp: boolean('in_app').notNull().default(true),
+    threshold: text('threshold')
+      .$type<'all' | 'medium' | 'high'>()
+      .notNull()
+      .default('medium'),
+    deadlineDaysBefore: integer('deadline_days_before').notNull().default(7),
+    respectQuietHours: boolean('respect_quiet_hours').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('notification_prefs_tenant_idx').on(t.tenantId),
+    tenantCategoryUnique: uniqueIndex(
+      'notification_prefs_tenant_category_unique',
+    ).on(t.tenantId, t.category),
+    categoryCheck: check(
+      'notification_prefs_category_check',
+      sql`${t.category} IN ('deadlines', 'ai_alerts', 'client_activity', 'system')`,
+    ),
+    thresholdCheck: check(
+      'notification_prefs_threshold_check',
+      sql`${t.threshold} IN ('all', 'medium', 'high')`,
+    ),
+    deadlineDaysCheck: check(
+      'notification_prefs_deadline_days_check',
+      sql`${t.deadlineDaysBefore} > 0 AND ${t.deadlineDaysBefore} <= 90`,
+    ),
+  }),
+);
+
+/**
+ * Google Calendar mirror, tenant-scoped. Two-way sync via the
+ * google-calendar MCP server. client_id + engagement_id FKs make
+ * calendar entries first-class client artifacts queryable by the
+ * Discovery + Strategy agents.
+ */
+export const calendarEvents = pgTable(
+  'calendar_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    externalId: text('external_id'),
+    icalUid: text('ical_uid'),
+    calendarId: text('calendar_id'),
+    eventType: text('event_type')
+      .$type<
+        | 'meeting'
+        | 'filing_deadline'
+        | 'internal_review'
+        | 'audit_milestone'
+        | 'planning_touchpoint'
+      >()
+      .notNull()
+      .default('meeting'),
+    title: text('title').notNull(),
+    description: text('description'),
+    location: text('location'),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    allDay: boolean('all_day').notNull().default(false),
+    clientId: uuid('client_id').references(() => clients.id, {
+      onDelete: 'set null',
+    }),
+    engagementId: uuid('engagement_id').references(() => engagements.id, {
+      onDelete: 'set null',
+    }),
+    attendeeCount: integer('attendee_count').notNull().default(0),
+    organizerEmail: text('organizer_email'),
+    status: text('status')
+      .$type<'confirmed' | 'tentative' | 'cancelled'>()
+      .notNull()
+      .default('confirmed'),
+    externalUpdatedAt: timestamp('external_updated_at', { withTimezone: true }),
+    syncedAt: timestamp('synced_at', { withTimezone: true }),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantStartsIdx: index('calendar_events_tenant_starts_idx').on(
+      t.tenantId,
+      sql`${t.startsAt} DESC`,
+    ),
+    clientIdx: index('calendar_events_client_idx').on(t.clientId),
+    engagementIdx: index('calendar_events_engagement_idx').on(t.engagementId),
+    eventTypeIdx: index('calendar_events_event_type_idx').on(t.eventType),
+    tenantCalendarExternalUnique: uniqueIndex(
+      'calendar_events_tenant_calendar_external_unique',
+    ).on(t.tenantId, t.calendarId, t.externalId),
+    eventTypeCheck: check(
+      'calendar_events_event_type_check',
+      sql`${t.eventType} IN ('meeting', 'filing_deadline', 'internal_review', 'audit_milestone', 'planning_touchpoint')`,
+    ),
+    statusCheck: check(
+      'calendar_events_status_check',
+      sql`${t.status} IN ('confirmed', 'tentative', 'cancelled')`,
+    ),
+  }),
+);
+
+/**
+ * Generic per-tenant JSONB k/v store. Holds instance-scoped
+ * configuration that doesn't earn its own column:
+ *   - theme_pref          (firm-wide theme default)
+ *   - refund_policy_md    (markdown refund policy shown at checkout)
+ *   - branding            (logo URL, hue offset, etc.)
+ *   - portal              (welcome_md, video URLs, custom subdomain)
+ *   - metadata            (anything else)
+ *
+ * Prefer named columns when you query the field; prefer JSONB when
+ * you only render it.
+ */
+export const tenantSettings = pgTable('tenant_settings', {
+  tenantId: uuid('tenant_id')
+    .primaryKey()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  themePref: text('theme_pref')
+    .$type<'light' | 'dark' | 'system'>()
+    .notNull()
+    .default('system'),
+  refundPolicyMd: text('refund_policy_md').notNull().default(''),
+  branding: jsonb('branding')
+    .$type<{
+      logoUrl?: string;
+      hueOffset?: number;
+      customSubdomain?: string;
+    }>()
+    .notNull()
+    .default({}),
+  portal: jsonb('portal')
+    .$type<{
+      welcomeMd?: string;
+      videos?: Partial<{
+        first_time: string;
+        returning: string;
+        docs_received: string;
+        review_ready: string;
+        post_filing: string;
+      }>;
+    }>()
+    .notNull()
+    .default({}),
+  metadata: jsonb('metadata')
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

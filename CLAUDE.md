@@ -140,12 +140,21 @@ Earlier in conversation we used a hypothetical persona named "Maria" (58-year-ol
 ### Command Room (preparer surface, web + mobile)
 Single pane that shows **today** and lets the preparer act on it.
 
-- **Morning brief** — "3 deadlines, 2 e-file rejects, 5 stuck pickups, 1 high-risk position, 1 client at risk of churn"
-- **Pipeline** — every client across Intake → Docs → Prep → Review → Sign → File → Pay, with AI commentary on every card
-- **Unified inbox** — SMS, email, portal chat, voicemail. AI drafts replies pulled from real client state. Preparer approves.
-- **Practice intelligence** — margin per client, friction score, capacity, pricing inconsistency, churn risk, "fire the bad client" insights
-- **Outcome prediction** — position-level audit/controversy risk modeling on demand (Blue J integration)
-- **Command palette** — fuzzy-search any action across any tool. Pull IRS transcript · file 2848 · post invoice · generate workpaper · draft notice response · sync return to OLT · request docs · run YoY diff. Every action invokes an MCP tool.
+- **Morning brief** — "3 deadlines, 2 e-file rejects, 5 stuck pickups, 1 high-risk position, 1 client at risk of churn". Every page in the command room opens with an **aggregate metric strip** at the top — counts, totals, dollar amounts — so the preparer's eye lands on the number first, then the list. The strips themselves hover to their source artifacts (clients, returns, dollars).
+- **Need You queue** — the operational primitive that replaces "generic dashboard." Four workflow sub-sections, each its own swim-lane with its own metric:
+  - **New Intakes** — clients who completed intake but haven't been routed to a preparer yet
+  - **Ready to Prep** — docs gathered, intake complete, awaiting workpaper assembly
+  - **Ready to File** — return drafted, awaiting review and 8879 sign
+  - **Sign & File** — 8879 signed, awaiting e-file transmission
+  Sub-sections are the **structural primitive**; Pipeline is the *visualization* of how clients flow between them. AI commentary on every card. The reason this beats "generic pipeline": it gives the preparer a verb ("what do I do next?") instead of a noun ("look at the board"). Inherited from v3 Vazant dashboard IA.
+- **Clients page (three view toggles)** — Cards (default, scannable, AI commentary per card), Table (dense, sortable, filterable, exportable), **Pipeline (kanban-style across the four Need You sub-sections plus Filed and Paid)**. Same data; three lenses for different cognitive modes. Each row carries a **risk-tier pill** (green/amber/red) the firm's AI Preferences settings drive.
+- **Calendar** — first-class top-level nav surface, not buried inside settings. Weekly view default, day/month toggles. Event types: client meetings (linked to client record), filing deadlines (per engagement, color-coded by tax form type), internal reviews, audit milestones, year-round planning touchpoints. Two-way sync with Google Calendar via the `google-calendar` MCP server (§10). Click any event → opens client/engagement workspace.
+- **Unified inbox** — SMS, email, portal chat, voicemail. AI drafts replies pulled from real client state. Preparer approves. **Channel-availability icons render inline per conversation** (green = portal logged in within 24h, amber = SMS only, gray = email-only fallback) so the preparer picks the channel the client actually reads. **In-thread document handling**: when a client uploads a doc to a conversation, a `Process / Ignore` action pair appears inline next to the attachment — Process routes it through the doc-classification agent + files to the client record; Ignore archives without indexing (for off-topic forwards). Antonio's most-requested texture-win on 5/9 call.
+- **Documents** — two tabs: **Client docs** (everything filed to a client record, faceted by year/type/status) and **Firm files** (engagement letters, §7216 consents, audit-defense packets, internal SOPs, position library). Aggregate metric strip at top: "47 needs review · 12 missing · $2.4M total income across 1099s YTD."
+- **Audit Trail UI** — read-only view on `actions` table per client. Every AI action shown as "AI did X at time Y" with the cited authority + confidence tier + cost. **Rewind primitive** (V1.5, per the §23 [`/decisions-log`](.claude/skills/decisions-log/SKILL.md) and POSITION-FRAMEWORK refusal-floor design) becomes user-facing here: each row carries a "Reverse this action?" affordance that walks the chain to undo. Marketing handle: *"the only tax AI where every action is reversible."*
+- **Practice intelligence** — margin per client, friction score, capacity, pricing inconsistency, churn risk, "fire the bad client" insights. **Per-client risk tier** (green/amber/red) summarizes the AI's confidence in the firm-client fit (compliance posture, payment history, communication friction, scope drift). AI Preferences (§8) drive the tier thresholds; firms with conservative posture get more amber/red flags, aggressive firms get more green.
+- **Outcome prediction** — position-level audit/controversy risk modeling on demand (Blue J integration, V2).
+- **Command palette (Ask Docket, Cmd+K)** — fuzzy-search any action across any tool. Pull IRS transcript · file 2848 · post invoice · generate workpaper · draft notice response · sync return to OLT · request docs · run YoY diff. Every action invokes an MCP tool. Also handles **questions** (not just commands): "what's John Doe's missing docs status," "which clients haven't paid Q3 estimates." The agent shows a **multi-step reasoning trail** as it works — each sub-step (looked up client, queried engagement, checked deadlines) renders as a collapsible row so the preparer can audit *why* the answer landed where it did. Per §9, reasoning visualization is a contract on every agent output, not just Cmd+K.
 
 ### Client Portal (taxpayer surface, mobile-first 390×780 iOS)
 **Mediated by AI, gated by Antonio.** The taxpayer never interacts with an autonomous AI. Every AI action is preparer-approved.
@@ -153,6 +162,31 @@ Single pane that shows **today** and lets the preparer act on it.
 Two surfaces inside the portal:
 1. **Intake (38 routes, 25-step declarative flow)** — Login → SMS OTP → Welcome → Quick-start (name/DOB/email) → Tutorial → Service path → Personal → State → Filing status → Spouse → Dependents (count + per-dep detail) → Income (incl. self-employment, rental detail) → Tax questions → Deductions → Life events → Refund pref → Document upload (4 phases: empty → AI scanning → retake prompt → AI parsed → saved) → Engagement letter → §7216 consent → Schedule appt → $50 deposit → Done. Single source of truth: `apps/client-portal/src/lib/intake-flow.ts` — 25 steps with `isApplicable()`, `isComplete()`, `next()` per step. Continue button gated by `canAdvanceFromStep` per step (with `STEPS_WITHOUT_GATE = ['docs']` exemption).
 2. **Returning portal (5 tabs)** — Home · Docs · Messages · Signatures (with 8879 sign flow) · Profile, plus an AskAntonioChat overlay. **Reality:** layout exists; the five tab pages are placeholders pending production data flows.
+
+**Stage-specific portal status messages.** The Home tab renders a single primary card whose copy is driven by the client's current engagement state. Five canonical states map to five distinct copy + CTA combinations:
+
+| Stage | Status copy | Primary CTA |
+|---|---|---|
+| **First-time intake incomplete** | "Welcome — let's get to know you. ~12 minutes." | Resume intake |
+| **Docs received, awaiting prep** | "We have your docs. Antonio is preparing your return." | View checklist |
+| **Review-ready (8879 pending)** | "Your return is ready. Sign by [deadline]." | Sign 8879 |
+| **Filed, refund expected** | "Filed [date]. Refund $X expected [window]." | Track refund |
+| **Off-season, year-round mode** | "Tax year [yr] done. Anything change? Let Antonio know." | Plan ahead |
+
+State machine drives copy; firms cannot edit individual messages, but the firm-owner-display token (firm name, owner name) is interpolated at render time.
+
+**Five video portal touchpoints.** Stage-aware video slot on the Home tab. Same five states above map to five firm-recorded clips (or fallback Antonio template if firm hasn't recorded their own). The video plays inline on first arrival per stage; subsequent visits show a thumbnail with a "Watch again" affordance.
+- *First-Time* — firm intro, what to expect, doc list overview
+- *Returning* — "good to see you again, here's what's new this year"
+- *Docs Received* — "we got everything, here's the timeline"
+- *Review-Ready* — walks the client through their return before they sign
+- *Post-Filing* — "filed, here's what happens next, here's what to keep an eye on Q3-Q4"
+
+Recording UI is in command-room **Settings → Client Experience → Portal Videos**.
+
+**Welcome message customization (per-firm).** Firm sets the Welcome screen copy + intro paragraph + optional logo upload (otherwise defaults to firm-name typography). Lives in command-room **Settings → Client Experience → Portal Branding**.
+
+**Custom client-portal subdomain.** Per-firm CNAME (e.g. `clients.vazantconsulting.com`) maps to Docket's portal infrastructure. Firm logo, color tokens (within Docket's tone constraints — editorial-warm-only, no shadcn drift), Twilio sender ID, Square account, Gmail OAuth, DocuSign account all unified under the firm brand. V1.5 (post-7/30; tenant #2 onboarding gate). Substrate exists in `tenant_credentials`; UI + CNAME provisioning is the gap.
 
 Bilingual support as configuration (Spanish, Mandarin, Vietnamese, Tagalog) — not a separate product. Not yet implemented; English-only for first cohort.
 
@@ -312,11 +346,73 @@ For deduction / return positions specifically, the levels gate which tier auto-a
 
 Tier 4 always requires human attestation. Below Reasonable Basis always refuses. These never escalate.
 
+### AI Preferences (per-tenant configuration surface)
+
+Firm-level configuration of how the AI talks, what it surfaces, what it suppresses. Lives in command-room **Settings → Intelligence → AI Preferences**. Maps to a new `tenant_ai_preferences` table (one row per tenant, JSONB-extensible). Drives every agent's system-prompt assembly + insight-suppression filter.
+
+| Setting | Type | Default | Effect |
+|---|---|---|---|
+| **Tone** | enum (`professional` / `warm` / `direct`) | `warm` | System-prompt injection on every Inbox Drafter + portal-message agent call |
+| **Discovery insights** | toggle | on | Whether Discovery Agent surfaces deduction opportunities on dashboard |
+| **Compliance flags** | toggle | on | Whether the system surfaces Tier 3/4 positions for review |
+| **Risk-tier classification** | toggle | on | Whether client-risk pills (green/amber/red) render anywhere |
+| **Deadline alerts** | toggle | on | Whether the Morning Brief surfaces deadline risk |
+| **Pricing inconsistency alerts** | toggle | on | Practice-intelligence pillar; firm may turn off if scope-creep tracking feels intrusive |
+| **Churn risk alerts** | toggle | on | Practice-intelligence pillar |
+| **Capacity warnings** | toggle | on | Manager mission-control surface (V1.5) |
+| **Docket Personality** | free-text (≤500 chars) | empty | Optional firm-specific tone tweak appended to every agent's system prompt ("we always close emails with 'Stay well —' instead of 'Best,'"). Stored in plaintext. Visible to firm-owner only. |
+| **Quiet Hours** | time range (default 7pm-7am local) | on | Suppresses non-critical agent-initiated comms (drafts queue up; nothing sends to clients during quiet hours). Reminders + Notifications honor this same setting. |
+
+Trust-tier level (L1-L4 above) is also surfaced here as a single dropdown, but changes write to `tenants.trust_tier` and route through the same trust-gate enforcement code paths. AI Preferences settings do NOT bypass the position-tier gates — they shape how the AI *talks*, not what it's allowed to *do*.
+
 ### Insight severity
 - **Green** (informational) · **Amber** (needs attention) · **Red** (critical / deadline risk)
 
 ### When to show insights
 Always show when AI has concern/recommendation/action. One-liner when progressing normally but something notable. Show nothing when truly on track — **silence IS the signal.**
+
+### Canonical insight format
+
+Every AI-surfaced alert renders in the canonical form: **`{ClientName}'s {situation} · {quantified impact}`**.
+
+Examples (locked from v3 Vazant dashboard, refined for compliance-first frame):
+- *Maria Ortega's Q3 estimated payment due Sept 15 · est. $4,200 underpayment penalty if skipped*
+- *John Doe's 1099-NEC from Acme missing · $87K reportable, IRS auto-letter risk*
+- *Boney-Henderson LLC's Statement of Information overdue · CA SoS suspension risk in 23 days*
+- *Patel Family's Augusta-rule deduction (Tier 2, Substantial Authority) · est. $14K savings*
+
+The quantified-impact half is what makes the alert *legible* — preparers triage by dollar amount + deadline distance, not by alert title. Agents that can't quantify impact don't surface as alerts; they go to the secondary "informational" queue.
+
+### Automated Reminders (per-tenant configuration)
+
+Firm-level rules for how the AI nudges clients. Lives in command-room **Settings → Practice → Automated Reminders**. Maps to a new `reminder_rules` table (one row per (tenant, trigger) pair). The five canonical triggers:
+
+| Trigger | Default cadence | Channel | Default state |
+|---|---|---|---|
+| **Missing documents** | every 3 days, max 5 attempts | SMS → email fallback | on |
+| **Engagement letter unsigned** | every 2 days, max 4 attempts | email + portal | on |
+| **8879 awaiting signature** | every 24h, max 3 attempts | SMS + email | on |
+| **Outstanding balance** | weekly | email | on |
+| **Year-round planning touchpoint** | quarterly (Q1: extension; Q2: estimates; Q3: estimates; Q4: planning + Roth conversion window) | email | off (opt-in per firm) |
+
+Each rule carries: enabled flag, cadence (interval + max attempts), channel preference (SMS/email/portal/all), Quiet Hours respect (always on, inherited from AI Preferences), per-client opt-out (so a known-difficult client can be excluded). Antonio's most-pained-by item from the 5/9 call ("I get so many emails that you forget to answer one") — but the rule applies to *clients forgetting us*, not vice versa.
+
+### Notifications (per-tenant configuration)
+
+Firm-level rules for how Docket nudges *Antonio* (the preparer). Lives in command-room **Settings → Practice → Notifications**. Maps to a new `notification_prefs` table. Four event categories × three channels:
+
+| Category | Description | SMS | Email | In-app |
+|---|---|---|---|---|
+| **Deadlines** | engagement deadlines crossing threshold (default 7d) | on | on | on |
+| **AI alerts** | Discovery findings + Tier 3/4 position flags | off | on | on |
+| **Client activity** | new portal logins, message replies, doc uploads | off | off | on |
+| **System** | billing, integration failures, vendor outage | off | on | on |
+
+Per-category × per-channel toggle. Plus a **Threshold** slider per category (deadline distance, AI-alert severity floor, etc.). Quiet Hours inherited from AI Preferences (suppresses all SMS/in-app; email queues for 7am delivery).
+
+### Refund / Payment policy display
+
+The deposit + payment surfaces (portal `/deposit` step, command-room invoice pages) carry a **per-firm refund policy** block sourced from `tenant_settings.refund_policy_md`. Firms author once in Settings → Practice → Billing → Refund Policy. Renders inline at checkout *before* the client commits the deposit. Prevents the "I didn't know about your refund policy" dispute that escalates to chargeback.
 
 ### Why this matters
 The core product differentiator. Competitors show dashboards you read. Docket shows recommendations you act on. Every UI component asks "what would the AI say here?" Cards have space for commentary. Group by action type, not just pipeline stage.
@@ -358,6 +454,17 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 - Trust gate before external action: ❌ not built (placeholder field on tenant; no enforcement code yet)
 - Per-agent playbook bundle: ❌ not built (`packages/playbooks/` doesn't exist)
 
+### Agent contract — what every output must carry (UI rendering)
+
+Every agent output that surfaces to a preparer renders these four artifacts inline:
+
+1. **The answer** — what the agent decided / drafted / recommended.
+2. **Confidence + tier** — Tier 1-4 for tax positions; H/M/L confidence for everything else. Color-coded pill (green/amber/orange/red/gray).
+3. **Multi-step reasoning trail** — collapsible per-step view of what the agent did: which client facts it queried, which authorities it looked up, which intermediate decisions it made, what it considered and discarded. NOT a thinking-mode raw dump; a *curated* trail emitted alongside the answer so the preparer can audit "why this answer landed here." Required on Discovery, Strategy, Position, Pre-signature checklist, Notice Response, Ask Docket (command palette), and any future agent that emits a recommendation. Optional on Triage Classifier + Inbox Drafter (trivial cases — show only on `confidence < high`).
+4. **Cited authority** — when the answer touches a tax position, every claim carries an IRC §/Treas Reg/case cite with `effective_from` date. Hover expands to full authority text.
+
+Reasoning-trail rendering is a `<ReasoningTrail>` primitive in `packages/ui/src/components/`. Agents emit a `reasoning_trail: ReasoningStep[]` field in their JSON output schema; UI renders it as collapsible rows under the primary answer. This is the user-facing texture-win v3 surfaced and we're locking as a contract — *every* agent output, not just Cmd+K queries.
+
 ---
 
 ## 10. MCP server roster
@@ -380,10 +487,11 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 | 1 | **`ledger`** | internal | `log_action`, `query_actions`, `get_audit_trail`, `get_client_state` | 3d |
 | 2 | **`knowledge`** | internal | `search_authority`, `get_form_instructions`, `get_concept`, `get_playbook` | 5d (+ 5d ingestion) |
 | 3 | **`gmail`** | API wrapper | adopt official, thin tenant scoping | 2d |
-| 4 | **`xero`** | API wrapper | adopt community or thin wrapper | 2d |
-| 5 | **`portal`** | internal | `post_message`, `request_document`, `update_status` | 3d |
-| 6 | **`olt`** | browser automation | `list_returns`, `get_return_state`, `prefill_return`, `push_field`, `run_diagnostics` | 10–14d |
-| 7 | **`irs-solutions`** | browser automation | `pull_transcripts`, `list_notices`, `classify_notice`, `get_ian_alerts`, `prefill_2848` | 8–10d |
+| 4 | **`google-calendar`** | API wrapper | `list_events`, `create_event`, `update_event`, `delete_event`, `find_free_slots` — drives the command-room Calendar surface (§4). Per-tenant Google OAuth; events two-way sync into `calendar_events` table with `client_id` + `engagement_id` foreign keys so calendar entries are first-class client artifacts. | 3d |
+| 5 | **`xero`** | API wrapper | adopt community or thin wrapper | 2d |
+| 6 | **`portal`** | internal | `post_message`, `request_document`, `update_status` | 3d |
+| 7 | **`olt`** | browser automation | `list_returns`, `get_return_state`, `prefill_return`, `push_field`, `run_diagnostics` | 10–14d |
+| 8 | **`irs-solutions`** | browser automation | `pull_transcripts`, `list_notices`, `classify_notice`, `get_ian_alerts`, `prefill_2848` | 8–10d |
 
 ### Build-vs-adopt rules
 | Situation | Decision |
@@ -413,6 +521,7 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 - Fraunces / DM Sans / DM Sans (mono fallback)
 - Density: comfortable / cozy
 - Radius: 14px / 20px (lg)
+- **Theme: Light (default) / Dark / System.** Per-user preference stored in `users.theme_pref`. Light mode is the canonical editorial-warm + operational-modern surfaces above. Dark mode is the editorial-warm tokens *inverted* (ink canvas, cream text, forest-green hue brightened 8-12% for legibility against dark backgrounds) and the operational-modern tokens inverted (warm near-black canvas, cream-white cards, soft 1px borders inverted). System mode follows `prefers-color-scheme`. Lives in command-room **Settings → System → Appearance**, mirrored in portal Profile tab. Render via CSS custom properties so the inline-style intake/portal components don't need a per-component rewrite — a single `data-theme` attribute on `<html>` flips the variables. V1.5 ship (no demand for it on tonight's first cohort).
 
 ### Primitives in `packages/ui/src/components/`
 Layout: `Screen`, `Stack`, `Row`. Text: `Eyebrow`, `H1`, `H2`, `Body`. Buttons: `Button`, `BackButton`, `IntakeBackButton`. Indicators: `ProgressBar`, `Placeholder`, `TrustPill`. Media: `AvatarSlot`, `VideoPlaceholder`. Cards: `Card`, `ToggleCard`, `RadioRowCard`, `DependentCountCard`. Fields: `FieldLabel`, `TextField`, `SSNField`, `EncryptedTextField`. Antonio: `AskAntonioBar`, `AskAntonioChat`, `AntonioNote`. Frame: `SignOutProvider`, `IntakeRouteFrame`, `IntakeHeader`, `BottomBar`, `IntakeBottomBar`, `Footer`. Icons: `IncomeIcon`, `HandCheckmark`, `Wordmark`. Signature: `LegalDoc`, `SignaturePad`. Portal: `PortalTabBar`. All inline-style based for design fidelity.
@@ -822,11 +931,42 @@ The well-funded AI-native competitors ($235M+ combined) are economically forced 
 ```
 docket/
 ├── apps/
-│   ├── client-portal/        # Next.js 15, port 3001. 38 routes shipped.
+│   ├── client-portal/        # Next.js 15, port 3001. 38 routes shipped + /scan
+│   │                         #   (Discovery Scan cold-traffic landing, C12).
+│   │                         #   Returning portal Home tab renders stage-specific
+│   │                         #   status copy (5 canonical states, see §4 Client
+│   │                         #   Portal). Video touchpoint slot per stage.
 │   └── command-room/         # Next.js 15, port 3000. 4 working routes
 │                             #   (sign-in, /clients, /clients/new, /clients/[id]).
 │                             #   /messages /documents /settings = sidebar links → 404.
 │                             # NO admin/ app — command-room subsumes it.
+│                             #
+│                             # NEW SURFACES (post-v3-IA-integration, building now):
+│                             #   /calendar              — first-class Calendar
+│                             #                            (§4 Command Room).
+│                             #                            Backed by google-calendar
+│                             #                            MCP server + calendar_events
+│                             #                            table.
+│                             #   /settings/ai-preferences  — Tone / insight toggles /
+│                             #                              Docket Personality /
+│                             #                              Quiet Hours.
+│                             #                              Writes tenant_ai_preferences.
+│                             #   /settings/reminders    — 5 automated reminder rules
+│                             #                            per tenant. Writes
+│                             #                            reminder_rules.
+│                             #   /settings/notifications — 4 event categories ×
+│                             #                             3 channels per tenant.
+│                             #                             Writes notification_prefs.
+│                             #   /settings/branding     — Logo + custom subdomain
+│                             #                            + welcome copy + portal
+│                             #                            videos (V1.5 white-label
+│                             #                            tier).
+│                             #   Home / Need You queue   — 4-lane workflow primitive
+│                             #                            (New Intakes / Ready to
+│                             #                            Prep / Ready to File /
+│                             #                            Sign & File). Aggregate
+│                             #                            MetricStrip at top of
+│                             #                            every page.
 ├── services/
 │   ├── orchestrator/         # 109 LOC. Direct @anthropic-ai/sdk wrapper:
 │   │                         #   cost telemetry, prompt caching, audit hook,
@@ -845,6 +985,25 @@ docket/
 │   │                         #   encryption (master KEK + per-tenant DEK
 │   │                         #   AES-256-GCM, in-process LRU cache) + seed
 │   │                         #   (tenant + DEK + 1 user; NO mock clients).
+│   │                         #
+│   │                         # NEW TABLES (migration 0031, building now):
+│   │                         #   tenant_ai_preferences  — tone, insight toggles,
+│   │                         #                            Docket Personality,
+│   │                         #                            Quiet Hours, 1 row/tenant
+│   │                         #   reminder_rules         — 5 canonical triggers
+│   │                         #                            per tenant (missing
+│   │                         #                            docs / engagement letter
+│   │                         #                            / 8879 / balance / Q-end)
+│   │                         #   notification_prefs     — 4 categories ×
+│   │                         #                            3 channels per tenant
+│   │                         #   calendar_events        — google-calendar mirror
+│   │                         #                            scoped per tenant, with
+│   │                         #                            client_id + engagement_id
+│   │                         #                            FKs
+│   │                         #   tenant_settings        — generic JSONB key/value
+│   │                         #                            store per tenant (theme
+│   │                         #                            pref, refund_policy_md,
+│   │                         #                            branding overrides)
 │   ├── shared/               # IntakeState, intake-schemas (Zod), branded
 │   │                         #   types, role helpers, in-process rate limit,
 │   │                         #   masking (lives in intake.ts, NOT a separate

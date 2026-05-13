@@ -90,6 +90,7 @@ The wedge: Discovery Scan as the demo artifact. "We found Antonio $X in missed d
 To ship in Wks 1-2:
 - Schema migrations 0019-0021: `firm_profile`, `firm_patterns`, `client_facts`
 - Schema migration: `tax_positions`, `disclosure_filings`, `authority_chunks` (pgvector for retrieval)
+- Schema migration 0031 (NEW — v3-IA integration): `tenant_ai_preferences`, `reminder_rules`, `notification_prefs`, `calendar_events`, `tenant_settings` (JSONB k/v store with `theme_pref`, `refund_policy_md`, `branding_*` keys). Drives the new Settings routes + Calendar surface.
 - Authority library v0: IRC + Treas Regs + IRS Pubs (current + 3 prior years) + CA FTB pubs + Legal Rulings + Residency Manual
 - Position library seed: 50 highest-leverage positions hand-curated, classified, with authority links
 - Bedrock fallback in `runDocketAgent` (vendor resilience)
@@ -101,13 +102,19 @@ To ship in Wks 1-2:
 - Twilio "Send via SMS" invite flow
 - Sidebar dead links resolved (`/messages`, `/documents`, `/settings` placeholder routes)
 - Citation hover infrastructure (tooltip on every dollar value, sourced from artifact)
+- **`MetricStrip` UI primitive** (`packages/ui/src/components/MetricStrip.tsx`) — aggregate count/dollar/percentage strip that opens every command-room page. Hover-to-source on every metric. v3-IA primitive.
+- **`ReasoningTrail` UI primitive** (`packages/ui/src/components/ReasoningTrail.tsx`) — collapsible per-step trace renderer used by every agent output. Locked as a contract per [`CLAUDE.md` §9 Agent contract](../CLAUDE.md). Agent JSON schemas extended to include `reasoning_trail: ReasoningStep[]` field.
+- **Need You workflow primitive** — refactor `/` (command-room home) from generic dashboard to 4-lane sub-section view (New Intakes / Ready to Prep / Ready to File / Sign & File). Replaces "Pipeline" as the operational primitive; Pipeline becomes the 3rd view-toggle on /clients.
+- **Client risk-tier pill** (`packages/ui/src/components/RiskTierPill.tsx`) — green/amber/red classifier rendered on every Client list row. Heuristic v0: compliance posture (open issues) + payment history (overdue invoices) + communication friction (un-responded thread count) → tier; future versions will be driven by AI Preferences thresholds.
 
 ### Antonio production sub-milestone (Phase 2, Wks 3-4, 5/16 → 5/30)
 
 The 5/30 deadline: Antonio's full 200+ client base operational on production-grade substrate.
 
 - Real bidirectional messages (Twilio SMS + Gmail email + portal chat, channel-aware via Inbox Drafter agent)
+- **Channel-availability icons inline per conversation** (green / amber / gray dots indicating which channel the client uses) + **in-thread `Process / Ignore` action pair** on attached documents (v3-IA texture-win, antonio 5/9 ask)
 - Square Checkout API integration (per-client payment links, webhook for paid status)
+- **Refund policy display at checkout** — `tenant_settings.refund_policy_md` field rendered inline before the deposit-commit button on `/deposit` and command-room invoice pages. Markdown-authored once per firm in Settings → Practice → Billing → Refund Policy
 - DocuSign embedded signing for Form 8879 with LexisNexis KBA (NIST IAL2)
 - Cross-channel artifact capture (every channel writes to `actions` rows tied to clients)
 - Context assembler with 5 agent recipes (inbox-drafter, discovery, position, pre-signature, strategy)
@@ -120,6 +127,13 @@ The 5/30 deadline: Antonio's full 200+ client base operational on production-gra
 - Async-first audit on every server action (no synchronous Anthropic calls except pre-signature checklist)
 - Trust gate enforcement code at the position-tier level
 - DB write-failure → read-only mode
+- **Settings → Intelligence → AI Preferences page** (new route `/settings/ai-preferences`) — tone selector, 8 insight toggles, Docket Personality free-text, Quiet Hours range. Writes `tenant_ai_preferences` table. Drives every agent's system-prompt assembly. Per [`CLAUDE.md` §8 AI Preferences](../CLAUDE.md).
+- **Settings → Practice → Automated Reminders page** (new route `/settings/reminders`) — 5 canonical reminder rules (missing docs / engagement letter / 8879 / outstanding balance / year-round Q-end touchpoint). Per-rule: enabled / cadence / channel / max attempts. Writes `reminder_rules`. Quiet Hours inherited from AI Preferences.
+- **Settings → Practice → Notifications page** (new route `/settings/notifications`) — 4 categories (Deadlines / AI alerts / Client activity / System) × 3 channels (SMS / email / in-app). Writes `notification_prefs`. Inherits Quiet Hours.
+- **Stage-specific portal status messages** on Home tab — 5 canonical states map to 5 copy + CTA combinations (per [`CLAUDE.md` §4 Client Portal](../CLAUDE.md)). State machine drives copy; firms cannot edit individual messages (consistency floor); only firm-name/owner tokens interpolate.
+- **Audit Trail UI** — read-only view at `/clients/[id]/audit` showing all `actions` rows tied to client. Every AI action labeled with cited authority, confidence tier, cost. Substrate for the V1.5 Rewind primitive.
+- **Documents tab split: Client docs vs Firm files** — `/documents` becomes faceted: "Client docs" (filed to a client record) vs "Firm files" (engagement letters, §7216 consents, audit-defense packets, internal SOPs, position library). MetricStrip at top.
+- **Discovery agent output locked to canonical format** `{ClientName}'s {situation} · {quantified impact}` — alerts that can't quantify impact route to a secondary informational queue, not the dashboard primary. Locked as a contract.
 
 ### Antonio call feedback (2026-05-09)
 
@@ -286,6 +300,17 @@ Plus the natural-language client-book screening:
 - Drill-down to client detail
 - Full-text + structured-field hybrid search
 
+### Calendar surface + google-calendar MCP (Phase 4, Wks 7-8, 6/13 → 6/27)
+
+Calendar as first-class top-level command-room nav (not buried in settings). Per [`CLAUDE.md` §4 Calendar](../CLAUDE.md).
+
+- `google-calendar` MCP server (§10 — slot 4 in v0 roster). Tools: `list_events`, `create_event`, `update_event`, `delete_event`, `find_free_slots`. Per-tenant Google OAuth via the existing `tenant_credentials` substrate.
+- `calendar_events` table (migration 0031) — mirrors Google Calendar events, scoped per-tenant via RLS, with `client_id` + `engagement_id` foreign keys so calendar entries are first-class client artifacts (queryable in Discovery + Strategy agents).
+- `/calendar` route in command-room — weekly view default, day/month toggles. Event types: client meetings (linked to client record), filing deadlines (per engagement, color-coded by tax form type), internal reviews, audit milestones, year-round planning touchpoints.
+- Two-way sync. Webhook on Google Calendar changes → mirror into `calendar_events`. Writes from command-room → Google Calendar API.
+- Click any event → opens client/engagement workspace.
+- **Aggregate MetricStrip** at top: "This week: 8 meetings · 3 filing deadlines · 1 audit milestone."
+
 ### Discovery agent + wedge demo (Phase 5, Wks 9-10, 6/27 → 7/11)
 
 Discovery agent runs end-to-end against Antonio's actual book. The output is the demo artifact that closes deals.
@@ -365,6 +390,17 @@ The features that, once Antonio uses them, he can't go back to working without t
 - **Text mode for clients** — full SMS conversational onboarding. Magic-link pattern for sensitive ops. §7216 consent at onboarding. Inbound PII regex scrubbing.
 - **WhatsApp parity** — port the text-mode work (~2 days). Twilio WhatsApp Business API.
 - **Spanish translation** — bilingual UI strings. Antonio's first cohort already includes Spanish-speaking clients.
+
+### White-label / firm branding (V1.5 distribution unlock)
+
+The migration from "Antonio's tool" to "the OS Antonio's mentor's network of 1000s of preparers all run on." Substrate already exists in `tenant_credentials`; the gap is UI + per-firm onboarding flow + DNS provisioning.
+
+- **Custom client-portal subdomain** — per-firm CNAME (e.g. `clients.vazantconsulting.com`) maps to Docket's portal infrastructure. DNS instructions in command-room Settings → System → Custom Domain. Vercel multi-domain config + automatic SSL.
+- **Firm logo + color overrides** — within Docket's tone constraints (editorial-warm-only, no shadcn drift). `tenant_settings.branding_*` keys hold logo URL + accent-hue offset (within 130-165 oklch range only). Forest-green primary stays locked across all firms — the brand-aware design is *texture*, not full reskin.
+- **Welcome message customization** — per-firm Welcome screen copy + intro paragraph. Lives in command-room **Settings → Client Experience → Portal Branding** (per [`CLAUDE.md` §4 Client Portal](../CLAUDE.md)).
+- **5 video portal touchpoints** — stage-aware video slot on portal Home tab (First-Time / Returning / Docs Received / Review-Ready / Post-Filing). Recording UI in command-room Settings → Client Experience → Portal Videos. Falls back to firm-name-only typography card if firm hasn't recorded a video for that stage.
+- **Per-firm Twilio sender ID, DocuSign account, Square account, Gmail OAuth** — already supported in `tenant_credentials`; gap is the per-firm onboarding flow that walks new firm owners through linking each.
+- **Light / Dark / System theme** — per-user preference stored in `users.theme_pref`. Single `data-theme` attribute on `<html>` flips the CSS-custom-property variables; inline-style intake/portal components don't need a per-component rewrite. Lives in command-room **Settings → System → Appearance**, mirrored in portal Profile tab. (Per [`CLAUDE.md` §11 Design Tokens](../CLAUDE.md).)
 
 ### Tax-law diff agent
 

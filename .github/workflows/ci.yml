@@ -220,6 +220,9 @@ jobs:
       - name: Apply migration 0030 (prospects)
         run: bun run packages/db/scripts/apply-30.ts
 
+      - name: Apply migration 0031 (settings + calendar layer)
+        run: bun run packages/db/scripts/apply-31.ts
+
       # Integration smoke. Proves:
       #   - Composite FK rejects cross-tenant client_id binding
       #   - Audit chain trigger fires with chain_seq + prev_hash + row_hash

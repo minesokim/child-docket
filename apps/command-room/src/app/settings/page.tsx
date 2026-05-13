@@ -276,6 +276,59 @@ export default async function SettingsPage() {
 
             <section className="settings-section">
               <div className="settings-section-head">
+                <h2 className="settings-section-title">Intelligence + practice</h2>
+              </div>
+              <ul className="settings-integrations">
+                <li className="settings-integ">
+                  <div className="settings-integ-main">
+                    <div className="settings-integ-name">AI Preferences</div>
+                    <div className="settings-integ-purpose">
+                      Tone, insight toggles, Docket Personality, Quiet Hours.
+                      Drives every agent's voice + what surfaces on dashboards.
+                    </div>
+                  </div>
+                  <Link
+                    href="/settings/ai-preferences"
+                    className="settings-section-link"
+                  >
+                    Configure →
+                  </Link>
+                </li>
+                <li className="settings-integ">
+                  <div className="settings-integ-main">
+                    <div className="settings-integ-name">Automated Reminders</div>
+                    <div className="settings-integ-purpose">
+                      Five canonical reminder rules — missing docs, 8879 pending,
+                      engagement letter, outstanding balance, year-round planning.
+                    </div>
+                  </div>
+                  <Link
+                    href="/settings/reminders"
+                    className="settings-section-link"
+                  >
+                    Configure →
+                  </Link>
+                </li>
+                <li className="settings-integ">
+                  <div className="settings-integ-main">
+                    <div className="settings-integ-name">Notifications</div>
+                    <div className="settings-integ-purpose">
+                      Four event categories (deadlines, AI alerts, client activity,
+                      system) × three channels (SMS, email, in-app).
+                    </div>
+                  </div>
+                  <Link
+                    href="/settings/notifications"
+                    className="settings-section-link"
+                  >
+                    Configure →
+                  </Link>
+                </li>
+              </ul>
+            </section>
+
+            <section className="settings-section">
+              <div className="settings-section-head">
                 <h2 className="settings-section-title">Integrations</h2>
                 <Link href="/settings/credentials" className="settings-section-link">
                   Manage credentials →

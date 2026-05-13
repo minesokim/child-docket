@@ -41,6 +41,12 @@ export * from './format.js';
 // checklist + slot matching for AI-classified uploads.
 export * from './required-docs.js';
 
+// Multi-step reasoning trail — canonical shape every agent emits
+// alongside its primary answer. Locked as a contract per CLAUDE.md
+// §9 Agent contract. The UI primitive lives at
+// apps/command-room/src/components/reasoning-trail.tsx.
+export * from './reasoning-trail.js';
+
 // Webhook signature verification lives in `@docket/shared/webhooks` as a
 // SUBPATH export — NOT from this main barrel. The verifier imports
 // `node:crypto`, which webpack/turbopack will pull into any bundle that
