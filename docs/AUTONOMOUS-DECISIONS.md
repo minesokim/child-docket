@@ -1155,5 +1155,78 @@ cold during primary outage; auto-recovers within one poll cycle)
 
 ---
 
-*Last updated: 2026-05-12. Backfilled from session start; subsequent
+---
+
+## [27] 2026-05-13 — Clone-on-attach when picker target is a template
+
+**Decision**: When a preparer attaches an engagement to a project
+via the new `/clients/[id]` picker (C25), and the selected project
+is `is_template=true`, the server action transparently materializes
+a derived instance (`is_template=false`, `source_template_id =
+templateId`, `tax_year = engagement.taxYear`) and attaches the
+engagement to the instance — not the template itself. If a derived
+instance for the same template+year already exists in the tenant,
+reuse it instead of creating a duplicate.
+
+**Reasoning**: Codex round 4 caught that attaching engagements
+directly to template rows breaks the existing project-centric views.
+`/projects/[id]` for templates only loads `loadDerivedInstances()`
+(other projects whose `source_template_id` points at this one);
+direct engagement attachments would be invisible there. Template
+cards on `/projects` don't surface `engagement_count` in their
+footer (the count is computed but the UI hides it on templates).
+Net: an engagement attached to a template would only show on the
+client page that created it — broken product-coherence.
+
+Three options considered:
+1. **Forbid template attach** (filter `NOT p.is_template` in the
+   picker query). Codex round 1 already caught that this leaves
+   the picker unreachable for stock tenants — the only in-product
+   way to populate the project pool today is the `seedProjectTemplates`
+   action, which only inserts templates. No clone-template UI
+   exists yet (queued V1.5).
+2. **Extend `/projects` + `/projects/[id]` to surface direct
+   template attachments.** Bigger UI scope; breaks the template/
+   instance mental model (templates become both definitions AND
+   runtime-attachment targets).
+3. **Clone-on-attach** (chosen). Preserves template-as-definition
+   semantics. The user-facing flow is invisible: picker shows
+   templates + instances both; selecting a template still results
+   in an attachment, and the engagement appears on `/projects/[id]`
+   for the template (via derived-instances list) AND on `/projects`
+   (as a new active project under the instance section). Mental
+   model stays clean.
+
+**Trade-off**: tenants accumulate instance rows over time, one per
+template-engagement-year combination. With 12 canonical templates
+and ~200 engagements per Antonio-scale firm spanning 3 tax years,
+worst case is ~3600 instance rows per tenant — well within Postgres
+performance bounds, and the `is_active` flag lets firms archive
+completed instances. The `(tenant_id, kind, name, tax_year) UNIQUE`
+constraint from migration 0034 prevents accidental duplicates;
+the reuse-before-create logic in the action makes the constraint
+silent rather than fatal.
+
+**Alternative considered**: clone synchronously on the picker UI
+side (client component clones via a separate action before calling
+attach). Rejected: requires two round-trips + leaks the template
+detail to the client. Server-side clone-on-attach is one atomic
+transaction.
+
+**How to reverse**: revert C25's `loadProjectForAttach` + the
+template-branch in `attachEngagementToProject`. Filter `NOT
+is_template` in the picker. Requires shipping a clone-template
+UI on `/projects/[id]` first to avoid unreachable picker.
+
+**Severity**: medium (architectural pattern that defines how
+template/instance relate; reversing requires UI work to keep the
+picker functional)
+
+**Commit**: 96ebb76
+
+**User-review status**: pending
+
+---
+
+*Last updated: 2026-05-13. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
