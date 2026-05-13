@@ -29,6 +29,21 @@ const ALLOWED_ROLES = new Set(['firm_owner', 'preparer', 'reviewer']);
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Sentinel thrown from inside withTenant when clone-on-attach finds
+ * an archived derived instance for the same template+year. Bubbles
+ * out of the transaction and is caught at the outer scope so we can
+ * surface a friendly firm-owner-action error instead of the raw
+ * Postgres 23505 (UNIQUE violation) that would otherwise hit if we
+ * blind-inserted a duplicate kind+name+year. Codex round 3 P1 (C27).
+ */
+class ArchivedMatchError extends Error {
+  constructor() {
+    super('archived_match');
+    this.name = 'ArchivedMatchError';
+  }
+}
+
 export type AttachResult =
   | { ok: true; alreadyAttached?: boolean }
   | { ok: false; error: string };
@@ -90,6 +105,7 @@ type ProjectForAttach = {
   name: string;
   description: string | null;
   isTemplate: boolean;
+  isActive: boolean;
   colorHint: string | null;
 };
 
@@ -105,6 +121,7 @@ async function loadProjectForAttach(
         name: schema.projects.name,
         description: schema.projects.description,
         isTemplate: schema.projects.isTemplate,
+        isActive: schema.projects.isActive,
         colorHint: schema.projects.colorHint,
       })
       .from(schema.projects)
@@ -146,11 +163,41 @@ export async function attachEngagementToProject(
   if (!projectInfo) {
     return { ok: false, error: 'Project not found.' };
   }
+  // Pre-flight is_active check (fast-path rejection). The
+  // authoritative re-check happens inside the transaction with
+  // a FOR UPDATE row lock — see codex round 4 P2 #2 fix below.
+  if (!projectInfo.isActive) {
+    return {
+      ok: false,
+      error: 'Project is archived. Unarchive it before attaching.',
+    };
+  }
 
   let alreadyAttached = false;
   let conflict = false;
+  let archivedMatch = false;
+  let archivedTargetRace = false;
   let attachedProjectId = projectId;
-  await withTenant(auth.ctx.tenantId as TenantId, async (db) => {
+  try {
+    await withTenant(auth.ctx.tenantId as TenantId, async (db) => {
+      // Codex round 4 P2 #2 (C27): re-check is_active fresh inside
+      // the transaction with FOR UPDATE row lock on the projects
+      // row. The pre-flight loadProjectForAttach above runs in a
+      // different transaction, so a firm owner could archive the
+      // project between the check and the INSERT. FOR UPDATE
+      // blocks concurrent archive on this projectId until our tx
+      // commits. Closes the TOCTOU window.
+      const fresh = await db.execute<{ is_active: boolean }>(sql`
+        SELECT is_active
+          FROM projects
+         WHERE id = ${projectId}::uuid
+         FOR UPDATE
+      `);
+      const freshArr = fresh as unknown as Array<{ is_active: boolean }>;
+      if (freshArr.length === 0 || !freshArr[0]?.is_active) {
+        archivedTargetRace = true;
+        return;
+      }
     // Codex round 4 P1: clone-on-attach. Until V1.5 ships a
     // "clone template to instance" UI, the only way to populate
     // the project pool is the /projects seed action which inserts
@@ -171,11 +218,16 @@ export async function attachEngagementToProject(
         .where(eq(schema.engagements.id, engagementId))
         .limit(1);
       const taxYear = eng?.taxYear ?? null;
-      // Look for an existing instance derived from this template
-      // for the same tax_year. Reuse keeps the data model clean
-      // when two engagements share a project (e.g., both Maria's
-      // 1040 and John's 1040 sit under "Annual Return Prep 2026").
-      const reuseRows = await db.execute<{ id: string }>(
+      // Look for an existing ACTIVE instance derived from this
+      // template for the same tax_year. Reuse keeps the data model
+      // clean when two engagements share a project (e.g., both
+      // Maria's 1040 and John's 1040 sit under "Annual Return Prep
+      // 2026"). Codex round 3 P1 (C27): only consider is_active=true.
+      // Auto-unarchiving an archived instance from this path would
+      // be a role-bypass (only firm_owner can unarchive via
+      // /projects/[id] header). The archived-match-blocks-reattach
+      // case is handled below with a friendly firm-owner-action error.
+      const activeReuseRows = await db.execute<{ id: string }>(
         taxYear === null
           ? sql`
               SELECT id::text AS id
@@ -196,10 +248,43 @@ export async function attachEngagementToProject(
                LIMIT 1
             `,
       );
-      const arr = reuseRows as unknown as Array<{ id: string }>;
-      if (arr.length > 0 && arr[0]) {
-        attachedProjectId = arr[0].id;
+      const activeArr = activeReuseRows as unknown as Array<{ id: string }>;
+      if (activeArr.length > 0 && activeArr[0]) {
+        attachedProjectId = activeArr[0].id;
       } else {
+        // No active match. Before INSERT, check for an archived
+        // match — the projects.(tenant_id, kind, name, tax_year)
+        // UNIQUE constraint would otherwise produce a confusing
+        // 23505 error on the INSERT. Surface the friendly error
+        // so the preparer knows the firm owner needs to unarchive
+        // from /projects/[id] header first.
+        const archivedRows = await db.execute<{ id: string }>(
+          taxYear === null
+            ? sql`
+                SELECT id::text AS id
+                  FROM projects
+                 WHERE source_template_id = ${projectId}::uuid
+                   AND tax_year IS NULL
+                   AND NOT is_active
+                 LIMIT 1
+              `
+            : sql`
+                SELECT id::text AS id
+                  FROM projects
+                 WHERE source_template_id = ${projectId}::uuid
+                   AND tax_year = ${taxYear}
+                   AND NOT is_active
+                 LIMIT 1
+              `,
+        );
+        if ((archivedRows as unknown as unknown[]).length > 0) {
+          throw new ArchivedMatchError();
+        }
+      }
+
+      if (attachedProjectId === projectId) {
+        // Still pointing at the template (no active match found,
+        // no archived match found above). Clone into a new instance.
         const instanceName = taxYear
           ? `${projectInfo.name} ${taxYear}`
           : projectInfo.name;
@@ -294,8 +379,32 @@ export async function attachEngagementToProject(
         }
       }
     }
-  });
+    });
+  } catch (err) {
+    if (err instanceof ArchivedMatchError) {
+      archivedMatch = true;
+    } else {
+      throw err;
+    }
+  }
 
+  if (archivedTargetRace) {
+    // Archive landed in a concurrent tx between the pre-flight
+    // check and the in-transaction FOR UPDATE. Surface the same
+    // user-facing message as the pre-flight rejection so the
+    // experience is consistent regardless of timing.
+    return {
+      ok: false,
+      error: 'Project is archived. Unarchive it before attaching.',
+    };
+  }
+  if (archivedMatch) {
+    return {
+      ok: false,
+      error:
+        'An archived instance of this template exists for this tax year. Ask the firm owner to unarchive it from /projects, then retry.',
+    };
+  }
   if (conflict) {
     return {
       ok: false,
@@ -366,6 +475,7 @@ export async function setPrimaryProject(
 
   let updated = false;
   let conflict = false;
+  let archivedTarget = false;
   await withTenant(auth.ctx.tenantId as TenantId, async (db) => {
     // Codex round 2 P2a: verify the target attachment exists in
     // the same transaction BEFORE any UPDATE. The earlier shape
@@ -384,15 +494,30 @@ export async function setPrimaryProject(
     // Belt-and-suspenders: also check the set-UPDATE's RETURNING
     // count to make absolutely sure a row was promoted before
     // returning ok.
-    const locked = await db.execute(sql`
-      SELECT id
-        FROM engagement_projects
-       WHERE engagement_id = ${engagementId}::uuid
-         AND project_id = ${projectId}::uuid
-       FOR UPDATE
+    //
+    // Codex round 3 P2 (C27): also join to projects.is_active to
+    // detect the "engagement attached to project, then project
+    // archived, now user clicks star on archived attachment" path.
+    // Without this, an archived project could be re-promoted to
+    // primary, contradicting the archive semantics.
+    const locked = await db.execute<{ id: string; is_active: boolean }>(sql`
+      SELECT ep.id, p.is_active
+        FROM engagement_projects ep
+        JOIN projects p ON p.id = ep.project_id
+       WHERE ep.engagement_id = ${engagementId}::uuid
+         AND ep.project_id = ${projectId}::uuid
+       FOR UPDATE OF ep
     `);
-    if ((locked as unknown as unknown[]).length === 0) {
+    const lockedArr = locked as unknown as Array<{
+      id: string;
+      is_active: boolean;
+    }>;
+    if (lockedArr.length === 0) {
       updated = false;
+      return;
+    }
+    if (lockedArr[0] && !lockedArr[0].is_active) {
+      archivedTarget = true;
       return;
     }
     // Codex round 3 P1: split clear+set into two statements,
@@ -447,6 +572,13 @@ export async function setPrimaryProject(
       ok: false,
       error:
         'Another preparer changed the primary project at the same time. Please retry.',
+    };
+  }
+  if (archivedTarget) {
+    return {
+      ok: false,
+      error:
+        'This project is archived. Ask the firm owner to unarchive it before setting it primary.',
     };
   }
   if (!updated) {

@@ -17,6 +17,7 @@ import type { TenantId } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
 import { CommandShell } from '@/components/command-shell';
 import { EngagementProjectNotes } from '@/components/engagement-project-notes';
+import { ProjectArchiveButton } from '@/components/project-archive-button';
 import { getCanonicalTemplateMetadata } from '../metadata';
 
 export const runtime = 'nodejs';
@@ -357,17 +358,44 @@ export default async function ProjectDetailPage({ params }: PageProps) {
               {!project.is_active && ' · archived'}
             </span>
           </div>
-          <h1
+          <div
             style={{
-              fontSize: 30,
-              fontWeight: 600,
-              color: 'oklch(20% 0.01 85)',
-              margin: '0 0 10px 0',
-              letterSpacing: -0.4,
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 16,
+              marginBottom: 10,
             }}
           >
-            {project.name}
-          </h1>
+            <h1
+              style={{
+                fontSize: 30,
+                fontWeight: 600,
+                color: 'oklch(20% 0.01 85)',
+                margin: 0,
+                letterSpacing: -0.4,
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              {project.name}
+            </h1>
+            {/* Codex round 2 P2 (C27): archive button on instances only.
+                Archiving a canonical template would vanish it from
+                /projects, and seedProjectTemplates uses ON CONFLICT DO
+                NOTHING — so the archived template row stays archived
+                and there is no in-product unarchive path. Templates
+                are canonical workflow definitions; firms customize +
+                clone but don't archive (per CLAUDE.md §4). */}
+            {user.role === 'firm_owner' && !project.is_template && (
+              <div style={{ flexShrink: 0, marginTop: 4 }}>
+                <ProjectArchiveButton
+                  projectId={project.id}
+                  isActive={project.is_active}
+                />
+              </div>
+            )}
+          </div>
           {project.description && (
             <p
               style={{
