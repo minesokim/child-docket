@@ -53,6 +53,10 @@ The agents act on real client state without a chat surface. Antonio sees a dashb
 
 Every action / doc / message lives on the client record. Six-layer memory model (working, episodic, semantic, procedural, relational, pattern). Cost-optimized via aggressive Anthropic prompt caching. Institutional memory (procedural + pattern layers) becomes a queryable firm asset that compounds over years.
 
+**Memories as a first-class surface (locked 2026-05-13 after Slant.app research).** The substrate (`client_facts` shipped via migration 0021) gets a user-facing Memories tab on every client record — plain-English bullets like *"Daughter Lily starts UC Davis Aug 2026 (AOTC + 529 windowing)"* or *"Prefers SMS over email; never call between 9am-1pm — daycare hours."* Memory Curator agent (Phase 5) extracts these continuously from messages / meeting transcripts / intake answers / doc parses; preparer can pin / edit / delete. Pre-meeting brief auto-surfaces top 5 Memories.
+
+Slant's architectural lift (their words, our application): *"Minimize usage of custom fields, maximize unstructured data via AI extraction."* The Memories surface is the user-facing manifestation of L4's memory architecture. Their financial-advice market validated this hard enough to raise $3.3M behind it (and it became their pricing-page-line-item differentiator vs Wealthbox/Redtail). Ours is the same primitive in tax.
+
 **Detail**: [`docs/MEMORY-ARCHITECTURE.md`](MEMORY-ARCHITECTURE.md)
 **Why this is pillar 3**: the EA's 20 years of accumulated wisdom dies when they retire. Docket captures and surfaces it. Switching cost = the EA's career.
 
@@ -300,6 +304,30 @@ Plus the natural-language client-book screening:
 - Drill-down to client detail
 - Full-text + structured-field hybrid search
 
+### Projects surface (Phase 4, Wks 7-8, 6/13 → 6/27)
+
+Third organizing primitive in command-room (alongside per-client and per-status / Need You queue). Locked 2026-05-13 after Slant.app research.
+
+- `projects` table (new migration): one row per project type per tenant. Default template rows seeded per tenant on signup.
+- `engagement_projects` join table: each engagement belongs to 1+ projects.
+- `/projects` route in command-room — top-level nav alongside Calendar. Lists active projects with counts. Click into a project → all engagements in that project + their current stage + filter / sort / search.
+- Canonical v1 templates seeded out-of-the-box (firms customize):
+  - Annual Return Prep (per tax year, branched by form type)
+  - Discovery Scan (book-wide deduction surfacing, the wedge offering)
+  - Audit Defense Engagement (per active audit)
+  - Notice Response Workflow (CP2000 / CP504 / LT11 et al.)
+  - Quarterly Estimated Payments Cycle
+  - Incorporation (CA SoS + BOI + Form 8832)
+  - BOI Annual Filing
+  - Year-Round Planning Touchpoints (Q2 extension / Q3 estimates / Q4 Roth conversion)
+  - Statement of Information Renewal
+  - Pre-Filing IRS Reconciliation
+  - 8821 Transcript Pull Cycle
+  - Client Onboarding
+- Pre-built Project Templates marketplace: starter library + firm-authored. Slant has a "workflow marketplace" concept for AI Automations — we adopt the pattern for Projects.
+
+The unlock: instead of asking "look at clients" (per-client) or "look at lanes" (Need You queue), Antonio can ask "show me everyone in Annual Return Prep at the Review stage" or "show me everyone in Audit Defense by deadline distance." Different lens; same underlying engagement state machine.
+
 ### Calendar surface + google-calendar MCP (Phase 4, Wks 7-8, 6/13 → 6/27)
 
 Calendar as first-class top-level command-room nav (not buried in settings). Per [`CLAUDE.md` §4 Calendar](../CLAUDE.md).
@@ -355,6 +383,9 @@ Discovery agent runs end-to-end against Antonio's actual book. The output is the
 
 The features that, once Antonio uses them, he can't go back to working without them.
 
+- **Memories surface + Memory Curator agent (V1.5 — Slant-validated)** — `client_facts` already shipped (migration 0021). What lands V1.5: (1) Memory Curator background agent that extracts plain-English memories from every inbound message, meeting transcript, doc parse, and intake answer; (2) per-client Memories tab in command-room showing curated bullets, sorted by relevance + recency; (3) pre-meeting briefing that auto-surfaces top 5 memories for attendees; (4) the same memories made retrievable inside Ask Docket (client-scope) and Notetaker. The unlock: Antonio walks into every client meeting with the right detail at the right time, without ever opening a custom-fields page. Slant validated the demand for this at $3.3M of seed.
+- **Notetaker agent (V1.5 — Slant-validated)** — Records meetings (Zoom / Google Meet / phone), transcribes via Deepgram (then Gladia per L5), routes through Memory Curator. Output: meeting summary + extracted memories + action items + sentiment + follow-up commitments. Each tied to the right client record. Action items create Tasks in the active engagement; follow-up commitments create Promise-Keeper-agent entries. This is the table-stakes feature financial-services-adjacent buyers expect; tax buyers will start asking for it within 6 months as Jump.ai-style notetakers cross over.
+- **Nudges agent (V1.5 — Slant-validated; sibling to Discovery)** — Daily cron walks `client_facts` + `engagement` state + `calendar_events` against `nudge_rules`. Drafts approved-pending preparer-to-client outreach for life events (child starts college, business hits milestone, state move), time windows (Q3 estimates, Roth conversion window, BOI deadline cohort), drift (W-2 jumped 40%, charitable giving doubled), milestones (business crosses $250K rev → S-corp election conversation). Output = pre-drafted outreach + planning prompt, surfaced to Antonio for approve / edit / dismiss. Slant prices this as a distinct line-item differentiator vs Wealthbox/Redtail; we should expect prospects to ask for it by name within a quarter of launch.
 - **Bank-feed deduction harvester** — Plaid + Xero/QBO integration. Continuous categorization of business bank feeds. AI flags "$4,500 charge to coworking space → home office?" with context from email and prior years. Antonio reviews 5 per week, approves/rejects, agent learns. Pattern-recognition dividend: by month 3, agent knows the client's business better than the client.
 - **Audit defense subscription** — $20/return/mo recurring revenue. If client gets audited, Docket auto-generates the defense package: every position taken + cited authority + contemporaneous documentation + drafted response + timeline of EA's decision points + third-party attestation contacts. Aligned incentives.
 - **Cross-client pattern recognition** — weekly digest. "8 of your Schedule C clients have W-2 wages from same employer (Acme Corp). One was reclassified to W-2-only via §3509. The other 7 likely still misclassified — high audit risk." Practice-intelligence pillar made proactive.
@@ -473,17 +504,51 @@ Required since Jan 2024 for ALL US businesses. ~30M businesses need to file Bene
 
 ## 6. Marketing positioning (locked)
 
+### The opening line (locked 2026-05-13 after Slant.app research)
+
+**"Double a tax preparer's capacity."**
+
+Slant.app uses the same opener for financial advice and raised $3.3M behind it. Buyer behavior is identical in tax. The unpack:
+
+- Solo EAs serve 150-200 clients per season at high friction today. With Docket: 400-500 with the same quality.
+- $36K/yr saved per practitioner at $250/mo. Junior preparer salary $40-60K/yr is the cost Docket displaces.
+- Antonio is the case study. He's not scared of it. If he can do it, so can you.
+
+**Position Framework + compliance-first + cited authority is the second sentence, not the first.** The first sentence is the capacity claim. The second sentence is the moat (why an EA can adopt us where they can't adopt a deduction-finder). Same shape as Slant: their position-framework-equivalent (SOC 2 + fiduciary alignment) is also their second sentence.
+
+### The tool-consolidation narrative (locked 2026-05-13)
+
+Docket replaces 6+ tools at once:
+- **TaxDome / Canopy / Karbon** (practice management — clients, tasks, billing, portal)
+- **Black Ore / Accrual / Basis** (return-prep AI — workpapers, position drafting)
+- **DocuSign / HelloSign** (8879 signing)
+- **Square / Stripe** (deposits, invoicing)
+- **Zoom / Otter / Fathom** (meeting + transcription)
+- **Generic CRM** (contact + comms log)
+- **Excel / Notion / Google Sheets** (everywhere a firm tracks anything internal)
+
+This is how we close mid-market firms (20-100 staff) who are paying for 3-5 of those tools today. Pitch: *"What if every one of those tools collapsed into a single, AI-native operating system that knows your firm's voice?"*
+
+### The pivot-pattern narrative (YC application; locked 2026-05-13)
+
+Pageport → Slant is our reference shape. They started as a video landing page + marketing automation tool for advisors (2023). Users started manually using Pageport as a CRM. Two users in one week asked to add Social Security numbers. They pivoted to full CRM. By Aug 2025: 1,200+ advisors, $1M ARR, $3.3M seed.
+
+Our analog: Discovery Scan is our point-solution wedge (a productized $1-5K service we sell to ~100 firms by 8/1 per L16). Antonio's 5/9 call surfaced 25+ feature requests that became Phase 2-expansion — *that's the customer-pull pivot signal.* By the time we pitch YC Fall 2026, the narrative is: "we sold a wedge service to N firms; they pulled us into building the platform; we're now selling the platform back to them."
+
 ### For EA-side acquisition (firm-facing)
 
 ✅ **Use**:
+- **"Double a tax preparer's capacity."** (lead with this)
+- "Six tools collapsed into one OS."
 - "The closed-loop AI for tax practices."
 - "Catches every defensible deduction your team would have caught with unlimited time."
 - "Audit trail built in for every position taken."
 - "Compliance-first AI that won't put your PTIN at risk."
 - "The only tax AI where every action is reversible and audit-defensible."
+- "Memory scoped to the client. Memories surfaced where you work."
 - "Type what you want watched. Watch it forever." (AI Tasks)
 - "Your practice. Every tool. One operator."
-- "Memory scoped to the client."
+- *"I want their job to be easier. Come to work with 18 things to do, not 80."* (Thomas Clawson voice, applied to tax)
 
 ❌ **Never**:
 - "Maximize your client's refund." (Wrong audience signal — repels EAs.)
@@ -492,6 +557,47 @@ Required since Jan 2024 for ALL US businesses. ~30M businesses need to file Bene
 - "Deeper than any CPA." (Table stakes by 2027.)
 - "Bloomberg Terminal alternative" energy. (Perplexity Finance can do this; tax cannot.)
 - Any borrowed swagger from generic AI marketing language.
+
+### Sales artifact: competitor matrix (build before 6/15 Antonio demo)
+
+Slant's pricing page hosts a Slant-vs-Wealthbox-vs-Redtail matrix that ships ✓ across every Slant feature and "Limited" or "-" everywhere else. Customers can screenshot it and forward to their procurement team. We need the equivalent.
+
+**Build:** `docs/pitch-decks/competitor-matrix.md` + a page on the marketing site that renders the matrix interactively.
+
+**Rows (the features we ship that incumbents don't):**
+
+| Capability | Docket | TaxDome | Canopy | Karbon |
+|---|---|---|---|---|
+| Position Framework with cited authority (Tier 1-4 + refusal floor) | ✓ | — | — | — |
+| Discovery agent (continuous deduction surfacing across book) | ✓ | — | — | — |
+| Audit chain with cryptographic verification | ✓ | — | — | — |
+| Memories surface (AI-curated, plain-English, per-client) | ✓ | — | — | — |
+| Nudges agent (life-event + drift + milestone outreach) | ✓ | — | — | — |
+| Need You workflow primitive (4-lane: New Intakes / Ready to Prep / Ready to File / Sign & File) | ✓ | Limited | Limited | — |
+| Reasoning trail on every agent output | ✓ | — | — | — |
+| OLT browser automation (tax software where competitors won't go) | ✓ | — | — | — |
+| Cited-authority position library (IRC + Treas Regs + FTB) | ✓ | — | — | — |
+| Per-active-client pricing (no per-seat penalty for growth) | ✓ | — | — | — |
+| Pre-filing IRS reconciliation (W&I transcripts vs uploaded docs) | ✓ (V1.5) | — | — | — |
+| Refund policy display + KBA-compliant 8879 e-sign | ✓ | Limited | Limited | — |
+| AI Tasks (natural-language workflow authoring) | ✓ | Rules-based | Rules-based | Rules-based |
+| Audit Defense subscription module | ✓ | — | — | — |
+| Bilingual portal (Spanish v1.5, Mandarin/Vietnamese/Tagalog v2) | ✓ (V1.5) | — | — | — |
+| White-label / firm-custom subdomain | ✓ (V1.5) | ✓ | Limited | — |
+| Client + meeting + book chat (three-scope Ask Docket) | ✓ | — | — | — |
+| Project templates (Return Prep / Audit Defense / Notice Response / etc.) | ✓ | Limited | Limited | Limited |
+
+**Update cadence:** every 6 weeks during v1 build, monthly post-launch. When a competitor adds a feature we listed, mark "Limited" and add a footnote of the gap.
+
+### Content marketing assets (locked 2026-05-13)
+
+Slant ships content marketing through their Resource Center. Copy the shape:
+
+- **Ebook 1: "10 ways Docket saves a tax preparer 10+ hours a week"** — concrete time-savings math per agent (Discovery surfacing, Inbox Drafter, Notice Drafter, Triage Classifier, Document Triage, Need You queue, Pre-Signature Checklist, etc.). Target: launch with the v1 pitch deck.
+- **Ebook 2: "Tax practice in the age of AI"** — strategic framing for EAs. Why now. What the AI revolution does + doesn't change. How to choose tools that don't put your PTIN at risk. Mirrors Slant's "Financial advice in the age of AI" ebook.
+- **Blog post 1: "RIP traditional tax practice management software"** — borrows Slant's wealthmanagement.com framing. Why TaxDome / Canopy / Karbon are last-generation. Why AI-native matters. Calls out the structural gap.
+- **Customer story: Antonio at Vazant** — 90-second Loom + written long-form. Same shape as Slant's Alex Stoehr / Northstar testimonial. Quote: *"With Docket, I'm actually able to focus on the client and the position, not the busywork."*
+- **Pricing-page-as-marketing**: matrix above, plus public transparent pricing per L6 lock. No "request a quote" gates on standard tiers.
 
 ### For client-side marketing
 

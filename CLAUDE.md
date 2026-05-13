@@ -68,7 +68,8 @@ If you need to ADD to this list, do it via a /decisions-log entry first, then mi
 |---|---|
 | Vision | The agentic operator for a tax practice. Top-tier preparer-grade AI animates every surface; drives the existing tax stack via API-first integrations + browser automation as fallback. |
 | Pitch | "Your practice. Every tool. One operator." |
-| Memory architecture (stolen from Practiq) | **"Memory scoped to the client."** Every action, doc, message lives on the client record — not in a chat thread. The practice ledger enforces this. |
+| Capacity claim (closes deals) | **Double a tax preparer's capacity.** Solo EAs serve ~150-200 clients per season at high friction today. With Docket: 400-500 with the same quality. Junior preparer salary $40-60K/yr is the cost Docket displaces. **$36K/yr saved per practitioner at $250/mo** is the closing math. Slant.app proved this works in financial advice (advisors going from 70-90 clients to 200-250+); the dynamics are identical in tax. |
+| Memory architecture (stolen from Practiq + reinforced by Slant) | **"Memory scoped to the client."** Every action, doc, message lives on the client record — not in a chat thread. The practice ledger enforces this. **Memories surfaced as first-class objects** (per §8) — plain-English bullets the preparer sees on each client card, AI-curated from `client_facts` + `firm_patterns`, surfaced pre-meeting + during chat. The bet (validated by Slant): minimize custom fields, maximize AI-extracted Memories from unstructured artifacts. |
 | Codename | Docket (final brand TBD; repo named `child-docket` to mark this as the consulting/services flywheel that becomes the platform) |
 | Founders | **David Kim** (legal: Minseo Kim) — CEO, `minseodavid@gmail.com`. **Haokun Yang** — technical co-founder + CTO. Partners since day one (5+ year working relationship before Docket; on the project from inception). Haokun owns the codebase end-to-end — 13-table Drizzle schema with RLS, per-tenant DEK encryption, cryptographic audit chain, agent fleet, both Next.js apps in production. UCR CS background. |
 | Advisory | **Antonio Vazquez, EA** — Vazant Consulting (CA). Founding design partner + **on-platform tax advisor**. All tax-domain knowledge, position validation, and Position Library content sign-off runs through Antonio (and contracted backup advisors for scale-validation when Antonio's bandwidth is constrained, e.g., during his audits). Equity advisor (1%). This is the structural answer to "where does the tax-domain depth come from"; the tax co-founder hire is explicitly closed (CLAUDE.md §21 #4) because the substrate IS Antonio + scale-validation pipeline, not an open seat. |
@@ -151,10 +152,36 @@ Single pane that shows **today** and lets the preparer act on it.
 - **Calendar** — first-class top-level nav surface, not buried inside settings. Weekly view default, day/month toggles. Event types: client meetings (linked to client record), filing deadlines (per engagement, color-coded by tax form type), internal reviews, audit milestones, year-round planning touchpoints. Two-way sync with Google Calendar via the `google-calendar` MCP server (§10). Click any event → opens client/engagement workspace.
 - **Unified inbox** — SMS, email, portal chat, voicemail. AI drafts replies pulled from real client state. Preparer approves. **Channel-availability icons render inline per conversation** (green = portal logged in within 24h, amber = SMS only, gray = email-only fallback) so the preparer picks the channel the client actually reads. **In-thread document handling**: when a client uploads a doc to a conversation, a `Process / Ignore` action pair appears inline next to the attachment — Process routes it through the doc-classification agent + files to the client record; Ignore archives without indexing (for off-topic forwards). Antonio's most-requested texture-win on 5/9 call.
 - **Documents** — two tabs: **Client docs** (everything filed to a client record, faceted by year/type/status) and **Firm files** (engagement letters, §7216 consents, audit-defense packets, internal SOPs, position library). Aggregate metric strip at top: "47 needs review · 12 missing · $2.4M total income across 1099s YTD."
+- **Memories** (per-client tab) — plain-English bullets of "what we know about this client" surfaced as a first-class object, not hidden in extension fields. Examples: *"Daughter Lily starts UC Davis Aug 2026 (AOTC + 529 windowing relevant)"* / *"Owns rental at 1244 Olive — depreciation Schedule E"* / *"Took Augusta Rule position 2024, $14K saved"* / *"Prefers SMS over email; never call between 9am-1pm — daycare hours"* / *"Spouse files MFS; works at different CPA — request Form 8958 by 2/15."*
+
+  Memories live in `client_facts` (already shipped via migration 0021). What's NEW is the **UI surface**: a Memories tab on the client page showing curated bullets, sorted by relevance + recency. AI extracts memories continuously from messages, meeting transcripts, intake answers, and document parses. Preparer can pin, edit, delete. Pre-meeting brief auto-surfaces the top 5 Memories for the client. Slant's framing locked verbatim (per founder Thomas Clawson): *"Minimize usage of custom fields"* — Memories replace the "let me add 47 custom fields to the client schema" anti-pattern that bloats every CRM. Memory architecture L4 is the substrate; Memories is the surface.
 - **Audit Trail UI** — read-only view on `actions` table per client. Every AI action shown as "AI did X at time Y" with the cited authority + confidence tier + cost. **Rewind primitive** (V1.5, per the §23 [`/decisions-log`](.claude/skills/decisions-log/SKILL.md) and POSITION-FRAMEWORK refusal-floor design) becomes user-facing here: each row carries a "Reverse this action?" affordance that walks the chain to undo. Marketing handle: *"the only tax AI where every action is reversible."*
 - **Practice intelligence** — margin per client, friction score, capacity, pricing inconsistency, churn risk, "fire the bad client" insights. **Per-client risk tier** (green/amber/red) summarizes the AI's confidence in the firm-client fit (compliance posture, payment history, communication friction, scope drift). AI Preferences (§8) drive the tier thresholds; firms with conservative posture get more amber/red flags, aggressive firms get more green.
 - **Outcome prediction** — position-level audit/controversy risk modeling on demand (Blue J integration, V2).
 - **Command palette (Ask Docket, Cmd+K)** — fuzzy-search any action across any tool. Pull IRS transcript · file 2848 · post invoice · generate workpaper · draft notice response · sync return to OLT · request docs · run YoY diff. Every action invokes an MCP tool. Also handles **questions** (not just commands): "what's John Doe's missing docs status," "which clients haven't paid Q3 estimates." The agent shows a **multi-step reasoning trail** as it works — each sub-step (looked up client, queried engagement, checked deadlines) renders as a collapsible row so the preparer can audit *why* the answer landed where it did. Per §9, reasoning visualization is a contract on every agent output, not just Cmd+K.
+
+  **Three-scope chat split** (locked 2026-05-13 after Slant.app research): the same Ask Docket surface auto-scopes to *where the preparer invoked it*, not one global chat. Three scopes:
+  - **Client chat** — invoked from a client page (or `Cmd+K → @ClientName`). Scoped to that client's facts, engagements, prior returns, memos, signatures, messages. Answers like "what did we promise Maria about Q3 estimates" stay tight.
+  - **Meeting chat** — invoked from a meeting transcript (when Notetaker lands, V1.5). Scoped to that meeting's transcript + linked client record. Answers like "what did Antonio commit to in this call" + auto-extracts action items.
+  - **Book chat** — invoked from the global palette with no client context. Scoped to the entire firm's clients, engagements, calendar, position library. Answers like "which Schedule C clients haven't paid Q3 estimates" or "show me everyone whose business hit $250K rev this year."
+
+  Same model, same retrieval substrate (PostgresRetriever + Voyage + Cohere Rerank). Scope is a system-prompt parameter + retrieval filter, not three separate agents. Slant has client / meeting / book chat as three distinct UI surfaces — we adopt the pattern.
+
+- **Projects** — a third organizing primitive alongside per-client view and per-status view (Need You queue). Each project is a recurring workflow type the firm runs many clients through. Templates ship out-of-the-box and firms customize. Canonical v1 templates:
+  - **Annual Return Prep** (per tax year, branched by form type — 1040/1120-S/1120/1065)
+  - **Discovery Scan** (book-wide deduction surfacing, the wedge offering)
+  - **Audit Defense Engagement** (per active audit)
+  - **Notice Response Workflow** (CP2000 / CP504 / LT11 et al.)
+  - **Quarterly Estimated Payments Cycle** (4 per client per year)
+  - **Incorporation** (new entity creation, CA SoS + BOI + Form 8832 election)
+  - **BOI Annual Filing**
+  - **Year-Round Planning Touchpoints** (Q2 extension / Q3 estimates / Q4 Roth conversion windows)
+  - **Statement of Information Renewal**
+  - **Pre-Filing IRS Reconciliation** (W&I transcript pull → compare to client-uploaded docs → flag missing forms before IRS auto-letter)
+  - **8821 Transcript Pull Cycle** (per quarter for monitored clients)
+  - **Client Onboarding** (intake → docs → engagement letter → §7216 → deposit)
+
+  Different lens than per-status (Need You): a Project view shows "all 47 clients currently in Annual Return Prep + their stage." A Need You lane shows "all 12 clients in Ready to File regardless of which project." Both lenses operate on the same engagement state machine. Engagement is the noun; lane + project are two lenses on the same noun. Inherited from v3 Vazant IA (project_management module concept) + Slant.app validates with their templates (Onboarding / RMDs / Money Movement / Annual Review).
 
 ### Client Portal (taxpayer surface, mobile-first 390×780 iOS)
 **Mediated by AI, gated by Antonio.** The taxpayer never interacts with an autonomous AI. Every AI action is preparer-approved.
@@ -383,6 +410,35 @@ Examples (locked from v3 Vazant dashboard, refined for compliance-first frame):
 
 The quantified-impact half is what makes the alert *legible* — preparers triage by dollar amount + deadline distance, not by alert title. Agents that can't quantify impact don't surface as alerts; they go to the secondary "informational" queue.
 
+### Nudges (life-event + drift + milestone surface)
+
+Locked 2026-05-13 after Slant.app research. **Nudges** are the proactive outreach surface — different from Discovery (which surfaces tax positions across the book), Strategy (EA-initiated multi-year modeling), and Position (aggressive client request → defense/refusal). Nudges fire on **life events, time-window drift, and client-fact milestones** that suggest the preparer should reach out *before the client knows they need to*.
+
+**The Slant frame** (lifted verbatim from their pitch): *"Slant scans your entire book of business daily to spot the moments that matter most, like when a client's child starts college, their business hits a new milestone, or their portfolio just out of alignment, so you can reach out with perfect timing."* — same primitive, tax-specific triggers.
+
+**Trigger taxonomy** (`nudge_rules` table — paper spec; ships V1.5 alongside Reminders/Notifications substrate):
+
+| Trigger class | Example triggers | Outreach pattern |
+|---|---|---|
+| **Life event** | Child turns 18 (no longer dependent) · child starts college (AOTC eligibility) · marriage · divorce · spouse death · birth · property purchase · home sale · inheritance · job change | Pre-drafted email + suggested talking points |
+| **Time window** | Q2 estimated payment due (June 15) · Q3 estimated (Sept 15) · Q4 Roth conversion window (Oct-Dec) · open enrollment season (Nov) · BOI deadline cohort · Statement of Information annual · RMD age 73 turnover | Pre-drafted reminder + planning conversation |
+| **Drift** | W-2 jumped 40% YoY (Roth conversion conversation) · 1099 income tripled (S-corp election timing) · new business income on bank feeds (entity choice review) · state residency change (multi-state apportionment) · charitable giving doubled (bunching strategy) | Pre-drafted strategy memo + scenarios |
+| **Milestone** | Business hits $250K rev (S-corp election threshold) · LLC formed (BOI deadline starts) · client crosses $1M net worth (estate planning conversation) · home value crosses $500K (cap gains exclusion planning) | Pre-drafted "here's what changes for you" |
+| **Drift-from-prior-year** | Refund dropped 60% YoY · withholding pattern changed · new state tax return needed · deduction posture flipped (itemized → standard or reverse) | Pre-drafted YoY explainer for portal |
+| **Compliance / risk** | Statement of Information overdue · BOI not filed within 90d of formation · CA SoS suspension risk · payment past due | Pre-drafted action item with deadline |
+
+**How Nudges differ from Discovery + Reminders:**
+
+- **Discovery** surfaces tax positions (deductions/credits/elections) across the book continuously. Output = `TaxPosition` objects, surfaced to a Discovered queue.
+- **Reminders** chase clients who owe us something (missing docs, unsigned 8879). Output = scheduled outbound to the *client*. Rules in `reminder_rules` (shipped C13).
+- **Nudges** push the *preparer* to reach out to clients before clients know they need to. Output = pre-drafted preparer-to-client outreach + planning prompt. Daily-firing on a `nudge_rules` table.
+
+A Nudge is a *moment-that-matters* surfaced for human approval. Antonio sees: *"Maria Ortega's daughter Lily starts UC Davis Aug 25 — AOTC + 529 conversation. Draft ready."* He clicks Approve, the email goes; or Edit, then send; or Dismiss with a reason that trains the model.
+
+**Implementation:** the v1 Nudges agent reads `client_facts` (life events, current-year income vs prior, business state) + `engagement` state + `calendar_events`. Each rule is a SQL query + a Sonnet prompt that drafts the outreach. The daily Inngest cron walks the rule set and queues approved-pending drafts. Pre-meeting briefing automatically surfaces pending nudges for that meeting's attendees.
+
+**Why this matters strategically:** Slant prices Nudges as a distinct line item on their pricing page (✓ Slant only / – Wealthbox / – Redtail). It's a category-creation differentiator. Our analog: nobody at the tax-vertical PM tier (TaxDome/Canopy/Karbon) does life-event-driven proactive outreach; nobody at the return-prep AI tier (Black Ore/Accrual/Basis) does outreach at all. Nudges is structurally open white space.
+
 ### Automated Reminders (per-tenant configuration)
 
 Firm-level rules for how the AI nudges clients. Lives in command-room **Settings → Practice → Automated Reminders**. Maps to a new `reminder_rules` table (one row per (tenant, trigger) pair). The five canonical triggers:
@@ -445,6 +501,9 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 | **Discovery Agent** *(deduction surfacing — the wedge)* | Paper spec only | Needs authority library + position-library seed + cross-channel artifact capture. See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) §4. Phase-3 work. |
 | **Strategy Agent** *(EA-initiated multi-year modeling)* | Paper spec only | Same dependencies as Discovery + entity/retirement/depreciation rule encoding. POSITION-FRAMEWORK §4. |
 | **Position Agent** *(aggressive territory: defend or refuse)* | Paper spec only | Same dependencies. The refusal-floor logic is the load-bearing piece. POSITION-FRAMEWORK §2. |
+| **Nudges Agent** *(life-event + drift + milestone surface)* | Paper spec only | Locked 2026-05-13 after Slant.app research. Daily cron walks `client_facts` + `engagement` state + `calendar_events` + `nudge_rules`, drafts approved-pending preparer-to-client outreach. See §8 Nudges. Ships V1.5 alongside Reminders execution scheduler. |
+| **Memory Curator Agent** *(continuous Memories extraction)* | Paper spec only | Background job that extracts plain-English Memories from every inbound message, meeting transcript, doc parse, and intake answer → writes `client_facts` rows tagged `kind='memory'`. Drives the Memories tab UI (§4). Locked 2026-05-13 after Slant.app research; their "Memories" surface is the strongest single steal from their product. Ships Phase 5. |
+| **Notetaker Agent** *(meeting transcript → action items)* | Paper spec only | Records meeting (Zoom / Google Meet / phone), transcribes via Deepgram/Gladia (L5), routes through Memory Curator to extract Memories + action items + sentiment + follow-up commitments. Output ties to client record + creates Tasks in engagement workflow. V1.5 ship. Slant's #2 marketing capability — strong proof point that financial-services-adjacent buyers expect this. |
 | **Practice Pattern, Promise Keeper, Outcome Prediction, Phone Agent** | Paper spec only | v1+, post-5/15 |
 
 ### Agent contract — what's enforced today
@@ -606,6 +665,21 @@ Concrete edges where the funded competitors are NOT building. Ranked by signal s
 ### Pricing edge
 Per-return / per-notice usage on top of a low monthly base. Storefront and small-firm EAs can't pay $1.5k–$3k/seat/yr that competitors charge.
 - **$99–$299/mo** base + **$5–$15/return** + **$200–$500/notice handled**
+
+### Marketing lead (locked 2026-05-13 after Slant.app research)
+
+The opening line that closes deals is **"Double a tax preparer's capacity."** Slant.app uses the exact same opener in financial advice and raised $3.3M behind it; the buyer behavior is the same in tax.
+
+The unpack:
+- *Solo EAs serve 150-200 clients per season at high friction today. With Docket: 400-500 with the same quality.*
+- *$36K/yr saved per practitioner at $250/mo. Junior preparer salary $40-60K/yr is the cost Docket displaces.*
+- *Antonio is the example. He's not scared of it. If he can do it, so can you.*
+
+Position Framework + compliance-first + cited authority is the **moat** (why an EA can adopt us where they can't adopt a deduction-finder). But it's the *second* sentence, not the first. The first sentence is the capacity claim. Same shape as Slant: their position framework equivalent (SOC 2 + fiduciary alignment) is also their second sentence, not their first.
+
+**Tool-consolidation narrative** (also locked from Slant): we replace TaxDome + Canopy + Karbon (practice management) + Black Ore/Accrual return-prep AI + manual audit notice management + separate DocuSign + separate Square. **6+ tools collapse into 1.** This is how we close mid-market firms (20-100 staff) who are paying for 3-5 of those tools today.
+
+**Pivot pattern (Pageport → Slant validates ours):** Slant started as Pageport, a video landing page + marketing tool for advisors. Users started manually using it as a CRM. Trigger: *"Two users in one week wanted to add Social Security numbers to PagePort."* Pivoted to full CRM. By Aug 2025: 1,200+ advisors, $1M ARR, $3.3M seed. Our analog: Antonio's 5/9 call surfaced 25+ feature requests that are now Phase 2-expansion. The customer-pull pivot story is identical. **Use this narrative shape in the YC application.**
 
 ---
 
@@ -915,6 +989,42 @@ The rules that prevent services-revenue from killing the platform:
 [practiq.dev](https://practiq.dev/) — AI workspace for boutique professional services firms (multi-vertical: accounting, law, HR, consulting, marketing). Tagline: *"AI built around your clients, not your chats."* Client-scoped memory, autonomous overnight scanning, AI-generated deliverables in firm voice, anomaly detection. **Explicitly admit they have no client portal** — pair with TaxDome/Canopy. Owned by Grindworks/Cliwant (DE).
 
 **They have to build 12–18 months to reach our tax-vertical depth:** no IRS knowledge layer, no rep work pillar, no portal, no tax-software integration. Watch but don't react. Steal: "memory scoped to the client" framing (locked into Docket positioning), autonomous overnight scanning marketing pillar, "in firm voice + client preferred format" phrasing.
+
+### Slant.app — vertical-adjacent reference (financial advice, NOT direct competitor)
+
+[slant.app](https://www.slant.app/) — AI-first CRM for financial advisors. Founded 2023 as Pageport (marketing automation for advisors); rebranded + raised $3.3M seed Aug 2025 (2048 Ventures + Matchstick Ventures lead; also angels). $1.2M pre-seed 2023 (2048 + Boost VC). Co-founders Max Metcalf + Thomas Clawson, met as LDS missionaries in Denmark. Based Lehi, UT. 16 staff per About page; 9 per Aug 2025 press release. 1,200+ financial professionals using the platform; $1M ARR by 2024.
+
+**Tagline:** *"The Relationship CRM for Financial Advisors — AI that surfaces what matters, offloads the busywork, and frees up time for the stuff only you can do."*
+
+**Mission:** *"Help advisors double their capacity to serve the 20 million Americans who will soon seek financial advice."* (44M retiring in next decade; 22M lacking advisors; $12T in assets.)
+
+**Product surfaces (7):** CRM · AI Agents · Project Management · Notetaker · AI Automation · Marketing · Client Reviews. Each marketed individually as a top-nav category. Same surfaces tax needs.
+
+**Architectural bets (validated approach):**
+- Built on OpenAI GPT-5; "AI-first foundation" with CRM features layered on top, not the reverse
+- "Minimize custom fields, maximize unstructured data via AI extraction" — their **Memories** primitive
+- Three-scope chat split (client / meeting / book), not a single global chat
+- Project templates ship out-of-the-box (Onboarding, RMDs, Move Money, Annual Review)
+- SOC 2 compliant from launch (built in 6 months, Nov 2024 ideation → Aug 2025 launch)
+- Per-seat pricing ($150/mo) — *wrong for tax; per-active-client metering is right per L6*
+
+**What we lifted to our codebase (locked 2026-05-13):**
+- **Memories surface** (§4 + §8) — `client_facts`-backed UI tab; first-class plain-English bullets
+- **Nudges agent** (§8 + §9) — life-event + drift + milestone surface; sibling to Discovery
+- **Projects organizing primitive** (§4) — 3rd lens alongside per-client + per-status (Need You)
+- **3-scope Cmd+K** (§4) — client / meeting / book chat scoping
+- **Notetaker agent** (§9) — was missing from our roster; tax buyers expect parity here
+- **Capacity-doubling marketing lead** (§1 + §13) — "$36K/yr saved per practitioner at $250/mo"
+- **Competitor matrix sales tool** (PRODUCT-ROADMAP marketing section) — Docket vs TaxDome vs Canopy vs Karbon
+- **Pivot-pattern YC framing** — Pageport → Slant validates our Discovery Scan → Docket platform shape
+
+**Why we won't compete head-on:**
+- Different vertical (financial advice vs tax) — different compliance regime, different software integrations, different segment economics
+- They lack the Position Framework (refusal-floor + cited authority) — their market doesn't require it; ours does
+- Their fiduciary buyers ≠ our PTIN-on-the-line buyers; different risk profile, different sale
+- Founder relationship (LDS network in Utah / Denmark) is non-transferable to our EA / r/taxpros / NAEA distribution
+
+Watch their pricing + Notetaker product depth; copy their Resource Center ebook strategy ("10 ways AI saves you 10+ hours a week" → "10 ways Docket saves a tax preparer 10+ hours a week"). Steal their Iron Man framing for the launch Loom: *"I want their job to be easier. I want them to come to work and not have 80 things to do, but maybe 18."* — Thomas Clawson interview.
 
 ### Strategic read
 The well-funded AI-native competitors ($235M+ combined) are economically forced up-market. They cannot serve Antonio's segment. The PM incumbents ship shallow AI features but lack return intelligence. **The third layer — practice + relationship + rep — is open.** Docket's structural lane.
