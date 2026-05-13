@@ -25,6 +25,7 @@ import { PaymentsSection, type PaymentRow } from '@/components/payments-section'
 import { DeleteClientButton } from '@/components/delete-client-button';
 import { PIIUnlockProvider } from '@/components/pii-unlock-provider';
 import { PIIUnlockButton } from '@/components/pii-unlock-button';
+import { ClientMemoriesSection, type ClientMemory } from '@/components/client-memories-section';
 import { hasRole } from '@/lib/require-role';
 import type { TenantId, IntakeState } from '@docket/shared';
 import { asTenantId, maskSensitiveFields } from '@docket/shared';
@@ -147,6 +148,27 @@ export default async function ClientDetailPage({ params }: PageProps) {
       .where(eq(schema.signatures.clientId, id))
       .orderBy(desc(schema.signatures.createdAt));
 
+    // Memories — plain-English bullets of "what we know" surfaced
+    // as a first-class object on the client page. Slant-validated
+    // primitive (CLAUDE.md §4 Memories tab + §8 Memories section).
+    // RLS-scoped via withTenant; pinned + recent ordering at the
+    // index level (client_memories_active_idx).
+    const memoriesRaw = await db
+      .select({
+        id: schema.clientMemories.id,
+        text: schema.clientMemories.text,
+        pinned: schema.clientMemories.pinned,
+        dismissed: schema.clientMemories.dismissed,
+        sourceKind: schema.clientMemories.sourceKind,
+        extractedByAgent: schema.clientMemories.extractedByAgent,
+        confidence: schema.clientMemories.confidence,
+        createdAt: schema.clientMemories.createdAt,
+        updatedAt: schema.clientMemories.updatedAt,
+      })
+      .from(schema.clientMemories)
+      .where(eq(schema.clientMemories.clientId, id))
+      .orderBy(desc(schema.clientMemories.pinned), desc(schema.clientMemories.createdAt));
+
     // Square Checkout deposit links for this client. Surfaces in the
     // Deposits section (sibling to Engagement). Hide the row's
     // checkout_url is non-secret (already a hosted Square URL the
@@ -195,11 +217,22 @@ export default async function ClientDetailPage({ params }: PageProps) {
       payments,
       hasSquareCred,
       hasDocuSignCred,
+      memories: memoriesRaw.map((m) => ({
+        id: m.id,
+        text: m.text,
+        pinned: m.pinned,
+        dismissed: m.dismissed,
+        sourceKind: m.sourceKind,
+        extractedByAgent: m.extractedByAgent,
+        confidence: m.confidence,
+        createdAt: m.createdAt.toISOString(),
+        updatedAt: m.updatedAt.toISOString(),
+      })),
     };
   });
 
   if (!data) notFound();
-  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred, hasDocuSignCred } = data;
+  const { client, engagement, issues, messages, intake, documents, signatures, payments, hasSquareCred, hasDocuSignCred, memories } = data;
 
   const initials = client.fullName
     .split(/\s+/)
@@ -513,6 +546,18 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </div>
         </div>
         </PIIUnlockProvider>
+
+        {/* Memories section — Slant-validated primitive. Renders
+            below the two-column main layout so it spans full width.
+            Plain-English bullets of "what we know" about this client,
+            curated by the Memory Curator agent (V1.5) + manually
+            editable by firm_owner/preparer/reviewer roles. */}
+        <ClientMemoriesSection
+          clientId={client.id}
+          clientName={client.fullName ?? 'this client'}
+          memories={memories as ClientMemory[]}
+          canEdit={hasRole(user, ['firm_owner', 'preparer', 'reviewer'])}
+        />
 
         {/* Danger zone — delete client. firm_owner + admin only.
             CCPA right-to-delete path: cascades intake_responses,

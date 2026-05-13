@@ -1675,6 +1675,91 @@ export const calendarEvents = pgTable(
 );
 
 /**
+ * client_memories (migration 0032) — Memories surface.
+ *
+ * Plain-English bullets of "what we know about this client" rendered
+ * as a first-class object on the client page. Slant.app validated
+ * this primitive in financial advice; we apply it to tax.
+ *
+ * Different semantics than client_facts (migration 0021): client_facts
+ * holds STRUCTURED facts with tax-year supersession (income_w2_2024,
+ * dependent_count); client_memories holds UNSTRUCTURED prose
+ * ("Daughter Lily starts UC Davis Aug 2026", "Prefers SMS over email").
+ */
+export const clientMemories = pgTable(
+  'client_memories',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    /**
+     * Composite FK on (tenantId, clientId) handles cross-tenant
+     * enforcement + cascade-on-client-delete via the `tenantClientFk`
+     * declaration below. No column-level reference here.
+     */
+    clientId: uuid('client_id').notNull(),
+    text: text('text').notNull(),
+    pinned: boolean('pinned').notNull().default(false),
+    dismissed: boolean('dismissed').notNull().default(false),
+    sourceKind: text('source_kind')
+      .$type<
+        | 'manual'
+        | 'message'
+        | 'meeting_transcript'
+        | 'intake_response'
+        | 'document_parse'
+        | 'inferred'
+      >()
+      .notNull()
+      .default('manual'),
+    sourceActionId: uuid('source_action_id').references(() => actions.id, {
+      onDelete: 'set null',
+    }),
+    sourceRef: text('source_ref'),
+    extractedByAgent: text('extracted_by_agent'),
+    confidence: real('confidence').notNull().default(1),
+    lastReferencedAt: timestamp('last_referenced_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantClientFk: foreignKey({
+      name: 'client_memories_tenant_client_fk',
+      columns: [t.tenantId, t.clientId],
+      foreignColumns: [clients.tenantId, clients.id],
+    }).onDelete('cascade'),
+    activeIdx: index('client_memories_active_idx')
+      .on(t.tenantId, t.clientId, sql`pinned DESC`, sql`created_at DESC`)
+      .where(sql`NOT dismissed`),
+    clientIdx: index('client_memories_client_idx').on(t.tenantId, t.clientId),
+    sourceActionIdx: index('client_memories_source_action_idx')
+      .on(t.sourceActionId)
+      .where(sql`source_action_id IS NOT NULL`),
+    tenantRecentIdx: index('client_memories_tenant_recent_idx').on(
+      t.tenantId,
+      sql`created_at DESC`,
+    ),
+    sourceKindCheck: check(
+      'client_memories_source_kind_check',
+      sql`${t.sourceKind} IN ('manual', 'message', 'meeting_transcript', 'intake_response', 'document_parse', 'inferred')`,
+    ),
+    confidenceRange: check(
+      'client_memories_confidence_range',
+      sql`${t.confidence} >= 0 AND ${t.confidence} <= 1`,
+    ),
+    textLength: check(
+      'client_memories_text_length',
+      sql`char_length(${t.text}) > 0 AND char_length(${t.text}) <= 2000`,
+    ),
+  }),
+);
+
+/**
  * Generic per-tenant JSONB k/v store. Holds instance-scoped
  * configuration that doesn't earn its own column:
  *   - theme_pref          (firm-wide theme default)
