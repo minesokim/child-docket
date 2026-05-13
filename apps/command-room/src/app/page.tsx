@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentDocketUser } from '@/lib/current-user';
 import { CommandShell } from '@/components/command-shell';
+import { NeedYouQueue } from '@/components/need-you-queue';
 import {
   loadHomeData,
   formatRelativeTime,
@@ -197,6 +198,9 @@ export default async function HomePage() {
                 </ol>
               )}
             </section>
+
+            {/* Need You workflow primitive — 4 lanes between brief and stats */}
+            <NeedYouQueue data={data.needYou} />
 
             {/* Stats-card row */}
             <section className="home-stats" aria-label="Practice summary">

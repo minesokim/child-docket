@@ -129,6 +129,133 @@ export type Citation = z.infer<typeof CitationSchema>;
 export type DiscoveryOutput = z.infer<typeof DiscoveryOutputSchema>;
 
 // ────────────────────────────────────────────────────────────────
+// Canonical alert format.
+//
+// Per CLAUDE.md §8 Canonical insight format:
+//   "Every AI-surfaced alert renders in the canonical form:
+//    `{ClientName}'s {situation} · {quantified impact}`.
+//    The quantified-impact half is what makes the alert *legible* —
+//    preparers triage by dollar amount + deadline distance, not by
+//    alert title."
+//
+// formatDiscoveryAlert composes a TaxPosition into this canonical
+// shape. Used by:
+//   - the dashboard Discovery findings card
+//   - the Morning Brief insight feed
+//   - any future AI alert surface that lists Discovery results
+//
+// EXAMPLES
+//   "Maria Ortega's home-office deduction · est. $14K savings"
+//   "Patel Family's Augusta-rule rental (Tier 2, Substantial Authority) · est. $4,200 savings"
+//   "Doe Family's QBI aggregation · est. $8,500 savings, Tier 3 (8275 required)"
+//
+// FALLBACK
+//   When a position's estimatedImpact.dollars is 0 or null, the
+//   alert routes to the secondary "informational" queue rather than
+//   the primary dashboard — quantified impact is what makes alerts
+//   legible.
+// ────────────────────────────────────────────────────────────────
+
+const TIER_LABELS: Record<1 | 2 | 3 | 4, string> = {
+  1: 'Settled',
+  2: 'Substantial Authority',
+  3: 'Reasonable Basis with 8275',
+  4: 'More Likely Than Not',
+};
+
+/**
+ * Compose a TaxPosition into the canonical alert string.
+ *
+ * Pass the prepared client display name (e.g., "Maria Ortega" or
+ * "Patel Family"). The function does NOT pluralize or auto-strip
+ * — caller controls the display form.
+ *
+ * Returns null when the impact is non-quantified (dollars <= 0).
+ * Callers route null returns to the informational queue, not the
+ * primary alert surface.
+ */
+export function formatDiscoveryAlert(
+  position: TaxPosition,
+  clientDisplayName: string,
+): string | null {
+  if (position.estimatedImpact.dollars <= 0) return null;
+  const situation = humanSituation(position.claim);
+  const impact = humanImpact(position);
+  return `${clientDisplayName}'s ${situation} · ${impact}`;
+}
+
+/**
+ * Extract a SHORT situation phrase from the position.claim. The
+ * full claim is a sentence; the alert wants a noun-phrase like
+ * "home-office deduction" or "Augusta-rule rental."
+ *
+ * Heuristic v0:
+ *   - Take the first 6 words of the claim
+ *   - Strip leading articles ("A ", "The ")
+ *   - Lowercase the first character (unless it's a proper noun)
+ *   - Drop trailing punctuation
+ *
+ * Caller can still override by passing in custom claim text from
+ * the prompt; this is the default formatter.
+ */
+export function humanSituation(claim: string): string {
+  let trimmed = claim.trim().replace(/^(A |An |The )/i, '');
+  // Cut at 6 words to keep alert legible.
+  const words = trimmed.split(/\s+/).slice(0, 6);
+  trimmed = words.join(' ');
+  // Drop trailing punctuation.
+  trimmed = trimmed.replace(/[.,;:!?]+$/, '');
+
+  // Lowercase first char ONLY when the first word is sentence-case
+  // (initial cap + lowercase rest). Preserve case for:
+  //   - all-caps acronyms (QBI, IRS, LLC)
+  //   - proper-noun pairs (Augusta Rule, Patel Family — detected by
+  //     second word also starting with A-Z)
+  //   - mixed-case (S-corp, K-1)
+  const firstWord = trimmed.split(/\s+/)[0] ?? '';
+  const isAllCaps =
+    firstWord.length > 1 && firstWord === firstWord.toUpperCase();
+  const isMixedCase = /[A-Z].*[a-z].*[A-Z]/.test(firstWord);
+  const second = trimmed.split(/\s+/)[1] ?? '';
+  // Restrict to ASCII A-Z — symbols like § are not "uppercase" for
+  // this purpose (they don't signal a proper noun continuation).
+  const secondIsCapitalized = /^[A-Z]/.test(second);
+
+  if (
+    trimmed.length > 1 &&
+    /^[A-Z]/.test(firstWord) &&
+    !isAllCaps &&
+    !isMixedCase &&
+    !secondIsCapitalized
+  ) {
+    trimmed = trimmed[0]!.toLowerCase() + trimmed.slice(1);
+  }
+  return trimmed;
+}
+
+/**
+ * Compose the quantified-impact half of the alert. Includes the
+ * tier label when tier > 1 (Tier 1 positions are settled law; the
+ * tier disclosure is most legible on the gray-area positions).
+ */
+export function humanImpact(position: TaxPosition): string {
+  const dollars = position.estimatedImpact.dollars;
+  const formatted =
+    dollars >= 1000
+      ? `$${(dollars / 1000).toFixed(dollars >= 10000 ? 0 : 1)}K`
+      : `$${dollars.toLocaleString()}`;
+  const prefix =
+    position.estimatedImpact.certainty === 'precise' ? '' : 'est. ';
+  const base = `${prefix}${formatted} savings`;
+  if (position.tier === 1) return base;
+  const tierFragment = `Tier ${position.tier}, ${TIER_LABELS[position.tier]}`;
+  if (position.disclosureRequired) {
+    return `${base}, ${tierFragment} (8275 required)`;
+  }
+  return `${base}, ${tierFragment}`;
+}
+
+// ────────────────────────────────────────────────────────────────
 // Trust-gate verdict — computed post-discovery from the highest-tier
 // position in the output. The drafter computes verdict from action
 // class only; Discovery additionally factors positionTier.

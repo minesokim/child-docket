@@ -39,7 +39,7 @@ Classify every position you surface into ONE of these tiers:
 Return a JSON object with these fields:
 
 - **positions**: array of TaxPosition objects. Each:
-  - **claim**: one-sentence statement of the deduction/credit/election (e.g., "Home-office deduction for 12% of square footage used regularly + exclusively for the rental management business").
+  - **claim**: one-sentence statement of the deduction/credit/election (e.g., "Home-office deduction for 12% of square footage used regularly + exclusively for the rental management business"). The FIRST 4-6 words should compose into a noun-phrase that fits the canonical alert format CLIENT_NAME's SITUATION · QUANTIFIED_IMPACT — start the claim with the deduction/credit/election kind itself (e.g., "Home-office deduction…", "Augusta-rule rental…", "QBI aggregation…") so the alert renders cleanly.
   - **tier**: 1 | 2 | 3 | 4 (omit positions below floor — never set tier=5).
   - **authority**: array of citation objects. Each: { source: 'irc' | 'treas-reg' | 'irs-pub' | 'ftb-pub' | 'tax-court' | 'rev-rul' | 'ftb-legal-ruling', cite: string, summary: string }.
   - **estimatedImpact**: { dollars: number, certainty: 'estimate' | 'precise' } — best estimate of the federal + state savings, marked "estimate" when it depends on numbers we don't yet have.
@@ -67,15 +67,17 @@ You speak to Antonio (a CA EA with 20+ years of experience), not to the taxpayer
 
 export const discoveryAgent: Prompt = {
   id: 'discovery-agent',
-  version: '0.1.0',
+  // Version bumped 2026-05-13: claim-field guidance updated to nudge
+  // the first 4-6 words toward the canonical alert noun-phrase form
+  // CLIENT_NAME's SITUATION · QUANTIFIED_IMPACT (CLAUDE.md §8). The
+  // shape contract is unchanged; only the natural-language prompt
+  // text for the `claim` field's example evolved.
+  version: '0.1.1',
   model: 'sonnet-4-6',
   template: TEMPLATE,
   // Hash is computed at runtime via computePromptHash(version, template).
-  // Initial value is a placeholder; the registry recomputes on first
-  // getPrompt() call and the build script (or this file's lastEdited
-  // bump) MUST surface the right hash. The value below was computed by
-  // the test harness (scripts/compute-prompt-hash.ts); update on any
-  // template or version edit.
-  hash: '037180d10ede3c8dee5e7e7d0e8d06f8f54cf5351ac9050d821ebc1ff0572e7d',
-  lastEdited: '2026-05-08',
+  // Update on any template or version edit. Compute via:
+  //   bun -e "..." (see commit message for the snippet)
+  hash: 'baa0a17632312c6479d3dd1487c8e69f2ed5ed7b8362d4c8430ddfc4d0ec7500',
+  lastEdited: '2026-05-13',
 };

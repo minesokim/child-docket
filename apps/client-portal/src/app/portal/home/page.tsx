@@ -2,6 +2,12 @@
 
 // Returning portal - Home tab. Hero status, balance, sign 8879, appointment,
 // progress timeline, Antonio's message. 1-to-1 port of ScreenHome.
+//
+// Hero status card driven by the canonical 5-state portal-stage map
+// from @docket/shared (CLAUDE.md §4 Client Portal). State detection
+// uses the IntakeState flags currently available; Phase-2 sub-milestone
+// flips the inputs to read engagement.status + signatures + filings
+// via a portal server query (the COPY contract stays stable).
 
 import {
   AvatarSlot,
@@ -18,6 +24,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { useRouter } from 'next/navigation';
+import { detectPortalStage, getStageCopy } from '@docket/shared';
 import { useIntakeField } from '@/lib/intake-context';
 
 export default function PortalHomePage() {
@@ -28,6 +35,7 @@ export default function PortalHomePage() {
   // intake flow writes to. The portal layout's IntakeProvider hydrates
   // it on every page load (one round trip, request-scoped cache).
   const [fullName] = useIntakeField<string>('personal.fullName', '');
+  const [docsList] = useIntakeField<unknown[]>('docs.uploaded', []);
   const [depositPaid, setDepositPaid] = useIntakeField<boolean>('deposit.paid', false);
   const [signed8879, setSigned8879] = useIntakeField<boolean>(
     'engagement.signed',
@@ -42,6 +50,28 @@ export default function PortalHomePage() {
   const needsPayment = !depositPaid;
   const needsSign = depositPaid && !signed8879;
   const allDone = depositPaid && signed8879;
+
+  // Compute the canonical portal stage. v0 inputs come from IntakeState;
+  // Phase 2 will swap in engagement/signature/filing queries.
+  const docsUploaded = Array.isArray(docsList) && docsList.length > 0;
+  const portalStage = detectPortalStage({
+    intakeComplete: Boolean(fullName),
+    docsUploaded,
+    depositPaid,
+    // 8879 sent at deposit completion (mock-only until real DocuSign).
+    eightyseventynineSent: depositPaid,
+    eightyseventynineSigned: signed8879,
+    filed: allDone,
+    filingAcknowledged: allDone,
+    daysSinceFiling: 0,
+  });
+  const stageCopy = getStageCopy(portalStage, {
+    firstName,
+    firmName: 'Vazant Consulting',
+    ownerName: 'Antonio',
+    taxYear: '2025',
+    filedDate: allDone ? '2026-04-14' : undefined,
+  });
 
   // Optimistic local-only flip until Square integration ships (Day 8-9).
   // Triggers a server save via useIntakeField; the user's deposit.paid
@@ -72,7 +102,9 @@ export default function PortalHomePage() {
             </Body>
           </Stack>
 
-          {/* Hero status */}
+          {/* Hero status — driven by canonical 5-state portal-stage map.
+              Eyebrow tone determines accent color; copy comes from
+              @docket/shared/portal-stage. */}
           <div
             style={{
               background: t.card,
@@ -91,7 +123,12 @@ export default function PortalHomePage() {
                 width: 120,
                 height: 120,
                 borderRadius: '50%',
-                background: allDone ? 'rgba(74, 143, 95, 0.15)' : t.tintAccent,
+                background:
+                  stageCopy.tone === 'success'
+                    ? 'rgba(74, 143, 95, 0.15)'
+                    : stageCopy.tone === 'neutral'
+                      ? t.bgElev
+                      : t.tintAccent,
                 opacity: 0.8,
               }}
             />
@@ -100,11 +137,21 @@ export default function PortalHomePage() {
                 style={{
                   display: 'inline-flex',
                   padding: '4px 10px',
-                  background: allDone ? 'rgba(74, 143, 95, 0.15)' : t.tintAccentStrong,
+                  background:
+                    stageCopy.tone === 'success'
+                      ? 'rgba(74, 143, 95, 0.15)'
+                      : stageCopy.tone === 'neutral'
+                        ? t.bgElev
+                        : t.tintAccentStrong,
                   borderRadius: 999,
                   fontFamily: t.mono,
                   fontSize: 10,
-                  color: allDone ? '#2e6b42' : t.rustInk,
+                  color:
+                    stageCopy.tone === 'success'
+                      ? '#2e6b42'
+                      : stageCopy.tone === 'neutral'
+                        ? t.muted
+                        : t.rustInk,
                   letterSpacing: 1,
                   marginBottom: 14,
                   alignItems: 'center',
@@ -115,21 +162,22 @@ export default function PortalHomePage() {
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    background: allDone ? '#4a8f5f' : t.rust,
+                    background:
+                      stageCopy.tone === 'success'
+                        ? '#4a8f5f'
+                        : stageCopy.tone === 'neutral'
+                          ? t.muted
+                          : t.rust,
                     marginRight: 6,
                   }}
                 />
-                {allDone ? 'FILED WITH IRS' : 'ACTION NEEDED'}
+                {stageCopy.eyebrow.toUpperCase()}
               </div>
               <H2 t={t} style={{ marginBottom: 10 }}>
-                {allDone
-                  ? 'Your 2025 return has been filed'
-                  : 'Your return is ready for your review'}
+                {stageCopy.title}
               </H2>
               <Body t={t} size={14} style={{ marginBottom: 12 }}>
-                {allDone
-                  ? "Antonio transmitted your return to the IRS. You'll get a confirmation within 3–5 business days. Refund is on its way."
-                  : "Antonio prepared your 2025 return. Once you pay the remaining balance and sign Form 8879, it will be filed with the IRS."}
+                {stageCopy.body}
               </Body>
               <div
                 style={{
@@ -141,9 +189,17 @@ export default function PortalHomePage() {
                   borderTop: `1px solid ${t.borderSoft}`,
                 }}
               >
-                {allDone
+                {/* Subline kept human-authored — the 5-state copy
+                    doesn't carry timing detail; the portal does. */}
+                {portalStage === 'filed_refund'
                   ? 'Filed Apr 14 · Awaiting IRS acknowledgement'
-                  : 'Estimated processing: 3–5 business days after filing'}
+                  : portalStage === 'review_ready'
+                    ? 'Sign by Apr 18 · E-file authorization'
+                    : portalStage === 'docs_received'
+                      ? 'Estimated processing: 3-5 business days after filing'
+                      : portalStage === 'off_season'
+                        ? 'Tax year complete · Year-round support active'
+                        : 'About 12 minutes to complete'}
               </div>
             </div>
           </div>

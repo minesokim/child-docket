@@ -37,15 +37,57 @@ export interface ActivityRow {
   [key: string]: unknown;
 }
 
+export interface NeedYouLaneClient {
+  client_id: string;
+  client_name: string;
+  engagement_id: string;
+  engagement_type: string;
+  /** ISO timestamp the engagement entered this lane. */
+  entered_lane_at: string;
+  /** Optional sub-cue rendered under the client name in the lane row. */
+  cue: string | null;
+  [key: string]: unknown;
+}
+
+export interface NeedYouLanes {
+  /**
+   * Need You workflow primitive — 4 swim-lanes that organize
+   * client engagements by what the preparer needs to DO next.
+   * Sharper than generic Pipeline per CLAUDE.md §4. Inherited
+   * from the v3 Vazant dashboard IA, locked 2026-05-13.
+   *
+   * - new_intakes      intake complete, not yet routed to a preparer
+   * - ready_to_prep    docs gathered, awaiting workpaper assembly
+   * - ready_to_file    return drafted, awaiting EA review + 8879
+   * - sign_and_file    8879 signed, awaiting e-file transmission
+   *
+   * Each lane caps at 5 clients in this v0 query; "View all" link
+   * drills to the dedicated filter on /clients.
+   */
+  new_intakes: NeedYouLaneClient[];
+  ready_to_prep: NeedYouLaneClient[];
+  ready_to_file: NeedYouLaneClient[];
+  sign_and_file: NeedYouLaneClient[];
+  /** Total count per lane (for the lane header tile count). */
+  counts: {
+    new_intakes: number;
+    ready_to_prep: number;
+    ready_to_file: number;
+    sign_and_file: number;
+  };
+}
+
 export interface HomeData {
   brief: BriefIssueRow[];
   stats: PracticeStats;
   activity: ActivityRow[];
+  needYou: NeedYouLanes;
 }
 
 export async function loadHomeData(tenantId: string): Promise<HomeData> {
   return await withTenant(tenantId as TenantId, async (db) => {
-    const [briefRows, statsRows, activityRows] = await Promise.all([
+    const [briefRows, statsRows, activityRows, needYouRows, needYouCountRows] =
+      await Promise.all([
       // Top unresolved issues by severity, capped at 5. high > medium > low,
       // most-recently-created tie-breaker.
       db.execute<BriefIssueRow>(sql`
@@ -110,6 +152,89 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
         ORDER BY a.created_at DESC
         LIMIT 10
       `),
+
+      // Need You queue — 4 lanes via engagement status. Maps engagement
+      // lifecycle to the operational primitive Antonio uses
+      // ("what do I do next?"). Each lane returns up to 5 rows; the
+      // counts query below gets the totals.
+      //
+      // Lane mapping (v0):
+      //   new_intakes    engagements.status IN ('intake')
+      //                  AND clients.intake_completed_at IS NOT NULL
+      //   ready_to_prep  engagements.status IN ('docs', 'prep')
+      //   ready_to_file  engagements.status = 'review'
+      //   sign_and_file  engagements.status = 'signature'
+      //
+      // Future versions will refine the routing (e.g., new_intakes
+      // checks for "intake complete BUT no preparer assigned yet"),
+      // but this v0 surfaces immediately-actionable signal.
+      db.execute<NeedYouLaneClient & { lane: string }>(sql`
+        WITH lanes AS (
+          SELECT
+            e.id::text AS engagement_id,
+            e.client_id::text AS client_id,
+            e.type::text AS engagement_type,
+            c.full_name AS client_name,
+            to_char(e.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS entered_lane_at,
+            CASE e.status::text
+              WHEN 'intake'    THEN 'new_intakes'
+              WHEN 'docs'      THEN 'ready_to_prep'
+              WHEN 'prep'      THEN 'ready_to_prep'
+              WHEN 'review'    THEN 'ready_to_file'
+              WHEN 'signature' THEN 'sign_and_file'
+              ELSE NULL
+            END AS lane,
+            CASE e.status::text
+              WHEN 'intake'    THEN 'intake complete'
+              WHEN 'docs'      THEN 'docs received'
+              WHEN 'prep'      THEN 'workpapers in progress'
+              WHEN 'review'    THEN 'awaiting review'
+              WHEN 'signature' THEN '8879 sent, awaiting signature'
+              ELSE NULL
+            END AS cue,
+            ROW_NUMBER() OVER (
+              PARTITION BY
+                CASE e.status::text
+                  WHEN 'intake'    THEN 'new_intakes'
+                  WHEN 'docs'      THEN 'ready_to_prep'
+                  WHEN 'prep'      THEN 'ready_to_prep'
+                  WHEN 'review'    THEN 'ready_to_file'
+                  WHEN 'signature' THEN 'sign_and_file'
+                  ELSE NULL
+                END
+              ORDER BY e.updated_at DESC
+            ) AS row_rank
+          FROM engagements e
+          JOIN clients c ON c.id = e.client_id
+          WHERE e.status::text IN ('intake', 'docs', 'prep', 'review', 'signature')
+        )
+        SELECT
+          engagement_id,
+          client_id,
+          engagement_type,
+          client_name,
+          entered_lane_at,
+          lane,
+          cue
+        FROM lanes
+        WHERE row_rank <= 5
+        ORDER BY lane, entered_lane_at DESC
+      `),
+
+      // Per-lane totals for the header tile counts.
+      db.execute<{
+        new_intakes: number;
+        ready_to_prep: number;
+        ready_to_file: number;
+        sign_and_file: number;
+      }>(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status::text = 'intake')::int AS new_intakes,
+          COUNT(*) FILTER (WHERE status::text IN ('docs', 'prep'))::int AS ready_to_prep,
+          COUNT(*) FILTER (WHERE status::text = 'review')::int AS ready_to_file,
+          COUNT(*) FILTER (WHERE status::text = 'signature')::int AS sign_and_file
+        FROM engagements
+      `),
     ]);
 
     const stats = (statsRows as unknown as Array<PracticeStats>)[0] ?? {
@@ -120,10 +245,33 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
       spend_24h_usd: 0,
     };
 
+    // Bucket the Need You rows into lanes.
+    type LaneRow = NeedYouLaneClient & { lane: string };
+    const needYouLanes: NeedYouLanes = {
+      new_intakes: [],
+      ready_to_prep: [],
+      ready_to_file: [],
+      sign_and_file: [],
+      counts: (needYouCountRows as unknown as Array<NeedYouLanes['counts']>)[0] ?? {
+        new_intakes: 0,
+        ready_to_prep: 0,
+        ready_to_file: 0,
+        sign_and_file: 0,
+      },
+    };
+    for (const r of needYouRows as unknown as LaneRow[]) {
+      const { lane, ...rest } = r;
+      if (lane === 'new_intakes') needYouLanes.new_intakes.push(rest);
+      else if (lane === 'ready_to_prep') needYouLanes.ready_to_prep.push(rest);
+      else if (lane === 'ready_to_file') needYouLanes.ready_to_file.push(rest);
+      else if (lane === 'sign_and_file') needYouLanes.sign_and_file.push(rest);
+    }
+
     return {
       brief: briefRows as unknown as BriefIssueRow[],
       stats,
       activity: activityRows as unknown as ActivityRow[],
+      needYou: needYouLanes,
     };
   });
 }

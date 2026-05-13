@@ -47,6 +47,14 @@ export * from './required-docs.js';
 // apps/command-room/src/components/reasoning-trail.tsx.
 export * from './reasoning-trail.js';
 
+// Portal stage-specific copy + CTA map for the taxpayer-facing
+// Home tab. Five canonical states (first_time / docs_received /
+// review_ready / filed_refund / off_season). State machine
+// drives copy; firms cannot author per-stage strings (platform-owned
+// language for consistency). Locked as a contract per CLAUDE.md §4
+// Client Portal.
+export * from './portal-stage.js';
+
 // Webhook signature verification lives in `@docket/shared/webhooks` as a
 // SUBPATH export — NOT from this main barrel. The verifier imports
 // `node:crypto`, which webpack/turbopack will pull into any bundle that
