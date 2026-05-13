@@ -13,6 +13,7 @@
     "eval:draft": "tsx scripts/eval-draft.ts",
     "e2e:app": "tsx scripts/e2e-app.ts",
     "e2e": "tsx scripts/e2e-app.ts && bun run ../../scripts/protocol-gate.ts --record-e2e-pass",
+    "smoke:compose-discovery": "tsx scripts/smoke-compose-discovery-scan.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "@docket/orchestrator": "workspace:*",
     "@docket/prompts": "workspace:*",
     "@docket/shared": "workspace:*",
+    "@docket/discovery-pdf": "workspace:*",
     "@docket/storage": "workspace:*",
     "@docket/tax-graph": "workspace:*",
     "drizzle-orm": "^0.45.2",

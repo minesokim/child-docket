@@ -18,6 +18,14 @@
 //   - ~50-200ms render for a typical 6-12 page scan
 //   - Pure CPU; safe to run inside an Inngest function
 
+// React import is required at the .tsx -> .js transpile boundary
+// regardless of tsconfig's `jsx: "react-jsx"` mode. tsx (the runner)
+// may emit `React.createElement(...)` calls depending on its loader
+// settings — without the import, runtime fails with "React is not
+// defined" on the `<DiscoveryScanDocument input={...} />` call below.
+// Belt-and-suspenders import keeps the package portable across
+// build tooling.
+import * as React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { DiscoveryScanDocument } from './DiscoveryScanDocument.js';
 import { type DiscoveryScanInput } from './types.js';
