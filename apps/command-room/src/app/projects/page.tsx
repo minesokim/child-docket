@@ -18,7 +18,7 @@ import type { TenantId } from '@docket/shared';
 import { requireRole } from '@/lib/require-role';
 import { CommandShell } from '@/components/command-shell';
 import { SeedProjectsButton } from './seed-button';
-import { getCanonicalTemplateMetadata } from './actions';
+import { getCanonicalTemplateMetadata } from './metadata';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -259,18 +259,26 @@ export default async function ProjectsPage() {
 
 function TemplateCard({ project }: { project: ProjectRow }) {
   const color = colorFor(project.color_hint);
+  // Codex round 5 P2: card body wrapped in Link so /projects/[id] is
+  // reachable via normal navigation. <li> stays the semantic outer
+  // list item; the Link spans the card content.
   return (
-    <li
-      style={{
-        padding: '14px 16px',
-        background: 'oklch(99% 0.005 85)',
-        border: '1px solid oklch(92% 0.008 85)',
-        borderTop: `3px solid ${color}`,
-        borderRadius: 10,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <li style={{ listStyle: 'none' }}>
+      <Link
+        href={`/projects/${project.id}`}
+        style={{
+          padding: '14px 16px',
+          background: 'oklch(99% 0.005 85)',
+          border: '1px solid oklch(92% 0.008 85)',
+          borderTop: `3px solid ${color}`,
+          borderRadius: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          textDecoration: 'none',
+          color: 'inherit',
+          height: '100%',
+        }}
+      >
       <h3
         style={{
           fontSize: 14,
@@ -307,57 +315,65 @@ function TemplateCard({ project }: { project: ProjectRow }) {
       >
         Template · {project.kind.replace(/_/g, ' ')}
       </div>
+      </Link>
     </li>
   );
 }
 
 function InstanceCard({ project }: { project: ProjectRow }) {
   const color = colorFor(project.color_hint);
+  // Codex round 5 P2: card body wrapped in Link so /projects/[id]
+  // is reachable via normal navigation.
   return (
-    <li
-      style={{
-        padding: '12px 14px',
-        background: 'oklch(99% 0.005 85)',
-        border: '1px solid oklch(93% 0.008 85)',
-        borderLeft: `3px solid ${color}`,
-        borderRadius: 8,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <h3
-          style={{
-            fontSize: 14,
-            fontWeight: 500,
-            color: 'oklch(20% 0.01 85)',
-            margin: '0 0 2px 0',
-          }}
-        >
-          {project.name}
-        </h3>
-        <div
-          style={{
-            fontSize: 11,
-            color: 'oklch(50% 0.01 85)',
-          }}
-        >
-          {project.kind.replace(/_/g, ' ')}
-          {project.tax_year && ` · tax year ${project.tax_year}`}
-          {project.engagement_count > 0 &&
-            ` · ${project.engagement_count} engagement${project.engagement_count === 1 ? '' : 's'}`}
-        </div>
-      </div>
-      <span
+    <li style={{ listStyle: 'none' }}>
+      <Link
+        href={`/projects/${project.id}`}
         style={{
-          fontSize: 16,
-          fontWeight: 600,
-          color: project.engagement_count > 0 ? color : 'oklch(60% 0.01 85)',
+          padding: '12px 14px',
+          background: 'oklch(99% 0.005 85)',
+          border: '1px solid oklch(93% 0.008 85)',
+          borderLeft: `3px solid ${color}`,
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
-        {project.engagement_count}
-      </span>
+        <div style={{ flex: 1 }}>
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'oklch(20% 0.01 85)',
+              margin: '0 0 2px 0',
+            }}
+          >
+            {project.name}
+          </h3>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'oklch(50% 0.01 85)',
+            }}
+          >
+            {project.kind.replace(/_/g, ' ')}
+            {project.tax_year && ` · tax year ${project.tax_year}`}
+            {project.engagement_count > 0 &&
+              ` · ${project.engagement_count} engagement${project.engagement_count === 1 ? '' : 's'}`}
+          </div>
+        </div>
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            color: project.engagement_count > 0 ? color : 'oklch(60% 0.01 85)',
+          }}
+        >
+          {project.engagement_count}
+        </span>
+      </Link>
     </li>
   );
 }

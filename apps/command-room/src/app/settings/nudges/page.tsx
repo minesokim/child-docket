@@ -18,7 +18,7 @@ import { getCurrentDocketUser } from '@/lib/current-user';
 import { CommandShell } from '@/components/command-shell';
 import { SeedNudgeRulesButton } from './seed-button';
 import { NudgeRuleToggle } from './rule-toggle';
-import { getCanonicalRuleMetadata } from './actions';
+import { getCanonicalRuleMetadata } from './metadata';
 import '../settings.css';
 
 export const runtime = 'nodejs';
