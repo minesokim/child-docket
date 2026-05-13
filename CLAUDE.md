@@ -148,10 +148,15 @@ Single pane that shows **today** and lets the preparer act on it.
   - **Ready to File** — return drafted, awaiting review and 8879 sign
   - **Sign & File** — 8879 signed, awaiting e-file transmission
   Sub-sections are the **structural primitive**; Pipeline is the *visualization* of how clients flow between them. AI commentary on every card. The reason this beats "generic pipeline": it gives the preparer a verb ("what do I do next?") instead of a noun ("look at the board"). Inherited from v3 Vazant dashboard IA.
-- **Clients page (three view toggles)** — Cards (default, scannable, AI commentary per card), Table (dense, sortable, filterable, exportable), **Pipeline (kanban-style across the four Need You sub-sections plus Filed and Paid)**. Same data; three lenses for different cognitive modes. Each row carries a **risk-tier pill** (green/amber/red) the firm's AI Preferences settings drive.
+- **Clients page (three view toggles + freshness lens)** — Cards (default, scannable, AI commentary per card), Table (dense, sortable, filterable, exportable), **Pipeline (kanban-style across the four Need You sub-sections plus Filed and Paid)**. Same data; three lenses for different cognitive modes. Each row carries a **risk-tier pill** (green/amber/red) the firm's AI Preferences settings drive. Default sort: most-recent-activity desc; switch to touchpoint freshness lens (above) to flip into staleness-sort mode for relationship audit.
+- **Prospects vs Clients vs Former Clients** — distinct entity-status states so the sales-funnel surface stays separate from the active book. **Prospects** = leads who completed a Discovery Scan or `/scan` form but haven't signed an engagement letter. **Clients** = active engagement letter signed within 12 months OR ongoing year-round arrangement. **Former Clients** = no engagement in 12+ months. Database: `client_status` enum on the existing `clients` table (no separate table — same identity primitive, different lifecycle stage). Filtering throughout command-room respects this distinction so Antonio can scope a query to "Prospects only" (sales motion) vs "Clients only" (active book) vs "Former — for win-back outreach." Discovery Scan flow auto-creates a Prospect; engagement-letter signature transitions Prospect → Client. Slant validates the distinction matters (their CRM page lists "clients, prospects, accounts" as separate concepts).
 - **Calendar** — first-class top-level nav surface, not buried inside settings. Weekly view default, day/month toggles. Event types: client meetings (linked to client record), filing deadlines (per engagement, color-coded by tax form type), internal reviews, audit milestones, year-round planning touchpoints. Two-way sync with Google Calendar via the `google-calendar` MCP server (§10). Click any event → opens client/engagement workspace.
 - **Unified inbox** — SMS, email, portal chat, voicemail. AI drafts replies pulled from real client state. Preparer approves. **Channel-availability icons render inline per conversation** (green = portal logged in within 24h, amber = SMS only, gray = email-only fallback) so the preparer picks the channel the client actually reads. **In-thread document handling**: when a client uploads a doc to a conversation, a `Process / Ignore` action pair appears inline next to the attachment — Process routes it through the doc-classification agent + files to the client record; Ignore archives without indexing (for off-topic forwards). Antonio's most-requested texture-win on 5/9 call.
 - **Documents** — two tabs: **Client docs** (everything filed to a client record, faceted by year/type/status) and **Firm files** (engagement letters, §7216 consents, audit-defense packets, internal SOPs, position library). Aggregate metric strip at top: "47 needs review · 12 missing · $2.4M total income across 1099s YTD."
+- **Touchpoint freshness view** — `/clients?view=freshness` shows every client sorted by days-since-last-meaningful-touch across all channels (email, SMS, portal chat, meeting, phone call, doc receipt). Per-engagement overdue thresholds: active engagement ≤14d / off-season ≤90d / year-round planning ≤quarterly. Red-flag column for clients who've been silent across ALL channels longer than threshold. Distinct from Need You queue (which shows clients in active workflow) — this surface catches the *off-workflow* relationship drift Slant proved is the silent churn driver in adjacent verticals. Bulk-action affordance: select N stale clients → "Draft 'just checking in' outreach" via Nudges Agent.
+- **Done-for-you tasks** — every task in an engagement carries a pre-drafted action artifact when the AI can prepare one. Examples: task "Get last year's W-2 from John" auto-attaches a draft email Antonio can send with one click; task "Verify CA SoS standing for Patel LLC" auto-runs the SoS API + attaches the result; task "Draft 2024 amended return for missed §179" auto-fires the Discovery agent on John's 2024 facts + drafts the position memo. The pattern: every task is a *one-click-to-complete* affordance, not a checkbox + manual labor. Slant's framing: *"Whenever Slant recognizes that an email could help complete a task, the email will be pre-written."* For tax: emails + API calls + draft memos + 8821 prefills + Tax Pro Account form starters all qualify.
+- **Pre-meeting brief automation** — N hours before any `calendar_events` entry tagged as a client meeting, the Pre-Meeting Brief Agent fires: pulls top 5 Memories for attendees, summarizes their last 3 messages, surfaces any pending TaxPositions awaiting client decision, lists open issues in their engagement, surfaces overdue payments. Output renders as a 1-page brief on the meeting card in Calendar AND drops into Antonio's inbox 1hr before the meeting. Antonio walks in with the right context every time. Distinct from the existing Pre-Signature Checklist (one specific case for 8879 sign meetings); this generalizes.
+- **Magic buttons** — clickable chat commands that run a firm-authored AI workflow on the current context. Pattern: in Maria's client chat (3-scope, above), Antonio clicks "Draft Q4 planning email" → runs the firm's pre-approved planning template scoped to Maria's facts + outputs a draft for approval. Different motion than AI Tasks (which are *scheduled* + *natural-language-authored*); Magic Buttons are *on-demand* + *pre-authored*. Firms compose their own button library; templates ship with the AI Task starter gallery. The shortcut surface that closes the loop between chat questions and chat actions.
 - **Memories** (per-client tab) — plain-English bullets of "what we know about this client" surfaced as a first-class object, not hidden in extension fields. Examples: *"Daughter Lily starts UC Davis Aug 2026 (AOTC + 529 windowing relevant)"* / *"Owns rental at 1244 Olive — depreciation Schedule E"* / *"Took Augusta Rule position 2024, $14K saved"* / *"Prefers SMS over email; never call between 9am-1pm — daycare hours"* / *"Spouse files MFS; works at different CPA — request Form 8958 by 2/15."*
 
   Memories live in `client_facts` (already shipped via migration 0021). What's NEW is the **UI surface**: a Memories tab on the client page showing curated bullets, sorted by relevance + recency. AI extracts memories continuously from messages, meeting transcripts, intake answers, and document parses. Preparer can pin, edit, delete. Pre-meeting brief auto-surfaces the top 5 Memories for the client. Slant's framing locked verbatim (per founder Thomas Clawson): *"Minimize usage of custom fields"* — Memories replace the "let me add 47 custom fields to the client schema" anti-pattern that bloats every CRM. Memory architecture L4 is the substrate; Memories is the surface.
@@ -274,7 +279,7 @@ The product is **practice management surface + agentic engine** built as four la
 | Language | **TypeScript end-to-end** | Frontend-backend cohesion. SDK is TS-first. Inngest is TS-native. Single language across the team. Python rejected (junior dev's instinct) because we're B2B SaaS-with-Claude, not ML-first. |
 | Substrate (today) | **Direct `@anthropic-ai/sdk`** wrapped in `services/orchestrator/runDocketAgent` | 109 LOC. Cost telemetry + prompt caching + audit hook + model tiering. Used by `services/workers` agents (triage-classifier, inbox-drafter). |
 | Substrate (next) | **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) | Already a dependency, not yet imported. Migrate once `mcp-gateway` exists and we want MCP-native tool routing + lifecycle hooks. |
-| Inference | **Direct Anthropic API + ZDR** for v0 | Bedrock as per-tenant flag for compliance customers later. Orchestrator is provider-agnostic. |
+| Inference | **Direct Anthropic Claude + ZDR + Bedrock fallback** | Bedrock as automatic per-tenant fallover (`callClaudeWithFallover`, shipped). Orchestrator is provider-agnostic at the interface, Anthropic-native at the policy layer (see Anthropic-vs-OpenAI rationale block below). |
 | Model tiering | **Haiku 4.5 for extract/classify, Sonnet 4.6 for most agent runs, Opus 4.7 only for hard reasoning** | 4×–10× cost reduction vs Opus-everywhere. Haiku is the dev default. |
 | Caching | **Prompt caching aggressive** on system prompts, knowledge bundles, playbooks | 80–90% cost drop on repeated calls. Wired into orchestrator from day 1. |
 | Integration | **MCP gateway** as only abstraction layer | Browser automation + APIs both wrapped as MCP tools. Agent doesn't know which path. |
@@ -293,6 +298,24 @@ The product is **practice management surface + agentic engine** built as four la
 | Hosting | **Vercel Pro** (Next.js apps, $20/mo — NOT Hobby) + **Fly.io** for Playwright workers when browser automation lands (M2+) | Hobby is forbidden by Vercel for commercial use. See `docs/HOSTING.md`. |
 | Database | **Neon Launch** ($19/mo, auto-suspend OFF) | Was: Neon Free. Free tier auto-suspends after 5 min and adds cold-start latency that breaks the 10-min Gmail poll. |
 | Secrets | `.env.local` for dev → **Infisical** for prod | Per-tenant credential vault for browser automation. |
+
+### Anthropic-native vs OpenAI rationale (locked 2026-05-13 after Slant.app benchmarking)
+
+Slant.app publicly built their AI-first CRM on **OpenAI GPT-5**. We're on **Anthropic Claude (Sonnet 4.6 / Opus 4.7 / Haiku 4.5) + AWS Bedrock fallover**. Different choice, deliberate. The case for Anthropic in tax specifically:
+
+1. **Hallucination calibration matters more in tax than in advice.** A wrong tax position carries a $580 Form 8867 penalty per occurrence + §6694 preparer penalty exposure. Anthropic's Constitutional AI training + RLHF prioritize "I don't know" over confident-wrong. Calibration audits across 2024-2026 consistently show Claude refuses more aggressively when the model lacks certainty. For wealth-advisor-style outputs (which Slant ships), GPT's "always answer something" posture is fine. For PTIN-on-the-line outputs (which we ship), Claude's posture is structurally safer.
+
+2. **Zero Data Retention by default.** Anthropic's enterprise tier (which our `@anthropic-ai/sdk` direct API surfaces) supports ZDR — prompts + completions are not stored for training. OpenAI's enterprise tier also offers this, but the configuration story is sharper at Anthropic (single flag vs multi-step opt-out). For SOC 2 Type II posture (L8) + downstream regulated-data buyers, the simpler ZDR story is the right pick.
+
+3. **Prompt caching discount is more aggressive.** Anthropic caches at 90% discount on cached input tokens vs OpenAI's 75% discount. For our usage pattern (5K-token system prompts on every Discovery / Position / Inbox-Drafter run), this compounds. Cost discipline per §7 + COSTS.md depends on this discount.
+
+4. **Tool-use + Computer Use are first-class.** Claude's tool-use API + Computer Use beta are the substrate for the Browser-automation MCP servers we'll build for OLT + IRS Solutions + IRS Tax Pro Account. OpenAI has function-calling but lacks the Computer Use equivalent today (May 2026); this matters for our integration moat.
+
+5. **AWS Bedrock fallover already shipped.** When primary Anthropic API has a capacity issue (verified 2026-05-12 during overnight build), our orchestrator transparently fails over to Bedrock-hosted Claude in us-east-1. Same model, different infrastructure path, zero downstream-call code changes. This is a resilience capability OpenAI doesn't expose at parity (Azure OpenAI is the closest equivalent but governance + region selection is tighter on Bedrock).
+
+6. **Voyage-3-Large embeddings** (L4) are tax/legal-domain-specialized — Voyage's training corpus over-indexes on legal + financial + regulatory documents. OpenAI's `text-embedding-3-large` is general-purpose. For our authority-grounded retrieval (Discovery + Position + audit-defense), Voyage's 4-6 percentage point accuracy advantage on tax-position retrieval is material. **This is a deliberate non-OpenAI stack choice that compounds with the Anthropic decision.**
+
+**As a marketing signal:** Slant pitches "AI-first" but the *quality* of the AI matters less in wealth advice (the human still decides). In tax, the AI's quality is the moat — Antonio's PTIN trusts the cited authority. We should publicly explain our Anthropic + Voyage + Cohere stack as a deliberate compliance-first choice, not an implementation detail. Talking point: *"We chose Anthropic because their model refuses more honestly when it's uncertain. For your PTIN, that matters."*
 
 ### What we explicitly REJECTED as base
 - **OpenClaw** — personal AI, single-tenant, full-trust permission model. Adopt patterns (local gateway, messaging-as-UI), not codebase.
@@ -504,6 +527,8 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 | **Nudges Agent** *(life-event + drift + milestone surface)* | Paper spec only | Locked 2026-05-13 after Slant.app research. Daily cron walks `client_facts` + `engagement` state + `calendar_events` + `nudge_rules`, drafts approved-pending preparer-to-client outreach. See §8 Nudges. Ships V1.5 alongside Reminders execution scheduler. |
 | **Memory Curator Agent** *(continuous Memories extraction)* | Paper spec only | Background job that extracts plain-English Memories from every inbound message, meeting transcript, doc parse, and intake answer → writes `client_facts` rows tagged `kind='memory'`. Drives the Memories tab UI (§4). Locked 2026-05-13 after Slant.app research; their "Memories" surface is the strongest single steal from their product. Ships Phase 5. |
 | **Notetaker Agent** *(meeting transcript → action items)* | Paper spec only | Records meeting (Zoom / Google Meet / phone), transcribes via Deepgram/Gladia (L5), routes through Memory Curator to extract Memories + action items + sentiment + follow-up commitments. Output ties to client record + creates Tasks in engagement workflow. V1.5 ship. Slant's #2 marketing capability — strong proof point that financial-services-adjacent buyers expect this. |
+| **Pre-Meeting Brief Agent** *(N-hour-ahead client meeting prep)* | Paper spec only | Fires N hours before any `calendar_events` row tagged as a client meeting (default: 1hr for in-day meetings, 24hr for next-day). Pulls top 5 Memories for attendees + summarizes last 3 messages + surfaces pending TaxPositions awaiting client decision + lists open issues + surfaces overdue payments + flags any year-over-year changes worth raising. Output: 1-page brief rendered on the meeting card in Calendar + emailed to Antonio 1hr pre-meeting. Generalizes the existing Pre-Signature Checklist (which only fires for 8879 sign meetings) to all client meetings. V1.5 ship. Slant pitches "Pre-and post-meeting automation" as a Notetaker subfeature; we split it into a dedicated agent so it can fire for meetings that don't involve a Notetaker recording. |
+| **Action-Item Extractor** *(Notetaker → Tasks in engagement)* | Paper spec only | Runs on every Notetaker transcript post-meeting. Extracts: action items by owner (Antonio commits / client commits), follow-up commitments with due dates, decisions reached. Creates `tasks` rows in the active engagement for each Antonio-owned action item with the due date pre-populated. Creates `pending_promises` entries (Promise Keeper agent input) for client-owned items. Drafts a follow-up email to the client summarizing what was decided + what each side committed to. V1.5 ship. This is the concrete "transcript → workflow" chain that Slant pitches generically; for tax it ties to the engagement state machine. |
 | **Practice Pattern, Promise Keeper, Outcome Prediction, Phone Agent** | Paper spec only | v1+, post-5/15 |
 
 ### Agent contract — what's enforced today
@@ -523,6 +548,18 @@ Every agent output that surfaces to a preparer renders these four artifacts inli
 4. **Cited authority** — when the answer touches a tax position, every claim carries an IRC §/Treas Reg/case cite with `effective_from` date. Hover expands to full authority text.
 
 Reasoning-trail rendering is a `<ReasoningTrail>` primitive in `packages/ui/src/components/`. Agents emit a `reasoning_trail: ReasoningStep[]` field in their JSON output schema; UI renders it as collapsible rows under the primary answer. This is the user-facing texture-win v3 surfaced and we're locking as a contract — *every* agent output, not just Cmd+K queries.
+
+### Magic Buttons (chat-bound custom workflows; locked 2026-05-13 after Slant.app research)
+
+**Pattern.** A click in Ask Docket (3-scope chat) that runs a firm-authored AI workflow on the current context. Different motion than AI Tasks (scheduled + natural-language-authored): Magic Buttons are on-demand + pre-authored.
+
+**Example.** In Maria Ortega's client chat, Antonio sees button "Draft Q4 planning email." Click → runs the firm's `q4_planning` template scoped to Maria's facts → renders a draft for approval inline. No typing, no scheduling, no prompt engineering at click time.
+
+**Composition.** Each Magic Button = {label, scope (client/meeting/book), template_id, trust-gate-class}. Firms compose their own buttons in command-room **Settings → AI → Magic Buttons**. Template library ships with starter buttons (Q4 Planning Email · Year-End Review Memo · Audit Defense Draft · Engagement Letter Renewal · Bad-Client Fire Letter · BOI Reminder · Statement of Information Renewal · 8821 Filing). Each template is a system-prompt + agent + JSON schema spec — runs through the same `runDocketAgent` + audit chain as any other agent call.
+
+**Shared with the Workflow Marketplace.** Magic Button templates published from one firm become installable by others (per CLAUDE.md §8 Workflow Marketplace concept). Lock-in compounds as firms author firm-specific buttons; differentiation across firms compounds as the marketplace fills.
+
+**Why this matters.** Slant cross-mentions Magic Buttons on both their AI Agents and AI Automation product pages — it's not an afterthought, it's *the* connecting tissue between question-asking (chat) and action-taking (workflows). For tax: the chat-question-to-action bridge is what makes Discovery findings + Position decisions + Notice triage feel *operational* instead of *suggestive*.
 
 ---
 
@@ -610,6 +647,25 @@ After the user-shared "Nexus Tax OS / Courtney Henry" dashboard reference frames
 **Both surfaces share:** forest green primary `oklch(42% 0.09 150)`, the same Antonio-voice copy rules, the same anti-AI-slop discipline, the same restraint. Different fonts and densities; same product.
 
 **Reference frames:** see `docs/visual-reference/dashboard-2026-05-08/` for the user-shared composition reference. Detailed translation rules + adopted patterns + anti-patterns: [`.claude/skills/craft/SKILL.md`](.claude/skills/craft/SKILL.md) — re-read whenever opening a new command-room route.
+
+### Adaptive UI principle (locked 2026-05-13 after Slant.app research)
+
+**The home page composition should change based on what the firm is doing this week, not just sit in a static layout.** Slant's Thomas Clawson articulated this as their north-star UX vision: *"Logging in could auto-prioritize frequently-used workflows without manual setup."*
+
+For tax, the signal is stronger because the calendar dictates the workflow:
+
+| Time window | Home prioritizes | De-prioritizes |
+|---|---|---|
+| **Tax season peak (Mar-Apr 15)** | Need You queue front-and-center · 8879 pending · e-file rejects · deadline alerts | Year-round planning · Discovery findings · Memories tab |
+| **Extension season (Apr 16 - Oct 15)** | Extended-return Need You lane · Q2 + Q3 estimated payment cohort · audit defense workspace | Annual review cycle |
+| **Off-season (Oct 16 - Feb)** | Year-round planning Nudges · Discovery findings · annual review touchpoints · prospecting + new-client onboarding | Need You queue (collapsed) |
+| **Pre-season (Feb)** | Engagement letter renewal queue · prior-year reconciliation · intake-flow restart prompts | Audit defense (unless active) |
+
+**Implementation.** Calendar-driven layout switch + a per-user pinning override. Stored in `tenant_settings.ui_layout_mode` enum (`peak` / `extension` / `offseason` / `preseason` / `custom`). Auto-set by date or manually toggleable by firm owner. Each mode is a *composition* of which sections render in which prominence on `/` (home) — same components, different stacking + sizing.
+
+**Why not full ML-personalized UI?** Tax has hard seasonality; the time-window driver is more legible than usage-frequency driver. The user experience is also more predictable: Antonio knows what April looks like vs August. Behavioral personalization layers on top (V2+) — for v1.5, time-window switching is the right floor.
+
+This is craft principle, not a separate feature. Every new command-room page should ask: *"How does this page change shape when the firm enters extension season vs off-season?"*
 
 ### Auth styling note
 The user identity in flows is real: **Antonio Vazquez**, EA (firm: Vazant Consulting). Avatar in `apps/client-portal/public/antonio.webp` is the static fallback; live `users.avatar_url` (Clerk `imageUrl`, lazy-backfilled) is preferred when present.
@@ -699,6 +755,11 @@ Position Framework + compliance-first + cited authority is the **moat** (why an 
 | **No Claude Code CLI subscription as production inference** | Against ToS, can't multi-tenant, no SLA. Dev tool only. |
 | **No Python backend** | TS end-to-end. Junior dev's instinct rejected. |
 | **No AWS Bedrock from day 1** | Defer until first compliance customer asks. Direct Anthropic + ZDR is v0 default. |
+| **No per-seat pricing** | Slant prices at $150/seat — works for advisor firms where seat = value unit. Tax: client = value unit. Per-active-client metering aligns cost with value; per-seat punishes growth. Locked per L6. (Re-affirmed 2026-05-13 after Slant pricing benchmark.) |
+| **No on-site-only hiring** | Slant concentrates 16 staff on-site in Lehi, Utah. Works for LDS-network-dense talent pool. We're remote-first by deliberate choice (David in NJ, Haokun TBD, Antonio CA, future hires anywhere). Centralized HQ is not on the table for v1 or v1.5. |
+| **No OpenAI GPT-primary** | Slant runs on GPT-5. We're Anthropic Claude + Voyage embeddings + Bedrock fallover. The Anthropic-vs-OpenAI rationale (§6) is structural: Claude calibrates better on legal/regulatory tasks where wrong answers cost $580 per Form 8867 occurrence. Don't second-guess this on cost basis — the cost discipline (§7) already accounts for it. |
+| **No Calendly competitor build** | Slant is building lightweight Calendly into their product because their integrations are weak. Our Google Calendar MCP + Outlook MCP (planned V1.5) are cleaner. We integrate; we don't compete on scheduling. (Re-affirmed 2026-05-13 after Slant product audit.) |
+| **No prospecting feature as PILLAR 1** | Slant builds Marketing/Prospecting as a top-level product surface (find leads · enrich · sequence outreach). For us this is a *paid add-on module* (per §6 add-ons) or a v1.5 feature — NOT a primary pillar competing with Position Framework / Ambient Operator / Memory / Review Automation / Multi-channel. Solo + small EA firms get prospecting as add-on; mid-market firms use their existing prospecting tools. Don't promote it to pillar status; promotion would dilute the "compliance-first tax operator" positioning. |
 | **No Big 4 / top-100 firm pivot for 18-24 months** | Decided 5/2/2026 CEO review. Fortress market with $235M+ funded competitors holding 2-year head starts. Brand maturity gap that 12 weeks of building cannot close. 18-month sales cycles. Bootstrap option dies. Mid+down lane is the structurally open one. |
 | **No F500 in-house tax department pivot for 18-24 months** | Same compliance + ERP integration timelines as Big 4 without the partner-network distribution upside. Underexplored but not by accident. |
 
@@ -1436,6 +1497,104 @@ This project converged through a series of conversations. Major decision points,
 9. **gstack installed** as workflow framework (v0.x.x — see `~/.claude/skills/gstack`).
 
 The full strategic synthesis lives in [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC-BRIEF.md). When something feels under-specified here, that's where to look first.
+
+---
+
+## 25. Slant.app strategic lessons (business + marketing + pricing)
+
+Locked 2026-05-13 after deep slant.app research (homepage, 7 product surfaces, pricing, security, about, careers, press release, founder podcast, investor thesis). Slant is a vertical-adjacent reference (financial advisor CRM); the *product* lessons live in §4, §8, §9, §17. This section captures the non-product strategic lessons.
+
+### Business strategy
+
+1. **Point-solution-first, platform-second.** Slant ran as Pageport (video landing pages + marketing automation for advisors) for 2 years before launching the full CRM. Pageport earned them 1,000+ advisor users, real customer relationships, and product instincts. The platform pivot was customer-pulled, not engineered. **Our analog:** Discovery Scan as productized service ($1-5K per book scan, L6) is our Pageport. Sell it to ~100 firms by 8/1 per L16; use that base to convert to platform subscriptions. **The narrative arc for the YC application IS this exact pattern.** Headline: *"We sold a wedge service to N firms; they pulled us into building the platform; we're now selling the platform back to them."*
+
+2. **Capital-efficient: $4.5M total raised over 2 years.** $1.2M pre-seed (2023, 2048 Ventures + Boost VC) → $3.3M seed (Aug 2025, 2048 + Matchstick + angels). Two-stage. Pre-seed funded point solution for 18 months; seed funded the platform launch when they had product-market-fit proof. **Our analog:** plan for a $1-2M pre-seed off the Discovery Scan revenue + Antonio reference + 100-customer-by-8/1 traction (per L16) — closing summer 2026, parallel to the YC Fall 2026 application. Don't raise more until v1 ships and the founder-tier cohort has 30+ paying firms.
+
+3. **Hiring shape: 50%+ customer-facing in early team.** 16 staff = 5 engineers + 5 AEs + 2 Onboarding Managers + GTM Lead + Head of Customer + 2 others. Slant optimized for sales motion over feature velocity. Means they value the conversion machine more than the next feature. **Our plan:** when we hit firm #6-10 onboarding, hire 1 Customer Success Manager ($60-80K) FIRST, not another engineer. Onboarding pain at scale is a CAC killer.
+
+4. **Strategic investors over signaling.** 2048 Ventures (vertical AI focus, both rounds) + Matchstick (Midwest, less crowded) + Boost VC (early-stage) + named angels with industry relationships. Optimized for partner support, not TechCrunch noise. **Our plan:** prioritize investors who understand the tax-practitioner segment — look at funds that have invested in Practiq, Canopy/TaxDome wave, accounting-vertical tools. Avoid funds that have TaxGPT/Black Ore/Accrual portfolio conflicts.
+
+5. **Insider knowledge moat.** Founders previously built point solutions for advisors (Pageport). Customer base + relationships pre-existed the platform launch. Matchstick explicitly cited this as the investment thesis. **Our analog:** Antonio + his mentor's 1,000+ preparer network + our 100-customer-by-8/1 push gives us the equivalent insider relationships. Frame this in YC application.
+
+6. **Customer concentration in early phase.** $1M ARR from "advisors with high lead volumes struggling with legacy CRMs" — they picked a deep wedge before going broad. **Our analog:** 2-10 preparer firms with active audit exposure (per L16) — same shape.
+
+7. **Word-of-mouth as primary acquisition.** Slant says explicitly: WOM is the channel. Low CAC. **Our plan:** by v1 launch, every founder-tier firm gets a referral incentive (1-month-free per referral that converts) plus a private community (Slack/Discord) where founder-tier firms share tax-position wins + Magic Button templates. Compounds the WOM motion.
+
+8. **No outside-vertical pivot risk.** Slant could have pivoted to "general SMB CRM" — they didn't. They stay locked on financial advisors. **Our discipline:** when a non-tax prospect asks ("can you do this for law firms? for HR consultancies?"), the answer is *"not in v1, not in v1.5, possibly v2 with a separate brand."* Per §16 productization discipline.
+
+### Marketing strategy
+
+1. **Emotional close tagline on every page footer.** Slant repeats *"Be the reason behind the retirement party, the second home, the peace of mind"* on every page. Structural emotional anchor. **Our equivalent (locked 2026-05-13):** *"Be the EA every taxpayer wishes they had — and the one your peers ask for advice."* Apply to footer of every marketing-site page.
+
+2. **Customer testimonial on every key page.** Slant pins Alex Stoehr's quote to homepage AND pricing page. Social proof is structural. **Our plan:** by v1 launch, pin 1 Antonio quote + 1 mid-market partner #2 quote to homepage, pricing, security, about. Plus "Watch the customer story" Loom embed on pricing page.
+
+3. **Resource Center as hub-and-spoke content strategy.** Slant ships articles + ebooks + press all from one Resource Center hub. Articles + Ebooks visible top-of-page. **Our plan:** build `/resources` route on marketing site; cadence 1 article per 2 weeks during v1 build, weekly post-launch. Two ebooks at launch (per PRODUCT-ROADMAP §6 marketing).
+
+4. **Trust signals on every footer.** Slant links Trust Center + Security from every page footer. **Our plan:** ship a static `/trust` page now (read-only list of shipped controls: audit chain, RLS, per-tenant DEK, MFA, encryption-at-rest, webhook verification, etc.) — defer Drata tooling per L8, but ship the *page* so prospects can find it pre-sale.
+
+5. **Tool-consolidation framing.** Slant names the 5-6 tools they replace inline ("Wealthbox + Redtail + Salesforce + Jump + ClickUp + Bento Engine"). **Our equivalent:** TaxDome + Canopy + Karbon + DocuSign + Square + Otter/Fathom — 6+ tools collapsed into 1. Ship a graphic on `/pricing`: 6 competitor logos → arrow → Docket logo.
+
+6. **Public competitor matrix.** Slant publishes the matrix on `/pricing`. Bold move; works when their AI is demonstrably better. **Our equivalent:** Docket vs TaxDome vs Canopy vs Karbon, 18 rows per PRODUCT-ROADMAP §6 marketing.
+
+7. **2:40 launch video structure.** TAM → AI-not-replacement → incumbent critique → mission → 5 capabilities → emotional close. Copy verbatim for our launch Loom (per §13 marketing lead).
+
+8. **Coordinated press push.** Slant pushed PR Newswire + TechBuzz + WealthManagement.com + Utah Business + 5+ outlets in coordinated launch. **Our plan:** for 7/30 v1 launch, line up Journal of Accountancy + Accounting Today + NAEA EA Journal + Tax Pro Today + Bloomberg Tax + a local NJ business outlet. Pre-write press release; place in PR Newswire week of launch.
+
+9. **Podcast appearances.** Clawson did "Customer Wins" podcast doing in-depth product + founder-journey interview. Builds founder profile + ICP awareness. **Our plan:** target 3-5 podcasts for David Wks 6-12 leading to launch — recommended: NAEA Tax Insider, Federal Tax Updates, EA Talk, AICPA podcast, The Accounting Podcast.
+
+10. **Industry-specific publications as authority.** WealthManagement.com is the WSJ of their vertical. **Our equivalent:** Journal of Accountancy, Accounting Today, Tax Pro Today, NAEA EA Journal, Bloomberg Tax. Coverage in 2-3 of these by launch is the goal.
+
+11. **Public team page builds founder/buyer trust.** Slant's About page lists all 16 staff with photos + roles. **Our minimum:** David Kim + Haokun Yang + Antonio Vazquez (advisor) photos + bios on `/about`. Mid-market regional firms want to see who they're buying from. Add by v1 launch.
+
+12. **Public salary bands.** Slant publishes role bands ($60-200K) on Ashby. Transparency play that aids recruiting + signals culture. **Our plan:** when we open our first FT role (post Customer Success Manager hire), publish bands.
+
+13. **AI conference + tax conference presence (different cadence).** Slant likely targets FPA Annual, Schwab Impact, MMI conferences. **Our equivalent (already in PRODUCT-ROADMAP):** AICPA Engage, NAEA Tax Forum, Latino Tax Pro events, Taxposium. Plus an AI-vertical conference: Anthropic Build, AI for Vertical SaaS (if it exists by 2026). Budget $5-15K per conference for booth + travel.
+
+### Pricing strategy
+
+1. **Per-seat at $150/mo is high-anchor but defensible.** Slant collapses 5-6 tools that cost a customer $200-300/mo in aggregate. They charge premium per-seat but cheaper than the sum. **Our applied principle:** per-active-client at $5 effective is *cheaper per client than competitors but premium per firm*. Same value-justification math. A firm with 200 clients pays $1000/mo flat — cheaper than TaxDome's $99/mo + $99/staff + per-return fees, but premium relative to a la carte tools.
+
+2. **Comparison-table-as-pricing-page leads with value not price.** Slant's `/pricing` page leads with the Wealthbox/Redtail matrix, not the seat price. Buyer reads value justification BEFORE seeing the number. **Our applied principle:** our `/pricing` route should open with the TaxDome/Canopy/Karbon matrix, then the founder-tier + standard-tier table, then per-event pricing. Anchor against value first.
+
+3. **Contact-sales for enterprise.** Slant has $150/seat public + Contact Sales for enterprise (likely $300-500/seat for 50+ advisor firms). **Our applied principle per L6:** Mid-market quote-driven for >2,000 active clients. Maintain.
+
+4. **No free tier.** Slant explicitly has no free tier. $150/seat = entry. Forces serious evaluations. **Our applied principle:** Founder Tier $250/mo flat = entry, no free-forever tier. Forces commitment.
+
+5. **Annual prepay discount.** Standard SaaS play; ~15%. **Our plan:** ship the annual-prepay option at v1 launch with 15% discount (per L6).
+
+6. **Beta pricing for early customers.** Slant gave beta users special pricing. **Our applied principle:** Founder Tier IS the beta-equivalent — first 50 firms get $250/mo + 30% lifetime discount on year-2 reversion to standard pricing (per L6). Same shape, different language.
+
+7. **Pricing transparency as moat.** Slant publishes seat price; TaxDome/Canopy/Karbon hide pricing behind "request a demo." Transparency lowers buyer friction + signals confidence. **Our applied principle:** Founder Tier + Standard Tier prices public on marketing site by v1 launch. Mid-market quote-driven is the only opacity.
+
+### Operational
+
+1. **Built SOC 2-compliant CRM in 6 months (Nov 2024 → Aug 2025).** Speed validates the build-it-as-you-go SOC 2 approach (L8). Slant didn't wait for perfect compliance; they shipped controls + audit-readiness concurrently with feature build. **Our applied discipline:** v1 launch 7/30 is also ~6 months from CEO review 5/2 — same shape. Don't fall behind on the security controls; ship them with every feature commit.
+
+2. **Centralized HQ vs remote-first.** Slant all-on-site Lehi UT; we're remote-first. Different bet. Slant's choice optimizes for dense culture + LDS-network talent pool. Ours optimizes for talent geography flexibility + low overhead. Neither is inherently better; ours is right for our team shape. Don't get pressured by Slant's pattern; trust the original decision.
+
+3. **Branding investment matters.** Slant has clean wordmark + consistent typography + branded ebook covers. Visual identity is part of trust signal. **Our applied principle per §11:** Docket's editorial-warm (portal) + operational-modern (command-room) language is the foundation; we need consistent brand application on marketing site by v1 launch.
+
+4. **Trial-fonts liability cleanup before launch.** Per §11 known stub: trial fonts in `public/fonts/trial/` expire 2026-05-14. License OR revert. **Action:** license-pre-v1 cleanup; don't let this blow up at launch.
+
+### What we're NOT taking from Slant (re-affirmed)
+
+| What | Why |
+|---|---|
+| Voice agent moved earlier | Tax has compliance issues with recording consent + tax-jargon transcription; V2+ is the right ship window |
+| Per-seat pricing | Per-active-client is right for our value unit (L6) |
+| Calendly competitor build | We integrate Google Calendar via MCP; lighter, cleaner |
+| AUM / portfolio integration | Vertical-specific |
+| LDS network distribution | Non-transferable; ours runs through r/taxpros + NAEA + Latino Tax Pro + Antonio's mentor |
+| GPT-5 / OpenAI primary | Anthropic Claude is calibrated better for legal/regulatory (see §6 Anthropic rationale block) |
+| Prospecting as Pillar 1 | Tax has different segment dynamics; prospecting is a paid add-on module not a core pillar |
+| On-site-only hiring | We're remote-first |
+| Mass-affluent buyer profile ($200K-$1M AUM) | Tax has different segment economics; ours is 2-10 preparer firms with audit exposure per L16 |
+
+### Where Slant is wrong for tax (defensive moves)
+
+1. **Slant lacks a Position Framework.** Their market doesn't require it; ours does. Our refusal-floor + cited-authority discipline is the structural reason an EA can adopt us where they can't adopt a deduction-finder. **This is the moat that Slant cannot copy without rebuilding their compliance posture.**
+2. **Slant's "minimize fields" goes too far for tax.** We have structured tables (clients / engagements / signatures / filings) that legally must persist as queryable rows. Tax-software API integrations require structured data for round-trip. Memories surface IS the unstructured complement, not a replacement.
+3. **Slant's chat-first UX wouldn't work for return prep.** Antonio doesn't want to chat with an AI to assemble a workpaper; he wants the workpaper assembled. We keep the agentic + UI-first principle: chat is one surface, not the only surface.
 
 ---
 

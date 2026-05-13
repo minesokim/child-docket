@@ -328,6 +328,35 @@ Third organizing primitive in command-room (alongside per-client and per-status 
 
 The unlock: instead of asking "look at clients" (per-client) or "look at lanes" (Need You queue), Antonio can ask "show me everyone in Annual Return Prep at the Review stage" or "show me everyone in Audit Defense by deadline distance." Different lens; same underlying engagement state machine.
 
+**Team filter dimension (Slant-validated).** Projects view supports filtering by team member assignment: *"show me everyone Sarah is reviewing"* / *"show me Audit Defense items assigned to Daniel."* Per-staff SLA tracking (days-since-assignment, blockers, throughput). Manager mission control (described in V1.5) integrates as a *filter dimension on Projects*, not a separate surface. Cleaner IA than building two parallel views.
+
+### Prospects entity distinct from Clients (Phase 4, Wks 7-8, 6/13 → 6/27)
+
+Locked 2026-05-13 after Slant.app research. Their CRM page treats "clients, prospects, accounts" as distinct primitives — we collapse them today.
+
+- Add `client_status` enum to `clients` table: `prospect` / `active_client` / `former_client`.
+- `prospect` = Discovery Scan or `/scan` form completed but no signed engagement letter.
+- `active_client` = signed engagement within 12 months OR ongoing year-round arrangement.
+- `former_client` = no engagement in 12+ months.
+- Discovery Scan flow auto-creates a Prospect row (currently `prospects` table — refactor to merge into `clients` with status discriminator); engagement-letter signature transitions Prospect → active_client.
+- Filtering throughout command-room respects this: "Prospects" filter on Clients page → sales-funnel view (separate from active book). "Former Clients" filter → win-back outreach surface.
+- **Won't fragment the data model**: same identity primitive (client row), different lifecycle stage. Memories, calendar_events, actions, signatures all point to the same client_id regardless of status.
+
+### Prospecting module (V1.5 — add-on, not pillar)
+
+Per CLAUDE.md §14: *"No prospecting feature as PILLAR 1."* Slant treats Marketing/Prospecting as a top-level product surface; for us it's a paid add-on at the founder + standard tier.
+
+What ships V1.5 as the Prospecting add-on:
+
+- **Ideal-fit prospect search**: define ideal-client criteria (e.g., "California businesses, S-corp election, revenue $250K-$2M, no CPA on file with CA SoS, formed in last 18 months"). Pull from CA SoS API (already integrated Phase 2) + business records + LinkedIn enrichment.
+- **Auto-enrichment**: pull verified contact details (email, phone, LinkedIn), company info, formation history.
+- **Pre-approved multi-step outreach sequences**: firm authors email sequences, system handles delivery cadence with throttling. Approval workflow gates every outbound (compliance-first per L9).
+- **Lead → Prospect → Client funnel reporting**: tracks pipeline conversion across the new `client_status` lifecycle.
+
+**Pricing**: Solo + Small tiers get this as an add-on at $99/mo. Growing + Mid include it. (Mirrors the per-tier add-on structure for Discovery / Strategy / Audit Defense per L6.)
+
+**Why we won't promote to pillar.** Tax-firm prospecting at the founder-tier / solo segment is mostly word-of-mouth + referral — the buyer isn't optimizing prospect-volume, they're optimizing capacity-per-client. At mid-market it's more about retention + upsell to existing clients. Both segments make Prospecting valuable but not foundational. Antonio's mentor's 1,000+ preparer network will buy this as an add-on; growing firms with no sales motion will get value from it; mid-market firms might use their existing prospecting tools and ignore ours.
+
 ### Calendar surface + google-calendar MCP (Phase 4, Wks 7-8, 6/13 → 6/27)
 
 Calendar as first-class top-level command-room nav (not buried in settings). Per [`CLAUDE.md` §4 Calendar](../CLAUDE.md).
@@ -371,6 +400,20 @@ Discovery agent runs end-to-end against Antonio's actual book. The output is the
 - Load test at 1000+ concurrent uploads
 - Pre-launch security review
 
+#### Slant-validated launch infrastructure (locked 2026-05-13)
+
+- **v1 platform waitlist (`/v1` route on marketing site)**. Captures emails + firm size + segment + Antonio-referral-source from prospects expressing pre-launch interest. Headline: *"Get early access to v1. Limited to first 50 firms — the Founder Tier closes when we hit cap."* L6 + L16 founder-tier accountability lever. Slant's PMF signal to Matchstick was their waitlist; mirror.
+- **Coordinated press release push**. Pre-write announcement; place in PR Newswire + Journal of Accountancy + Accounting Today + NAEA EA Journal + Tax Pro Today + Bloomberg Tax + a local NJ business outlet. Week-of-launch timing. Target: 3-5 outlet placements by 8/15.
+- **Launch Loom video (2:40 structure, Slant-cloned)**. Sections: TAM ($300-700M wedge per L16) → AI-not-replacement → incumbent critique (TaxDome/Canopy/Karbon) → mission ("double a tax preparer's capacity") → 5 pillars walkthrough → emotional close ("Antonio is the example"). Antonio's 6/15 Discovery Scan reference acts as the demo artifact embedded in the video.
+- **Customer testimonial Loom embeds**. 90-second Antonio testimonial (recorded post-Discovery-Scan delivery) embedded on `/pricing` and homepage. Same pattern as Slant's Alex Stoehr / Northstar quote. Long-form written version on Resource Center.
+- **Founder + advisor public bios** on `/about`. David Kim + Haokun Yang + Antonio Vazquez (advisor, 1% equity) photos + 100-word bios. Builds buyer trust for mid-market partner #2 outreach + investor visibility.
+- **Public Trust Center** at `/trust`. Static read-only listing of shipped security controls (audit chain with cryptographic verification, RLS multi-tenant isolation, per-tenant DEK encryption, MFA enforcement, encryption-at-rest, webhook signature verification, etc.). Defer Drata/Vanta tooling per L8; ship the *page* for pre-sale trust signal.
+- **Public team + careers page on marketing site**. Even with 0 open roles at launch, signals long-term plans. First public role hire post-launch: Customer Success Manager.
+- **Press / news aggregator page** at `/press`. Empty at launch; populates post-launch with PR placements, podcast appearances, founder interviews.
+- **Resource Center hub** at `/resources` with 2 ebooks at launch ("10 ways Docket saves a tax preparer 10+ hours a week" + "Tax practice in the age of AI"), 1 blog post ("RIP traditional tax practice management software"), 1 customer story (Antonio long-form).
+- **Annual prepay discount** (~15% per L6) wired into Stripe checkout at launch.
+- **Brand asset cleanup**: trial fonts in `public/fonts/trial/` license OR revert pre-launch (expires 2026-05-14). Wordmark + logo consistent across marketing site + product. Per CLAUDE.md §11 Design Tokens + Slant operational discipline (Section 25).
+
 ✅ **V1 launch 2026-07-30**
 
 ---
@@ -386,6 +429,13 @@ The features that, once Antonio uses them, he can't go back to working without t
 - **Memories surface + Memory Curator agent (V1.5 — Slant-validated)** — `client_facts` already shipped (migration 0021). What lands V1.5: (1) Memory Curator background agent that extracts plain-English memories from every inbound message, meeting transcript, doc parse, and intake answer; (2) per-client Memories tab in command-room showing curated bullets, sorted by relevance + recency; (3) pre-meeting briefing that auto-surfaces top 5 memories for attendees; (4) the same memories made retrievable inside Ask Docket (client-scope) and Notetaker. The unlock: Antonio walks into every client meeting with the right detail at the right time, without ever opening a custom-fields page. Slant validated the demand for this at $3.3M of seed.
 - **Notetaker agent (V1.5 — Slant-validated)** — Records meetings (Zoom / Google Meet / phone), transcribes via Deepgram (then Gladia per L5), routes through Memory Curator. Output: meeting summary + extracted memories + action items + sentiment + follow-up commitments. Each tied to the right client record. Action items create Tasks in the active engagement; follow-up commitments create Promise-Keeper-agent entries. This is the table-stakes feature financial-services-adjacent buyers expect; tax buyers will start asking for it within 6 months as Jump.ai-style notetakers cross over.
 - **Nudges agent (V1.5 — Slant-validated; sibling to Discovery)** — Daily cron walks `client_facts` + `engagement` state + `calendar_events` against `nudge_rules`. Drafts approved-pending preparer-to-client outreach for life events (child starts college, business hits milestone, state move), time windows (Q3 estimates, Roth conversion window, BOI deadline cohort), drift (W-2 jumped 40%, charitable giving doubled), milestones (business crosses $250K rev → S-corp election conversation). Output = pre-drafted outreach + planning prompt, surfaced to Antonio for approve / edit / dismiss. Slant prices this as a distinct line-item differentiator vs Wealthbox/Redtail; we should expect prospects to ask for it by name within a quarter of launch.
+- **Touchpoint freshness view (V1.5 — Slant-validated)** — `/clients?view=freshness` showing every client sorted by days-since-last-meaningful-touch across email + SMS + portal + meeting + phone. Per-engagement overdue thresholds (active ≤14d / off-season ≤90d / year-round ≤quarterly). Red-flag column for clients silent across ALL channels longer than threshold. Bulk action: select stale clients → "Draft just checking in outreach" via Nudges Agent. Distinct from Need You queue; catches off-workflow relationship drift Slant proved is the silent churn driver. Maps to Slant's Client Reviews surface in shape but tax-relationship-cadence in semantics.
+- **Done-for-you tasks (V1.5 — Slant-validated)** — every Task row in an engagement carries a pre-drafted action artifact when the AI can prepare one. Task "Get last year's W-2 from John" auto-attaches a draft email. Task "Verify CA SoS for Patel LLC" auto-runs the SoS API and attaches the result. Task "Draft 2024 amended return for missed §179" auto-fires Discovery + drafts the position memo. The pattern is one-click-to-complete on every task, not checkbox + manual labor. Slant pitches this generically; we tie it to the engagement state machine + Magic Button registry.
+- **Pre-Meeting Brief Agent (V1.5 — Slant-validated)** — Fires N hours before any `calendar_events` row tagged as a client meeting. Pulls top 5 Memories for attendees + last 3 messages + pending TaxPositions + open issues + overdue payments + YoY changes. Output: 1-page brief on the meeting card + email to Antonio 1hr pre-meeting. Generalizes existing Pre-Signature Checklist (which only fires for 8879 sign meetings) to all meetings. Generates value before every Zoom; Slant's most-quoted feature beyond Memories.
+- **Magic Buttons + Workflow Marketplace (V1.5 — Slant-validated)** — clickable chat commands that run firm-authored AI workflows on the current context. Templates ship out-of-the-box (Q4 Planning Email / Year-End Review Memo / Audit Defense Draft / Engagement Letter Renewal / BOI Reminder / 8821 Filing). Firms author their own via command-room Settings → AI → Magic Buttons. **Workflow Marketplace** allows firms to publish + install templates from each other. Network effect compounds: as tax-specific templates accumulate, switching cost compounds. Slant cross-mentions Magic Buttons on AI Agents + AI Automations product pages — connecting tissue between chat (questions) and workflows (actions).
+- **Notetaker → Tasks chain (V1.5)** — Action-Item Extractor runs on every Notetaker transcript: extracts action items by owner, creates `tasks` rows in active engagement for Antonio-owned items with due dates, creates `pending_promises` entries (Promise Keeper input) for client-owned items, drafts a follow-up email summarizing decisions + commitments. Concrete transcript → workflow chain that Slant pitches generically.
+- **Project audit trail UI (V1.5)** — read-only view at `/projects/[id]/audit` showing every action taken on this project (engagement state changes, agent runs, signature events, payment events, position decisions, document classifications). Different rendering of same `actions` data than per-client audit trail. Slant exposes this for compliance + onboarding handoff scenarios; we apply for IRS audit defense + 6694 evidence trails.
+- **Annual review / engagement renewal cycle (V1.5)** — distinct project type in the Projects surface. Antonio asks each client in Nov-Dec to renew their engagement for the upcoming tax year. Pre-built template: pre-renewal outreach + scope-change negotiation + new engagement letter draft + §7216 re-consent + deposit collection. Surface tracks who's renewed / overdue / not-coming-back. Cohort marketing: send blast email to all "renewed for tax year 2026" cohort with year-ahead planning prompts.
 - **Bank-feed deduction harvester** — Plaid + Xero/QBO integration. Continuous categorization of business bank feeds. AI flags "$4,500 charge to coworking space → home office?" with context from email and prior years. Antonio reviews 5 per week, approves/rejects, agent learns. Pattern-recognition dividend: by month 3, agent knows the client's business better than the client.
 - **Audit defense subscription** — $20/return/mo recurring revenue. If client gets audited, Docket auto-generates the defense package: every position taken + cited authority + contemporaneous documentation + drafted response + timeline of EA's decision points + third-party attestation contacts. Aligned incentives.
 - **Cross-client pattern recognition** — weekly digest. "8 of your Schedule C clients have W-2 wages from same employer (Acme Corp). One was reclassified to W-2-only via §3509. The other 7 likely still misclassified — high audit risk." Practice-intelligence pillar made proactive.
@@ -599,6 +649,74 @@ Slant ships content marketing through their Resource Center. Copy the shape:
 - **Customer story: Antonio at Vazant** — 90-second Loom + written long-form. Same shape as Slant's Alex Stoehr / Northstar testimonial. Quote: *"With Docket, I'm actually able to focus on the client and the position, not the busywork."*
 - **Pricing-page-as-marketing**: matrix above, plus public transparent pricing per L6 lock. No "request a quote" gates on standard tiers.
 
+**Cadence (locked 2026-05-13):** 1 article per 2 weeks during v1 build (Wks 1-12), 1 article per week post-launch. Each article = blog post OR ebook OR customer story OR press release. Slant publishes at ~monthly cadence; we go double.
+
+### Marketing site structure (locked 2026-05-13 after Slant audit)
+
+Marketing site routes by v1 launch:
+
+- `/` — Homepage. Capacity-doubling lead. 5-pillar walkthrough. Customer testimonial. Emotional close in footer.
+- `/product/position-framework` — Pillar 1 deep dive.
+- `/product/ambient-operator` — Pillar 2 deep dive (Need You queue + Nudges + Memories).
+- `/product/memory-architecture` — Pillar 3 (Memories surface + Memory Curator).
+- `/product/review-automation` — Pillar 4 (OLT browser automation + return prep).
+- `/product/multi-channel` — Pillar 5 (Portal + SMS + WhatsApp + voice future).
+- `/pricing` — Founder Tier + Standard Tiers + per-event + competitor matrix.
+- `/security` — Trust signal + security overview.
+- `/trust` — Static read-only listing of shipped controls (defer Drata tooling per L8 — ship the page now).
+- `/about` — Founders (David + Haokun) + Advisor (Antonio) + mission statement.
+- `/resources` — Hub for ebooks + blog + press + customer stories.
+- `/press` — Aggregated PR placements + podcast appearances + founder interviews.
+- `/v1` — v1-launch waitlist signup (closes when Founder Tier hits 50 firms).
+- `/careers` — Even at zero open roles, signals long-term hiring posture.
+- `/scan` — Discovery Scan landing (already shipped C12, kept as cold-traffic funnel).
+
+Every page footer: emotional close tagline + Trust Center link + Resource Center link + customer testimonial. Slant repeats their footer pattern across every page; mirror.
+
+### Press push coordination (locked 2026-05-13)
+
+Coordinated press release at 7/30 v1 launch + at major milestones (founder-tier closure, mid-market partner #2 onboarding, 100-customer-by-8/1 hit).
+
+**Outlets to target:**
+- **PR Newswire** — paid distribution to ~5,000 outlets, sponsored content. ~$800-1,500 per release.
+- **Journal of Accountancy** — AICPA's flagship publication. Editorial pitch, not paid.
+- **Accounting Today** — top trade journal for accounting. Editorial pitch.
+- **NAEA EA Journal** — National Association of Enrolled Agents members. Direct pitch via NAEA contacts.
+- **Tax Pro Today** — Drake Software's industry publication. Editorial pitch.
+- **Bloomberg Tax** — high-tier; difficult but feasible with $-raise news hook. Editorial pitch.
+- **TechBuzz News / Utah Business / NJ Business equivalents** — regional/tech press, easier placements.
+- **Hacker News (Show HN)** — community-driven; works if the launch artifact is technical-enough (the Discovery Scan output PDF + audit chain demo + cryptographic verification could land).
+
+**Pre-launch:** lock 1 founder-spotlight Antonio interview at NAEA EA Journal AND 1 product-feature article at Accounting Today. Both run within 30 days of 7/30 launch.
+
+### Podcast appearance plan (locked 2026-05-13)
+
+3-5 podcast appearances Wks 6-12 for David Kim leading to v1 launch. Slant's Thomas Clawson did "Customer Wins" podcast for 60+ minute in-depth interview — that level of depth builds founder profile + ICP awareness simultaneously.
+
+**Targets (in priority order):**
+1. **NAEA Tax Insider** — direct ICP, ~10K listeners
+2. **Federal Tax Updates podcast** — tax-policy-engaged EAs/CPAs
+3. **The Accounting Podcast / Cloud Accounting Podcast** — practice management adjacent
+4. **EA Talk** — Enrolled Agent community
+5. **AICPA / The Journal of Accountancy podcast** — broader accounting audience
+
+Outreach Wks 6-7 (early June). Schedule recordings Wks 8-10. Air Wks 10-12 (mid-July to launch).
+
+### Industry conferences (locked 2026-05-13; partial overlap with §15 existing)
+
+In-person presence builds the same trust as a press release.
+
+| Conference | When | Cost | Target attendees | Booth strategy |
+|---|---|---|---|---|
+| **AICPA Engage** | June 2027 (annual) | $5-15K booth + travel | 5,000+ CPAs, mid-market firms | Antonio + David booth-staff. Demo Discovery Scan + Pre-Sig Checklist. |
+| **NAEA Tax Forum** | August (annual, Las Vegas) | $5-10K booth | 1,000+ Enrolled Agents | David booth-staff. Lead with Position Framework + audit defense workspace. |
+| **Latino Tax Pro** | Multiple regional events | $1-5K per event | 200-500 bilingual EAs per event | Aligns with bilingual UI roadmap (V1.5). Antonio's natural relationship. |
+| **NATP Forum** | August | $5-10K booth | 600-1,000 tax professionals | Defer to 2027; v1 budget too tight. |
+| **Taxposium** | Annual | $5-15K booth | 1,000+ tax pros | Defer to 2027. |
+| **Anthropic Build / AI for Vertical SaaS** | TBD | TBD | AI builders | If/when exists. Position as case study of AI-native vertical operator. |
+
+**v1 cycle target:** 1 conference presence by year-end 2026 (NAEA Tax Forum August or Latino Tax Pro regional event). 3-5 conferences in 2027.
+
 ### For client-side marketing
 
 Not Docket's job. Antonio's firm sets its own posture (conservative, balanced, aggressive within compliance). Docket gives every firm the *range*, not the *posture*.
@@ -627,6 +745,53 @@ The realistic v1 distribution shortlist for solo-EA-Antonio-shape ICP:
 - Mid-market partner #2 onboarded (regional firm, 20-100 staff). Identified Phase 4, pitched in Phase 5, onboarded in Phase 6 of v1.
 - Door open for tax franchise networks (Liberty Tax / Jackson Hewitt / smaller). Activate after mid-market reference customer in hand.
 - BlackTaxPro re-engagement possible after closed-loop substrate proven reliable (white-label liability bar lowered).
+
+### Strategic angels — investor targeting (locked 2026-05-13 after Slant investor benchmarking)
+
+Slant raised from 2048 Ventures + Matchstick Ventures + named angels with advisor-industry relationships. Strategic angels with vertical-industry relationships are higher-value than name-brand-VC signaling. Plan our angel round (parallel to YC Fall 2026 + $1-2M pre-seed) with same shape.
+
+**Angel targets (priority order):**
+
+1. **Former TaxDome / Drake Software / Canopy executives** — they know the segment + can intro to firm-tier prospects + provide product judgment. Highest value.
+2. **Senior partners at AICPA-affiliated mid-market firms** — buyer-side angels who can validate the product internally + intro to peer firms.
+3. **Tax law professors at top schools (NYU, Georgetown LLM Tax)** — provide academic credibility + intro to law-firm-tax-practice prospects + advisory perspective on Position Library content.
+4. **Founders of adjacent-vertical AI tools (Practiq, Truss, etc.)** — pattern-recognized AI-vertical strategy + intros to investor network.
+5. **NAEA board members + state society leadership** — distribution channel + association-level credibility.
+
+**What we offer angels:** 0.25-0.5% equity stakes at $1-2M pre-seed valuation; quarterly product roadmap calls; "Founder Tier" comp accounts for their own firms (where applicable); advisory shoutout on `/about` page (per Antonio precedent at 1%).
+
+**Investor selection criteria:**
+- Operator backgrounds in vertical SaaS (not generalist consumer)
+- Comfortable with founder-driven point-solution → platform pivots (cite Slant pattern explicitly)
+- Patient on revenue-growth timeline (we're not 3x ARR YoY in year 1 — we're 100 → 300 → 1,000 firm cohort growth over 3 years)
+- Strong references from non-portfolio founders (post-investment "are they helpful?")
+
+**Investor sourcing channels:**
+- 2048 Ventures (themselves) — they've now done two AI-vertical-CRM deals (Slant + others). Ask Slant's founders for warm intro.
+- AICPA Engage networking
+- NAEA Tax Forum networking
+- Tax-vertical LP networks (former TurboTax / H&R Block / Drake executives)
+- YC alumni network (post-acceptance Fall 2026)
+
+### Hiring shape and triggers (locked 2026-05-13)
+
+Slant has 16 staff = 5 engineers + 5 AEs + 2 Onboarding Managers + GTM Lead + Head of Customer + 2 others. **50%+ customer-facing.** They optimized for sales motion over feature velocity. Lesson: at firm #6-10 onboarding, the bottleneck is *customer success* not *features.*
+
+**Pre-launch (now → 7/30):** David (CEO/founder operator) + Haokun (CTO/founder technical) + Antonio (advisor, 1% equity, not staff). Add: 1 part-time sales VA per existing PRODUCT-ROADMAP §3 Phase 1 (already in plan).
+
+**Post-launch (7/30 → 9/30, ~Firm #1-5):** founder-driven onboarding. David handles each founder-tier firm onboarding personally. Per Slant precedent: every early customer is white-glove + a customer story candidate.
+
+**Post-launch (~Firm #6, ~10/2026):** **Hire 1 Customer Success Manager ($60-80K, equity).** This is the trigger. Slant has 2 Onboarding Managers full-time in their 16-person team — onboarding pain at scale is a CAC killer. Onboarding ≠ sales (those are AEs); onboarding = the post-sale, pre-active-user transition where you lose customers to friction.
+
+**Post-launch (~Firm #15, ~12/2026):** Hire 1 Account Executive ($80-120K + commission, equity). When David becomes the bottleneck on inbound demos.
+
+**Post-launch (~Firm #25, ~Q1/2027):** Hire 1 Senior Software Engineer ($150-200K, equity). When Haokun can't both maintain v1 + ship v1.5 features + onboard new tax-software integrations.
+
+**Post-launch (~Firm #40, ~Q1-Q2/2027):** Hire 1 Product Designer ($100-150K, equity). When the design-craft surface area exceeds Haokun + David's bandwidth.
+
+**Geography:** remote-first by deliberate choice (per CLAUDE.md §14 NOs). Slant centralizes in Lehi UT for LDS-network talent density; ours optimizes for geography flexibility. Don't drift on this.
+
+**Public salary bands at hire:** when we open the first FT role (CSM), publish bands on Ashby or similar. Transparency aids recruiting + signals culture. Slant publishes their bands; mirror.
 
 ---
 
@@ -708,6 +873,15 @@ The orchestration platform play. Public API + MCP server ship in v1, NOT v1.5.
 - **Annual discount: 15%** if customer pre-pays.
 - **Founder-tier protection.** First 50 firms get 30% lifetime discount on year-2 standard pricing as gratitude for being design partners.
 - **Active client = client with at least one of: filed return in last 12 months, active engagement letter, billable activity in last 90 days.** Inactive clients in storage don't count.
+
+### Pricing-page strategy (locked 2026-05-13 after Slant audit)
+
+- **Comparison-table-as-pricing-page leads with value, not price.** Slant's `/pricing` page leads with the Wealthbox/Redtail competitor matrix BEFORE showing the seat price. Buyer reads value justification first. **Our `/pricing` page must mirror:** opens with TaxDome/Canopy/Karbon matrix (per §6 marketing — 18 capability rows), then founder + standard tier table, then per-event pricing, then API tier. The matrix anchors the value before the buyer sees the number.
+- **No free-forever tier.** Slant explicitly has no free tier — $150/seat is the entry. Forces serious evaluations only. **Our applied principle:** Founder Tier $250/mo flat IS the entry. No free-forever (per L6). Founder Tier is the beta-equivalent — first 50 firms get $250/mo + 30% lifetime discount on year-2 reversion (per L6).
+- **Annual prepay default option.** Slant offers annual; standard SaaS. **Our applied principle:** annual prepay at 15% discount visible as the default radio button on `/pricing` — switching to monthly billing requires a click. Anchors high-LTV customers from day 1.
+- **Pricing transparency as moat.** TaxDome/Canopy/Karbon all hide pricing behind "request a demo" gates. Slant publishes. **Our applied principle:** Founder + Standard Tier prices public on marketing site by v1 launch. Mid-market quote-driven is the only opacity. Publishing pricing lowers buyer friction *and* signals confidence — both compound over time.
+- **6-tools-collapsed-into-1 graphic on pricing page.** Visual: 6 competitor logos (TaxDome, Canopy, Karbon, DocuSign, Square, Otter/Fathom) → arrow → Docket logo. Single-glance "what we replace." 1-day design task; ship by v1 launch.
+- **Watch-the-customer-story embed.** Antonio's 90-second Loom embedded inline on `/pricing` builds trust at moment of purchase decision. Slant pins Alex Stoehr's quote + "watch the story" to pricing; mirror.
 
 ---
 
