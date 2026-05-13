@@ -170,6 +170,18 @@ export default async function ClientsPage() {
               <span style={{ fontFamily: t.mono, color: t.rustInk }}>
                 {rows.reduce((sum, r) => sum + (r.openIssueCount || 0), 0)}
               </span>
+              {' · '}
+              <Link
+                href="/clients/freshness"
+                style={{
+                  color: t.rustInk,
+                  textDecoration: 'none',
+                  fontFamily: t.sans,
+                  borderBottom: `1px dotted ${t.rustInk}`,
+                }}
+              >
+                Freshness lens
+              </Link>
             </p>
           </div>
           <Link

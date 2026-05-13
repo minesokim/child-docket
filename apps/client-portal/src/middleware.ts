@@ -26,6 +26,11 @@ const isPublicRoute = createRouteMatcher([
   // middleware runs before Next.js URL normalization (codex C12 R6 P2).
   '/scan(.*)',
   '/api/scan-intake-stub',
+  // /trust is the public Trust Center page (C22). Anonymous
+  // prospects + investors read it pre-sale to verify our security
+  // posture. Static page, no PII, no auth required. Source content
+  // canonicalized at docs/security/trust-center-content.md.
+  '/trust(.*)',
   '/api/sentry-test(.*)',
   // /api/health is the vendor-status probe polled by HealthStatusGate
   // (packages/ui). Public so the gate works for unauthenticated routes.
