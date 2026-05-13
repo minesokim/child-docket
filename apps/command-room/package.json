@@ -21,7 +21,7 @@
     "@docket/storage": "workspace:*",
     "@docket/ui": "workspace:*",
     "@docket/workers": "workspace:*",
-    "@sentry/nextjs": "^10.51.0",
+    "@sentry/nextjs": "^10.53.1",
     "drizzle-orm": "^0.45.2",
     "inngest": "^3.27.4",
     "next": "15.5.15",
