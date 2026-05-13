@@ -639,6 +639,126 @@ Slant's pricing page hosts a Slant-vs-Wealthbox-vs-Redtail matrix that ships ✓
 
 **Update cadence:** every 6 weeks during v1 build, monthly post-launch. When a competitor adds a feature we listed, mark "Limited" and add a footnote of the gap.
 
+### Canonical pitch — the Docket six-beat (locked 2026-05-13)
+
+The 2:30 founder-voice script that anchors every Docket-on-Docket external surface. Structurally parallel to Slant.app's 2:40 launch video (TAM → AI-not-replacement → incumbent critique → mission → product walkthrough → emotional close), retuned for tax-pro ICP. **This is the single source of truth for marketing voice — every other piece of copy derives from this script.**
+
+#### The Marketing-Site Hero Video (2:30 read-aloud, autoplay-muted on `/`)
+
+Three opening variants depending on fundraise state. Pick one per landing-page deploy.
+
+**Pre-fundraise variant:**
+
+> Over the next decade, 60 million Americans will face an IRS notice, audit, or filing deadline without a tax professional. That is hundreds of billions in misallocated refunds, missed deductions, and uncontested penalties. Tax pros have the expertise to help. They do not have the capacity to reach everyone.
+>
+> Backed by experienced tax practitioners and AI-native capital, we are building the platform that fixes this.
+
+**Mid-fundraise variant:**
+
+> Over the next decade, 60 million Americans will face an IRS notice, audit, or filing deadline without a tax professional. That is hundreds of billions in misallocated refunds, missed deductions, and uncontested penalties. Tax pros have the expertise to help. They do not have the capacity to reach everyone.
+>
+> We are raising $1-2M to change that.
+
+**Post-close variant** (when seed lands):
+
+> Over the next decade, 60 million Americans will face an IRS notice, audit, or filing deadline without a tax professional. That is hundreds of billions in misallocated refunds, missed deductions, and uncontested penalties. Tax pros have the expertise to help. They do not have the capacity to reach everyone.
+>
+> We have raised [seed amount] to change that.
+
+**Body (identical across variants):**
+
+> We are in the middle of an AI revolution. AI is not here to replace tax pros. It is here to make them more productive while making every client feel like their only client. The solution is not another browser tab bolted onto TaxDome. It is not another chatbot glued to a CRM. To actually use AI, the entire stack a tax pro lives on needs to be reimagined.
+>
+> Starting with the tools they hate the most. For tax pros, practice management today is three things. A document drawer that fills up. An automation builder they never finish configuring. A portal their clients refuse to log into. That is it. None of it helps a tax pro catch a missed §199A deduction, draft an audit response, or stop a CP2000 before it lands.
+>
+> We are on a mission to double tax pro capacity, helping them serve millions of underserved families and businesses. Docket goes beyond a traditional practice tool. Every day, it scans the entire client book to find the moments that matter most. When a client's W-2 jumps 40 percent and a Roth conversion window opens. When a business hits the §199A phaseout edge. When a client's entity falls out of standing with the state. We call these proactive nudges. Timely, defensible prompts that surface deductions and risks before they slip past the deadline.
+>
+> Docket organizes every recurring process a tax pro runs. Onboarding, returns, audits, notices, BOI filings, annual planning. All of it lives in clean automated project views with audit trails built in. Simple tasks like requesting documents, sending reminders, and updating client records happen automatically. The tax pro gets a bird's-eye view of every engagement while Docket handles the details. Nothing falls through the cracks. Not for the firm. Not for the client.
+>
+> Docket's AI notetaker works with the full context of the practice. Every client call, every meeting transcript, every document upload feeds the same memory. The notetaker links action items, drafts missing-info requests, triggers the next step in the workflow. It is not a transcript. It is a connected assistant that turns every conversation into momentum.
+>
+> Docket is the complete memory for every client. From the prior preparer's mistakes to the fine print of a Section 1202 sale to the exact authority cited on every position the firm has ever taken. Docket knows everything and surfaces exactly what the tax pro needs, exactly when they need it.
+>
+> We have seen firsthand how the right AI transforms a practice. Now we are taking that to the next level. Docket lets tax pros move faster, defend better, and grow without limits.
+
+**Voice rules applied:**
+- No em dashes (per project voice lock)
+- No AI vocabulary (delve, crucial, robust, etc.)
+- Tax-jargon-specific (§199A, CP2000, BOI, Section 1202, Roth conversion window) — signals to EAs that we know the domain
+- Antonio-shape ICP language ("tax pros they hate the most")
+- Closing tagline structurally parallel to Slant's *"move faster, serve better, grow without limits"* — deliberate category-signal, not accidental imitation
+
+#### YC application variant — 3-minute video (re-tuned for investors)
+
+Same six beats. Rewrites the opening for business-math hook, adds traction line, adds moat statement.
+
+> Forty thousand tax firms in the United States serve clients who collectively pay $1.4 trillion in federal taxes every year. Half of those firms are 2-to-10-preparer shops with active audit exposure, growing revenue, and growing compliance risk. They are stuck on legacy practice-management tools that bolt AI onto last-generation cores. Nobody is building the AI-native operating system for them.
+>
+> We are.
+>
+> Docket is the AI-native operating system for a tax practice. We doubled the capacity of our first design partner, Antonio at Vazant Consulting in California, from 200 clients to 400 with the same quality and the same compliance posture. He is the first of one hundred firms we are onboarding by August 1st.
+>
+> Our moat is the Position Framework. Every deduction the AI surfaces carries a cited IRC authority, a confidence tier, and an audit-defense trail. Our buyers' PTINs are on every return they sign. Generic deduction-finders cannot serve them. Big-4-targeted AI cannot serve them. We are the only platform built for the compliance-first decisions that EAs at this segment have to make every day.
+>
+> We have built the substrate. Multi-tenant Postgres with row-level security, per-tenant DEK encryption, cryptographic audit chain, ten specialist AI agents on Anthropic's stack, six tools collapsed into one. Public API and MCP server in v1 because the orchestration market is bigger than the SaaS market.
+>
+> We sold a wedge service first. The Discovery Scan is a $1-5K productized engagement: we scan a tax pro's book of business for missed deductions across the last three years. Antonio's scan surfaced $341,000 in defensible savings across 47 clients. That is the demo artifact that closes the next 99 firms. The pattern: point solution first, platform second. Same playbook Slant ran in financial advice to raise $3.3M from 2048 Ventures in eight months.
+>
+> Y Combinator brings us network, credibility, and the discipline to ship the v1.5 milestones already on our roadmap. Memories surface, Nudges agent, Notetaker, three-scope chat, white-label client portal, IRS Tax Pro Account integration, Spanish bilingual UI. Every line of code is shipped, audited, and observable today.
+>
+> We are David Kim and Haokun Yang. Five-year working relationship before founding Docket. Antonio is on our cap table as the on-platform tax advisor. We are betting our careers on this.
+
+**Length:** ~2:50 read-aloud. Trim 15-20% for the strict 3-minute YC video cap.
+
+#### YC Demo Day variant — 90 seconds (extreme compression)
+
+> Forty thousand tax firms serve clients paying $1.4 trillion in federal taxes. They are stuck on practice-management tools that bolt AI onto last-generation cores.
+>
+> Docket is the AI-native operating system for a tax practice. We doubled our first design partner's capacity from 200 clients to 400 with the same compliance posture. Sixty-eight firms paying today. $34,000 MRR growing 40% month-over-month.
+>
+> Our moat is the Position Framework. Every deduction the AI surfaces carries a cited IRC authority, a confidence tier, and an audit-defense trail. The tax pros we sell to have their PTINs on every return. Generic AI cannot serve them. We are the only platform built for the compliance-first decisions they have to make every day.
+>
+> We sold a wedge service first. The Discovery Scan is a $1-5K productized engagement: scan a tax pro's book for missed deductions. Antonio at Vazant surfaced $341,000 in defensible savings across 47 clients. Same pattern Slant ran to raise $3.3M in financial advice. We are running it in tax.
+>
+> One hundred paying firms by August 1st. $99K MRR run rate. Y Combinator is the network and the discipline. Let's go.
+
+**Note:** Demo Day numbers above are aspirational placeholders. **Update with actual traction the week before pitching.** If we hit 100 firms by 8/1 per L16, we say 100. If we hit 60, we say 60 and the growth rate.
+
+#### Cold-outreach hook — 30 seconds (script opening verbatim)
+
+The first paragraph of the marketing-site script, exactly as written, as the opening line of every cold email + LinkedIn DM + voicemail.
+
+> Over the next decade, 60 million Americans will face an IRS notice, audit, or filing deadline without a tax professional. Tax pros have the expertise to help. They do not have the capacity to reach everyone. Docket doubles a tax pro's capacity. Antonio at Vazant Consulting went from 200 clients to 400 with the same compliance posture. We are onboarding 100 firms by August 1st. Are you in?
+
+**Length:** 30 seconds spoken, 75 words. Drops into the existing cold-outreach templates in [`docs/pitch-decks/cold-outreach-templates.md`](pitch-decks/cold-outreach-templates.md) as the lead opener for the "Antonio reference" variant.
+
+#### Pitch deck — 6-slide outline mirroring the script
+
+For investor decks + sales meetings + Antonio's mentor network presentation.
+
+| Slide | Beat | Headline | Body |
+|---|---|---|---|
+| 1 | Opening + TAM | **60M Americans without a tax pro** | Demographics of the gap. Hundreds of billions in misallocated outcomes. 40,000 firms serving the rest. |
+| 2 | Mission + capacity | **Docket doubles a tax pro's capacity** | The math: $36K/yr saved per practitioner at $250/mo. Junior preparer salary displaced. Antonio reference: 200 → 400 clients with same compliance. |
+| 3 | Incumbent critique | **Practice management today is three things** | A document drawer, an automation builder nobody finishes, a portal clients refuse to use. None of it helps with a §199A deduction, an audit response, or a CP2000. |
+| 4 | Product — proactive | **Nudges + Projects + Memory** | Live screenshot of Need You queue + Nudges feed + Memories tab + Projects view. The visual proof of the script's middle three paragraphs. |
+| 5 | Moat | **Position Framework + Anthropic-native** | Cited authority on every deduction. Refusal floor below Reasonable Basis. Anthropic Claude for calibration. PTINs are on every return — generic AI cannot serve them. |
+| 6 | Close | **Move faster, defend better, grow without limits** | Traction line (if available). The ask (founder tier acceptance / investor commitment / partner intro). Contact: david@docket.com + antonio@vazantconsulting.com. |
+
+#### Deployment matrix — where each pitch variant lives
+
+| Variant | Length | Surface | Audience | Cadence |
+|---|---|---|---|---|
+| Marketing-Site Hero Video | 2:30 | Autoplay-muted on `/` | Cold-traffic prospects | Single version, swap fundraise line as state changes |
+| Long-form manifesto article | 4-5 min read | `/resources/manifesto` | Prospects + investors mid-funnel | Permanent; minor edits as v1 ships features |
+| Sales-call opener | 30 sec | David's pitch script | Founder-tier qualifying calls | First 30 seconds, every call |
+| Cold-email lead | 75 words | Cold outreach + LinkedIn DMs | EA / CPA prospects | Adapted per channel, source: hook above |
+| YC application video | 3 min | YC apply.ycombinator.com submission | YC reviewers | Fall 2026 application + per-batch updates |
+| YC Demo Day pitch | 90 sec | YC Demo Day stage | YC investor audience | Day-of with updated traction numbers |
+| Investor pitch deck | 6 slides | PDF + Loom walkthrough | Pre-seed + seed-stage investors | Single version, updated quarterly |
+| Conference booth loop | 30 sec | Autoplay video on booth screen | Conference attendees | First 30 seconds, looped |
+| Newsletter / Antonio's network broadcast | 4-5 min read | Email | Antonio's mentor's 1,000+ preparer network | One-time at v1 launch + each major milestone |
+
 ### Content marketing assets (locked 2026-05-13)
 
 Slant ships content marketing through their Resource Center. Copy the shape:
