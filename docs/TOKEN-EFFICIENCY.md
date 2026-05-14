@@ -1,9 +1,28 @@
 # Token Efficiency
 
-> *How to keep Docket's Claude Code sessions within weekly quota at same-or-higher output quality.*
-> *Researched 2026-05-13 after founder hit 25% weekly usage with 6 days remaining.*
+> *How to preserve performance first and save tokens as a byproduct.*
+> *Founder priority (2026-05-13 verbatim): "performance is more important to me. if it costs more tokens, performance is more important."*
+> *Researched 2026-05-13 after founder hit 25% weekly usage with 6 days remaining. Revised same day after the founder reported that aggressive `/clear` had previously caused significantly lower performance + more bugs even with handoff docs.*
 
-**Last updated**: 2026-05-13. Living doc — update with new patterns as they prove out.
+**Last updated**: 2026-05-13 (post-revision). Living doc.
+
+---
+
+## The performance vs token tradeoff (read this first)
+
+Handoff docs + CLAUDE.md + claude-mem transfer **explicit** knowledge across sessions but NOT:
+
+1. Working memory of codebase shape (built across 30+ tool calls per session)
+2. Codex calibration (what gets flagged, what's a true P1 vs fussy P3)
+3. Iterative refinement memory (the dead ends + why we ended up here)
+4. Conversation-level user-pattern intuition
+5. Consistency of voice + idiom
+
+Empirical: 60-70% transfer at best. The user has lived through the failure mode where a "fresh session with handoff" performed significantly worse than the prior long session.
+
+**Decision rule**: prefer the long session. Pay budget for performance. `/compact` at wave boundaries when natural. `/clear` only on explicit user invocation after they decide a session truly needs full reset.
+
+The disciplines below preserve performance AND save tokens incidentally. They do not trade performance for tokens.
 
 ---
 
@@ -90,16 +109,20 @@ Project-level settings (`.claude/settings.json`) cap outputs server-side:
 
 **Savings**: 20-30% of tool-output tokens.
 
-### 4. /clear after STATE.md sync between unrelated commits
+### 4. `/compact` at wave boundaries, NEVER `/clear` between commits
 
-Each commit in an overnight session inherits the context of all prior commits. By C29, the chat history includes C24's full diff. None of it is relevant.
+**Revised 2026-05-13 after founder reported `/clear` cost performance more than it saved tokens.**
 
-Pattern: after `git push origin main` + STATE.md sync, run `/clear` IF the next task is meaningfully independent. Keep continuity for tightly-coupled work (e.g., codex r1→r2→r3 within the same commit; immediate follow-up fix to the same module).
+Each commit in an overnight session inherits the context of all prior commits. The naive intuition says: clear between commits to save tokens. Empirical: this causes significantly lower performance + more bugs because working memory of codebase shape, codex calibration, and iterative refinement state do not transfer through handoff docs.
 
-**Savings**: 30-50% of mid-session token bloat.
-**Performance**: zero for unrelated tasks; minor friction when continuity matters (skip /clear in those cases).
+**Use `/compact` instead, at WAVE boundaries**, not commit boundaries. A wave boundary = a coherent unit of work just shipped AND a meaningfully different track begins next (e.g., Wave 1 substrate done → Wave 2 integrations begin). `/compact` preserves working memory via lossy summarization; loses much less than `/clear`.
 
-Note on prompt caching: Anthropic's prompt cache has 5-minute TTL. Rapid commits in tight time windows benefit from cache hits; long pauses lose the cache. Cluster commits.
+**The agent surfaces recommendations; the user decides.** When the agent observes a wave boundary, it invokes `Skill({ skill: "context-watch" })` which prints a structured recommendation. The user reads and chooses whether to `/compact`.
+
+**Auto-compact at 70%** is the safety net (`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in `.claude/settings.json`). This catches the case where the user keeps going past a natural boundary.
+
+**Savings**: modest — `/compact` reduces context by ~30-50% but only when invoked. Compared to `/clear`, the savings are smaller but the performance preservation is large.
+**Performance**: preserved. Working memory survives `/compact`.
 
 ### 5. Grep before Read for symbol lookups
 

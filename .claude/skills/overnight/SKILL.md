@@ -79,7 +79,7 @@ For every task in the autonomous loop, execute every step. Do not batch, do not 
 | 16 | STATE.md sync | Update Last verified line + build queue row + Connected systems if applicable. Commit as `docs(state): ... — sync substrate state`. `docs()` commits do NOT require the protocol-gate trailer block (the gate only enforces `feat()`/`fix()`), so no `Protocol-Skip` is needed; commit cleanly. | Pushed. |
 | 17 | /decisions-log | If a judgment call was made (naming / UX / scope / architecture / default / deferral), append to `docs/AUTONOMOUS-DECISIONS.md`. | Row added. |
 | 18 | Per-task report | One line: `feat(scope): summary @ <sha> · cost $X.XXX · cycles N` | Surface to user log. |
-| 19 | `/clear` if next task is unrelated | Context cleanup. Run `/clear` after STATE.md sync IF the next task has no meaningful dependency on the prior chat (e.g., different package, different primitive, different layer). Skip /clear if continuing in tightly-coupled work (e.g., immediate follow-up fix to the same module). Per docs/TOKEN-EFFICIENCY.md: avoids carrying 50-100K tokens of prior-task context into the next commit. | Token budget protected. |
+| 19 | Surface `/compact` recommendation if at a wave boundary | When a coherent unit of work just shipped AND a meaningfully different track begins next (e.g., Wave 1 substrate done → Wave 2 integrations), invoke `Skill({ skill: "context-watch" })` to surface a structured recommendation to the user. Do NOT run `/clear` between commits — user-reported failure mode 2026-05-13: session handoff cannot transfer working memory of codebase shape, codex calibration, or iterative refinement state, so `/clear` cost performance more than it saved tokens. Use `/compact` (lossy summarization, preserves working memory) at wave boundaries instead, and only when the user explicitly accepts the recommendation. | User decides whether to /compact; agent never auto-clears. |
 
 ---
 
@@ -142,9 +142,13 @@ When you stop: print a per-task report (commit sha + 1-line summary + cost) + th
 
 ---
 
-## Token efficiency — required reading
+## Token efficiency — required reading (PERFORMANCE FIRST)
 
-Tokens are budget. Codex rounds + tool outputs + commit messages are the biggest drains. Disciplines below ship same-or-higher output quality at 30-50% the token cost.
+**Founder priority (2026-05-13 verbatim)**: *"performance is more important to me. if it costs more tokens, performance is more important."*
+
+Historical failure mode (user-reported, 2026-05-13): aggressive `/clear` between sessions caused significantly lower performance + more bugs even with session-handoff doc + CLAUDE.md + claude-mem. Handoff docs transfer explicit knowledge (decisions, gotchas, plans) but cannot transfer working memory of codebase shape, codex calibration, iterative refinement state, or conversation-level user-pattern intuition. Estimate: 60-70% transfer at best.
+
+**Disciplines below preserve performance AND save tokens.** They do NOT trade performance for tokens. When in doubt, choose the longer session.
 
 ### Codex via subagent (preferred when budget-tight)
 
@@ -213,9 +217,15 @@ Grep "export.*getTenantCredential" path -A 8
 
 Use Read with `offset` + `limit` for targeted reads when you need surrounding context. Full-file Read only when you actually need full-file understanding.
 
-### /clear cadence
+### /clear vs /compact — what to do at task boundaries
 
-Run `/clear` after STATE.md sync (per-task ritual step 19) IF the next task is meaningfully independent. Don't /clear inside a tight cluster (e.g., codex r1 → r2 → r3 of the same commit; rapid follow-up fix to the same module). Anthropic's prompt cache has 5-min TTL; rapid commits in tight time windows benefit from cache hits.
+**Never invoke `/clear` automatically. Do not recommend `/clear` between commits.** The user reports this trades performance for budget which is the wrong trade. Working memory of codebase shape + codex calibration + iterative refinement state do not survive `/clear` even with a handoff doc.
+
+**Use `/compact` strategically at WAVE boundaries**, not commit boundaries. A wave boundary = a coherent unit of work just shipped AND a meaningfully different track begins next (e.g., Wave 1 substrate complete → Wave 2 integrations begin). Compact preserves working memory via lossy summarization; lose much less than `/clear`.
+
+**Surface recommendations, never execute them.** When you observe a wave boundary, call `Skill({ skill: "context-watch" })` to print a structured recommendation. The user reads it and decides whether to `/compact` (or to stay in the long session and pay the budget cost for performance).
+
+Anthropic auto-compact at 70% threshold is already configured via `.claude/settings.json` `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70`. That's the safety net.
 
 ### Stop-conditions for token burn
 
