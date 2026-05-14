@@ -565,6 +565,12 @@ Reasoning-trail rendering is a `<ReasoningTrail>` primitive in `packages/ui/src/
 
 ## 10. MCP server roster
 
+> **CANONICAL HOME**: full integration roster + build plan + Cowork-architecture
+> research lives in [`docs/AGENT-PLATFORM.md`](docs/AGENT-PLATFORM.md) (added 2026-05-13).
+> When this section disagrees with that doc, **AGENT-PLATFORM.md wins** until
+> a docs-pass folds it back here. The §10 below is the v0 paper plan kept for
+> historical reference; the Cowork-informed sequence (Waves 1-4, C28+) supersedes it.
+>
 > **Reality check (5/2/2026):** `mcp-servers/` directory exists but is **empty**.
 > Zero MCP servers have been built. The orchestrator does not currently route
 > through MCP — agents talk to `runDocketAgent` directly and DB writes go through
@@ -1477,6 +1483,7 @@ Beyond this CLAUDE.md, six docs anchor product + ops decisions and SHOULD NOT be
 - [`docs/DISCOVERY-SCAN-OPERATIONAL.md`](docs/DISCOVERY-SCAN-OPERATIONAL.md) — Discovery Scan landing page copy + onboarding email + PDF template + Discovery agent technical spec for Haokun's queue. Ship target: landing page 5/25, Antonio reference scan 6/15.
 - [`docs/COVERAGE-MAP.md`](docs/COVERAGE-MAP.md) — published transparent compliance scope. 4-tier classification + 5-layer Minimum-Viable Shield + 20-position v1 Position Library list. Re-read every demo, every cold-outreach reply with "what does it cover" questions, every Coverage Map update commit.
 - [`docs/MARKETING-FRAMES.md`](docs/MARKETING-FRAMES.md) — Option B audience-segmented hierarchy. Per-surface lead language + penalty-anchored pricing math + canonical copy variants. Re-read before writing any external surface copy (landing page, deck, email, video script, social post).
+- [`docs/AGENT-PLATFORM.md`](docs/AGENT-PLATFORM.md) — **agent runtime + MCP gateway + Skills registry + integration roster** (added 2026-05-13 after Claude Cowork launch). Reference architecture is Cowork (Agent SDK + MCP + Skills). Docket adopts same substrate, server-side multi-tenant runtime, tax-vertical depth. Full integration universe (75+ vendors across tax prep / practice mgmt / IRS / state / bookkeeping / payroll / banks / e-sign / portal / comms / OCR) categorized by integration approach (🟢 MCP / 🟡 OAuth REST / 🟠 limited API / 🔴 browser automation / ⚫ no API). Build plan: Waves 1-4 spanning C28-C42 (~9 weeks), replaces §10's earlier paper roster. Re-read before any new agent / connector / skill ship. Supersedes §10 on agent-platform questions until folded back.
 
 **Vendor resilience posture (locked 2026-05-08 after Neon Cell 6 outage)**: Anthropic + Bedrock fallback at orchestrator layer (V1). Neon read replica us-east-2 (V1). Status-aware UX everywhere (V1). R2 cross-region replication (V1.5, before Feb 2027 tax season). Multi-cloud DB hot standby (V1.5). Read-only mode for DB write failures (V1). Detailed plan in PRODUCTION-READINESS §A.
 
