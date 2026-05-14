@@ -500,23 +500,55 @@ export async function setPrimaryProject(
     // archived, now user clicks star on archived attachment" path.
     // Without this, an archived project could be re-promoted to
     // primary, contradicting the archive semantics.
-    const locked = await db.execute<{ id: string; is_active: boolean }>(sql`
-      SELECT ep.id, p.is_active
-        FROM engagement_projects ep
-        JOIN projects p ON p.id = ep.project_id
-       WHERE ep.engagement_id = ${engagementId}::uuid
-         AND ep.project_id = ${projectId}::uuid
-       FOR UPDATE OF ep
+    // Codex round 5 P3 (C27): lock the project row to detect
+    // archived state, then lock the engagement_projects row for
+    // the two UPDATE statements below. Without locking p, a firm
+    // owner could archive the project between this SELECT and
+    // the UPDATE, contradicting the archive semantics.
+    //
+    // Codex round 1 P2 (C27a): lock projects FIRST, then
+    // engagement_projects. archiveProject() UPDATEs in that same
+    // order (UPDATE projects then cascade UPDATE engagement_projects),
+    // so taking locks in matching order avoids the ABBA deadlock
+    // that would otherwise abort one of the two TXs with 40P01
+    // when archive + setPrimary race on the same project. Two
+    // separate SELECT FOR UPDATEs make the lock order explicit
+    // and self-documenting.
+    const projectLock = await db.execute<{ is_active: boolean }>(sql`
+      SELECT is_active
+        FROM projects
+       WHERE id = ${projectId}::uuid
+       FOR UPDATE
     `);
-    const lockedArr = locked as unknown as Array<{
-      id: string;
+    const projectLockArr = projectLock as unknown as Array<{
       is_active: boolean;
     }>;
-    if (lockedArr.length === 0) {
+    // Codex round 2 P2 (C27a): always check ep existence BEFORE
+    // surfacing archived-target error. Otherwise a stale/forged
+    // setPrimary against an archived project that ISN'T attached
+    // to this engagement would tell the user "unarchive it first"
+    // instead of the correct "attachment not found." Preserves
+    // the action's error contract.
+    const epLock = await db.execute<{ id: string }>(sql`
+      SELECT id
+        FROM engagement_projects
+       WHERE engagement_id = ${engagementId}::uuid
+         AND project_id = ${projectId}::uuid
+       FOR UPDATE
+    `);
+    const epLockArr = epLock as unknown as Array<{ id: string }>;
+    if (epLockArr.length === 0) {
+      // No attachment row. Whether the project exists / is
+      // archived is irrelevant — the action targets a specific
+      // attachment that isn't there.
       updated = false;
       return;
     }
-    if (lockedArr[0] && !lockedArr[0].is_active) {
+    // Attachment exists. Now check if its project is archived
+    // (covers both "project never existed" — which can't happen
+    // given the FK from ep to projects — and "project archived
+    // after ep was created").
+    if (projectLockArr.length === 0 || !projectLockArr[0]?.is_active) {
       archivedTarget = true;
       return;
     }

@@ -125,6 +125,22 @@ export async function archiveProject(
     const arr = result as unknown as Array<{ id: string }>;
     if (arr.length > 0) {
       updated = true;
+      // Codex round 5 P2 (C27): demote any engagement_projects
+      // primary flags pointing at this project. /clients/[id]
+      // renders the primary badge purely from ep.is_primary, so
+      // without this clear an archived project would still show
+      // "Primary" on the client page even though setPrimaryProject
+      // now rejects archived targets. Engagement is left without
+      // a primary; firm owner can set a new one explicitly. We
+      // don't auto-promote a different attached project because
+      // that's a UX surprise — the firm chose to archive, the
+      // firm chooses what becomes primary next.
+      await db.execute(sql`
+        UPDATE engagement_projects
+           SET is_primary = false
+         WHERE project_id = ${projectId}::uuid
+           AND is_primary = true
+      `);
     } else {
       // Distinguish template-rejection from not-found so the caller
       // gets a useful message.
