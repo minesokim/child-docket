@@ -1121,7 +1121,7 @@ The client popup has its own billing tab. **Don't add BillingCard to popup overv
 When loading this project cold, in this order:
 
 1. **Read this CLAUDE.md** (you are here). It now reflects reality as of 5/2/2026, not aspiration.
-2. **Then read the most recent session handoff** in `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas (what shipped, what's open, what the founder decided). When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in.
+2. **Then read the most recent session handoff** in `docs/OVERNIGHT-HANDOFF-*.md` or `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas (what shipped, what's open, what the founder decided, in-context decisions not yet logged to AUTONOMOUS-DECISIONS.md, and any token-efficiency or workflow patterns the prior session adopted). When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in. Latest as of 2026-05-13: [`docs/OVERNIGHT-HANDOFF-2026-05-13.md`](docs/OVERNIGHT-HANDOFF-2026-05-13.md) — covers C24-C29 substrate shipping + agent-platform research + token-efficiency pass + the C30 Agent SDK migration plan for the next session.
 3. **Verify the dev DB is caught up** before writing any code that touches schema:
    ```bash
    pnpm --filter @docket/db migrate
