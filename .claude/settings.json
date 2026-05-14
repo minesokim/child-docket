@@ -1,4 +1,10 @@
 {
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "8000",
+    "MAX_MCP_OUTPUT_TOKENS": "4000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70",
+    "MAX_THINKING_TOKENS": "8000"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -10,6 +16,20 @@
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(node_modules/**)",
+      "Read(.next/**)",
+      "Read(dist/**)",
+      "Read(.turbo/**)",
+      "Read(coverage/**)",
+      "Read(.gstack/**)",
+      "Read(*.lock)",
+      "Read(pnpm-lock.yaml)",
+      "Read(package-lock.json)",
+      "Read(yarn.lock)"
     ]
   }
 }

@@ -69,7 +69,7 @@ For every task in the autonomous loop, execute every step. Do not batch, do not 
 | 6 | /code-quality | Pattern adherence, no `console.log`, no untyped `any` w/o justification, lockfile-package.json sync. | No flags. |
 | 7 | /craft (if UI) | Apple-bar UX check: hierarchy / copy voice / empty-loading-error states / every element earns its place. | PASS. |
 | 8 | Stage diff | `git add <specific files>` | Only the intended files. |
-| 9 | /codex review | `bash scripts/codex-review-staged.sh` | Clean (or all findings fixed). Loop up to **5 rounds**. If round 5 still has the same finding, STOP. |
+| 9 | /codex review | **Token-efficient form: `bash scripts/codex-review-staged.sh --summary-only`** (cuts output 70-85%). Run via Agent (subagent) when budget-tight. Loop up to **5 rounds**. If round 5 still has the same finding, STOP. | Clean (or all findings fixed) |
 | 10 | /score | Identify gap. Iterate until ≥95. | `Score: ≥95/100`. |
 | 11 | /align | Six-question alignment check vs product anchors + L1-L16. | `Align: ALIGNED`. |
 | 12 | /smoke-test | If diff touches Inngest workers / doc processing / storage / server actions firing events / encryption / new /api/* routes. | All checks PASS. |
@@ -79,6 +79,7 @@ For every task in the autonomous loop, execute every step. Do not batch, do not 
 | 16 | STATE.md sync | Update Last verified line + build queue row + Connected systems if applicable. Commit as `docs(state): ... — sync substrate state`. `docs()` commits do NOT require the protocol-gate trailer block (the gate only enforces `feat()`/`fix()`), so no `Protocol-Skip` is needed; commit cleanly. | Pushed. |
 | 17 | /decisions-log | If a judgment call was made (naming / UX / scope / architecture / default / deferral), append to `docs/AUTONOMOUS-DECISIONS.md`. | Row added. |
 | 18 | Per-task report | One line: `feat(scope): summary @ <sha> · cost $X.XXX · cycles N` | Surface to user log. |
+| 19 | `/clear` if next task is unrelated | Context cleanup. Run `/clear` after STATE.md sync IF the next task has no meaningful dependency on the prior chat (e.g., different package, different primitive, different layer). Skip /clear if continuing in tightly-coupled work (e.g., immediate follow-up fix to the same module). Per docs/TOKEN-EFFICIENCY.md: avoids carrying 50-100K tokens of prior-task context into the next commit. | Token budget protected. |
 
 ---
 
@@ -138,6 +139,89 @@ Stop the loop and surface a session report to the user if ANY of these fire:
 12. **Three-strikes-stop**: 3 items in a row failed the four-skill cycle. Status report; wait for human.
 
 When you stop: print a per-task report (commit sha + 1-line summary + cost) + the stop reason + what's blocked + one suggested next step. Do not just go silent.
+
+---
+
+## Token efficiency — required reading
+
+Tokens are budget. Codex rounds + tool outputs + commit messages are the biggest drains. Disciplines below ship same-or-higher output quality at 30-50% the token cost.
+
+### Codex via subagent (preferred when budget-tight)
+
+The default `bash scripts/codex-review-staged.sh` dumps 1500-3000 tokens per round into the main session's context. Multi-round commits compound. **Run codex via Agent subagent** so the verbose output stays in the agent's context; only the verdict returns:
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  description: "Codex review staged Cnn diff",
+  prompt: "Run `bash scripts/codex-review-staged.sh --summary-only`.
+  Return ONLY: (a) verdict CLEAN/HAS_FINDINGS, (b) up to 3 most
+  important findings with file:line and one-sentence fix, (c) nothing
+  else. Under 150 words total."
+})
+```
+
+When the budget allows (early in a session, fresh `/clear`), run codex inline so the operator sees the full output for debugging. When the budget is tight (>50% weekly quota consumed, late session), subagent it.
+
+### Filter tool outputs aggressively
+
+`pnpm typecheck 2>&1 | tail -10` keeps the last 10 lines but the BASH buffer still holds the full output in some contexts. Better:
+
+```bash
+pnpm typecheck 2>&1 | grep -E "error|Error|FAIL|✗" | head -20
+bash scripts/codex-review-staged.sh --summary-only
+pnpm test 2>&1 | grep -A 3 -E "FAIL|✗|expect\(.*\)\.toEqual" | head -50
+```
+
+Project-level env vars in `.claude/settings.json` cap output server-side:
+- `BASH_MAX_OUTPUT_LENGTH=8000` — caps any bash command output at ~2K tokens
+- `MAX_MCP_OUTPUT_TOKENS=4000` — caps MCP server responses
+- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` — auto-compact at 70% instead of default 95%
+- `MAX_THINKING_TOKENS=8000` — caps extended thinking; default is tens of thousands
+
+### Commit message discipline
+
+20-40 lines max per commit body. Detailed rationale belongs in `docs/AUTONOMOUS-DECISIONS.md` (linked from the commit). The protocol-gate trailers (Edge-Cases / Score / Align / Craft / Codex-Reviewed / Compliance-Check) MUST be present; the body prose around them should be terse.
+
+Bad (this overnight session pattern, 80-150 lines per message): full architecture writeup + every codex round detail + next-block roadmap.
+
+Good (target going forward, 20-40 lines):
+```
+feat(scope): C28 short title
+
+One paragraph: what shipped + why now (≤ 5 sentences).
+
+Verification:
+  - typecheck 16/16 PASS
+  - tests N/N PASS
+  - codex M rounds (S findings fixed)
+  - /e2e PASS at <sha> if applicable
+
+NEXT: <pointer to docs/AGENT-PLATFORM.md or docs/AUTONOMOUS-DECISIONS.md>
+
+[trailer block — Edge-Cases / Score / Align / Craft / Codex-Reviewed / Decisions / Compliance-Check]
+```
+
+### Grep before Read for symbol lookups
+
+When the goal is "what's the shape of `getTenantCredential`," use Grep with `-A 5`. Don't Read the whole 200-line file.
+
+```bash
+Grep "export.*getTenantCredential" path -A 8
+# NOT: Read path  (sends full file)
+```
+
+Use Read with `offset` + `limit` for targeted reads when you need surrounding context. Full-file Read only when you actually need full-file understanding.
+
+### /clear cadence
+
+Run `/clear` after STATE.md sync (per-task ritual step 19) IF the next task is meaningfully independent. Don't /clear inside a tight cluster (e.g., codex r1 → r2 → r3 of the same commit; rapid follow-up fix to the same module). Anthropic's prompt cache has 5-min TTL; rapid commits in tight time windows benefit from cache hits.
+
+### Stop-conditions for token burn
+
+Add to the existing stop conditions:
+- If a single task burns >$1.50 in codex rounds, you are in a refactor that needs human input (existing rule for 5+ rounds applies; this is the cost-side cutoff)
+- If session approaches the **weekly** subscription quota (>80% used in <5 days), STOP and surface — don't keep grinding through codex rounds
 
 ---
 

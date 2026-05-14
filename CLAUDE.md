@@ -824,196 +824,38 @@ Position Framework + compliance-first + cited authority is the **moat** (why an 
   AI, hardcoded everything. Stays live at `docket-client-portal.vercel.app`
   for pitch / Loom / Antonio walkthrough.
 
-### v1 production phased plan — 12 weeks, 6 phases
+### v1 phased plan + status
 
-> **⚠ STALENESS WARNING — read this first.** This phased plan was authored
-> 5/2/2026. Items below are listed in the order they were originally
-> intended to ship. The actual current state is in
-> [`docs/AUTONOMOUS-QUEUE.md`](docs/AUTONOMOUS-QUEUE.md) and the latest
-> [`docs/OVERNIGHT-HANDOFF-*.md`](docs/) — those are the source of truth for
-> "what shipped, what's queued." Items below are tagged ✅ done /
-> 🟡 partial / ⬜ open as of 5/9/2026, but the queue file is canonical.
-> Whenever you ask "what's next," read AUTONOMOUS-QUEUE.md FIRST, not this
-> phased plan.
+**Canonical home for v1 phase plan** (Phase 1-6, weekly milestones, what shipped vs open): [`docs/PRODUCT-ROADMAP.md`](docs/PRODUCT-ROADMAP.md). The §15 inline plan was authored 5/2/2026 and grew stale; the roadmap doc + [`docs/STATE.md`](docs/STATE.md) "Active development tasks" + [`docs/AUTONOMOUS-QUEUE.md`](docs/AUTONOMOUS-QUEUE.md) are the source of truth for "what shipped, what's queued." Whenever you ask "what's next," read STATE.md + AGENT-PLATFORM.md FIRST.
 
-**Phase 1 (Weeks 1–2, 5/2 → 5/16) — Foundation + Antonio Production Essentials**
-- ✅ Preparer-side SSN/EIN reveal flow on command-room — shipped as per-session unlock with 15-min TTL, role gate (firm_owner/preparer/reviewer), 6/min rate limit, audit row per unlock. See `apps/command-room/src/lib/intake/unlock.ts` + `pii-unlock-button.tsx`.
-- ✅ Twilio "Send via SMS" for client invites (per-tenant credentials) — Twilio inbound webhook + outbound via /messages/[id] approve. Credentials installed for Vazant + rotatable via /settings/credentials.
-- ✅ Knowledge layer schema in DB + ingestion infrastructure scaffolded — migrations 0019-0021 (firm_profile, firm_patterns, client_facts) + 7 starter authorities seeded + authority full-text search + citation verifier.
-- ✅ `packages/tax-graph` package created — exists at `packages/tax-graph/`.
-- ✅ Citation rendering scaffolding in agent output — citation-verifier loop in notice-drafter + discovery agent (commit `a58f05d`).
-- ✅ Trust gate scaffolding (per-tenant × agent × action-class) — `assertTrustGate` enforcement helper (15 tests, commit `3929fef`). Substrate-without-current-consumer; consumer wiring is Phase 3.
-- 🟡 Docs pipeline started: Cloudflare R2 bucket + presigned URL helper — verify state via /smoke-test.
-- ✅ Sidebar dead links resolved — /messages (`de266f9`), /documents (`95d1fed`), /settings (`b623ce4`), /settings/credentials (`7e03e7a`).
-- ✅ + (added later) Cost dashboard at /dashboard/cost (commit `f170c03` + `86e7e0a`).
-- ✅ + (added later) Home dashboard at / (commit `8cc55eb`).
-- ✅ + (added later) `@docket/prompts` registry with hash-drift detection (commit `fbae613`).
-- ✅ + (added later) PII regex scrubber (commit `8f0c2d5`, 32 tests).
-- ✅ + (added later) Audit-trail cryptographic chain — `chain_seq` + `prev_hash` + `row_hash` + nightly `verify_actions_chain` cron (commits `0680874` + `5b4ef92`).
+For agent-platform substrate work specifically (mcp-gateway, skills registry, Agent SDK migration, MCP servers, cross-context skills, Magic Buttons): [`docs/AGENT-PLATFORM.md`](docs/AGENT-PLATFORM.md) Waves 1-4 (C28-C42) supersedes the §15 phase plan on those items.
 
-**Phase 2 (Weeks 3–4, 5/16 → 5/30) — Antonio Production Sub-Milestone**
-- 🟡 Real bidirectional messages — Twilio inbound webhook ✅ + outbound approval flow ✅; Gmail polling has 8 `TODO(week-1)` stubs in `services/workers/src/functions/gmail-poll.ts` + `classify-gmail-message.ts`.
-- 🟡 Square Checkout API integration — scaffold shipped (`cc8edd1`); needs production wiring (real Checkout API call, webhook for paid status, link tied to engagement).
-- 🟡 DocuSign embedded signing for Form 8879 with LexisNexis KBA (NIST IAL2) — scaffold shipped (`7d330fd`); needs production wiring (LexisNexis KBA add-on, real envelope creation, webhook for completion).
-- ⬜ IRS Pub 17 + FTB residency manual ingested with effective-date versioning — 7 starter authorities seeded; bulk ingestion + effective-date versioning still open.
-- ⬜ AAD on AES-GCM bound to (tenant_id, client_id, path).
-- ⬜ KEK rotation procedure documented + master-KEK fallback removed.
-- ✅ Webhook signature verification helper — shipped at `@docket/shared/webhooks` subpath (commit `b31e91f` + codex-fixup `00cd377`). 32/32 tests, timing-safe.
-- ✅ Sentry signup + DSN configured — both apps wired with `app:` tag (commit chain `a122ae5` → `95e2629` → `40c5caa`).
-- ✅ + (added later) Bedrock fallback in orchestrator (`callClaudeWithFallover`, commit `303f886`). 38/38 unit tests + 4/4 smoke.
-- ✅ + (added later) `/api/health` + `HealthStatusGate` + `assertWritable` server-side gate (commit `c72ba1b`).
-- ✅ + (added later) Status banners + ReadOnlyProvider + WriteAction (commit `0521701`).
-- ⬜ Neon read replica wiring (B3 in queue file) — `DATABASE_URL_READ_REPLICA` provided; pairs with status-banners; ~1d.
-- **🟡 Sub-milestone 5/30: Antonio's full 200+ client base operational on production-grade substrate** — substrate is ~70% there; Square + DocuSign production-real wiring + Gmail polling + AAD-binding + KEK rotation are the remaining must-haves before pointing real client volume at it.
+**The 5/2 phase plan had this shape, kept here for cross-reference:**
 
-**Phase 3 (Weeks 5–6, 5/30 → 6/13) — Agent Fleet Build-Out**
-- Wire intake agent (intake completeness scoring, missing-data prompts)
-- Wire doc classification agent (4-phase doc upload pipeline driver)
-- Wire missing information agent (cross-doc validation, gap detection)
-- Wire planning agent (year-round scenarios, QBI/PTET/entity-choice modeling)
-- Wire return drafting agent (workpaper assembly, position drafting, multi-state flagging)
-- Wire review agent (junior-staff drafting + senior-prep flagging)
-- Wire notice response agent (CP2000/CP504/LT11 triage + drafted response)
-- Tax-law diff agent (10th, D4) bones — IRS/FTB monitoring, position-level affected-return surface
-- Trust gate enforcement live across all 10 agents
-- Confidence scoring + citation rendering on every agent output
+| Phase | Weeks | Status |
+|---|---|---|
+| 1 Foundation + Antonio essentials | 5/2-5/16 | ~90% shipped |
+| 2 Antonio production sub-milestone | 5/16-5/30 | ~65% (Square + DocuSign + Gmail polling production wiring open) |
+| 3 Agent fleet build-out (10 agents) | 5/30-6/13 | ~35% (5 of 10 agents coded) |
+| 4 Orchestration + manager mission-control | 6/13-6/27 | ~10% (paper spec; mcp-gateway shipped C28) |
+| 5 Year-round portal + IRS-facing (D6 descoped to V1.5) | 6/27-7/11 | ~12% |
+| 6 Partner #2 + hardening + launch | 7/11-7/30 | ~15% (Antonio only) |
 
-**Phase 4 (Weeks 7–8, 6/13 → 6/27) — Orchestration + Manager Mission-Control (D5)**
-- Event-driven task routing on Inngest substrate
-- Dependency graph (return → workpaper → source doc → intake response)
-- SLA tracking (engagement deadlines, review SLAs, response-time SLAs per channel)
-- Capacity planning (per-staff-member load, projected throughput, bottleneck detection)
-- Workload-aware prioritization (high-confidence cases auto-routed to accelerated prep, position-risk cases to senior reviewers)
-- Manager mission-control surface: portfolio view, exception monitoring, margin leakage analytics, advisory-opportunity surface
-- Reallocation + escalation flows
-- Mid-market partner #2 identification + initial pitching begins
+Realistic v1 launch: **late September to mid-October 2026** at current pace (6-10 week slip from 7/30). See last "where are we" exchange in chat history or `docs/STATE.md` Last verified entry for the math.
 
-**Phase 5 (Weeks 9–10, 6/27 → 7/11) — Year-Round Portal (D3) + IRS-Facing Layer (D6, DESCOPED)**
-- Bilateral year-round portal: AskAntonioChat as persistent surface, year-round tax position summary, planning prompts proactive in Q4, document collection rolling
-- 2848 / 8821 e-signing in portal (DocuSign + LexisNexis KBA, NIST IAL2)
-- 2848 / 8821 **filing to IRS via Tax Pro Account browser automation** (the official IRS web portal; 2-5 day CAF posting)
-- CAF state visualization (read-only, scraped from Tax Pro Account business-firm view per Feb 9, 2026 expansion)
-- Notice triage agent on **uploaded** notices (PDF/image upload by client or Antonio; no live-feed dependency)
-- Notice response drafting with cited authority (firm-approved before send)
-- Tax-software orchestration for e-file (browser automation against OLT for Antonio + ProConnect/UltraTax for partner #2)
-- Per-client encrypted IRS credentials in `tenant_credentials` table
-
-> **D6 was descoped 5/2/2026 after IRS API research** (full findings in CEO plan).
-> Original D6 included programmatic transcript pulls + direct MeF + live IRS Solutions API.
-> Reasons for descope:
-> - IRS Transcripts API is invitation-only partner program (Canopy is in; no public path; 12-24 month relationship horizon)
-> - Legacy third-party transcript scraping is being shut down (May 23 deadline)
-> - e-Services APIs require a user session (breaks autonomous overnight-pull pattern)
-> - Bridge providers (TaxStatus, Compliancely) are sales-led pricing with dual-8821 consent conflict + 20-85% margin compression on v1 partners
-> - IRS cybersecurity bar (FIPS 140-3, Pub 1075, NIST SP 800-53, PCI DSS-derived practices) is multi-month work; not in v1 scope
->
-> **Deferred to v1.5:** programmatic transcript API (path C bridge or direct IRS partner program), EFIN + Software Developer authorization, direct MeF, live IRS Solutions API at depth, full IRS partner program application.
->
-> **Net impact:** D6 reversibility 1/5 → 3/5; v1 risk register goes from 5 critical risks to 2 critical (compliance liability on filed forms + agent-prompt-error remain critical). Mid-market partner #2 onboarding no longer blocked on IRS Solutions API access.
-
-**Phase 6 (Weeks 11–12, 7/11 → 7/30) — Partner #2 Onboarding + Hardening + Launch**
-- Mid-market partner #2 (regional firm, 20-100 staff) onboarded with full v1 OS
-- Both partners running on multi-tenant substrate (no snowflakes per §16)
-- E2E tests (Bun + Playwright) across intake → docs → messaging → e-sign → onboarding
-- Audit-trail review on every server action
-- Approval policy enforcement (filing authority, signed advice, material positions)
-- Evidence trail UI
-- Retention policy (7-year tax-document retention default, configurable per tenant)
-- Pitch deck (5–10 slides), Loom demo, marketing surface
-- **✅ v1 launch 7/30**
+**D6 descope (5/2/2026)**: IRS Solutions API access deferred to V1.5 — IRS Transcripts API is invitation-only partner program (12-24 month relationship horizon), e-Services APIs require user session, bridge providers (TaxStatus/Compliancely) have dual-8821 consent conflicts, IRS cybersecurity bar is multi-month work. Browser automation against IRS Tax Pro Account is the v1 path for 2848/8821/transcripts. Full IRS partner program application + direct MeF deferred. Net: v1 risk register goes from 5 critical → 2 critical (compliance liability + agent-prompt-error remain critical).
 
 ### Top 5 risks (from CEO plan, post-D6-descope)
 
-1. **Compliance liability on filed forms** — incorrect 2848 filing or missed notice deadline causes legal exposure (sanctions + malpractice). Defense: agent prompt construction is unit-tested + integration-tested + run through eval suite before production; 2848 filings always require human approval (trust gate locked at level 1 for `file` action class); audit trail captures every filed form with the prompt + reasoning that drove it.
-2. **Agent prompt error sends wrong filing for wrong client** — single bug in prompt construction could file fake 2848 to IRS for wrong client. Defense: structured prompt construction with client_id binding at every layer; pre-flight verification that the form data matches the client_id before any submit action; mandatory human approval before any IRS-facing submit.
-3. **Knowledge layer ingestion brittleness** — start with hand-curated subset (Pub 17 + FTB residency) before automated ingestion; spot-check citations manually before agent output reaches users.
-4. **Mid-market partner #2 acquisition timing** — start partner identification Phase 4; warm intros via Antonio's mentor network; pre-build partner-onboarding playbook so engagement-to-production cycle is <2 weeks.
-5. **Cathedral-mode scope creep** — explicit no-more-expansions rule for v1 once 5/30 sub-milestone hits. New ideas go to TODOs.md. Schedule "expansion appetite check" at 6/13 and 7/11.
-
-(Risks previously in this list — IRS Solutions API access timing, trust gate calibration on D4 — were either resolved by the D6 descope or absorbed into the must-build list in the CEO plan tactical decisions section.)
-
-### Status of the original 5/15 DEFERS list (revised for production)
-
-**Still deferred (out of scope for first cohort):**
-- IRS Solutions live integration (no API access yet — Antonio emails them)
-- OLT browser automation (Antonio uses OLT directly for first month)
-- Bilingual UI strings (English-only first cohort, translate Spanish in week 3)
-- Outcome Prediction (Blue J) integration
-- Practice Intelligence module
-- Voice agent (voicemail → AI transcribe → drafted reply)
-- Auto Doc-chase
-- SOC 2 Type II (~6+ months of work, not a 14-day item)
-- Multi-state knowledge ingestion beyond CA
-
-**MOVED INTO SCOPE (was deferred, now required for IRS-compliant production):**
-- KBA-compliant 8879 e-signature — required by IRS Pub 1345 (NIST IAL2)
-  → Wired Day 13 via DocuSign embedded signing (LexisNexis under the hood, $3/KBA)
-  → v1+ migration: self-host Documenso + direct LexisNexis InstantID Q&A integration ($1.50/KBA wholesale)
-
-**CORRECTED (was wrong in earlier version):**
-- ❌ "Stripe Identity for KYC for 8879" — Stripe Identity is selfie+ID document verification.
-  IRS Pub 1345 requires credit-bureau-sourced KBA (NIST IAL2). Stripe Identity does NOT satisfy this.
-- ✅ Use DocuSign + KBA (LexisNexis) for 8879. Use Square (Antonio's existing tool) for payments.
-- ✅ No Stripe products needed in v0. Drop STRIPE_* env vars until/unless they earn a job.
-
-### Surface ancestry to merge
-- **v3 Vazant Dashboard** (`vazant-dashboard-v3.vercel.app`) → Command Room information architecture
-- **v4 Vazant Client Portal** (`C:\Users\minse\Downloads\docket-portal-design\`) → editorial-warm design language
-- v0 = v3's IA in v4's design (already shipped in demo)
-- production = real backend behind same UI
-
-### Post-5/15 — 12 weeks to paying customer (Antonio onboarded)
-
-
-
-### Phase 1 (Weeks 1–3) — Foundation infra + Client Portal port
-Port the design while the orchestrator is being built in parallel.
-
-- Repo scaffolding (Turborepo + pnpm + TS) ✅
-- Postgres + Drizzle schema + RLS policies
-- Clerk auth (phone-based) + Square Checkout ($50 deposit) + DocuSign+KBA (8879 e-sign)
-- Twilio for SMS OTP
-- Two Next.js app shells ✅
-- Practice ledger schema + audit middleware
-- Port `apps/client-portal/` from JSX prototype:
-  - Move components into Next.js app router structure
-  - Replace localStorage with real Postgres-backed state
-  - Wire SMS OTP, document upload (R2 + presigned URLs), engagement-letter and 8879 signing
-  - Bring `tokens.jsx` into `packages/ui/` (already done) + the design primitives
-
-### Phase 2 (Weeks 4–6) — Orchestrator + first MCP servers + Morning Brief
-- `services/orchestrator` wrapping direct Anthropic SDK with cost telemetry + audit hook + caching ✅
-  (migration to Claude Agent SDK deferred until MCP gateway is the substrate)
-- MCP gateway with tenant scoping
-- `ledger` and `knowledge` MCP servers
-- Trust escalation gate (level 1 only — every action approved)
-- Knowledge ingestion for IRS forms/instructions/pubs (current + 3 prior years)
-- Knowledge ingestion for FTB pubs + Legal Rulings + Residency manual
-- Versioning by effective date
-- `gmail` and `xero` MCP servers
-- **Morning Brief agent** end-to-end with mock data
-- **First demo to Antonio:** real morning brief from real data
-
-### Phase 3 (Weeks 7–9) — Browser automation harness + OLT v0
-- Playwright workers + queue (Inngest)
-- Encrypted credential vault per tenant (Infisical)
-- `olt` MCP server (read-only first: list returns, get state)
-- `irs-solutions` MCP server (read-only: pull transcripts, list notices)
-- Inngest jobs for async automation
-- Mock e2e: trigger an OLT pull from the orchestrator
-
-### Phase 4 (Weeks 10–12) — Wedge automation + Inbox Drafter + Portal MVP
-- `olt` write actions (prefill, push fields)
-- **OLT Prep Handoff agent** (or Notice Triage — Antonio's choice in week 1)
-- **Inbox Drafter agent**
-- Approval queue UI in Command Room
-- Client Portal v0 (upload, chat, status)
-- **Second demo to Antonio:** end-to-end prep handoff or notice triage
-
-### After week 12
-Foundation package is real. Onboard tenant 0. Start week 13 = expansion engagement.
+1. **Compliance liability on filed forms** — incorrect 2848 filing or missed notice deadline causes legal exposure. Defense: agent prompts unit + integration + eval-suite tested before prod; 2848 filings always require human approval (trust gate L1 for `file`); audit trail captures every filed form with the prompt + reasoning.
+2. **Agent prompt error sends wrong filing for wrong client** — single bug could file fake 2848 to IRS for wrong client. Defense: structured prompt construction with client_id binding at every layer; pre-flight verification that form data matches client_id before submit; mandatory human approval before any IRS-facing submit.
+3. **Knowledge layer ingestion brittleness** — start with hand-curated subset (Pub 17 + FTB residency); spot-check citations manually before agent output reaches users.
+4. **Mid-market partner #2 acquisition timing** — start identification Phase 4; warm intros via Antonio's mentor network; pre-build partner-onboarding playbook (<2 week engagement-to-prod cycle).
+5. **Cathedral-mode scope creep** — explicit no-more-expansions rule for v1 once 5/30 hits. New ideas go to TODOs.md. Expansion appetite check at 6/13 and 7/11.
 
 ---
+
+<!-- Section §15 detailed phase listings + "Post-5/15 12-week plan" + "Status of original 5/15 DEFERS list" + surface ancestry deliberately removed to slim CLAUDE.md. Reference docs above. -->
 
 ## 16. Productization discipline
 
@@ -1028,76 +870,15 @@ The rules that prevent services-revenue from killing the platform:
 
 ---
 
-## 17. Competitive landscape (April 2026)
+## 17. Competitive landscape
 
-**Three layers of the AI-tax stack are forming. Docket is the third layer.**
+**Three layers of the AI-tax stack. Docket is the third (practice + relationship + rep). The other two are crowded with well-funded competitors; the third is structurally open.**
 
-| Layer | Who's there | Docket's stance |
-|---|---|---|
-| **Data layer** (K-1, K-3, 1099 ingestion) | K1x ($175M growth, Apr 2026) — 44 of top-100 institutional investors | Integrate, don't compete |
-| **Return-prep agent layer** (autonomous prep + review) | Accrual ($75M, Feb 2026) · Basis ($1B+, Feb 2026) · Black Ore Tax Autopilot ($60M, GA Apr 2026) · TaxGPT (Tax Prep Agent + Agent Andrew, Mar 2026) · Juno ($12M seed, Apr 2026) · Filed · Grove · StanfordTax · SmartRequestAI · Soraban · Taxlytic | **Don't compete head-on. Orchestrate them via browser automation.** |
-| **Practice + relationship layer** (the day, the comms, the ledger, the rep loop) | **Empty for AI-native.** PM incumbents (TaxDome, Canopy, Karbon) shipping shallow AI features. Canopy released triage, beat us to it. | **This is Docket's lane.** |
+Don't compete head-on with autonomous-prep specialists (Accrual $75M, Basis $1.15B val, Black Ore $60M, TaxGPT, Filed, Juno). Orchestrate them via browser automation. Don't compete on consumer (Deduction, Rally Tax, Gelt, April, Perplexity). Don't compete with PM incumbents (TaxDome, Canopy, Karbon) on shallow AI — out-execute on depth.
 
-### Notable secondary entrants
-- **Gelt** (Series A Sep 2025, $13M) — year-round wealth optimization, HNW
-- **Deduction / Taylor CPAI** ($2.8M pre-seed Nov 2025) — consumer agent
-- **Rally Tax** (YC) — year-round HNW subscription
-- **April** ($38M Series B Jul 2025) — embedded B2B2C tax for wealth/payroll
-- **Perplexity Computer for Taxes** (Apr 2026) — $17/mo consumer-side, drafts federal returns
-- **Instead** — tax planning + IRS notice monitoring
-- **CPA Pilot** — IRS notice triage
+**For the full competitor matrix, funding details, and strategic read**: [`docs/COMPETITIVE-LANDSCAPE.md`](docs/COMPETITIVE-LANDSCAPE.md).
 
-### Practice management incumbents shipping AI
-- **TaxDome AI** — file detection, NL reporting, bundled
-- **Canopy** — direct IRS integration, transcript pulls; AI is shallow but shipping
-- **Karbon** — strongest email AI among PM incumbents
-
-### Practiq — horizontal-shallow adjacency (not direct competitor)
-[practiq.dev](https://practiq.dev/) — AI workspace for boutique professional services firms (multi-vertical: accounting, law, HR, consulting, marketing). Tagline: *"AI built around your clients, not your chats."* Client-scoped memory, autonomous overnight scanning, AI-generated deliverables in firm voice, anomaly detection. **Explicitly admit they have no client portal** — pair with TaxDome/Canopy. Owned by Grindworks/Cliwant (DE).
-
-**They have to build 12–18 months to reach our tax-vertical depth:** no IRS knowledge layer, no rep work pillar, no portal, no tax-software integration. Watch but don't react. Steal: "memory scoped to the client" framing (locked into Docket positioning), autonomous overnight scanning marketing pillar, "in firm voice + client preferred format" phrasing.
-
-### Slant.app — vertical-adjacent reference (financial advice, NOT direct competitor)
-
-[slant.app](https://www.slant.app/) — AI-first CRM for financial advisors. Founded 2023 as Pageport (marketing automation for advisors); rebranded + raised $3.3M seed Aug 2025 (2048 Ventures + Matchstick Ventures lead; also angels). $1.2M pre-seed 2023 (2048 + Boost VC). Co-founders Max Metcalf + Thomas Clawson, met as LDS missionaries in Denmark. Based Lehi, UT. 16 staff per About page; 9 per Aug 2025 press release. 1,200+ financial professionals using the platform; $1M ARR by 2024.
-
-**Tagline:** *"The Relationship CRM for Financial Advisors — AI that surfaces what matters, offloads the busywork, and frees up time for the stuff only you can do."*
-
-**Mission:** *"Help advisors double their capacity to serve the 20 million Americans who will soon seek financial advice."* (44M retiring in next decade; 22M lacking advisors; $12T in assets.)
-
-**Product surfaces (7):** CRM · AI Agents · Project Management · Notetaker · AI Automation · Marketing · Client Reviews. Each marketed individually as a top-nav category. Same surfaces tax needs.
-
-**Architectural bets (validated approach):**
-- Built on OpenAI GPT-5; "AI-first foundation" with CRM features layered on top, not the reverse
-- "Minimize custom fields, maximize unstructured data via AI extraction" — their **Memories** primitive
-- Three-scope chat split (client / meeting / book), not a single global chat
-- Project templates ship out-of-the-box (Onboarding, RMDs, Move Money, Annual Review)
-- SOC 2 compliant from launch (built in 6 months, Nov 2024 ideation → Aug 2025 launch)
-- Per-seat pricing ($150/mo) — *wrong for tax; per-active-client metering is right per L6*
-
-**What we lifted to our codebase (locked 2026-05-13):**
-- **Memories surface** (§4 + §8) — `client_facts`-backed UI tab; first-class plain-English bullets
-- **Nudges agent** (§8 + §9) — life-event + drift + milestone surface; sibling to Discovery
-- **Projects organizing primitive** (§4) — 3rd lens alongside per-client + per-status (Need You)
-- **3-scope Cmd+K** (§4) — client / meeting / book chat scoping
-- **Notetaker agent** (§9) — was missing from our roster; tax buyers expect parity here
-- **Capacity-doubling marketing lead** (§1 + §13) — "$36K/yr saved per practitioner at $250/mo"
-- **Competitor matrix sales tool** (PRODUCT-ROADMAP marketing section) — Docket vs TaxDome vs Canopy vs Karbon
-- **Pivot-pattern YC framing** — Pageport → Slant validates our Discovery Scan → Docket platform shape
-
-**Why we won't compete head-on:**
-- Different vertical (financial advice vs tax) — different compliance regime, different software integrations, different segment economics
-- They lack the Position Framework (refusal-floor + cited authority) — their market doesn't require it; ours does
-- Their fiduciary buyers ≠ our PTIN-on-the-line buyers; different risk profile, different sale
-- Founder relationship (LDS network in Utah / Denmark) is non-transferable to our EA / r/taxpros / NAEA distribution
-
-Watch their pricing + Notetaker product depth; copy their Resource Center ebook strategy ("10 ways AI saves you 10+ hours a week" → "10 ways Docket saves a tax preparer 10+ hours a week"). Steal their Iron Man framing for the launch Loom: *"I want their job to be easier. I want them to come to work and not have 80 things to do, but maybe 18."* — Thomas Clawson interview.
-
-### Strategic read
-The well-funded AI-native competitors ($235M+ combined) are economically forced up-market. They cannot serve Antonio's segment. The PM incumbents ship shallow AI features but lack return intelligence. **The third layer — practice + relationship + rep — is open.** Docket's structural lane.
-
-### Outcome prediction — Blue J
-[Blue J](https://www.bluej.com/) does ML on tax cases for outcome prediction. Plan: partner via API for v1 outcome prediction service. Long-term, build native predictive model trained on practice ledger (the unique dataset only Docket can build).
+**Outcome prediction**: partner with [Blue J](https://www.bluej.com/) via API for v1; native predictive model trained on practice ledger is the V2+ moat.
 
 ---
 
@@ -1484,6 +1265,9 @@ Beyond this CLAUDE.md, six docs anchor product + ops decisions and SHOULD NOT be
 - [`docs/COVERAGE-MAP.md`](docs/COVERAGE-MAP.md) — published transparent compliance scope. 4-tier classification + 5-layer Minimum-Viable Shield + 20-position v1 Position Library list. Re-read every demo, every cold-outreach reply with "what does it cover" questions, every Coverage Map update commit.
 - [`docs/MARKETING-FRAMES.md`](docs/MARKETING-FRAMES.md) — Option B audience-segmented hierarchy. Per-surface lead language + penalty-anchored pricing math + canonical copy variants. Re-read before writing any external surface copy (landing page, deck, email, video script, social post).
 - [`docs/AGENT-PLATFORM.md`](docs/AGENT-PLATFORM.md) — **agent runtime + MCP gateway + Skills registry + integration roster** (added 2026-05-13 after Claude Cowork launch). Reference architecture is Cowork (Agent SDK + MCP + Skills). Docket adopts same substrate, server-side multi-tenant runtime, tax-vertical depth. Full integration universe (75+ vendors across tax prep / practice mgmt / IRS / state / bookkeeping / payroll / banks / e-sign / portal / comms / OCR) categorized by integration approach (🟢 MCP / 🟡 OAuth REST / 🟠 limited API / 🔴 browser automation / ⚫ no API). Build plan: Waves 1-4 spanning C28-C42 (~9 weeks), replaces §10's earlier paper roster. Re-read before any new agent / connector / skill ship. Supersedes §10 on agent-platform questions until folded back.
+- [`docs/COMPETITIVE-LANDSCAPE.md`](docs/COMPETITIVE-LANDSCAPE.md) — full competitor matrix + funding details + strategic read. Split from CLAUDE.md §17 for token efficiency (2026-05-13). Re-read before sales conversations, positioning work, or when a competitor ships something material.
+- [`docs/SLANT-LESSONS.md`](docs/SLANT-LESSONS.md) — 33 patterns lifted from Slant.app (business strategy + marketing + pricing + operational). Split from CLAUDE.md §25 for token efficiency (2026-05-13). Re-read before YC application work, pre-seed pitch, or marketing-site content.
+- [`docs/TOKEN-EFFICIENCY.md`](docs/TOKEN-EFFICIENCY.md) — **Claude Code session budget discipline.** Added 2026-05-13 after 25%-weekly-quota-with-6-days-left burn rate. The 5 highest-ROI changes (subagent codex / trim CLAUDE.md / filter outputs / /clear cadence / Grep-before-Read), settings to apply, commit-message discipline, anti-recommendations. Re-read before any /overnight session + when you see a session burning faster than expected.
 
 **Vendor resilience posture (locked 2026-05-08 after Neon Cell 6 outage)**: Anthropic + Bedrock fallback at orchestrator layer (V1). Neon read replica us-east-2 (V1). Status-aware UX everywhere (V1). R2 cross-region replication (V1.5, before Feb 2027 tax season). Multi-cloud DB hot standby (V1.5). Read-only mode for DB write failures (V1). Detailed plan in PRODUCTION-READINESS §A.
 
@@ -1507,101 +1291,17 @@ The full strategic synthesis lives in [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC
 
 ---
 
-## 25. Slant.app strategic lessons (business + marketing + pricing)
+## 25. Slant.app strategic lessons
 
-Locked 2026-05-13 after deep slant.app research (homepage, 7 product surfaces, pricing, security, about, careers, press release, founder podcast, investor thesis). Slant is a vertical-adjacent reference (financial advisor CRM); the *product* lessons live in §4, §8, §9, §17. This section captures the non-product strategic lessons.
+**Locked 2026-05-13** after deep Slant.app research. Slant is a vertical-adjacent reference (financial advisor CRM, $4.5M raised, $1M ARR). Product lessons (Memories, Nudges, Projects, 3-scope chat, Notetaker) are in §4/§8/§9. **Full business + marketing + pricing + operational lessons (33 patterns) live in [`docs/SLANT-LESSONS.md`](docs/SLANT-LESSONS.md).**
 
-### Business strategy
-
-1. **Point-solution-first, platform-second.** Slant ran as Pageport (video landing pages + marketing automation for advisors) for 2 years before launching the full CRM. Pageport earned them 1,000+ advisor users, real customer relationships, and product instincts. The platform pivot was customer-pulled, not engineered. **Our analog:** Discovery Scan as productized service ($1-5K per book scan, L6) is our Pageport. Sell it to ~100 firms by 8/1 per L16; use that base to convert to platform subscriptions. **The narrative arc for the YC application IS this exact pattern.** Headline: *"We sold a wedge service to N firms; they pulled us into building the platform; we're now selling the platform back to them."*
-
-2. **Capital-efficient: $4.5M total raised over 2 years.** $1.2M pre-seed (2023, 2048 Ventures + Boost VC) → $3.3M seed (Aug 2025, 2048 + Matchstick + angels). Two-stage. Pre-seed funded point solution for 18 months; seed funded the platform launch when they had product-market-fit proof. **Our analog:** plan for a $1-2M pre-seed off the Discovery Scan revenue + Antonio reference + 100-customer-by-8/1 traction (per L16) — closing summer 2026, parallel to the YC Fall 2026 application. Don't raise more until v1 ships and the founder-tier cohort has 30+ paying firms.
-
-3. **Hiring shape: 50%+ customer-facing in early team.** 16 staff = 5 engineers + 5 AEs + 2 Onboarding Managers + GTM Lead + Head of Customer + 2 others. Slant optimized for sales motion over feature velocity. Means they value the conversion machine more than the next feature. **Our plan:** when we hit firm #6-10 onboarding, hire 1 Customer Success Manager ($60-80K) FIRST, not another engineer. Onboarding pain at scale is a CAC killer.
-
-4. **Strategic investors over signaling.** 2048 Ventures (vertical AI focus, both rounds) + Matchstick (Midwest, less crowded) + Boost VC (early-stage) + named angels with industry relationships. Optimized for partner support, not TechCrunch noise. **Our plan:** prioritize investors who understand the tax-practitioner segment — look at funds that have invested in Practiq, Canopy/TaxDome wave, accounting-vertical tools. Avoid funds that have TaxGPT/Black Ore/Accrual portfolio conflicts.
-
-5. **Insider knowledge moat.** Founders previously built point solutions for advisors (Pageport). Customer base + relationships pre-existed the platform launch. Matchstick explicitly cited this as the investment thesis. **Our analog:** Antonio + his mentor's 1,000+ preparer network + our 100-customer-by-8/1 push gives us the equivalent insider relationships. Frame this in YC application.
-
-6. **Customer concentration in early phase.** $1M ARR from "advisors with high lead volumes struggling with legacy CRMs" — they picked a deep wedge before going broad. **Our analog:** 2-10 preparer firms with active audit exposure (per L16) — same shape.
-
-7. **Word-of-mouth as primary acquisition.** Slant says explicitly: WOM is the channel. Low CAC. **Our plan:** by v1 launch, every founder-tier firm gets a referral incentive (1-month-free per referral that converts) plus a private community (Slack/Discord) where founder-tier firms share tax-position wins + Magic Button templates. Compounds the WOM motion.
-
-8. **No outside-vertical pivot risk.** Slant could have pivoted to "general SMB CRM" — they didn't. They stay locked on financial advisors. **Our discipline:** when a non-tax prospect asks ("can you do this for law firms? for HR consultancies?"), the answer is *"not in v1, not in v1.5, possibly v2 with a separate brand."* Per §16 productization discipline.
-
-### Marketing strategy
-
-1. **Emotional close tagline on every page footer.** Slant repeats *"Be the reason behind the retirement party, the second home, the peace of mind"* on every page. Structural emotional anchor. **Our equivalent (locked 2026-05-13):** *"Be the EA every taxpayer wishes they had — and the one your peers ask for advice."* Apply to footer of every marketing-site page.
-
-2. **Customer testimonial on every key page.** Slant pins Alex Stoehr's quote to homepage AND pricing page. Social proof is structural. **Our plan:** by v1 launch, pin 1 Antonio quote + 1 mid-market partner #2 quote to homepage, pricing, security, about. Plus "Watch the customer story" Loom embed on pricing page.
-
-3. **Resource Center as hub-and-spoke content strategy.** Slant ships articles + ebooks + press all from one Resource Center hub. Articles + Ebooks visible top-of-page. **Our plan:** build `/resources` route on marketing site; cadence 1 article per 2 weeks during v1 build, weekly post-launch. Two ebooks at launch (per PRODUCT-ROADMAP §6 marketing).
-
-4. **Trust signals on every footer.** Slant links Trust Center + Security from every page footer. **Our plan:** ship a static `/trust` page now (read-only list of shipped controls: audit chain, RLS, per-tenant DEK, MFA, encryption-at-rest, webhook verification, etc.) — defer Drata tooling per L8, but ship the *page* so prospects can find it pre-sale.
-
-5. **Tool-consolidation framing.** Slant names the 5-6 tools they replace inline ("Wealthbox + Redtail + Salesforce + Jump + ClickUp + Bento Engine"). **Our equivalent:** TaxDome + Canopy + Karbon + DocuSign + Square + Otter/Fathom — 6+ tools collapsed into 1. Ship a graphic on `/pricing`: 6 competitor logos → arrow → Docket logo.
-
-6. **Public competitor matrix.** Slant publishes the matrix on `/pricing`. Bold move; works when their AI is demonstrably better. **Our equivalent:** Docket vs TaxDome vs Canopy vs Karbon, 18 rows per PRODUCT-ROADMAP §6 marketing.
-
-7. **2:40 launch video structure.** TAM → AI-not-replacement → incumbent critique → mission → 5 capabilities → emotional close. Copy verbatim for our launch Loom (per §13 marketing lead).
-
-8. **Coordinated press push.** Slant pushed PR Newswire + TechBuzz + WealthManagement.com + Utah Business + 5+ outlets in coordinated launch. **Our plan:** for 7/30 v1 launch, line up Journal of Accountancy + Accounting Today + NAEA EA Journal + Tax Pro Today + Bloomberg Tax + a local NJ business outlet. Pre-write press release; place in PR Newswire week of launch.
-
-9. **Podcast appearances.** Clawson did "Customer Wins" podcast doing in-depth product + founder-journey interview. Builds founder profile + ICP awareness. **Our plan:** target 3-5 podcasts for David Wks 6-12 leading to launch — recommended: NAEA Tax Insider, Federal Tax Updates, EA Talk, AICPA podcast, The Accounting Podcast.
-
-10. **Industry-specific publications as authority.** WealthManagement.com is the WSJ of their vertical. **Our equivalent:** Journal of Accountancy, Accounting Today, Tax Pro Today, NAEA EA Journal, Bloomberg Tax. Coverage in 2-3 of these by launch is the goal.
-
-11. **Public team page builds founder/buyer trust.** Slant's About page lists all 16 staff with photos + roles. **Our minimum:** David Kim + Haokun Yang + Antonio Vazquez (advisor) photos + bios on `/about`. Mid-market regional firms want to see who they're buying from. Add by v1 launch.
-
-12. **Public salary bands.** Slant publishes role bands ($60-200K) on Ashby. Transparency play that aids recruiting + signals culture. **Our plan:** when we open our first FT role (post Customer Success Manager hire), publish bands.
-
-13. **AI conference + tax conference presence (different cadence).** Slant likely targets FPA Annual, Schwab Impact, MMI conferences. **Our equivalent (already in PRODUCT-ROADMAP):** AICPA Engage, NAEA Tax Forum, Latino Tax Pro events, Taxposium. Plus an AI-vertical conference: Anthropic Build, AI for Vertical SaaS (if it exists by 2026). Budget $5-15K per conference for booth + travel.
-
-### Pricing strategy
-
-1. **Per-seat at $150/mo is high-anchor but defensible.** Slant collapses 5-6 tools that cost a customer $200-300/mo in aggregate. They charge premium per-seat but cheaper than the sum. **Our applied principle:** per-active-client at $5 effective is *cheaper per client than competitors but premium per firm*. Same value-justification math. A firm with 200 clients pays $1000/mo flat — cheaper than TaxDome's $99/mo + $99/staff + per-return fees, but premium relative to a la carte tools.
-
-2. **Comparison-table-as-pricing-page leads with value not price.** Slant's `/pricing` page leads with the Wealthbox/Redtail matrix, not the seat price. Buyer reads value justification BEFORE seeing the number. **Our applied principle:** our `/pricing` route should open with the TaxDome/Canopy/Karbon matrix, then the founder-tier + standard-tier table, then per-event pricing. Anchor against value first.
-
-3. **Contact-sales for enterprise.** Slant has $150/seat public + Contact Sales for enterprise (likely $300-500/seat for 50+ advisor firms). **Our applied principle per L6:** Mid-market quote-driven for >2,000 active clients. Maintain.
-
-4. **No free tier.** Slant explicitly has no free tier. $150/seat = entry. Forces serious evaluations. **Our applied principle:** Founder Tier $250/mo flat = entry, no free-forever tier. Forces commitment.
-
-5. **Annual prepay discount.** Standard SaaS play; ~15%. **Our plan:** ship the annual-prepay option at v1 launch with 15% discount (per L6).
-
-6. **Beta pricing for early customers.** Slant gave beta users special pricing. **Our applied principle:** Founder Tier IS the beta-equivalent — first 50 firms get $250/mo + 30% lifetime discount on year-2 reversion to standard pricing (per L6). Same shape, different language.
-
-7. **Pricing transparency as moat.** Slant publishes seat price; TaxDome/Canopy/Karbon hide pricing behind "request a demo." Transparency lowers buyer friction + signals confidence. **Our applied principle:** Founder Tier + Standard Tier prices public on marketing site by v1 launch. Mid-market quote-driven is the only opacity.
-
-### Operational
-
-1. **Built SOC 2-compliant CRM in 6 months (Nov 2024 → Aug 2025).** Speed validates the build-it-as-you-go SOC 2 approach (L8). Slant didn't wait for perfect compliance; they shipped controls + audit-readiness concurrently with feature build. **Our applied discipline:** v1 launch 7/30 is also ~6 months from CEO review 5/2 — same shape. Don't fall behind on the security controls; ship them with every feature commit.
-
-2. **Centralized HQ vs remote-first.** Slant all-on-site Lehi UT; we're remote-first. Different bet. Slant's choice optimizes for dense culture + LDS-network talent pool. Ours optimizes for talent geography flexibility + low overhead. Neither is inherently better; ours is right for our team shape. Don't get pressured by Slant's pattern; trust the original decision.
-
-3. **Branding investment matters.** Slant has clean wordmark + consistent typography + branded ebook covers. Visual identity is part of trust signal. **Our applied principle per §11:** Docket's editorial-warm (portal) + operational-modern (command-room) language is the foundation; we need consistent brand application on marketing site by v1 launch.
-
-4. **Trial-fonts liability cleanup before launch.** Per §11 known stub: trial fonts in `public/fonts/trial/` expire 2026-05-14. License OR revert. **Action:** license-pre-v1 cleanup; don't let this blow up at launch.
-
-### What we're NOT taking from Slant (re-affirmed)
-
-| What | Why |
-|---|---|
-| Voice agent moved earlier | Tax has compliance issues with recording consent + tax-jargon transcription; V2+ is the right ship window |
-| Per-seat pricing | Per-active-client is right for our value unit (L6) |
-| Calendly competitor build | We integrate Google Calendar via MCP; lighter, cleaner |
-| AUM / portfolio integration | Vertical-specific |
-| LDS network distribution | Non-transferable; ours runs through r/taxpros + NAEA + Latino Tax Pro + Antonio's mentor |
-| GPT-5 / OpenAI primary | Anthropic Claude is calibrated better for legal/regulatory (see §6 Anthropic rationale block) |
-| Prospecting as Pillar 1 | Tax has different segment dynamics; prospecting is a paid add-on module not a core pillar |
-| On-site-only hiring | We're remote-first |
-| Mass-affluent buyer profile ($200K-$1M AUM) | Tax has different segment economics; ours is 2-10 preparer firms with audit exposure per L16 |
-
-### Where Slant is wrong for tax (defensive moves)
-
-1. **Slant lacks a Position Framework.** Their market doesn't require it; ours does. Our refusal-floor + cited-authority discipline is the structural reason an EA can adopt us where they can't adopt a deduction-finder. **This is the moat that Slant cannot copy without rebuilding their compliance posture.**
-2. **Slant's "minimize fields" goes too far for tax.** We have structured tables (clients / engagements / signatures / filings) that legally must persist as queryable rows. Tax-software API integrations require structured data for round-trip. Memories surface IS the unstructured complement, not a replacement.
-3. **Slant's chat-first UX wouldn't work for return prep.** Antonio doesn't want to chat with an AI to assemble a workpaper; he wants the workpaper assembled. We keep the agentic + UI-first principle: chat is one surface, not the only surface.
+Quick recap — the load-bearing takeaways:
+- Point-solution-first, platform-second pattern (Pageport → Slant). Our analog: Discovery Scan → Docket platform. The YC narrative arc.
+- Capital-efficient $4.5M total over 2 years. Plan $1-2M pre-seed off Discovery Scan revenue summer 2026.
+- Tagline anchor on every footer: *"Be the EA every taxpayer wishes they had — and the one your peers ask for advice."*
+- Tool-consolidation framing: replaces TaxDome + Canopy + Karbon + DocuSign + Square + Otter (6+ tools → 1).
+- Per-seat $150 is wrong for us; per-active-client metering aligns with our value unit per L6.
+- Slant lacks Position Framework — our structural moat that they can't copy without rebuilding compliance posture.
 
 ---
 
