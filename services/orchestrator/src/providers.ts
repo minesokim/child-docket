@@ -40,9 +40,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import {
   BedrockRuntimeClient,
   ConverseCommand,
+  type ContentBlock as BedrockContentBlock,
   type ConverseCommandInput,
   type Message as BedrockMessage,
   type SystemContentBlock,
+  type Tool as BedrockTool,
+  type ToolConfiguration as BedrockToolConfig,
 } from '@aws-sdk/client-bedrock-runtime';
 
 // ────────────────────────────────────────────────────────────────
@@ -52,10 +55,88 @@ import {
 export type ModelTier = 'haiku-4-5' | 'sonnet-4-6' | 'opus-4-7';
 export type Provider = 'anthropic' | 'bedrock';
 
-export type CallClaudeInput = {
+/**
+ * Why this exists (stop reason): the agent loop needs to know
+ * whether Claude is done (`end_turn`), wants to call a tool
+ * (`tool_use`), or got cut off (`max_tokens`). Normalized across
+ * both providers; Anthropic uses snake_case stop_reason, Bedrock
+ * uses camelCase stopReason.
+ */
+export type StopReason =
+  | 'end_turn'
+  | 'tool_use'
+  | 'max_tokens'
+  | 'stop_sequence'
+  | 'other';
+
+/**
+ * Normalized content block format. Maps to both Anthropic SDK and
+ * Bedrock Converse content blocks; the providers normalize on the
+ * way in + on the way out. Agents and callers see this shape only.
+ */
+export type ContentBlock =
+  | { type: 'text'; text: string }
+  | {
+      type: 'tool_use';
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    }
+  | {
+      type: 'tool_result';
+      toolUseId: string;
+      /** Plain text result. Errors: pass isError=true. */
+      content: string;
+      isError?: boolean;
+    };
+
+/**
+ * A conversation message. Shorthand `string` content expands to a
+ * single text block on the provider boundary. Multi-block content
+ * (text + tool_use, or multiple tool_result blocks) is used during
+ * the agent loop where Claude needs to see prior tool results.
+ */
+export type Message = {
+  role: 'user' | 'assistant';
+  content: string | ContentBlock[];
+};
+
+/**
+ * Tool definition the agent makes available to Claude. inputSchema
+ * is JSON Schema; both providers accept this shape directly
+ * (Anthropic as `input_schema`, Bedrock as `inputSchema.json`).
+ */
+export type ToolDefinition = {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+};
+
+/**
+ * The summary of a tool call Claude wants to make. Extracted from
+ * the response after a `tool_use` stop_reason. Agent loop invokes
+ * each one (typically via @docket/mcp-gateway) and appends the
+ * tool_result back to messages for the next iteration.
+ */
+export type ToolUse = {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+};
+
+/**
+ * Fields shared by both the single-shot and multi-turn callsites.
+ * Extracted to keep the discriminated union below readable.
+ */
+type CallClaudeInputBase = {
   modelTier: ModelTier;
   systemPrompt: string;
-  userPrompt: string;
+  /**
+   * Tools Claude may call. Empty/omitted = no tool use. Required
+   * when the caller wants tool_use stop_reason; without it the
+   * model never emits tool_use blocks even if it wanted to.
+   */
+  tools?: ToolDefinition[];
   maxTokens: number;
   /**
    * When true, the system prompt is wrapped with cache_control:
@@ -68,7 +149,39 @@ export type CallClaudeInput = {
   cachedSystem?: boolean;
 };
 
+/**
+ * Input to `callClaudeWithFallover`. Discriminated union: callers
+ * must pass EITHER `userPrompt` (single-shot, legacy + most common)
+ * OR `messages` (multi-turn, used by the agent loop). Passing both
+ * or neither is a compile-time error. Codex r1 P3 flagged that the
+ * previous shape (both optional) admitted runtime-invalid inputs
+ * TypeScript couldn't catch.
+ */
+export type CallClaudeInput =
+  | (CallClaudeInputBase & {
+      /**
+       * Single-shot path. When set, becomes the first user message.
+       */
+      userPrompt: string;
+      messages?: undefined;
+    })
+  | (CallClaudeInputBase & {
+      /**
+       * Multi-turn path (tool-use loop). Full conversation history;
+       * the agent loop appends assistant responses + tool results
+       * between iterations.
+       */
+      messages: Message[];
+      userPrompt?: undefined;
+    });
+
 export type CallClaudeResult = {
+  /**
+   * Concatenated text from the response's text blocks. Empty
+   * string when the response was pure tool_use (no text). Agent
+   * loop callers should check stopReason + toolUses rather than
+   * relying on text alone.
+   */
   text: string;
   provider: Provider;
   inputTokens: number;
@@ -76,6 +189,23 @@ export type CallClaudeResult = {
   cachedInputTokens: number;
   cacheCreationInputTokens: number;
   latencyMs: number;
+  /**
+   * Why the model stopped. 'tool_use' means callers should invoke
+   * the toolUses + continue the loop. 'end_turn' or 'max_tokens'
+   * means the loop is done.
+   */
+  stopReason: StopReason;
+  /**
+   * Tool calls the model wants to make. Always present (possibly
+   * empty) — empty when stopReason !== 'tool_use'.
+   */
+  toolUses: ToolUse[];
+  /**
+   * Full normalized content blocks from the assistant response.
+   * Agent loops append this verbatim to messages as the next
+   * assistant turn before appending tool_results.
+   */
+  assistantContent: ContentBlock[];
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -129,6 +259,106 @@ function anthropicClient(): Anthropic {
   return _anthropicClient;
 }
 
+/**
+ * Resolve the effective messages array. The discriminated union on
+ * CallClaudeInput guarantees exactly one of userPrompt / messages
+ * is set, but we still defend against runtime drift (e.g., a caller
+ * who casts through `any` or constructs the object via Object.assign).
+ *
+ * Codex r2 P3 flagged that the original implementation silently
+ * preferred `messages` when both were set — masking a caller bug.
+ * Throw eagerly when both are present so the mismatch is surfaced.
+ */
+function resolveMessages(input: CallClaudeInput): Message[] {
+  const hasUserPrompt =
+    input.userPrompt !== undefined && input.userPrompt !== '';
+  const hasMessages = input.messages !== undefined && input.messages.length > 0;
+  if (hasUserPrompt && hasMessages) {
+    throw new Error(
+      'callClaudeWithFallover rejects both `userPrompt` and `messages` — pass exactly one',
+    );
+  }
+  if (hasMessages) {
+    return input.messages!;
+  }
+  if (hasUserPrompt) {
+    return [{ role: 'user', content: input.userPrompt! }];
+  }
+  // Defensive: should be unreachable thanks to the discriminated union
+  // — but TypeScript narrowing can be defeated by casts, and an empty
+  // string userPrompt is a caller bug we surface here rather than
+  // sending a content-less request to Claude (which would 400).
+  throw new Error(
+    'callClaudeWithFallover requires non-empty `userPrompt` or non-empty `messages`',
+  );
+}
+
+/**
+ * Convert normalized Message[] to Anthropic SDK MessageParam[].
+ * String content stays as a string (SDK accepts it); structured
+ * content blocks map field-by-field.
+ */
+function messagesToAnthropic(
+  messages: Message[],
+): Array<Anthropic.MessageParam> {
+  return messages.map((m): Anthropic.MessageParam => {
+    if (typeof m.content === 'string') {
+      return { role: m.role, content: m.content };
+    }
+    const blocks: Anthropic.ContentBlockParam[] = m.content.map((b) => {
+      if (b.type === 'text') {
+        return { type: 'text', text: b.text };
+      }
+      if (b.type === 'tool_use') {
+        return {
+          type: 'tool_use',
+          id: b.id,
+          name: b.name,
+          input: b.input,
+        };
+      }
+      // tool_result
+      return {
+        type: 'tool_result',
+        tool_use_id: b.toolUseId,
+        content: b.content,
+        ...(b.isError ? { is_error: true } : {}),
+      };
+    });
+    return { role: m.role, content: blocks };
+  });
+}
+
+/**
+ * Convert ToolDefinition[] to Anthropic Tool[] shape.
+ */
+function toolsToAnthropic(
+  tools: ToolDefinition[],
+): Array<Anthropic.Tool> {
+  return tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    // Anthropic's Tool['input_schema'] type is the JSON-Schema-shape;
+    // we trust the caller's schema is a valid JSON Schema object.
+    input_schema: t.inputSchema as Anthropic.Tool['input_schema'],
+  }));
+}
+
+/**
+ * Normalize Anthropic stop_reason → our StopReason. Anthropic's API
+ * may add new values over time; map unknown values to 'other' so
+ * the agent loop terminates safely on unrecognized stops.
+ */
+function normalizeAnthropicStopReason(
+  raw: string | null | undefined,
+): StopReason {
+  if (raw === 'end_turn' || raw === 'tool_use' || raw === 'max_tokens') {
+    return raw;
+  }
+  if (raw === 'stop_sequence') return 'stop_sequence';
+  return 'other';
+}
+
 async function callViaAnthropic(input: CallClaudeInput): Promise<CallClaudeResult> {
   const start = Date.now();
   const systemBlock = input.cachedSystem
@@ -141,11 +371,16 @@ async function callViaAnthropic(input: CallClaudeInput): Promise<CallClaudeResul
       ]
     : input.systemPrompt;
 
+  const messages = messagesToAnthropic(resolveMessages(input));
+
   const response = await anthropicClient().messages.create({
     model: ANTHROPIC_MODEL_IDS[input.modelTier],
     max_tokens: input.maxTokens,
     system: systemBlock,
-    messages: [{ role: 'user', content: input.userPrompt }],
+    messages,
+    ...(input.tools && input.tools.length > 0
+      ? { tools: toolsToAnthropic(input.tools) }
+      : {}),
   });
 
   const latencyMs = Date.now() - start;
@@ -155,6 +390,37 @@ async function callViaAnthropic(input: CallClaudeInput): Promise<CallClaudeResul
     .map((b) => b.text)
     .join('\n');
 
+  // Normalize content blocks for the assistant response so callers
+  // can append them verbatim to next-turn messages.
+  const assistantContent: ContentBlock[] = response.content.map((b) => {
+    if (b.type === 'text') {
+      return { type: 'text', text: b.text };
+    }
+    if (b.type === 'tool_use') {
+      return {
+        type: 'tool_use',
+        id: b.id,
+        name: b.name,
+        // Anthropic's ToolUseBlock.input is `unknown`; we coerce to
+        // Record<string, unknown> since tool inputs are JSON objects
+        // by API contract.
+        input: (b.input as Record<string, unknown>) ?? {},
+      };
+    }
+    // Defensive: Anthropic content can include other block types
+    // (server_tool_use, etc.) in the future. Map to text to keep
+    // the shape closed.
+    return { type: 'text', text: '' };
+  });
+
+  // Extract tool uses for caller convenience (it's a subset of
+  // assistantContent but typed narrowly).
+  const toolUses: ToolUse[] = assistantContent
+    .filter((b): b is Extract<ContentBlock, { type: 'tool_use' }> =>
+      b.type === 'tool_use',
+    )
+    .map((b) => ({ id: b.id, name: b.name, input: b.input }));
+
   return {
     text,
     provider: 'anthropic',
@@ -163,6 +429,9 @@ async function callViaAnthropic(input: CallClaudeInput): Promise<CallClaudeResul
     cachedInputTokens: usage.cache_read_input_tokens ?? 0,
     cacheCreationInputTokens: usage.cache_creation_input_tokens ?? 0,
     latencyMs,
+    stopReason: normalizeAnthropicStopReason(response.stop_reason),
+    toolUses,
+    assistantContent,
   };
 }
 
@@ -197,6 +466,62 @@ function bedrockClient(): BedrockRuntimeClient {
   return _bedrockClient;
 }
 
+/**
+ * Convert normalized Message[] → Bedrock Converse messages format.
+ * Bedrock uses camelCase (toolUse / toolResult) vs Anthropic's
+ * snake_case (tool_use / tool_result). The structure is otherwise
+ * parallel.
+ */
+function messagesToBedrock(messages: Message[]): BedrockMessage[] {
+  return messages.map((m): BedrockMessage => {
+    // Bedrock's ContentBlock is a discriminated union with $unknown
+    // fallback (AWS SDK exhaustiveness pattern); cast each shape we
+    // emit since we control the structure end-to-end.
+    const content: BedrockContentBlock[] =
+      typeof m.content === 'string'
+        ? [{ text: m.content } as BedrockContentBlock]
+        : m.content.map((b): BedrockContentBlock => {
+            if (b.type === 'text') {
+              return { text: b.text } as BedrockContentBlock;
+            }
+            if (b.type === 'tool_use') {
+              return {
+                toolUse: {
+                  toolUseId: b.id,
+                  name: b.name,
+                  input: b.input,
+                },
+              } as BedrockContentBlock;
+            }
+            // tool_result
+            return {
+              toolResult: {
+                toolUseId: b.toolUseId,
+                content: [{ text: b.content }],
+                ...(b.isError ? { status: 'error' as const } : {}),
+              },
+            } as BedrockContentBlock;
+          });
+    return { role: m.role, content };
+  });
+}
+
+/**
+ * Normalize Bedrock Converse stopReason → our StopReason. Bedrock
+ * emits 'tool_use' as 'tool_use' (lowercase, snake_case despite
+ * camelCase elsewhere — see Bedrock docs). 'end_turn' / 'max_tokens'
+ * are parallel.
+ */
+function normalizeBedrockStopReason(
+  raw: string | null | undefined,
+): StopReason {
+  if (raw === 'end_turn' || raw === 'tool_use' || raw === 'max_tokens') {
+    return raw;
+  }
+  if (raw === 'stop_sequence') return 'stop_sequence';
+  return 'other';
+}
+
 async function callViaBedrock(input: CallClaudeInput): Promise<CallClaudeResult> {
   const start = Date.now();
 
@@ -210,28 +535,71 @@ async function callViaBedrock(input: CallClaudeInput): Promise<CallClaudeResult>
       ]
     : [{ text: input.systemPrompt }];
 
-  const messages: BedrockMessage[] = [
-    {
-      role: 'user',
-      content: [{ text: input.userPrompt }],
-    },
-  ];
+  const messages = messagesToBedrock(resolveMessages(input));
+
+  // Bedrock's Tool type is a discriminated union with a $unknown
+  // fallback member (AWS SDK's exhaustiveness pattern). The
+  // toolSpec-shaped object satisfies the ToolSpec member; cast is
+  // safe because we control the shape end-to-end.
+  const toolConfig: BedrockToolConfig | undefined =
+    input.tools && input.tools.length > 0
+      ? {
+          tools: input.tools.map(
+            (t): BedrockTool =>
+              ({
+                toolSpec: {
+                  name: t.name,
+                  description: t.description,
+                  // Bedrock takes the JSON Schema under inputSchema.json.
+                  inputSchema: { json: t.inputSchema },
+                },
+              }) as BedrockTool,
+          ),
+        }
+      : undefined;
 
   const command = new ConverseCommand({
     modelId: BEDROCK_MODEL_IDS[input.modelTier],
     system,
     messages,
     inferenceConfig: { maxTokens: input.maxTokens },
+    ...(toolConfig ? { toolConfig } : {}),
   } satisfies ConverseCommandInput);
 
   const response = await bedrockClient().send(command);
   const latencyMs = Date.now() - start;
 
-  const text =
-    response.output?.message?.content
-      ?.map((b) => ('text' in b && typeof b.text === 'string' ? b.text : ''))
-      .filter(Boolean)
-      .join('\n') ?? '';
+  // Normalize response content blocks. Bedrock returns
+  // { text?, toolUse?, ... } blocks; map to our normalized union.
+  const rawContent = response.output?.message?.content ?? [];
+  const assistantContent: ContentBlock[] = rawContent.map((b) => {
+    if ('text' in b && typeof b.text === 'string') {
+      return { type: 'text', text: b.text };
+    }
+    if ('toolUse' in b && b.toolUse) {
+      const tu = b.toolUse;
+      return {
+        type: 'tool_use',
+        id: tu.toolUseId ?? '',
+        name: tu.name ?? '',
+        input: (tu.input as Record<string, unknown>) ?? {},
+      };
+    }
+    // Unknown block — coerce to empty text block so the shape stays closed.
+    return { type: 'text', text: '' };
+  });
+
+  const text = assistantContent
+    .filter((b): b is Extract<ContentBlock, { type: 'text' }> => b.type === 'text')
+    .map((b) => b.text)
+    .filter(Boolean)
+    .join('\n');
+
+  const toolUses: ToolUse[] = assistantContent
+    .filter((b): b is Extract<ContentBlock, { type: 'tool_use' }> =>
+      b.type === 'tool_use',
+    )
+    .map((b) => ({ id: b.id, name: b.name, input: b.input }));
 
   const usage = response.usage ?? {
     inputTokens: 0,
@@ -248,6 +616,9 @@ async function callViaBedrock(input: CallClaudeInput): Promise<CallClaudeResult>
     cachedInputTokens: usage.cacheReadInputTokens ?? 0,
     cacheCreationInputTokens: usage.cacheWriteInputTokens ?? 0,
     latencyMs,
+    stopReason: normalizeBedrockStopReason(response.stopReason),
+    toolUses,
+    assistantContent,
   };
 }
 
