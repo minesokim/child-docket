@@ -1228,5 +1228,238 @@ picker functional)
 
 ---
 
+## [28] 2026-05-13 — C27 archive-project clears engagement is_primary
+
+**Decision**: Archiving a project clears `engagement_projects.is_primary`
+on every engagement that had this project as primary. Engagement is
+left without a primary; firm owner sets a new one explicitly (no
+auto-promotion).
+
+**Reasoning**: Auto-promotion requires the system to guess which of
+the remaining attached projects "should" become primary; that guess
+is wrong often enough (especially when an engagement spans an
+audit-defense project + an annual-return project simultaneously) that
+the explicit-reassign-by-firm-owner default avoids data drift.
+
+**Alternative considered**: auto-promote the next-most-recently-attached
+project. Rejected because the "most recent attachment" signal is
+noisy — the firm might attach a Q3 estimates project in October that
+was never meant to be primary over the annual return.
+
+**How to reverse**: edit `archiveProject` server action; add the
+auto-promote SQL after the is_primary clear.
+
+**Severity**: low (engagement primary is informational; the UI shows
+the engagement clearly with or without a primary).
+
+**Commit**: C27 commit (backfilled from session handoff 2026-05-13).
+
+**User-review status**: pending
+
+---
+
+## [29] 2026-05-13 — C27 template archive rejection
+
+**Decision**: Templates cannot be archived. `archiveProject` server-
+side rejects template IDs with a descriptive error. UI hides the
+button for templates.
+
+**Reasoning**: `seedProjectTemplates` uses `ON CONFLICT DO NOTHING`
+which can't restore an archived template — archiving would be a
+one-way door for canonical workflow definitions. We don't want a
+firm-owner to accidentally delete the "Annual Return Prep" template
+and then have to manually re-create it.
+
+**Alternative considered**: allow archive + add a "restore canonical
+template" admin action. Rejected: extra UI scope, and the failure
+mode is silent (no template visible until admin notices).
+
+**How to reverse**: remove the template-id check in `archiveProject`
++ surface the archive button on template cards.
+
+**Severity**: low (templates are firm-owner-only and rare).
+
+**Commit**: C27 commit (backfilled from session handoff 2026-05-13).
+
+**User-review status**: pending
+
+---
+
+## [30] 2026-05-13 — C28 mcp-gateway agent_id NULL for direct invocations
+
+**Decision**: When `McpGateway.callTool` / `readResource` is called
+without `agentName` (server-action or background-job case), the
+audit row's `agent_id` stays NULL. Existing UI
+(`home-queries.ts TOOL_LABEL_HINTS`) treats non-null `agent_id` as
+actor label and would show "ledger" or "quickbooks" as a fake agent.
+Tool name (`connectorName:toolName`) carries the connector identity
+instead.
+
+**Reasoning**: A connector name is not an agent. An agent is a named
+chain of LLM calls + reasoning + tool calls (Triage Classifier,
+Inbox Drafter). A tool call originating from a server action has no
+agent — labeling it as "ledger-agent" or similar would distort the
+audit-trail UI.
+
+**Alternative considered**: synthesize `system-action` as the agent_id
+default when no agentName is supplied. Rejected: poisons the
+agent-action histogram with non-agent activity.
+
+**How to reverse**: edit `services/orchestrator/src/mcp-gateway/gateway.ts`
+`callTool` and default `agentName` to `'system-action'` when omitted.
+
+**Severity**: low (audit trail is read-only; downstream impact is
+cosmetic on the home-queries label).
+
+**Commit**: C28 (`1ac47fc`), backfilled.
+
+**User-review status**: pending
+
+---
+
+## [31] 2026-05-13 — C29 SkillCategory is free-form `string`
+
+**Decision**: `SkillCategory` is typed as free-form `string`, not a
+discriminated union. `CANONICAL_SKILL_CATEGORIES` const lists the
+canonical v0 categories ('reconciliation' / 'discovery' / 'notice-
+response' / 'memo' / 'planning') as authoring guidance. Firms can
+add categories like 'meeting-brief' or 'payroll' without hitting a
+type error.
+
+**Reasoning**: Vendor lock-in vs flexibility trade-off. A union type
+would force every new category to land in a TS file + redeploy
+@docket/skills; firms can't add their own categories without a
+PR cycle. Free-form string moves category-tracking to runtime + the
+`computeSkillHash` ensures category changes still trip drift
+detection. The const-array provides authoring guidance without
+typing rigidity.
+
+**Alternative considered**: discriminated union with `extra-string`
+escape hatch. Rejected: adds complexity to consumer code (every
+category check needs a fallback branch).
+
+**How to reverse**: replace `type SkillCategory = string` with a
+union in `packages/skills/src/types.ts` and remove the const.
+
+**Severity**: low (consumer code is unaffected; only the type
+strictness changes).
+
+**Commit**: C29 (`8d7896d`), backfilled.
+
+**User-review status**: pending
+
+---
+
+## [32] 2026-05-13 — C29 computeSkillHash uses options-object form
+
+**Decision**: `computeSkillHash(options: { id, version, name,
+description, instructions, category, connectors })` instead of
+positional args. Every hashed field is required by the type system.
+
+**Reasoning**: Codex round 3 caught that the original positional
+form `computeSkillHash(name, description, instructions, version,
+connectors)` silently defaulted id and category to empty strings when
+omitted — producing wrong hashes that wouldn't trip drift detection
+when those fields changed. Options-object makes every field required.
+
+**Alternative considered**: keep positional but require id+category
+as the first two parameters. Rejected: most consumers wouldn't have
+either parameter handy when computing hashes, and positional-with-N
+required parameters is a fragile signature when the field set is
+likely to grow.
+
+**How to reverse**: rewrite signature back to positional + add
+runtime guards in `computeSkillHash` body to validate all fields
+are non-empty.
+
+**Severity**: medium (hash drift is the only enforcement boundary
+preventing skill edits without version bumps; getting it wrong is
+a real security/integrity concern).
+
+**Commit**: C29 (`8d7896d`), backfilled.
+
+**User-review status**: pending
+
+---
+
+## [33] 2026-05-13 — C30 additive runDocketAgentWithTools alongside runDocketAgent
+
+**Decision**: C30 ships `runDocketAgentWithTools` as a NEW exported
+function in `services/orchestrator/src/agent-loop.ts`, leaving the
+existing single-shot `runDocketAgent` in `docket-agent.ts`
+byte-identical. The Wave 1 substrate (Agent SDK migration) is
+additive, not a replacement.
+
+**Reasoning**: The 5 production agents in `services/workers/`
+(triage-classifier, inbox-drafter, gmail-poll, classify-gmail-message,
++1 stub) all call `runDocketAgent`. Replacing it with a multi-turn
+tool-use loop is a behavior change for those agents (loop iterations
+where there were none before) plus a typing change (CallClaudeInput
+shape extended). Additive ship: zero risk to running production
+agents; future skills (C36+) voluntarily migrate to the new function.
+
+**Alternative considered**: swap `runDocketAgent` for a thin shim
+that calls `runDocketAgentWithTools(maxIterations=1)`. Rejected: same
+behavior change (cost-telemetry shape, audit-hook frequency,
+stop-reason semantics) just hidden — the existing 5 production
+agents' test suites would catch the drift but a real Antonio call
+might surface a subtle regression in production.
+
+**How to reverse**: delete `agent-loop.ts` + `agent-loop.test.ts` +
+strip the new exports from `index.ts`. `runDocketAgent` continues
+working unchanged.
+
+**Severity**: architectural (the multi-turn substrate is what every
+future skill/agent in Wave 2+ will sit on; the additive-not-replace
+choice locks the migration pattern for the next 6-12 months).
+
+**Commit**: dd916b5
+
+**User-review status**: pending
+
+---
+
+## [34] 2026-05-13 — C30 leaves docket-agent.ts cost-calc gap as scope-discipline followup
+
+**Decision**: Codex r1 P2 caught a cost-calculation bug — `cache_
+creation_input_tokens` were silently dropped from the cost formula
+(underreporting spend by ~12x on cache-warm iterations). C30 fixes
+this in `agent-loop.ts` but explicitly does NOT fix the same gap in
+the older `docket-agent.ts`. The gap remains as a scope-discipline
+followup.
+
+**Reasoning**: Two competing principles:
+(1) Boil-the-lake: fix the whole class of bug, not the demo path.
+(2) Scope discipline: C30 is the agent-loop ship; widening to also
+modify `docket-agent.ts` introduces risk to the 5 production agents
+that depend on it, requires its own test updates + codex review +
+potentially a separate commit.
+
+Picked (2) for this commit. The fix in `docket-agent.ts` is small
+(<10 LOC) and well-scoped — should land as a dedicated `fix(orchestrator):`
+commit in the next session. Recording here so the followup doesn't
+get lost.
+
+**Alternative considered**: widen C30 to fix both. Rejected for the
+risk reason above + commit-atomicity: "agent-loop ships" and
+"production-agent cost-calc fix" should be separate commits so the
+git log tells the right story.
+
+**How to reverse**: not applicable — this is a non-action decision
+(deliberate non-fix). Reverse = take the followup fix off the queue.
+
+**Severity**: medium (real cost-tracking inaccuracy in production
+today; impact bounded by how aggressively the 5 production agents
+exercise prompt caching — Triage Classifier and Inbox Drafter both
+use cached system prompts, so the under-reporting is happening daily
+in dev). Tracked as a followup commit.
+
+**Commit**: dd916b5 (the decision-to-defer; the followup commit will
+reference this entry).
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-13. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
