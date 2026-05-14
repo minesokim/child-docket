@@ -1461,5 +1461,59 @@ reference this entry).
 
 ---
 
+## [35] 2026-05-13 — Cost dashboard's "cache hit %" semantics flagged but not fixed in this commit
+
+**Decision**: While shipping the docket-agent.ts cost-calc fix (decision
+#34's followup), codex review surfaced a P2 concern about the cost
+dashboard at `apps/command-room/src/app/dashboard/cost/page.tsx`:354-368.
+The dashboard computes a "cache hit %" as `cached_tokens / input_tokens`
+where `cached_tokens` in the `actions` table is the SUM of cache reads
++ cache writes (the orchestrator writes `result.cachedInputTokens +
+result.cacheCreationInputTokens` into that column). When a call is
+cache-WARMING only (reads=0, writes >> 0), the dashboard renders 100%+
+"cache hit" even though zero hits actually happened (the clamp to 100
+masks but doesn't fix the misleading display).
+
+**Reasoning**: Codex misattributed the issue to this commit's diff —
+the `cachedTokens = reads + writes` line is unchanged from pre-patch
+HEAD, and the same pattern shipped in `agent-loop.ts` via C30 (commit
+dd916b5) through three rounds of codex review. The dashboard semantic
+concern is REAL but pre-existing, and the fix path requires breaking
+changes to either (a) `actions` schema (add `cache_creation_tokens`
+column + migration + rollup updates) or (b) the orchestrator's return
+type contract (split `cachedTokens` into `cachedReadTokens` /
+`cacheCreationTokens`) — both touch the 5 production agents that
+consume `runDocketAgent`. That widens scope well beyond decision #34's
+"fix the cost formula" mandate.
+
+**Alternative considered**: widen this commit to fix the dashboard
+too. Rejected for the same scope-discipline reason that drove decision
+#34 — atomic commits tell the right story in the git log.
+
+**How to reverse**: dashboard rewrite + actions schema migration in a
+dedicated followup commit. Recommended sequence: (1) add
+`cache_creation_tokens` column to actions table; (2) update
+`cachedTokens` writes to split into two fields at the orchestrator
++ agent-loop level; (3) rewrite the dashboard's "cache hit %"
+computation to use `cached_read_tokens / (input_tokens + cached_read_tokens)`
+(the correct denominator for "what fraction of input was served from
+cache"). Affects: docket-agent.ts, agent-loop.ts, all 5 production
+agents (passive — they consume `cachedTokens` opaquely), actions
+schema, cost-rollups.ts, cost dashboard.
+
+**Severity**: medium (UI is misleading on cache-warming days; cost
+math itself is correct after decision #34 followup ships). Bounded by
+how aggressively cache warming dominates a tenant's daily activity —
+for steady-state agents with cached system prompts, reads dominate
+and the dashboard reads ~correctly; for sparse / first-of-day calls
+the warmup distorts.
+
+**Commit**: (this commit — the followup to decision #34, references
+#35 to track the discovery).
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-13. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*

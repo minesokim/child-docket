@@ -13,8 +13,20 @@ import {
   type Provider,
 } from './providers.js';
 
-// Per-million-token pricing (USD). Cached column is the prompt-cache
-// hit price (90% discount on Anthropic; Bedrock pricing parity).
+// Per-million-token pricing (USD).
+//
+// Anthropic Messages API reports three buckets of input tokens, each
+// charged at a different rate (Anthropic billing docs, verified 2026-05):
+//   - input_tokens          → base rate                  (uncached)
+//   - cache_creation_input  → 1.25× base rate            (5-min TTL write)
+//   - cache_read_input      → 0.1× base rate             (90% discount)
+// Output is billed flat at the output rate.
+//
+// `cacheWrite` is the dollar rate for cache-creation tokens; `cached`
+// is the dollar rate for cache-read tokens. Both buckets must be
+// billed separately — counting cache_creation under `cached` under-
+// reports spend by ~12× (cached is 0.1× base, write is 1.25× base —
+// 12.5× ratio).
 //
 // EDGE CASE 14 (Bedrock retail cost ~+5-10%): for v0 we use the
 // Anthropic-direct prices for both providers. The 5-10% Bedrock
@@ -23,9 +35,9 @@ import {
 // $500/mo (PRODUCTION-READINESS §B cost dashboard threshold), we
 // split the columns and re-run cost analytics.
 const PRICING = {
-  'haiku-4-5':  { input: 0.80,  output: 4.00,  cached: 0.08 },
-  'sonnet-4-6': { input: 3.00,  output: 15.00, cached: 0.30 },
-  'opus-4-7':   { input: 15.00, output: 75.00, cached: 1.50 },
+  'haiku-4-5':  { input: 0.80,  output: 4.00,  cached: 0.08, cacheWrite: 1.00 },
+  'sonnet-4-6': { input: 3.00,  output: 15.00, cached: 0.30, cacheWrite: 3.75 },
+  'opus-4-7':   { input: 15.00, output: 75.00, cached: 1.50, cacheWrite: 18.75 },
 } as const;
 
 export type DocketAgentOptions = {
@@ -79,11 +91,17 @@ export async function runDocketAgent(opts: DocketAgentOptions): Promise<DocketAg
     cachedSystem: opts.cachedSystem,
   });
 
+  // Anthropic reports three input buckets (uncached / cache-write /
+  // cache-read), each at a different rate. `cachedTokens` returned to
+  // the caller is the SUM of read + write — it's the "how much cache
+  // activity happened this call" signal for cost dashboards. The cost
+  // formula bills each bucket at its proper rate.
   const cachedTokens = result.cachedInputTokens + result.cacheCreationInputTokens;
 
   const pricing = PRICING[tier];
   const costUsd =
-    ((result.inputTokens - result.cachedInputTokens) * pricing.input) / 1_000_000 +
+    (result.inputTokens * pricing.input) / 1_000_000 +
+    (result.cacheCreationInputTokens * pricing.cacheWrite) / 1_000_000 +
     (result.cachedInputTokens * pricing.cached) / 1_000_000 +
     (result.outputTokens * pricing.output) / 1_000_000;
 
