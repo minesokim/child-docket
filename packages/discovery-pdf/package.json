@@ -16,7 +16,7 @@
     "@docket/shared": "workspace:*",
     "@docket/ui": "workspace:*",
     "@react-pdf/renderer": "^4.3.0",
-    "react": "^19.0.0"
+    "react": "^19.2.6"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
