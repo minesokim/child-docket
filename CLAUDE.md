@@ -160,7 +160,27 @@ Single pane that shows **today** and lets the preparer act on it.
 - **Memories** (per-client tab) — plain-English bullets of "what we know about this client" surfaced as a first-class object, not hidden in extension fields. Examples: *"Daughter Lily starts UC Davis Aug 2026 (AOTC + 529 windowing relevant)"* / *"Owns rental at 1244 Olive — depreciation Schedule E"* / *"Took Augusta Rule position 2024, $14K saved"* / *"Prefers SMS over email; never call between 9am-1pm — daycare hours"* / *"Spouse files MFS; works at different CPA — request Form 8958 by 2/15."*
 
   Memories live in `client_facts` (already shipped via migration 0021). What's NEW is the **UI surface**: a Memories tab on the client page showing curated bullets, sorted by relevance + recency. AI extracts memories continuously from messages, meeting transcripts, intake answers, and document parses. Preparer can pin, edit, delete. Pre-meeting brief auto-surfaces the top 5 Memories for the client. Slant's framing locked verbatim (per founder Thomas Clawson): *"Minimize usage of custom fields"* — Memories replace the "let me add 47 custom fields to the client schema" anti-pattern that bloats every CRM. Memory architecture L4 is the substrate; Memories is the surface.
-- **Audit Trail UI** — read-only view on `actions` table per client. Every AI action shown as "AI did X at time Y" with the cited authority + confidence tier + cost. **Rewind primitive** (V1.5, per the §23 [`/decisions-log`](.claude/skills/decisions-log/SKILL.md) and POSITION-FRAMEWORK refusal-floor design) becomes user-facing here: each row carries a "Reverse this action?" affordance that walks the chain to undo. Marketing handle: *"the only tax AI where every action is reversible."*
+- **Audit Trail UI** — read-only view on `actions` table per client.
+
+  **Three-lane attribution.** Every row tinted by actor lane — AI rows on faint blue-gray tint, human rows on cream (default), integration rows on faint warm-gray. The AI/human distinction is structurally required for audit defense (§6694 needs to show *who* did *what* under *whose* authority). Deliberate divergence from Ping which conflates AI/human actions.
+
+  **Per-row content:** Actor icon (AI glyph / user avatar / vendor logo) · timestamp · action title · 1-2 line snippet · **Tier pill** for tax-position rows (Tier 1 green / Tier 2 amber / Tier 3 orange / Tier 4 red / Refused gray) · **Cited authority** with hover-expanded text + effective-from/superseded-on dates · **Confidence** badge (H/M/L) for non-position AI · **Status pill** (open/completed/reversed/superseded) · **Cost telemetry** (Anthropic API $ per row) · **Reasoning trail** (collapsible) · **Rewind affordance** ("Reverse this action?" — gated by role + reversibility flag).
+
+  **Rewind mechanics (critical clarification):** the audit chain is NEVER rewound. It only grows. The `actions` table is INSERT-only via Postgres trigger; nothing edits or deletes a row. "Reverse this action" appends a new audit row that says *"Reversal of action #X — reason: ..."* + executes a compensating real-world action. Both rows remain forever. Like a banking ledger — you don't erase a charge, you post a reversal. Filed IRS forms, payments via Square, third-party webhooks cannot be undone at the external system — Rewind applies to Docket-internal state only, with compensating action logged for the external case.
+
+  **Four AI-action-attribution states:** (1) *AI took action under human authority* — AI lane tint, approving human's avatar, approval timestamp. (2) *AI surfaced a recommendation* — AI lane tint, awaiting-review pill + Tier + cited authority. (3) *Human acted on AI suggestion* — human lane tint, "AI-assisted" sub-glyph for provenance. (4) *AI auto-executed under L2-L4 trust tier* — AI lane tint with "auto-accepted" pill + link to firm's AI Preferences config that authorized it (chain-of-authorization audit).
+
+  **Filtering:** date range / actor lane / action category / Tier / cited authority / client / preparer / cost threshold. Persistent across visits via query-params (Ping pattern). **Search:** hybrid full-text + vector across `actions.reasoning_trail` + linked artifacts.
+
+  **Aggregate metric strip above the feed:** actions today/week/month with breakdown by actor lane · Tier classifications surfaced ("34 Tier 1 auto-accepted, 12 Tier 2 reviewed, 3 Tier 3 flagged") · dollar impact ($ tax savings YTD) · reversals YTD · authority citations used YTD. Ping does NOT surface aggregate metrics — Docket's strategic divergence.
+
+  **IRS-defensible PDF export per engagement:** one click → 30-90 page packet with cover page (firm PTIN + tenant ID + date range) · chronological action log · per-position cite + tier + decision + human approver · chain-hash audit verification · Form 8275 attachments · engagement letter + §7216 consent + 8879 signatures · all sync events (Square deposits, DocuSign signatures, Gmail sends, Twilio SMS sends). **The packet IS the §6694 defense.** Antonio's two active 2026 IRS audits are the structural validation. Ping has zero competitor surface here.
+
+  **Client-facing year-end PDF.** Lighter version of audit packet, same substrate — *"here's what we did for you this year"*. Retention move per Slant lessons.
+
+  **Mobile rendering:** single-column vertical list, sticky filter chips, tap row → reasoning trail in bottom-sheet. Rewind affordance intentionally NOT shown on mobile (one-tap reversibility too risky on a phone; force desktop interaction for reversals).
+
+  Marketing handle: *"the only tax AI where every action is reversible."*
 - **Practice intelligence** — margin per client, friction score, capacity, pricing inconsistency, churn risk, "fire the bad client" insights. **Per-client risk tier** (green/amber/red) summarizes the AI's confidence in the firm-client fit (compliance posture, payment history, communication friction, scope drift). AI Preferences (§8) drive the tier thresholds; firms with conservative posture get more amber/red flags, aggressive firms get more green.
 - **Outcome prediction** — position-level audit/controversy risk modeling on demand (Blue J integration, V2).
 - **Command palette (Ask Docket, Cmd+K)** — fuzzy-search any action across any tool. Pull IRS transcript · file 2848 · post invoice · generate workpaper · draft notice response · sync return to OLT · request docs · run YoY diff. Every action invokes an MCP tool. Also handles **questions** (not just commands): "what's John Doe's missing docs status," "which clients haven't paid Q3 estimates." The agent shows a **multi-step reasoning trail** as it works — each sub-step (looked up client, queried engagement, checked deadlines) renders as a collapsible row so the preparer can audit *why* the answer landed where it did. Per §9, reasoning visualization is a contract on every agent output, not just Cmd+K.
@@ -190,6 +210,10 @@ Single pane that shows **today** and lets the preparer act on it.
 
 ### Client Portal (taxpayer surface, mobile-first 390×780 iOS)
 **Mediated by AI, gated by Antonio.** The taxpayer never interacts with an autonomous AI. Every AI action is preparer-approved.
+
+**Critical: every client-facing message is preparer-reviewed and signed under the preparer's name.** AI drafts; preparer reviews; preparer sends. The text that lands on Maria's phone has Antonio's name signed at the bottom, written in Antonio's voice (learned from past sent messages). Antonio can edit before sending. Per L9: AI is invisible infrastructure; the conversation is between client and preparer; the client should never know AI noticed something, only that their preparer is on top of things.
+
+The single design test: if a Memory-triggered outreach (e.g., the AOTC reminder when a client's kid starts college) would feel "creepy" or "surveillance-like" to the client, the framing is wrong. Always lead with the relationship moment, not the data point. *"Congrats to Lily on UC Davis!"* not *"Your daughter Lily starts UC Davis this fall."* The preparer's review pass catches creepiness.
 
 Two surfaces inside the portal:
 1. **Intake (38 routes, 25-step declarative flow)** — Login → SMS OTP → Welcome → Quick-start (name/DOB/email) → Tutorial → Service path → Personal → State → Filing status → Spouse → Dependents (count + per-dep detail) → Income (incl. self-employment, rental detail) → Tax questions → Deductions → Life events → Refund pref → Document upload (4 phases: empty → AI scanning → retake prompt → AI parsed → saved) → Engagement letter → §7216 consent → Schedule appt → $50 deposit → Done. Single source of truth: `apps/client-portal/src/lib/intake-flow.ts` — 25 steps with `isApplicable()`, `isComplete()`, `next()` per step. Continue button gated by `canAdvanceFromStep` per step (with `STEPS_WITHOUT_GATE = ['docs']` exemption).
@@ -521,7 +545,8 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 | **OLT Prep Handoff** *(or Notice Triage — Antonio's choice week 1)* | Paper spec only | Needs `olt` browser automation MCP server (not built; M2+ per build order) |
 | **Document Triage** | Paper spec only | Needs `documents` MCP server + Cloudflare R2 + Haiku vision pipeline (per `docs/DOCS-CAPTURE-PIPELINE.md`) |
 | **Notice Response** | Paper spec only | Needs `irs-solutions` MCP + knowledge graph |
-| **Discovery Agent** *(deduction surfacing — the wedge)* | Paper spec only | Needs authority library + position-library seed + cross-channel artifact capture. See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) §4. Phase-3 work. |
+| **Discovery Agent** *(continuous scanner across 9 categories — the wedge)* | Paper spec only | Continuous, year-round, across entire firm's book. NOT just deductions. Nine categories: tax-saving opportunities (Augusta · §179 · S-corp election thresholds · QBI bunching · Roth conversion windows · AOTC · §199A optimization · cost segregation · charitable bunching) · cross-doc discrepancies (1099-NEC vs Xero vs bank deposits) · YoY discrepancies · missing docs · compliance gaps (BOI · SoI · CA SoS suspension · payroll deadlines · 1099-K thresholds) · audit risk signals · strategy moments (business crosses $250K → S-corp · client crosses $1M → estate) · cross-platform reconciliation · lifecycle moments · client-side life events. Each finding carries category tag + severity (informational/opportunity/risk/critical-deadline) + cited authority if it's a tax position + dollar impact estimate + action card. Runs nightly cron + on-demand + event-triggered. Distinct from Tax Reviewer Agent (filing-time gate). See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) §4. Phase-3 work. |
+| **Tax Reviewer Agent** *(filing-time gate)* | Paper spec only | Triggered when preparer clicks "Review before file" on a return. Looks at completed return + source docs + math + form structure. Outputs: errors blocking file, errors needing disclosure, cosmetic auto-fixes. Each error classified by tier (Tier 1 mistake = file blocked; Tier 3 = surface for EA decision; cosmetic = inline fix). Discovery findings can become Tax Reviewer blockers. Different mental model — Discovery is proactive scanner; Tax Reviewer is gate before filing. Both needed. |
 | **Strategy Agent** *(EA-initiated multi-year modeling)* | Paper spec only | Same dependencies as Discovery + entity/retirement/depreciation rule encoding. POSITION-FRAMEWORK §4. |
 | **Position Agent** *(aggressive territory: defend or refuse)* | Paper spec only | Same dependencies. The refusal-floor logic is the load-bearing piece. POSITION-FRAMEWORK §2. |
 | **Nudges Agent** *(life-event + drift + milestone surface)* | Paper spec only | Locked 2026-05-13 after Slant.app research. Daily cron walks `client_facts` + `engagement` state + `calendar_events` + `nudge_rules`, drafts approved-pending preparer-to-client outreach. See §8 Nudges. Ships V1.5 alongside Reminders execution scheduler. |
@@ -537,6 +562,33 @@ Two functions are registered in `services/workers/src/functions/` but the integr
 - Audit-trail hook on every call: ✅ at orchestrator level (caller wires it to the `actions` table)
 - Trust gate before external action: ❌ not built (placeholder field on tenant; no enforcement code yet)
 - Per-agent playbook bundle: ❌ not built (`packages/playbooks/` doesn't exist)
+
+### Critical authorization boundary (non-negotiable)
+
+**Docket NEVER:**
+- Auto-files a return with the IRS or any state agency
+- Auto-submits 8879 e-signature transmission
+- Auto-pushes return data to OLT / Drake / Lacerte / ProConnect / CCH Axcess / ProSeries / any tax prep software
+- Auto-files 2848 / 8821 / 8275 with the IRS
+- Auto-sends client-facing communications (email / SMS / portal message)
+- Auto-charges deposits or processes payments
+- Auto-executes ANY action that touches an external system or sends to a client
+
+**What Docket DOES autonomously:**
+- Reads source documents
+- Builds the workpaper (proposed, in Docket's internal database)
+- Drafts return data in Docket's staging area (NOT pushed to tax software)
+- Surfaces Discovery findings + Position classifications + draft 8275 disclosures
+- Generates pre-meeting briefs
+- Curates Memories from interactions
+
+**Per-action gating via trust escalation L1-L4** (per §8):
+- L1 firm (Antonio's starting state): every external action requires explicit preparer approval click. No auto-execute.
+- L2: Tier-1 positions auto-accepted into workpaper, but pushing to OLT still requires approval. Logged.
+- L3: Tier-1-2 positions auto-accepted, pushing to OLT auto-approved IF return below configurable complexity threshold. Weekly L1-2 audit review.
+- L4: most autonomy — only Tier-3+ positions or unusual returns require human attestation.
+
+Trust escalation is **per-firm + per-action-class**, not all-or-nothing. Antonio can be L4 on "auto-classify documents" (low risk) while staying L1 on "push to OLT" (high risk) — same firm, different gates per action class. This is the line that makes Docket adoptable where Claude Cowork isn't.
 
 ### Agent contract — what every output must carry (UI rendering)
 
@@ -563,46 +615,97 @@ Reasoning-trail rendering is a `<ReasoningTrail>` primitive in `packages/ui/src/
 
 ---
 
-## 10. MCP server roster
+## 10. MCP server roster + integration architecture
 
-> **CANONICAL HOME**: full integration roster + build plan + Cowork-architecture
-> research lives in [`docs/AGENT-PLATFORM.md`](docs/AGENT-PLATFORM.md) (added 2026-05-13).
-> When this section disagrees with that doc, **AGENT-PLATFORM.md wins** until
-> a docs-pass folds it back here. The §10 below is the v0 paper plan kept for
-> historical reference; the Cowork-informed sequence (Waves 1-4, C28+) supersedes it.
->
-> **Reality check (5/2/2026):** `mcp-servers/` directory exists but is **empty**.
-> Zero MCP servers have been built. The orchestrator does not currently route
-> through MCP — agents talk to `runDocketAgent` directly and DB writes go through
-> Drizzle. The `mcp-gateway` service in CLAUDE.md's earlier draft does not exist.
->
-> The roster below is the planned build order for **post-5/15** once we migrate
-> the orchestrator to Claude Agent SDK. Until then, agents do their work in
-> straight TypeScript against the DB and Anthropic API.
+> **Architecture locked 2026-05-14** after Composio detailed mechanics + Ping audit-trail UX + Anthropic Citations API + Twilio Conference + DocuSign KBA + IRS Systems + CA State Agencies + §7216 research. Full detail in `docs/architecture-research/` and `docs/competitor-research/`.
 
-**Build effort estimates in parens.** Each independently deployable.
+### The three-specialist hybrid architecture
 
-### v0 servers (build in this order — POST-5/15)
+`@docket/mcp-gateway` (shipped C28) stays on top. It owns trust gates, audit chain, §7216 consent gating, multi-tenant routing. **Three downstream specialists route through it:**
 
-| # | Server | Type | Tools | Effort |
-|---|---|---|---|---|
-| 1 | **`ledger`** | internal | `log_action`, `query_actions`, `get_audit_trail`, `get_client_state` | 3d |
-| 2 | **`knowledge`** | internal | `search_authority`, `get_form_instructions`, `get_concept`, `get_playbook` | 5d (+ 5d ingestion) |
-| 3 | **`gmail`** | API wrapper | adopt official, thin tenant scoping | 2d |
-| 4 | **`google-calendar`** | API wrapper | `list_events`, `create_event`, `update_event`, `delete_event`, `find_free_slots` — drives the command-room Calendar surface (§4). Per-tenant Google OAuth; events two-way sync into `calendar_events` table with `client_id` + `engagement_id` foreign keys so calendar entries are first-class client artifacts. | 3d |
-| 5 | **`xero`** | API wrapper | adopt community or thin wrapper | 2d |
-| 6 | **`portal`** | internal | `post_message`, `request_document`, `update_status` | 3d |
-| 7 | **`olt`** | browser automation | `list_returns`, `get_return_state`, `prefill_return`, `push_field`, `run_diagnostics` | 10–14d |
-| 8 | **`irs-solutions`** | browser automation | `pull_transcripts`, `list_notices`, `classify_notice`, `get_ian_alerts`, `prefill_2848` | 8–10d |
+1. **Composio** (rented managed service) — commodity OAuth long-tail. Cannot host self-hosted MCP servers — Composio's gateway only proxies to Composio-hosted MCP servers.
+2. **Browser-automation workers** (Docket-owned, Fly.io sandboxed Playwright) — legacy tax software + IRS/state browser automation. Composio's request-response model cannot host long-running browser sessions.
+3. **Docket-native MCP servers** (Docket-owned, multi-tenant) — tax-vertical APIs + internal services + research corpus. The moat.
 
-### Build-vs-adopt rules
+### Composio — the OAuth long-tail specialist
+
+**Pricing:** Free tier (20K calls/mo) for dev. **Starter $29/mo** (200K calls) when first customer onboards. Pro $229/mo at ~10-15 customer firms. Enterprise (custom + VPC + BAA + DPA) from 200+ firms. All ~1,000 toolkits available at every tier; metered on calls.
+
+**Acquisition risk:** ~40-55% probability within 18 months (Pipedream → Workday Nov 2025; n8n SAP $5.2B May 2026). 6-month wean-off plan: swap `ComposioConnectorProvider` → `NangoConnectorProvider` per-connector via the `IntegrationProvider` boundary.
+
+**§7216 posture:** Requires contractual DPA carve-out before 1040 data flows — explicit no-training-on-tool-call-payloads. Per §301.7216-2(d)(2) carve-out for contractor / equipment & software, most processors covered IF pinned to US regions. Cohere has Canadian regions — offshore consent required.
+
+**Day-1 Composio connectors (~12, ship for founder-50 cohort):** Gmail · Outlook · Google Calendar · Outlook Calendar · Zoom · Google Drive · Dropbox · OneDrive · Plaid · Calendly · Karbon · Xero.
+
+**Day-1 DIRECT vendor OAuth (NOT Composio):**
+- **QuickBooks Online** (Direct Intuit OAuth) — load-bearing for trial-balance work
+- **Square** + **Stripe** — already direct in stack
+- **Twilio** — Conference API for handset-merge call recording (Antonio merges Docket into in-progress cell calls via Add Call + Merge; Twilio sees inbound PSTN call)
+- **DocuSign 8879 KBA flow** — IRS Pub 1345 has TWO options: (1) credit-bureau KBA (~$3/attempt via DocuSign Identify, ~$1.50 wholesale via LexisNexis) for NEW clients; **(2) 2FA + ERO-known information** (prior-year AGI + 6-digit code) for REPEAT clients — no KBA charge. Option 2 covers ~80% of Antonio's book.
+- **DocuSign (general)** — can route through Composio for non-8879 docs
+
+**V1 expansion (~17 more):** Microsoft Teams · Google Meet · Slack · Financial Cents · Anchor · Double · HubSpot · SharePoint · Mailchimp · Asana · Monday · ClickUp · Fathom · Granola · Otter · RingCentral · Dialpad.
+
+**V1.5/V2 niche (~13):** NetSuite · Sage Intacct · Salesforce · Box · Brex/Ramp/Mercury/Relay · PayPal/Wave/FreshBooks · Notion/Coda/Airtable · Avalara/TaxJar · CoinTracker/Koinly · Bill.com/Melio.
+
+### Browser-automation workers — the legacy tax software specialist
+
+Long-running Playwright sessions in Fly.io sandboxed containers. Cannot fit Composio's request-response model.
+
+- **Tax software**: OLT (Antonio's primary) · Drake · Lacerte · ProConnect · CCH Axcess · ProSeries · ATX · TaxWise · TaxSlayer Pro · UltraTax CS · GoSystem Tax RS
+- **IRS systems**: Tax Pro Account (pre-fill + click-to-submit in preparer's authenticated session — ID.me automation is a hard no; ship as browser extension or deep-link handoff) · e-Services TDS (gated by EFIN + Client ID + X.509 cert + ~45-day suitability review; apply at V1 launch, 6 months to production)
+- **State agencies**: CA FTB (MyFTB with mandatory MFA, no transcript API — Playwright + cached storageState) · CDTFA · EDD (bulk file upload of DE 8300-spec XML/CSV; DE 48 verification required) · CA SoS BizFile API (FREE no-auth public records — daily heartbeat for entity standing checks; mirrors FTB suspensions within ~30 days)
+- **BOI / FinCEN** — direct partner program when granted; browser auto V1
+
+**TaxStatus** (developer.taxstatus.com) is the V1 primary aggregator for IRS transcripts (REST API, public dev docs, advisor-leaning). TaxNow + Compliancely are alternatives. **IRS Solutions + Canopy are competitors, NOT partners** — Antonio continues personal IRS Solutions use; Docket replaces at practice-OS level.
+
+**Direct File partner program:** IRS formally cancelled FS2026 launch (Nov 2025). Reclassified V1.5 → V2+ contingent on Treasury PPP study outcome.
+
+All Docket-native browser-automation runs under `@docket/mcp-gateway` trust gates + audit chain. **Critical authorization boundary (per §9):** NEVER auto-files / auto-pushes / auto-submits to external systems without explicit preparer authorization per trust escalation L1-L4.
+
+### Docket-native MCP servers — the tax-vertical specialist
+
+Internal MCP servers for tax-vertical capabilities + research corpus. No vendor risk.
+
+| Server | Tools | Effort |
+|---|---|---|
+| **`ledger`** | `log_action`, `query_actions`, `get_audit_trail`, `get_client_state` | 3d |
+| **`knowledge`** | `search_authority`, `get_form_instructions`, `get_concept`, `get_playbook`. Backed by tax-graph corpus (Tier 1 federal: IRC + Treas Regs + Pubs + Tax Court + IRM + IRB + CCAs/PLRs/TAMs; Tier 1 state: CA first, NY/TX/FL expansion). | 5d server + 4w ingestion |
+| **`documents`** | `parse`, `classify`, `link`, `generate_workpaper`. Auto-classify W-2/1099/K-1/brokerage; auto-rename per firm convention; auto-PDF (image→PDF); OCR-searchable binarization; mask/unmask for sharing. | 5d |
+| **`portal`** | `post_message`, `request_document`, `update_status` | 3d |
+| **`skills`** | `list`, `invoke`, `get_definition`. Uses `@docket/skills` registry (shipped C29). | 2d |
+| **`memos`** | `create`, `version`, `link`, `export`. Memos as first-class per §11. | 4d |
+| **`positions`** | `propose`, `classify_tier`, `accept`, `reject`, `superseded`. Position Framework Tier 1-4 classifier. | 5d |
+| **`rules`** | Deterministic calculators (Schedule C, §199A, AOTC, bonus depreciation). Per §5 Rules layer. | 6d |
+
+### The IntegrationProvider boundary (vendor-swap insurance)
+
+`@docket/mcp-gateway` exposes a single interface:
+
+```typescript
+interface ConnectorProvider {
+  invoke(toolName: string, input: unknown): Promise<ConnectorResult>;
+  oauth(firmId: TenantId, ...): Promise<OAuthFlow>;
+  webhook(event: WebhookEvent): Promise<void>;
+}
+```
+
+Four implementations: `ComposioConnectorProvider` · `BrowserAutomationProvider` · `NativeMcpProvider` · `DirectVendorProvider`.
+
+**Migration scenarios:** Composio 5x price hike → swap to Nango self-hosted, per-connector ~2 days. Composio acquired → execute 6-month wean-off plan in `docs/competitor-research/COMPOSIO-DETAILED-2026-05-14.md` §11.
+
+### Build-vs-adopt rules (refined)
+
 | Situation | Decision |
 |---|---|
-| Vendor has open API + incentive to expose (Stripe, Gmail, Drive, Xero, QBO, Plaid, Twilio, DocuSign, Notion, Slack, Calendar) | **Adopt** community/official MCP server |
-| Vendor has API but no MCP server yet, friendly to integrators | **Adopt or build thin wrapper** in a weekend |
-| Vendor has API but hostile/competitive (TaxDome, Canopy, Karbon — PM competitors) | **Don't bet on them.** Design around. |
-| Vendor has no API (Drake, OLT, parts of Lacerte) | **You build.** Browser automation as MCP server. Moat. |
-| Custom abstraction over multiple sources ("client tax timeline" merging Drake + IRS transcript + ledger) | **Always build.** This is your product. |
+| Commodity OAuth (Gmail, Drive, Slack, Calendar, etc.) | **Composio** |
+| Load-bearing vendor with direct partnership (QBO, Stripe, DocuSign-KBA, Twilio) | **Direct vendor OAuth** |
+| Legacy tax software (Drake, Lacerte, OLT, etc.) | **Docket-native browser automation in Fly.io** |
+| IRS / state agency / BOI / 1099 filing | **Docket-native browser automation OR direct partner API** |
+| Tax research / corpus / memos / position library | **Docket-native MCP server** |
+| Tax-vertical competitor PM (TaxDome, Canopy, Liscio, IRS Solutions) | **NOT integrated — Docket replaces** |
+| Advisory-leaning PM (Karbon, Financial Cents, Anchor, Double) | **Composio integration** — firms keep these, Docket runs AI on top |
+| Custom abstraction over multiple sources | **Always build native.** This is the product. |
 
 ---
 
