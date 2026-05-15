@@ -344,31 +344,34 @@ export function EncryptedTextField({
   style?: React.CSSProperties;
 }) {
   const masked = value.includes('·');
-  const [editing, setEditing] = React.useState(!masked);
+  // `editing` was previously local state synced from `masked` via a
+  // useEffect (the classic derived-state anti-pattern react-doctor
+  // flagged 2026-05-14). It's purely derivable: when the value is
+  // masked, we show the display chip; otherwise the user is editing.
+  // The state transitions in handleStartEdit all flow through
+  // onChange (which mutates `value` upstream), so the parent's next
+  // render naturally flips `masked` → `editing` follows. No
+  // useEffect, no setEditing calls, no sync bugs. See:
+  // https://react.dev/learn/you-might-not-need-an-effect
+  const editing = !masked;
   const [revealing, setRevealing] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-
-  // If the value flips back to masked (e.g., post-save the server
-  // re-masks), drop back to masked display. If it's no longer masked
-  // (user actively typing), enter editing mode.
-  React.useEffect(() => {
-    setEditing(!masked);
-  }, [masked]);
 
   const handleStartEdit = async () => {
     if (onReveal) {
       setRevealing(true);
       try {
         const plaintext = await onReveal();
+        // onChange flips `value` → `masked` → `editing` on next
+        // render. Focus on the next tick once the input mounts.
         onChange(plaintext ?? '');
-        setEditing(true);
         setTimeout(() => inputRef.current?.focus(), 0);
       } finally {
         setRevealing(false);
       }
     } else {
+      // Same flow — clearing the value unmasks it; editing follows.
       onChange('');
-      setEditing(true);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   };
