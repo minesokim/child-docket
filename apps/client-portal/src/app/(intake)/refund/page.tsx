@@ -26,7 +26,7 @@ import {
 } from '@docket/ui';
 import { useRef } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { formatDigits, lookupBankByRouting } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
@@ -103,7 +103,7 @@ export default function RefundPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={11} label="Refund" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/refund')} label="Refund" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

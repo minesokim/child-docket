@@ -23,7 +23,7 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 
@@ -55,7 +55,7 @@ export default function ContactInfoPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={1} label="Contact" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/contact-info')} label="Contact" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

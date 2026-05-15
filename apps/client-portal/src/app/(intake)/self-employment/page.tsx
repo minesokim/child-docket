@@ -24,7 +24,7 @@ import {
   ToggleCard,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { formatEin, formatMoney } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
@@ -74,7 +74,7 @@ export default function SelfEmploymentPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={7} label="Self-employment" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/self-employment')} label="Self-employment" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

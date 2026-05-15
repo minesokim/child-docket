@@ -1699,7 +1699,7 @@ REACT-DOCTOR-CONFIG.md`. CI score drops back to the pre-suppression
 **Severity**: low. Advisory mode means none of this gates merges
 either way. The config just makes the score legible.
 
-**Commit**: <pending — current commit>
+**Commit**: ec9d545
 
 **User-review status**: pending
 

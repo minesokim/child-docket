@@ -21,7 +21,7 @@ import {
 } from '@docket/ui';
 import { motion, LayoutGroup } from 'framer-motion';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { ServiceOtherSubKind } from '@docket/shared';
@@ -83,7 +83,7 @@ export default function ServicesPathPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={1} subStep="A" label="Services" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/services')} subStep="A" label="Services" />
         <div style={{ padding: '32px 24px 8px' }}>
           <Stack gap={16}>
             <Stack gap={10}>

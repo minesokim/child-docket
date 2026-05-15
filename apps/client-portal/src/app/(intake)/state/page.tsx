@@ -20,7 +20,7 @@ import {
 } from '@docket/ui';
 import { expandStateCode } from '@docket/shared';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 
@@ -57,7 +57,7 @@ export default function StatePage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={3} label="State & prior year" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/state')} label="State & prior year" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

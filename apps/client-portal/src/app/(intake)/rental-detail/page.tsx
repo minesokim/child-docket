@@ -21,7 +21,7 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useSetIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatDigits, formatMoney, formatYear } from '@docket/shared';
@@ -83,7 +83,7 @@ export default function RentalDetailPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={7} label="Rental" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/rental-detail')} label="Rental" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

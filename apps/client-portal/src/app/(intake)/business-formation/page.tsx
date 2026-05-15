@@ -29,7 +29,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatDigits } from '@docket/shared';
@@ -154,7 +154,7 @@ export default function BusinessFormationPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={2} label="Formation" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/business-formation')} label="Formation" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

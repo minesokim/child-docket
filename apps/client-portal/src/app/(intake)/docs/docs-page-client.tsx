@@ -47,7 +47,7 @@ import {
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import {
   type ExpectedDoc,
   type ExpectedDocKind,
@@ -174,7 +174,7 @@ export function DocsOverviewClient({
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={12} label="Documents" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/docs')} label="Documents" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

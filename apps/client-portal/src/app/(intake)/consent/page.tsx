@@ -18,7 +18,7 @@ import {
 } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { recordIntakeSignature } from '@/lib/intake/sign';
@@ -123,7 +123,7 @@ export default function ConsentPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={13} label="Consent" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/consent')} label="Consent" />
         <div style={{ padding: '32px 24px 8px' }}>
           <Stack gap={10}>
             <div

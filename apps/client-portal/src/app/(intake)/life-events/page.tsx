@@ -25,7 +25,7 @@ import {
   ToggleCard,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useSetIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 type ItemKey = 'marriage' | 'baby' | 'home' | 'business' | 'inherit' | 'retire';
@@ -84,7 +84,7 @@ export default function LifeEventsPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={10} label="Life events" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/life-events')} label="Life events" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

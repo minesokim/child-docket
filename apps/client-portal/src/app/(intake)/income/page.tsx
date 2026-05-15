@@ -23,7 +23,7 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { isEntityOnlyFiling, type IncomeType } from '@docket/shared';
@@ -96,7 +96,7 @@ export default function IncomePage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={7} label="Income" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/income')} label="Income" />
 
         <div style={{ padding: '32px 24px 8px' }}>
           <Row gap={10} align="center" style={{ marginBottom: 18 }}>

@@ -20,7 +20,7 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 
 export default function ServicesAddonsPage() {
@@ -73,7 +73,7 @@ export default function ServicesAddonsPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={1} subStep="B" label="Services" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/services-addons')} subStep="B" label="Services" />
         <div style={{ padding: '32px 24px 8px' }}>
           <Stack gap={16}>
             <Stack gap={10}>

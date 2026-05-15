@@ -16,7 +16,7 @@ import {
   Stack,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeField } from '@/lib/intake-context';
+import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { FilingStatus } from '@docket/shared';
@@ -63,7 +63,7 @@ export default function FilingPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={4} label="Filing" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/filing')} label="Filing" />
 
         <div style={{ padding: '32px 24px 8px' }}>
           <Stack gap={16}>

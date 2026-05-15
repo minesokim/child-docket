@@ -35,6 +35,7 @@ import {
   useFieldReveal,
   useIntakeAnswers,
   useSetIntakeField,
+  useIntakeStepNumber,
 } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
@@ -241,7 +242,7 @@ export default function DepsDetailPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={6} label="Dependents" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/deps-detail')} label="Dependents" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

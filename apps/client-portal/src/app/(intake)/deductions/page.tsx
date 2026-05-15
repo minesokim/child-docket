@@ -30,7 +30,7 @@ import {
 } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useSetIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useSetIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { formatEin, formatMoney } from '@docket/shared';
@@ -119,7 +119,7 @@ export default function DeductionsPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={9} label="Deductions" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/deductions')} label="Deductions" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />
