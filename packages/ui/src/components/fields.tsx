@@ -258,20 +258,37 @@ export function SSNField({
     );
   }
 
-  // Masked display (server-supplied mask sentinel = filled).
+  // Masked display (server-supplied mask sentinel = filled). Rendered
+  // as a <button> for keyboard accessibility — SSN reveal is a
+  // PII-disclosing action that must work for keyboard + screen-reader
+  // users. Masked text + pill marked aria-hidden so AT announces only
+  // the action, not the literal "•••-••-1234" dots. react-doctor a11y
+  // fix 2026-05-14.
   return (
-    <div
-      onClick={handleStartEdit}
+    <button
+      type="button"
+      onClick={() => void handleStartEdit()}
+      disabled={revealing}
+      aria-label={
+        revealing
+          ? 'Revealing SSN'
+          : `Edit SSN (currently masked, ends in ${lastFour})`
+      }
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '12px 14px',
         background: t.ease.mintWhisper,
+        border: 'none',
         borderRadius: 12,
         cursor: revealing ? 'wait' : 'text',
         opacity: revealing ? 0.6 : 1,
         transition: 'opacity 140ms cubic-bezier(.2,.8,.2,1)',
+        width: '100%',
+        textAlign: 'left',
+        fontFamily: 'inherit',
+        color: 'inherit',
       }}
     >
       {/* Single span with one continuous text node — same font, size,
@@ -279,8 +296,11 @@ export function SSNField({
           Color is the only thing that switches: muted on the masked
           5 digits + dashes, ink on the lastFour. Mask is `•` (BULLET)
           — thinner and smaller than BLACK CIRCLE, reads as a quiet
-          placeholder rather than a heavy redaction block. */}
+          placeholder rather than a heavy redaction block.
+          aria-hidden on the visible mask + pill so screen readers
+          announce only the button's aria-label, not the dots. */}
       <span
+        aria-hidden="true"
         style={{
           flex: 1,
           fontFamily: t.mono,
@@ -292,8 +312,10 @@ export function SSNField({
       >
         •••-••-<span style={{ color: t.ink }}>{lastFour}</span>
       </span>
-      <EncryptedPill t={t} />
-    </div>
+      <span aria-hidden="true">
+        <EncryptedPill t={t} />
+      </span>
+    </button>
   );
 }
 

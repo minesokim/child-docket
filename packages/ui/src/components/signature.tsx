@@ -51,8 +51,13 @@ export function LegalDoc({
       >
         {title}
       </div>
-      {paras.map((p, i) => (
-        <p key={i} style={{ margin: '0 0 10px' }}>
+      {/* Use the paragraph text itself as the key — stable across
+          renders (the LegalDoc body for a given engagement letter or
+          §7216 consent never reorders or filters in place). Array
+          index would break if a parent ever filtered the paras list.
+          react-doctor a11y/correctness fix 2026-05-14. */}
+      {paras.map((p) => (
+        <p key={p} style={{ margin: '0 0 10px' }}>
           {p}
         </p>
       ))}

@@ -223,6 +223,11 @@ export function TaxFormSkeleton({
             {title}
             {subtitle ? <span className="doc-title-sub">{subtitle}</span> : null}
           </div>
+          {/* react-doctor-disable-next-line no-array-index-as-key —
+              skeleton bars are static decoration, the widths array
+              never reorders or filters at runtime. Using `${w}-${i}`
+              would still index-into the array; the index IS the
+              identity here. */}
           {widths.map((w, i) => (
             <div key={i} className={`bar ${w}`} />
           ))}

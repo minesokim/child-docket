@@ -63,18 +63,49 @@ export function Card({
     (selected ? t.ease.mintKiss : tinted ? t.tintAccent : t.card);
   const color = accentFill?.fg ?? (selected ? t.ease.forestDark : t.ink);
 
+  // A11y: when onClick is set, render as a <button> so keyboard users
+  // (Enter / Space) can activate. When no onClick, render a plain
+  // <div> — non-interactive card stays semantically neutral. Button
+  // styles get a full reset so the visual stays identical to the
+  // prior <div> rendering. react-doctor a11y fix 2026-05-14.
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        style={{
+          background,
+          color,
+          // Zero box stroke. Affordance from fill + shadow only.
+          border: 'none',
+          borderRadius: t.radius,
+          padding: t.pad,
+          transition: 'all 0.15s ease',
+          cursor: 'pointer',
+          // Button-reset declarations to inherit container layout.
+          textAlign: 'left',
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          width: '100%',
+          display: 'block',
+          ...style,
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
     <div
-      onClick={onClick}
       style={{
         background,
         color,
-        // Zero box stroke. Affordance from fill + shadow only.
         border: 'none',
         borderRadius: t.radius,
         padding: t.pad,
         transition: 'all 0.15s ease',
-        cursor: onClick ? 'pointer' : 'default',
+        cursor: 'default',
         ...style,
       }}
     >

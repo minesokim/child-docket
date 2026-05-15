@@ -111,6 +111,19 @@ export function HealthStatusGate({
   const [dbStatus, setDbStatus] = React.useState<ServiceStatus | 'unknown'>('unknown');
   const [replicaState, setReplicaState] = React.useState<ReplicaState | null>(null);
 
+  // react-doctor-disable-next-line no-fetch-in-effect, no-cascading-set-state —
+  // this is a polling-with-backoff health-check loop:
+  //   - fetch-in-effect is the correct pattern for periodic polling.
+  //     SWR / react-query are designed for declarative one-shot or
+  //     focus-revalidated fetches, not for "ping /api/health every
+  //     30s with exponential backoff on down state." Reaching for a
+  //     library here would obscure the polling logic, not simplify it.
+  //   - cascading-set-state flags setDbStatus + setReplicaState back-
+  //     to-back; React batches these into a single render, and they're
+  //     independent state slices (DB status + replica state) not a
+  //     dependent chain. False positive on this specific pattern.
+  // If we ever swap to SWR for non-polling endpoints, do NOT migrate
+  // this hook — its job is fundamentally periodic + backoff-aware.
   React.useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;

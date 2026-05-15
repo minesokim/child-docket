@@ -66,8 +66,10 @@ export function AskAntonioBar({
   };
 
   return (
-    <div
+    <button
+      type="button"
       onClick={handleClick}
+      aria-label={`Ask ${firstName} — open chat`}
       style={{
         background: '#FFFFFF',
         // Zero stroke. Soft drop shadow carries elevation instead of an
@@ -79,14 +81,23 @@ export function AskAntonioBar({
         cursor: 'pointer',
         overflow: 'hidden',
         transition: 'transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms cubic-bezier(.2,.8,.2,1)',
+        // Button-reset: inherit container chrome instead of UA-default
+        // button paint. Width 100% so the bar spans the container.
+        width: '100%',
+        padding: 0,
+        textAlign: 'left',
+        fontFamily: 'inherit',
+        fontSize: 'inherit',
+        color: 'inherit',
+        display: 'block',
       }}
       onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
+        const el = e.currentTarget as HTMLButtonElement;
         el.style.transform = 'translateY(-1px)';
         el.style.boxShadow = '0 4px 14px rgba(15, 62, 23, 0.12)';
       }}
       onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
+        const el = e.currentTarget as HTMLButtonElement;
         el.style.transform = 'translateY(0)';
         el.style.boxShadow = '0 2px 10px rgba(15, 62, 23, 0.08)';
       }}
@@ -127,11 +138,12 @@ export function AskAntonioBar({
         >
           Stuck? Ask {firstName}
         </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClick();
-          }}
+        {/* Was a nested <button>; collapsed to a styled <span> because
+            the outer element is now a <button> (a11y fix 2026-05-14)
+            and buttons-inside-buttons is invalid HTML. Click still
+            goes to the outer button's handleClick. Visual identical. */}
+        <span
+          aria-hidden="true"
           style={{
             padding: '6px 14px',
             fontSize: 13,
@@ -140,15 +152,14 @@ export function AskAntonioBar({
             color: '#fff',
             border: 'none',
             borderRadius: 999,
-            cursor: 'pointer',
             fontFamily: t.sans,
             letterSpacing: -0.05,
           }}
         >
           Open chat
-        </button>
+        </span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -166,9 +177,24 @@ export function AskAntonioBar({
 // in forestDark medium, timestamp muted forestDark right-aligned.
 // ────────────────────────────────────────────────────────────────
 
-type ChatMsg = { from: 'a' | 'u'; text: string; time: string };
+type ChatMsg = { id: string; from: 'a' | 'u'; text: string; time: string };
+
+// crypto.randomUUID is available in Node 19+ and every evergreen
+// browser — safe for both SSR and CSR. Fallback to a timestamp +
+// random suffix in the impossible case the API isn't present.
+function newMsgId(): string {
+  if (
+    typeof globalThis !== 'undefined' &&
+    typeof globalThis.crypto !== 'undefined' &&
+    typeof globalThis.crypto.randomUUID === 'function'
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 const WELCOME_MSG: ChatMsg = {
+  id: 'welcome',
   from: 'a',
   text: "Hey - I'm here. What can I help with?",
   time: '2:14 PM',
@@ -204,24 +230,34 @@ export function AskAntonioChat({ t }: { t: Theme }) {
     }
   }, []);
 
+  // Split into two effects (was a single useEffect with 3 mutations
+  // including localStorage — react-doctor flagged it as cascading
+  // setState 2026-05-14). The split makes each effect responsible for
+  // one concern: (1) listen for the open event, (2) on open transitions,
+  // run the first-time welcome-message queuer with proper setTimeout
+  // cleanup.
   React.useEffect(() => {
-    const onOpen = () => {
-      setOpen(true);
-      // First-ever open: queue the welcome message ~600ms after the modal
-      // slides up so it visually arrives like a real incoming text.
-      if (typeof window === 'undefined') return;
-      const seen = window.localStorage.getItem(FIRST_OPEN_KEY);
-      if (seen === 'true') return;
-      setTimeout(() => {
-        setMessages([WELCOME_MSG]);
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(FIRST_OPEN_KEY, 'true');
-        }
-      }, 600);
-    };
+    const onOpen = () => setOpen(true);
     window.addEventListener('ask-antonio:open', onOpen);
     return () => window.removeEventListener('ask-antonio:open', onOpen);
   }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    if (typeof window === 'undefined') return;
+    const seen = window.localStorage.getItem(FIRST_OPEN_KEY);
+    if (seen === 'true') return;
+    // First-ever open: queue the welcome message ~600ms after the modal
+    // slides up so it visually arrives like a real incoming text.
+    // Cleanup clears the timer if `open` flips back to false before
+    // the welcome lands (previously a leak when the user closed the
+    // modal within 600ms of opening).
+    const id = setTimeout(() => {
+      setMessages([WELCOME_MSG]);
+      window.localStorage.setItem(FIRST_OPEN_KEY, 'true');
+    }, 600);
+    return () => clearTimeout(id);
+  }, [open]);
 
   React.useEffect(() => {
     if (scrollerRef.current) {
@@ -229,25 +265,55 @@ export function AskAntonioChat({ t }: { t: Theme }) {
     }
   }, [messages, open]);
 
+  // Document-level Escape handler — closes the modal even when focus
+  // is outside the dialog subtree (e.g., focus stuck on the trigger
+  // button after a render that re-mounted the dialog). Pairs with
+  // the dialog-element onKeyDown handler below for in-dialog focus
+  // (codex catch 2026-05-14 — the dialog-only handler missed the
+  // outside-focus case).
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const send = () => {
     if (!input.trim()) return;
     const msg = input.trim();
     const now = new Date();
     const time = `${((now.getHours() + 11) % 12) + 1}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
-    setMessages((m) => [...m, { from: 'u', text: msg, time }]);
+    setMessages((m) => [...m, { id: newMsgId(), from: 'u', text: msg, time }]);
     setInput('');
     setTimeout(() => {
       setMessages((m) => [
         ...m,
-        { from: 'a', text: "Got it. Give me a few minutes - I'll come back with specifics.", time },
+        {
+          id: newMsgId(),
+          from: 'a',
+          text: "Got it. Give me a few minutes - I'll come back with specifics.",
+          time,
+        },
       ]);
     }, 1400);
   };
 
   if (!open) return null;
 
+  // A11y: modal pattern — backdrop is a div with role="presentation"
+  // and an onClick that closes, plus an Escape-key handler bound at
+  // the dialog level (below) for keyboard-only users. The chat
+  // surface uses role="dialog" + aria-modal="true" so screen readers
+  // announce it as a modal dialog and focus-trap behavior applies
+  // (forms-content inside the dialog still receives tab focus
+  // normally). The previous bare-div onClick pattern was a
+  // documented react-doctor a11y finding; this is the canonical
+  // dialog-modal fix per WAI-ARIA Authoring Practices 1.2.
   return (
     <div
+      role="presentation"
       style={{
         position: 'fixed',
         inset: 0,
@@ -275,7 +341,13 @@ export function AskAntonioChat({ t }: { t: Theme }) {
         }
       `}</style>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Chat with ${firstName}`}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setOpen(false);
+        }}
         style={{
           width: '100%',
           maxWidth: 480,
@@ -418,6 +490,11 @@ export function AskAntonioChat({ t }: { t: Theme }) {
             </div>
           </div>
 
+          {/* Messages now carry a stable `id` (crypto.randomUUID
+              minted at creation time) so React reconciliation has a
+              true identity per row — codex caught the previous
+              composite-key-with-index fallback as still index-sensitive
+              for insert/reorder cases. */}
           {messages.map((m, i) => {
             const isUser = m.from === 'u';
             const senderName = isUser ? 'You' : firstName;
@@ -430,7 +507,7 @@ export function AskAntonioChat({ t }: { t: Theme }) {
             const shouldAnimate = i >= animateFromIndex.current;
             return (
               <div
-                key={i}
+                key={m.id}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -640,6 +717,10 @@ function AnimatedWords({
   let wordIdx = 0;
   return (
     <>
+      {/* react-doctor-disable-next-line no-array-index-as-key —
+          word-reveal renders a static split of `node` (a string).
+          Duplicate words ("the" appearing twice in a sentence) would
+          collide if keyed by content; the index IS the identity here. */}
       {parts.map((part, i) => {
         if (/^\s+$/.test(part) || part === '') {
           return <React.Fragment key={i}>{part}</React.Fragment>;

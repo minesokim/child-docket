@@ -145,8 +145,16 @@ export function CitationList({
         </div>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {citations.map((c, i) => (
-          <Citation key={`${c.label}-${i}`} t={t} {...c} />
+        {/* Composite key — label + status + tooltip + href. Distinct
+            citations have distinct labels in practice (the formatter
+            includes section / part / subsection in the label string).
+            react-doctor array-index fix 2026-05-14. */}
+        {citations.map((c) => (
+          <Citation
+            key={`${c.label}|${c.status ?? 'in_effect'}|${c.href ?? ''}`}
+            t={t}
+            {...c}
+          />
         ))}
       </div>
     </div>
