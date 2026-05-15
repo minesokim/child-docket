@@ -368,29 +368,63 @@ function FilePickerButton({
   mode: 'camera' | 'file';
   children: React.ReactNode;
 }) {
-  const ref = React.useRef<HTMLInputElement>(null);
+  // Antonio bug-fix (2026-05-14): switched from `<button onClick={ref.current?.click()}>`
+  // to native `<label htmlFor>` pattern. Bulletproof file picker triggering;
+  // no ref timing dependency, no React hydration races, no programmatic
+  // .click() that some browsers silently block.
+  const inputId = React.useId();
+  const variants = {
+    primary: { bg: t.rust, fg: '#fff' },
+    ghost: { bg: t.ease.keylimeWash, fg: t.ease.forestDark },
+  } as const;
+  const v = primary ? variants.primary : variants.ghost;
   return (
     <>
       <input
-        ref={ref}
+        id={inputId}
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
         {...(mode === 'camera' ? { capture: 'environment' as const } : {})}
-        style={{ display: 'none' }}
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          opacity: 0,
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onPick(f);
           e.target.value = '';
         }}
       />
-      <Button
-        t={t}
-        variant={primary ? 'primary' : 'ghost'}
-        onClick={() => ref.current?.click()}
-        style={{ width: '100%' }}
+      <label
+        htmlFor={inputId}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          background: v.bg,
+          color: v.fg,
+          border: 'none',
+          borderRadius: t.tone === 'magazine' ? 4 : 999,
+          padding: '14px 22px',
+          fontFamily: t.sans,
+          fontSize: 16,
+          fontWeight: 400,
+          letterSpacing: -0.1,
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          userSelect: 'none',
+          boxSizing: 'border-box',
+        }}
       >
         {children}
-      </Button>
+      </label>
     </>
   );
 }

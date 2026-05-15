@@ -18,6 +18,7 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
+import { expandStateCode } from '@docket/shared';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
@@ -96,6 +97,14 @@ export default function StatePage() {
                   t={t}
                   value={primaryState}
                   onChange={(v) => void setPrimaryState(v)}
+                  onBlur={(v) => {
+                    // Antonio's intake feedback (2026-05-14): type "CA"
+                    // → autofill "California" on blur. Same for any
+                    // 2-letter state code. Helper is idempotent so
+                    // typing "California" stays "California".
+                    const expanded = expandStateCode(v);
+                    if (expanded !== v) void setPrimaryState(expanded);
+                  }}
                   placeholder="California"
                 />
               </div>
@@ -105,6 +114,10 @@ export default function StatePage() {
                   t={t}
                   value={additionalState}
                   onChange={(v) => void setAdditionalState(v)}
+                  onBlur={(v) => {
+                    const expanded = expandStateCode(v);
+                    if (expanded !== v) void setAdditionalState(expanded);
+                  }}
                   placeholder="Oregon"
                 />
               </div>

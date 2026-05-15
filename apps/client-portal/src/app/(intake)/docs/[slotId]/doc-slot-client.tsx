@@ -1205,11 +1205,22 @@ function FilePickerButton({
   mode: 'camera' | 'file';
   children: React.ReactNode;
 }) {
-  const ref = React.useRef<HTMLInputElement>(null);
+  // Antonio reported (2026-05-14) that the original `<button onClick={() =>
+  // ref.current?.click()}>` pattern wasn't opening the file picker on his
+  // device — "doesn't even highlight or anything." Replaced with the native
+  // `<label htmlFor>` pattern which doesn't depend on ref timing, React
+  // hydration, or programmatic .click() — clicking the label is a native
+  // browser action that opens the file dialog. Bulletproof.
+  const inputId = React.useId();
+  const variants = {
+    primary: { bg: t.rust, fg: '#fff' },
+    ghost: { bg: t.ease.keylimeWash, fg: t.ease.forestDark },
+  } as const;
+  const v = primary ? variants.primary : variants.ghost;
   return (
     <>
       <input
-        ref={ref}
+        id={inputId}
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
         // For the "Take a photo" button on mobile, capture="environment"
@@ -1217,21 +1228,49 @@ function FilePickerButton({
         // omit capture so the native file picker shows photo library +
         // files. Desktop ignores capture entirely.
         {...(mode === 'camera' ? { capture: 'environment' as const } : {})}
-        style={{ display: 'none' }}
+        // Visually hidden but still interactable via the associated <label>.
+        // `display: none` would break the label-click binding on some
+        // browsers — sr-only sizing is the safer pattern.
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          opacity: 0,
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onPick(f);
           e.target.value = '';
         }}
       />
-      <Button
-        t={t}
-        variant={primary ? 'primary' : 'ghost'}
-        onClick={() => ref.current?.click()}
-        style={{ width: '100%' }}
+      <label
+        htmlFor={inputId}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          background: v.bg,
+          color: v.fg,
+          border: 'none',
+          borderRadius: t.tone === 'magazine' ? 4 : 999,
+          padding: '14px 22px',
+          fontFamily: t.sans,
+          fontSize: 16,
+          fontWeight: 400,
+          letterSpacing: -0.1,
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          userSelect: 'none',
+          boxSizing: 'border-box',
+        }}
       >
         {children}
-      </Button>
+      </label>
     </>
   );
 }

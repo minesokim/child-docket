@@ -41,6 +41,11 @@ export * from './format.js';
 // checklist + slot matching for AI-classified uploads.
 export * from './required-docs.js';
 
+// Routing number → bank name lookup for intake autofill. Local map
+// covering top 25 US consumer banks (~120 routing numbers). Returns
+// null on miss; safe per-keystroke (single object lookup).
+export * from './bank-routing.js';
+
 // Multi-step reasoning trail — canonical shape every agent emits
 // alongside its primary answer. Locked as a contract per CLAUDE.md
 // §9 Agent contract. The UI primitive lives at

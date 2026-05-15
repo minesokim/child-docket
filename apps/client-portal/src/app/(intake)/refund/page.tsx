@@ -24,9 +24,10 @@ import {
   Stack,
   TextField,
 } from '@docket/ui';
+import { useRef } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
-import { formatDigits } from '@docket/shared';
+import { formatDigits, lookupBankByRouting } from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 
@@ -40,6 +41,35 @@ export default function RefundPage() {
   const [accountNumber, setAccountNumber] = useIntakeField<string>('refund.bankAccount', '');
   const revealRouting = useFieldReveal('refund.bankRouting');
   const revealAccount = useFieldReveal('refund.bankAccount');
+
+  // Antonio's intake feedback (2026-05-14): when a client types a
+  // 9-digit routing number, autofill the bank name (OLT does this;
+  // builds trust instantly). Local lookup, no network call.
+  //
+  // Only touch bankName when it's empty OR matches the prior autofill,
+  // so we never trample a user-typed bank name. The ref tracks what
+  // WE filled in — if the user edits that value, the ref no longer
+  // equals bankName and subsequent routing changes leave it alone.
+  //
+  // Clear path (codex-flagged 2026-05-14): when digits drop below 9
+  // AND the current bankName is still our prior autofill (user hasn't
+  // edited it), clear bankName too. Otherwise a stale "Chase" lingers
+  // after the user backspaces the routing.
+  const autoFilledBankRef = useRef<string>('');
+  const handleRoutingChange = (raw: string) => {
+    const digits = formatDigits(raw, 9);
+    void setRoutingNumber(digits);
+    if (digits.length === 9) {
+      const match = lookupBankByRouting(digits);
+      if (match && (bankName === '' || bankName === autoFilledBankRef.current)) {
+        autoFilledBankRef.current = match;
+        void setBankName(match);
+      }
+    } else if (bankName !== '' && bankName === autoFilledBankRef.current) {
+      autoFilledBankRef.current = '';
+      void setBankName('');
+    }
+  };
 
   // Direct deposit is the only option (IRS retired paper checks
   // 9/2025). persistDefault: true writes 'direct_deposit' on mount
@@ -113,7 +143,7 @@ export default function RefundPage() {
             <EncryptedTextField
               t={t}
               value={routingNumber}
-              onChange={(v) => setRoutingNumber(formatDigits(v, 9))}
+              onChange={handleRoutingChange}
               onReveal={revealRouting}
               placeholder="XXXXXXXXX"
               mono

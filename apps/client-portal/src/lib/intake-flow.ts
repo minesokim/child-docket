@@ -124,7 +124,12 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'welcome',
     isApplicable: () => true,
     isComplete: () => true, // optional by design - addons can be empty
-    next: () => '/personal',
+    // Antonio bug 2026-05-14: when service.kind === 'biz', route to
+    // /business-info FIRST instead of /personal. The user just told us
+    // they're filing a business return — collecting personal SSN/DOB
+    // up-front is wrong and confuses them. /personal becomes optional
+    // downstream IF business.preparingPersonal === 'yes'.
+    next: (s) => (s.service?.kind === 'biz' ? '/business-info' : '/personal'),
   },
 
   // ─── About you ────────────────────────────────────────────────
@@ -133,7 +138,11 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/personal',
     label: 'About you',
     section: 'about-you',
-    isApplicable: () => true,
+    // For biz path: applicable only when firm is ALSO preparing personal
+    // returns for the owners (business.preparingPersonal === 'yes').
+    // Entity-only biz filings skip the entire personal subflow.
+    isApplicable: (s) =>
+      s.service?.kind !== 'biz' || s.business?.preparingPersonal === 'yes',
     isComplete: (s) =>
       !!s.personal?.fullName &&
       !!s.personal?.dateOfBirth &&
@@ -145,7 +154,9 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/state',
     label: 'State',
     section: 'about-you',
-    isApplicable: () => true,
+    // Entity-only biz filings skip — entity has its own filing state on
+    // /business-info. Personal state question is 1040-specific.
+    isApplicable: (s) => !isEntityOnlyFiling(s),
     isComplete: (s) => !!s.state?.primaryState,
     next: () => '/filing',
   },
@@ -154,7 +165,8 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/filing',
     label: 'Filing status',
     section: 'about-you',
-    isApplicable: () => true,
+    // Filing status (single/MFJ/MFS/HoH/QW) is 1040-only.
+    isApplicable: (s) => !isEntityOnlyFiling(s),
     isComplete: (s) => !!s.filing?.status,
     next: (s) => {
       const fs = s.filing?.status;
@@ -166,7 +178,9 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/spouse',
     label: 'Spouse',
     section: 'about-you',
-    isApplicable: (s) => s.filing?.status === 'mfj' || s.filing?.status === 'mfs',
+    isApplicable: (s) =>
+      !isEntityOnlyFiling(s) &&
+      (s.filing?.status === 'mfj' || s.filing?.status === 'mfs'),
     isComplete: (s) =>
       !!s.spouse?.fullName &&
       !!s.spouse?.dateOfBirth &&
@@ -178,7 +192,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/deps',
     label: 'Dependents',
     section: 'about-you',
-    isApplicable: () => true,
+    isApplicable: (s) => !isEntityOnlyFiling(s),
     isComplete: (s) => s.dependents?.count !== undefined,
     next: (s) => ((s.dependents?.count ?? 0) === 0 ? '/income' : '/deps-detail'),
   },
@@ -187,7 +201,7 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     route: '/deps-detail',
     label: 'Dependent details',
     section: 'about-you',
-    isApplicable: (s) => (s.dependents?.count ?? 0) > 0,
+    isApplicable: (s) => !isEntityOnlyFiling(s) && (s.dependents?.count ?? 0) > 0,
     isComplete: (s) => {
       const count = s.dependents?.count ?? 0;
       const list = s.dependents?.list ?? [];
@@ -273,7 +287,16 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     section: 'income',
     isApplicable: (s) => s.service?.kind === 'biz',
     isComplete: (s) => !!s.business?.legalName && !!s.business?.entityType,
-    next: () => '/income',
+    // Routing after /business-info:
+    //   - If preparingPersonal === 'yes': route to /personal to also
+    //     collect the owners' 1040 info. The 1040 subflow then continues
+    //     to /state, /filing, etc., then /income → /tax-questions.
+    //   - Otherwise (entity-only): route directly to /tax-questions.
+    //     The /state, /filing, /spouse, /deps, /income gates already
+    //     short-circuit via isEntityOnlyFiling, but jumping directly
+    //     saves a few stale-state evaluations.
+    next: (s) =>
+      s.business?.preparingPersonal === 'yes' ? '/personal' : '/tax-questions',
   },
   {
     id: 'business-formation',

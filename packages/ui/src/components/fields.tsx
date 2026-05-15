@@ -64,6 +64,7 @@ export function TextField({
   t,
   value,
   onChange,
+  onBlur,
   placeholder,
   mono,
   inputMode,
@@ -75,6 +76,14 @@ export function TextField({
   t: Theme;
   value: string;
   onChange: (v: string) => void;
+  /** Optional callback fired when the field loses focus. Fires
+   *  synchronously alongside the background-restore animation kickoff
+   *  (the animation itself is 140ms; the callback does not wait for
+   *  it). Useful for transformations like state-code expansion
+   *  ("CA" → "California") that should happen once the user commits
+   *  to their input. The current field value is passed so the handler
+   *  can decide whether to call onChange with a transformed version. */
+  onBlur?: (currentValue: string) => void;
   placeholder?: string;
   mono?: boolean;
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
@@ -125,6 +134,7 @@ export function TextField({
       }}
       onBlur={(e) => {
         e.target.style.background = restingBg;
+        if (onBlur) onBlur(e.target.value);
       }}
     />
   );
