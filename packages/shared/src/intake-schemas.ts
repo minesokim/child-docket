@@ -244,6 +244,13 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'business.ownerCount': z.string().max(3),
   'business.preparingPersonal': z.enum(['yes', 'no']),
 
+  // CA SoS BE Public Search snapshot. Written server-side by the
+  // /api/ca-sos/lookup route handler after a successful entity match.
+  'business.caSoSStatus': z.string().max(50),
+  'business.caSoSEntityNumber': z.string().max(20),
+  'business.caSoSMatchedName': z.string().max(200),
+  'business.caSoSCheckedAt': z.string().datetime().or(z.literal('')),
+
   // Tax questions — names match the UI checkboxes
   'taxQuestions.crypto': z.boolean(),
   'taxQuestions.estimated': z.boolean(),

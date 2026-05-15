@@ -46,6 +46,12 @@ export * from './required-docs.js';
 // null on miss; safe per-keystroke (single object lookup).
 export * from './bank-routing.js';
 
+// California Secretary of State (CA SoS) BE Public Search API helper.
+// Types + status bucketing + parse helpers + the server-only fetch
+// wrapper. The fetch must run from a Route Handler (apiKey is
+// server-only). Graceful degradation on every failure mode.
+export * from './ca-sos.js';
+
 // Multi-step reasoning trail — canonical shape every agent emits
 // alongside its primary answer. Locked as a contract per CLAUDE.md
 // §9 Agent contract. The UI primitive lives at

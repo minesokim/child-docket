@@ -7,6 +7,7 @@
 // Sensitive fields (business.ein, business.ownerSsn) match SENSITIVE_INTAKE_PATHS
 // in @docket/shared and get encrypted at rest before JSONB write.
 
+import { useEffect, useRef, useState } from 'react';
 import {
   AntonioNote,
   AskAntonioBar,
@@ -26,7 +27,17 @@ import {
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useFieldReveal, useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
-import { formatDigits, formatEin, formatStateCode, formatZip } from '@docket/shared';
+import {
+  bucketCaSoSStatus,
+  CA_SOS_STATUS_COPY,
+  type CaSoSLookupResult,
+  type CaSoSStatusBucket,
+  formatDigits,
+  formatEin,
+  formatStateCode,
+  formatZip,
+  normalizeCaSoSQuery,
+} from '@docket/shared';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 
@@ -76,6 +87,88 @@ export default function BusinessInfoPage() {
     'business.preparingPersonal',
     '',
   );
+
+  // CA SoS BE Public Search snapshot — persisted so Antonio sees it
+  // in command-room post-intake. The pill UI consumes the bucketed
+  // status; we persist the raw + entity number + matched name for the
+  // audit chain.
+  const [caSoSStatus, setCaSoSStatus] = useIntakeField<string>('business.caSoSStatus', '');
+  const [, setCaSoSEntityNumber] = useIntakeField<string>('business.caSoSEntityNumber', '');
+  const [, setCaSoSMatchedName] = useIntakeField<string>('business.caSoSMatchedName', '');
+  const [, setCaSoSCheckedAt] = useIntakeField<string>('business.caSoSCheckedAt', '');
+
+  // Debounced CA SoS lookup. Fires 600ms after the user stops typing
+  // when addressState === 'CA' AND legalName length >= 2. Aborts any
+  // in-flight request on re-typing. Failure is silent: the pill is
+  // only rendered when we have a positive { ok: true } result.
+  const isCa = addressState.trim().toUpperCase() === 'CA';
+  const [pillBucket, setPillBucket] = useState<CaSoSStatusBucket | null>(() => {
+    return caSoSStatus ? bucketCaSoSStatus(caSoSStatus) : null;
+  });
+  const abortRef = useRef<AbortController | null>(null);
+  const lastQueriedRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!isCa) {
+      setPillBucket(null);
+      // Reset so a later CA-re-entry re-fires the lookup for the same
+      // name. Without this, toggling state away from CA + back would
+      // suppress the next lookup. Codex caught this 2026-05-14.
+      lastQueriedRef.current = '';
+      return;
+    }
+    const query = normalizeCaSoSQuery(legalName);
+    if (query.length < 2) {
+      setPillBucket(null);
+      lastQueriedRef.current = '';
+      return;
+    }
+    // Avoid re-firing on debounce-driven re-renders for the same input.
+    if (query === lastQueriedRef.current) return;
+
+    const timer = setTimeout(() => {
+      const controller = new AbortController();
+      abortRef.current?.abort();
+      abortRef.current = controller;
+      lastQueriedRef.current = query;
+
+      void fetch('/api/ca-sos/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ legalName: query }),
+        signal: controller.signal,
+      })
+        .then((res) => res.json() as Promise<CaSoSLookupResult>)
+        .then((result) => {
+          if (controller.signal.aborted) return;
+          if (!result.ok) {
+            // Silent no-op on every failure mode — the pill stays
+            // hidden, intake proceeds normally.
+            return;
+          }
+          setPillBucket(result.status);
+          // Persist whether we matched or not_found — Antonio cares
+          // about both. ('not_found' surfaces as a soft "double-check
+          // spelling" hint; the snapshot itself is still useful.)
+          void setCaSoSStatus(result.rawStatus ?? 'not_found');
+          void setCaSoSEntityNumber(result.entityNumber ?? '');
+          void setCaSoSMatchedName(result.matchedName ?? '');
+          void setCaSoSCheckedAt(new Date().toISOString());
+        })
+        .catch(() => {
+          // AbortError or network — silent.
+        });
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [
+    legalName,
+    isCa,
+    setCaSoSStatus,
+    setCaSoSEntityNumber,
+    setCaSoSMatchedName,
+    setCaSoSCheckedAt,
+  ]);
 
   // Pass full answers so /income gating fires (entity-only biz filings
   // skip /income and walk straight to /tax-questions). With an empty
@@ -153,6 +246,7 @@ export default function BusinessInfoPage() {
               onChange={(v) => void setLegalName(v)}
               placeholder="Full legal entity name"
             />
+            {pillBucket && <CaSoSPill bucket={pillBucket} t={t} />}
           </div>
 
           <div>
@@ -471,5 +565,56 @@ export default function BusinessInfoPage() {
         </div>
       </div>
     </Screen>
+  );
+}
+
+// ─── CA SoS status pill ─────────────────────────────────────────────
+// Subtle inline pill rendered below the Legal business name when the
+// CA SoS lookup returns a result. Per L9 (AI invisibility) the copy
+// reads as informational, NOT as "AI verified" or "we checked" —
+// nothing in the surface signals that an external API ran. The pill
+// just states the entity's standing the way OLT or any thoughtful
+// preparer-facing tool would.
+//
+// Color buckets:
+//   active     — keylimeWash bg, forestDark text (calm green)
+//   suspended  — soft amber (warmth without alarm)
+//   forfeited  — rust (red but not a system error)
+//   dissolved  — muted gray
+//   not_found  — muted gray (same as dissolved — "check spelling")
+//   unknown    — muted gray (defensive fallback)
+function CaSoSPill({
+  bucket,
+  t,
+}: {
+  bucket: CaSoSStatusBucket;
+  t: ReturnType<typeof buildTheme>;
+}) {
+  const tone =
+    bucket === 'active'
+      ? { bg: t.ease.keylimeWash, fg: t.ease.forestDark }
+      : bucket === 'suspended'
+        ? { bg: '#fbeed3', fg: '#7a4a16' }
+        : bucket === 'forfeited'
+          ? { bg: '#f2dad3', fg: t.rustInk }
+          : { bg: '#efece6', fg: t.muted };
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '5px 10px',
+        background: tone.bg,
+        borderRadius: 999,
+        fontFamily: t.sans,
+        fontSize: 12,
+        color: tone.fg,
+        letterSpacing: 0.1,
+      }}
+    >
+      {CA_SOS_STATUS_COPY[bucket]}
+    </div>
   );
 }

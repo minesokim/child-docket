@@ -226,6 +226,16 @@ export type IntakeState = {
     ownerTitle?: string;
     ownerCount?: string;         // numeric string — "1", "2", … (formation only)
     preparingPersonal?: 'yes' | 'no';
+
+    // CA SoS BE Public Search snapshot — captured at intake time when
+    // addressState === 'CA'. Persists Antonio's audit-time view of the
+    // entity's standing per CA records (Active / FTB Suspended /
+    // Forfeited / etc.). Re-checkable from command-room later if
+    // status changes mid-engagement. See packages/shared/src/ca-sos.ts.
+    caSoSStatus?: string;        // raw status, e.g. "Active", "FTB Suspended"
+    caSoSEntityNumber?: string;  // CA SoS entity number (12 chars)
+    caSoSMatchedName?: string;   // canonical name from CA SoS
+    caSoSCheckedAt?: string;     // ISO timestamp of lookup
   };
 
   // ── Tax questions / deductions / events ─────────────────────────
