@@ -82,7 +82,7 @@ export function ScanLandingClient(): React.ReactElement {
       setSubmitError(
         err instanceof Error
           ? err.message
-          : "Something went wrong submitting the form. Email david@docket.com directly and we'll pick it up.",
+          : "Something went wrong submitting the form. Email david@petal.tax directly and we'll pick it up.",
       );
     } finally {
       setSubmitting(false);
@@ -503,8 +503,8 @@ function FoundersSection({ t }: { t: ReturnType<typeof buildTheme> }) {
           <p style={founderBodyStyle(t)}>
             CEO. Building the company-facing surfaces, the customer
             relationships, and the Antonio partnership. Email:{' '}
-            <a href="mailto:david@docket.com" style={{ color: t.rust }}>
-              david@docket.com
+            <a href="mailto:david@petal.tax" style={{ color: t.rust }}>
+              david@petal.tax
             </a>
             .
           </p>
@@ -726,10 +726,10 @@ function FormSection({
           David reviews each Discovery Scan submission personally (the first 30
           go through a manual review gate). Expect a follow-up email from{' '}
           <a
-            href="mailto:david@docket.com"
+            href="mailto:david@petal.tax"
             style={{ color: t.rust, textDecoration: 'underline' }}
           >
-            david@docket.com
+            david@petal.tax
           </a>{' '}
           within one business day with the secure upload link.
         </p>
@@ -799,10 +799,10 @@ function FormSection({
             <strong>Couldn&apos;t submit:</strong> {submitError} If this
             persists, email{' '}
             <a
-              href="mailto:david@docket.com"
+              href="mailto:david@petal.tax"
               style={{ color: '#7C2A1B', textDecoration: 'underline' }}
             >
-              david@docket.com
+              david@petal.tax
             </a>{' '}
             directly.
           </div>
@@ -924,12 +924,12 @@ function FormSection({
           deleted 7 days after scan delivery; your contact details on this
           form persist longer for follow-up — see our{' '}
           <a
-            href="mailto:david@docket.com"
+            href="mailto:david@petal.tax"
             style={{ color: t.rust, textDecoration: 'underline' }}
           >
             Privacy
           </a>{' '}
-          questions to david@docket.com.
+          questions to david@petal.tax.
         </p>
       </form>
     </section>
@@ -1058,7 +1058,7 @@ function Footer({ t }: { t: ReturnType<typeof buildTheme> }) {
             marginBottom: 8,
           }}
         >
-          DOCKET
+          PETAL
         </div>
         <p style={{ fontSize: 15, opacity: 0.8, marginBottom: 48, marginTop: 0 }}>
           The AI defense layer for tax practices.
@@ -1083,7 +1083,7 @@ function Footer({ t }: { t: ReturnType<typeof buildTheme> }) {
           <FooterColumn
             title="Contact"
             links={[
-              { label: 'david@docket.com', href: 'mailto:david@docket.com' },
+              { label: 'david@petal.tax', href: 'mailto:david@petal.tax' },
             ]}
           />
         </div>
@@ -1104,10 +1104,11 @@ function Footer({ t }: { t: ReturnType<typeof buildTheme> }) {
           </a>{' '}
           · © 2026 Petal
           {/*
-            docket.com brand link dropped from this footer until the
-            cutover lands. Same-origin /scan visitors clicking it
-            today land on an undeployed dead origin (codex C12 R7 P3).
-            Re-add once docket.com points at the production deploy.
+            petal.tax brand link dropped from this footer until DNS
+            + Vercel alias provisioning lands. Same-origin /scan
+            visitors clicking it today land on an undeployed dead
+            origin (codex C12 R7 P3). Re-add once petal.tax points
+            at the production deploy.
           */}
           <br />
           Compliance-first AI for the PTIN-carrying practice.

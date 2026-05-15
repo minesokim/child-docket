@@ -76,7 +76,7 @@ function resolveFromAddress(perCall?: string): string {
   const envValue = process.env.RESEND_FROM_ADDRESS;
   if (envValue && envValue.length > 0) return envValue;
   throw new Error(
-    'No from-address resolved. Set RESEND_FROM_ADDRESS in env (e.g. "Docket <discovery@yourdomain.com>") OR pass `from` on the send call. The address must match a domain verified in your Resend account; otherwise every send is rejected.',
+    'No from-address resolved. Set RESEND_FROM_ADDRESS in env (e.g. "Petal <discovery@yourdomain.com>") OR pass `from` on the send call. The address must match a domain verified in your Resend account; otherwise every send is rejected.',
   );
 }
 
@@ -237,7 +237,7 @@ function buildHtmlBody(
   </head>
   <body style="margin:0;padding:0;background-color:#FAF7F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1A1E2A;">
     <div style="max-width:560px;margin:0 auto;padding:40px 24px;">
-      <div style="color:#1F5E3D;font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:32px;">DOCKET</div>
+      <div style="color:#1F5E3D;font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:32px;">PETAL</div>
 
       <h1 style="font-size:24px;line-height:1.3;margin:0 0 16px;color:#1A1E2A;font-weight:600;">Your Discovery Scan is ready.</h1>
 

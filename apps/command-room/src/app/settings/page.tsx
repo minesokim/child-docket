@@ -283,7 +283,7 @@ export default async function SettingsPage() {
                   <div className="settings-integ-main">
                     <div className="settings-integ-name">AI Preferences</div>
                     <div className="settings-integ-purpose">
-                      Tone, insight toggles, Docket Personality, Quiet Hours.
+                      Tone, insight toggles, Petal Personality, Quiet Hours.
                       Drives every agent's voice + what surfaces on dashboards.
                     </div>
                   </div>

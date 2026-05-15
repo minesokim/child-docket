@@ -176,7 +176,7 @@ export default async function CalendarPage() {
                 lineHeight: 1.6,
               }}
             >
-              Connect your Google Calendar to mirror events into Docket. Once
+              Connect your Google Calendar to mirror events into Petal. Once
               connected, every meeting, filing deadline, and review block
               becomes a first-class client artifact your Discovery + Strategy
               agents can read.

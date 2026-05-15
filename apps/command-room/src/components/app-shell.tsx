@@ -76,11 +76,11 @@ export function AppShell({ user, activeHref, children }: AppShellProps) {
               color: t.rustInk,
             }}
           >
-            D
+            P
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
             <span style={{ fontFamily: t.serif, fontSize: 15, color: t.ink, letterSpacing: -0.2 }}>
-              Docket
+              Petal
             </span>
             <span
               style={{

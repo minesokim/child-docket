@@ -277,7 +277,7 @@ function CoverPage({ meta }: { meta: DiscoveryScanInput['meta'] }) {
     <Page size="LETTER" style={styles.page}>
       <View style={styles.coverWrap}>
         <View>
-          <Text style={styles.coverHeader}>DOCKET</Text>
+          <Text style={styles.coverHeader}>PETAL</Text>
         </View>
         <View>
           <Text style={styles.coverTitle}>Discovery Scan</Text>

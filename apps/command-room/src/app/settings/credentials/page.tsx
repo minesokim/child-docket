@@ -66,7 +66,7 @@ export default async function CredentialsPage() {
           </div>
           <h1 className="creds-title">Integration credentials</h1>
           <p className="creds-subtitle">
-            Per-tenant vault for the four integrations Docket drives. Each
+            Per-tenant vault for the four integrations Petal drives. Each
             credential is encrypted with a tenant-specific key the moment it's
             saved; the decrypted values never leave this server. Test and
             rotate anytime — every change is logged in the audit chain.

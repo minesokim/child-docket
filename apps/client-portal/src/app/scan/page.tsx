@@ -30,27 +30,30 @@ import { ScanLandingClient } from './scan-landing-client.js';
 
 // Canonical + Open Graph URL. Resolves at build time:
 //   - PUBLIC_SCAN_URL (Vercel env) — explicit override, set this to
-//     'https://docket.com/scan' once the brand-domain cutover lands.
+//     'https://petal.tax/scan' once the brand-domain cutover lands.
 //   - VERCEL_PROJECT_PRODUCTION_URL — Vercel-managed prod URL
-//     (e.g. docket-portal.vercel.app). Use during pre-cutover.
+//     (e.g. docket-portal.vercel.app — the Vercel project name stays
+//     `docket-portal` even after the Petal brand rename). Use during
+//     pre-cutover.
 //   - fallback: empty string → metadata omits absolute URLs entirely,
 //     letting Next.js fall back to relative URLs.
-// Codex C12 R7 P2: hard-coding `https://docket.com/scan` before the
-// brand cutover sends crawlers + social previews to a dead origin.
+// Codex C12 R7 P2: hard-coding `https://petal.tax/scan` before DNS
+// + Vercel-alias provisioning sends crawlers + social previews to a
+// dead origin.
 const scanUrl = process.env.PUBLIC_SCAN_URL
   ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/scan`
     : undefined);
 
 export const metadata: Metadata = {
-  title: 'Free Discovery Scan — Docket',
+  title: 'Free Discovery Scan — Petal',
   description:
     'Free 24-hour Position Framework scan on one of your returns. Every defensible deduction surfaced, cited authority attached, draft 8275 on every Tier 3 position. First 30 EAs and small-firm CPAs.',
   ...(scanUrl
     ? {
         alternates: { canonical: scanUrl },
         openGraph: {
-          title: 'Free Discovery Scan — Docket',
+          title: 'Free Discovery Scan — Petal',
           description:
             'The AI defense layer for tax practices. Every position cited. Every action audit-trailed.',
           type: 'website',
@@ -59,7 +62,7 @@ export const metadata: Metadata = {
       }
     : {
         openGraph: {
-          title: 'Free Discovery Scan — Docket',
+          title: 'Free Discovery Scan — Petal',
           description:
             'The AI defense layer for tax practices. Every position cited. Every action audit-trailed.',
           type: 'website',

@@ -19,13 +19,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-  title: 'Trust Center · Docket',
+  title: 'Trust Center · Petal',
   description:
     'Security controls shipped in production. Multi-tenant isolation, cryptographic audit chain, per-tenant DEK encryption, SOC 2 posture, IRS compliance.',
   openGraph: {
-    title: 'Trust Center · Docket',
+    title: 'Trust Center · Petal',
     description:
-      'Security controls shipped in production at Docket — the AI-native operating system for tax practices.',
+      'Security controls shipped in production at Petal — the AI-native operating system for tax practices.',
     type: 'website',
   },
   robots: {
@@ -294,7 +294,7 @@ export default function TrustCenterPage() {
               maxWidth: 680,
             }}
           >
-            Docket is the AI-native operating system for tax practices. Every
+            Petal is the AI-native operating system for tax practices. Every
             control listed below is actually shipped in production. We list
             what we have, and we list what we do not yet have. Honesty about
             gaps is part of the trust contract.
@@ -538,14 +538,14 @@ export default function TrustCenterPage() {
           >
             If you discover a security vulnerability, please email{' '}
             <a
-              href="mailto:security@docket.com"
+              href="mailto:security@petal.tax"
               style={{
                 color: 'oklch(42% 0.09 150)',
                 textDecoration: 'none',
                 fontWeight: 500,
               }}
             >
-              security@docket.com
+              security@petal.tax
             </a>{' '}
             with a description, reproduction steps, expected impact, and your
             contact information. We will respond within 24 hours, acknowledge
@@ -578,7 +578,7 @@ export default function TrustCenterPage() {
         >
           Last updated 2026-05-13. This page reflects the canonical control
           listing maintained at docs/security/trust-center-content.md in the
-          Docket repository. Updates to that file propagate here.
+          Petal repository. Updates to that file propagate here.
         </footer>
       </div>
     </main>

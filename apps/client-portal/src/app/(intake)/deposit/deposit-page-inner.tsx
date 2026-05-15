@@ -406,7 +406,7 @@ export function DepositPageInner({ config }: { config: GetDepositConfigResult })
                 marginTop: 2,
               }}
             >
-              <IconLockTiny size={10} /> Your card is encrypted by Square — never stored on Docket
+              <IconLockTiny size={10} /> Your card is encrypted by Square — never stored on Petal
             </div>
           </Stack>
         </div>

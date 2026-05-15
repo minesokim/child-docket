@@ -45,7 +45,7 @@ export default function SignInPage() {
               marginBottom: 10,
             }}
           >
-            DOCKET · COMMAND ROOM
+            PETAL · COMMAND ROOM
           </div>
           <h1
             style={{

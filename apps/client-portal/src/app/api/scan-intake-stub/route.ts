@@ -276,7 +276,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     //
     // Trade-off: in the DB-outage path, this stub does NOT preserve
     // the prospect's identity. The user-facing 500 explicitly tells
-    // them to email david@docket.com directly — that's the
+    // them to email david@petal.tax directly — that's the
     // documented recovery channel. Acceptable because:
     //   1. DB outages are rare (Neon Launch tier, auto-suspend OFF).
     //   2. Most prospects will retry once the DB recovers.
@@ -298,7 +298,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       {
         ok: false,
         error:
-          'We received your submission but encountered a server error storing it. Please email david@docket.com directly so we can follow up.',
+          'We received your submission but encountered a server error storing it. Please email david@petal.tax directly so we can follow up.',
       },
       { status: 500 },
     );

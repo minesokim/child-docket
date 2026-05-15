@@ -90,7 +90,7 @@ export default async function NotificationsPage() {
           <div className="settings-eyebrow">Practice</div>
           <h1 className="settings-title">Notifications</h1>
           <p className="settings-subtitle">
-            How Docket nudges preparers. Four event categories × three channels.
+            How Petal nudges preparers. Four event categories × three channels.
             Quiet Hours from AI Preferences apply: SMS + in-app suppress during
             the window; email queues for 7am delivery. Per-category edit UI
             in v1.5.
