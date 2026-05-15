@@ -1581,7 +1581,7 @@ Flip `fail-on: warning` in the workflow.
 **Severity**: low. Advisory mode is purely additive — adds a CI job
 that posts feedback, never blocks merge. Reversible in one commit.
 
-**Commit**: <pending — current commit>
+**Commit**: d668550
 
 **User-review status**: pending
 
