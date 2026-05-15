@@ -22,7 +22,12 @@ import {
 } from '@docket/ui';
 import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useFieldReveal, useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import {
+  useFieldReveal,
+  useIntakeAnswers,
+  useIntakeField,
+  useIntakeStepNumber,
+} from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { FilingStatus } from '@docket/shared';
@@ -92,7 +97,7 @@ export default function SpousePage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={5} label="Spouse" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/spouse')} label="Spouse" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

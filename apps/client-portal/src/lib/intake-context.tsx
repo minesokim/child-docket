@@ -32,6 +32,7 @@ import {
 } from 'react';
 import { getAtPath, setAtPath, type IntakeState } from '@docket/shared';
 import { revealIntakeField, saveIntakeField } from './intake';
+import { getStepProgress } from './intake-flow';
 
 type SetFieldFn = (path: string, value: unknown) => void;
 
@@ -227,6 +228,32 @@ function useIntakeContext(): IntakeContextValue {
 /** Get the full IntakeState. Use sparingly - most components want a single field. */
 export function useIntakeAnswers(): IntakeState {
   return useIntakeContext().answers;
+}
+
+/**
+ * Read the dynamic step number + total for the IntakeHeader on a
+ * given intake route. Counts only currently-applicable steps so the
+ * denominator matches what the client actually walks through.
+ *
+ * Returns the exact prop shape IntakeHeader consumes, so callers can
+ * spread it:
+ *
+ *   <IntakeHeader t={t} {...useIntakeStepNumber('/hoh-qualify')}
+ *     label="Head of Household" />
+ *
+ * Optional-branch pages (hoh-qualify, community-property, business-info,
+ * etc.) SHOULD use this hook — their hardcoded step numbers would
+ * otherwise collide with the happy-path pages they sit between (the
+ * codex finding from the MFS commit 2026-05-14).
+ *
+ * Happy-path pages can keep `step={N}` hardcoded if they prefer —
+ * the value is correct for the common case. Migrating them is
+ * mechanical low-priority polish for a separate sweep.
+ */
+export function useIntakeStepNumber(route: string): { step: number; total: number } {
+  const answers = useIntakeContext().answers;
+  const { current, total } = getStepProgress(route, answers);
+  return { step: current, total };
 }
 
 /**

@@ -44,7 +44,7 @@ import {
 } from '@docket/ui';
 import { taxYearForDate } from '@docket/shared';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 
@@ -126,7 +126,7 @@ export default function CommunityPropertyPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={6} label="Community property" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/community-property')} label="Community property" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

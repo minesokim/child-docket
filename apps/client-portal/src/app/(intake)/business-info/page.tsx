@@ -26,7 +26,12 @@ import {
   TextField,
 } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useFieldReveal, useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import {
+  useFieldReveal,
+  useIntakeAnswers,
+  useIntakeField,
+  useIntakeStepNumber,
+} from '@/lib/intake-context';
 import {
   bucketCaSoSStatus,
   CA_SOS_STATUS_COPY,
@@ -194,7 +199,7 @@ export default function BusinessInfoPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={2} label="Business" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/business-info')} label="Business" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />

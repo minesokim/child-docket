@@ -39,7 +39,7 @@ import {
   type HohVerdict,
 } from '@docket/shared';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
+import { useIntakeAnswers, useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 
@@ -103,7 +103,7 @@ export default function HohQualifyPage() {
           minHeight: '100%',
         }}
       >
-        <IntakeHeader t={t} step={4} label="Head of Household" />
+        <IntakeHeader t={t} {...useIntakeStepNumber('/hoh-qualify')} label="Head of Household" />
 
         <div style={{ padding: '22px 24px 0' }}>
           <IntakeBackButton t={t} onClick={handleBack} />
