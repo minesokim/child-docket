@@ -34,7 +34,12 @@ export { ocrToSearchablePdf } from './ocr.js';
 export type ProcessOptions = {
   /** Raw bytes from R2 — original upload. */
   input: Buffer;
-  /** MIME type of the input (image/png, image/jpeg, image/webp, image/gif, application/pdf). */
+  /** MIME type of the input. Supported:
+   *    image/png, image/jpeg, image/webp, image/gif,
+   *    image/heic, image/heif (iOS phone photos — sharp's libvips
+   *      build handles these via auto-detect; pdf-lib gets a JPEG
+   *      conversion produced by the existing else-branch in
+   *      wrapImageInPdf below), application/pdf. */
   inputMimeType: string;
   /** Classification kind from the AI — drives binarize-vs-color routing. */
   docKind: string;
@@ -66,7 +71,33 @@ export async function processDocument(opts: ProcessOptions): Promise<ProcessResu
   // PDF input — pass through. The user uploaded a clean PDF (downloaded
   // their official W-2 from ADP, etc.). It's already searchable if the
   // source PDF had a text layer; re-OCR'ing would just degrade it.
+  //
+  // Password-protected PDF detection: try a non-destructive pdf-lib
+  // load. pdf-lib throws "PDFEncryptedError" (or similar message
+  // containing "encrypted" / "password") when the PDF has a password
+  // gate. We DON'T attempt to decrypt — that would require knowing
+  // the password — but we DO log loudly so the worker can flag the
+  // document for Antonio's review. The bytes still pass through to R2
+  // so Antonio can see the doc in command-room and ask the client to
+  // re-upload an unprotected version.
   if (opts.inputMimeType === 'application/pdf') {
+    try {
+      await PDFDocument.load(opts.input);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/encrypt|password/i.test(msg)) {
+        console.warn(
+          `[document-processing] Password-protected PDF detected (${opts.docKind}); passing bytes through but downstream OCR + text extraction will fail. Worker should flag for Antonio review.`,
+        );
+      } else {
+        // Non-encryption load failure — corrupt PDF, truncated upload,
+        // etc. Still pass through (Antonio sees the doc in command-
+        // room with a parse-failure flag); don't break the upload UX.
+        console.warn(
+          `[document-processing] PDF load failed (${msg}); passing bytes through unchanged.`,
+        );
+      }
+    }
     return {
       pdf: opts.input,
       sizeBytes: opts.input.length,
@@ -388,8 +419,11 @@ export async function wrapImageInPdf(
   } else if (mimeType === 'image/jpeg') {
     embeddedImage = await pdfDoc.embedJpg(imageBytes);
   } else {
-    // GIF / WEBP — pdf-lib doesn't support these directly, so we run
-    // them through sharp to produce JPEG first.
+    // GIF / WEBP / HEIC / HEIF — pdf-lib doesn't support these
+    // directly, so we run them through sharp to produce JPEG first.
+    // Sharp's libvips build (default since 0.32) handles HEIC/HEIF
+    // via libheif, so this branch transparently supports iPhone-
+    // shot photos that arrive with image/heic MIME.
     const jpegBytes = await sharp(imageBytes).jpeg({ quality: 92 }).toBuffer();
     embeddedImage = await pdfDoc.embedJpg(jpegBytes);
   }
