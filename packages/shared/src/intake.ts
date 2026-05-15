@@ -152,6 +152,48 @@ export type IntakeState = {
     status?: FilingStatus;
   };
 
+  // ── Head of Household qualification (§2(b) / §7703(b) gate) ──────
+  // Antonio's §6694 risk surface: HoH is the single highest-volume
+  // mis-claimed filing status on solo-EA returns. We ask all four
+  // qualifying questions explicitly so Antonio can defend the claim
+  // or downgrade to Single before transmission. Only relevant when
+  // filing.status === 'hoh'.
+  //
+  // All four must be true for face-value HoH qualification:
+  //   1. unmarriedOrConsideredUnmarried: legally unmarried OR met the
+  //      "considered unmarried" tests (lived apart from spouse last
+  //      6 months, paid more than half of separate home, etc.).
+  //   2. paidMoreThanHalfHomeCost: paid more than half the cost of
+  //      keeping up a home for the year.
+  //   3. qualifyingPersonLivedWithYou: a qualifying person (qualifying
+  //      child OR qualifying relative) lived in the taxpayer's home
+  //      for more than half the year. Exception: a parent doesn't
+  //      need to live with the taxpayer if the taxpayer paid more
+  //      than half the cost of keeping up the parent's home.
+  //   4. qualifyingPersonIsChildOrRelative: the qualifying person
+  //      meets the qualifying-child OR qualifying-relative tests
+  //      (relationship + age + residency + support + joint-return).
+  //
+  // Persisting BOTH the answers and a derived qualifiesAtFace flag is
+  // intentional — Antonio's audit packet needs the raw client claims,
+  // not just our derived classification. See command-room /clients/[id]
+  // Audit Trail UI per CLAUDE.md §4.
+  hohQualify?: {
+    unmarriedOrConsideredUnmarried?: 'yes' | 'no' | 'not_sure';
+    paidMoreThanHalfHomeCost?: 'yes' | 'no' | 'not_sure';
+    qualifyingPersonLivedWithYou?: 'yes' | 'no' | 'not_sure';
+    // §2(b)(1)(B) parent exception: only asked as a follow-up when
+    // livedWithYou === 'no'. Drives whether a 'no' on cohabitation
+    // is a real §2(b) failure or just routes to 'uncertain' (Antonio
+    // verifies the parent-home-cost test).
+    qualifyingPersonIsParent?: 'yes' | 'no' | 'not_sure';
+    qualifyingPersonIsChildOrRelative?: 'yes' | 'no' | 'not_sure';
+    // Optional free-text — relationship to qualifying person
+    // (daughter, mother, niece, etc.). Surfaces in command-room as a
+    // hint for Antonio's review.
+    qualifyingPersonRelationship?: string;
+  };
+
   spouse?: {
     fullName?: string;
     dateOfBirth?: string;

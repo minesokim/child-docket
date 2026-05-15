@@ -170,8 +170,45 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
     isComplete: (s) => !!s.filing?.status,
     next: (s) => {
       const fs = s.filing?.status;
-      return fs === 'mfj' || fs === 'mfs' ? '/spouse' : '/deps';
+      if (fs === 'mfj' || fs === 'mfs') return '/spouse';
+      // HoH gets its own §2(b) qualification step before /deps.
+      // Antonio's §6694 / Form 8867 due-diligence surface lives here.
+      if (fs === 'hoh') return '/hoh-qualify';
+      return '/deps';
     },
+  },
+  {
+    id: 'hoh-qualify',
+    route: '/hoh-qualify',
+    label: 'Head of Household',
+    section: 'about-you',
+    // Only fires when filing.status === 'hoh'. Entity-only filings
+    // never reach /filing so the entity gate is redundant but kept
+    // for symmetry with neighboring steps.
+    isApplicable: (s) =>
+      !isEntityOnlyFiling(s) && s.filing?.status === 'hoh',
+    isComplete: (s) => {
+      const h = s.hohQualify;
+      // All four gating answers must be present (any value — 'yes',
+      // 'no', or 'not_sure'). A 'no' or 'not_sure' is still complete;
+      // Antonio reviews from command-room.
+      const baseComplete =
+        !!h?.unmarriedOrConsideredUnmarried &&
+        !!h?.paidMoreThanHalfHomeCost &&
+        !!h?.qualifyingPersonLivedWithYou &&
+        !!h?.qualifyingPersonIsChildOrRelative;
+      if (!baseComplete) return false;
+      // §2(b)(1)(B) parent-exception follow-up: required when the
+      // client said the qualifying person did NOT live with them.
+      if (
+        h?.qualifyingPersonLivedWithYou === 'no' &&
+        !h?.qualifyingPersonIsParent
+      ) {
+        return false;
+      }
+      return true;
+    },
+    next: () => '/deps',
   },
   {
     id: 'spouse',

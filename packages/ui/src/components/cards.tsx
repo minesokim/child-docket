@@ -215,7 +215,10 @@ export function RadioRowCard({
   selected: boolean;
   onClick: () => void;
   label: string;
-  sub: string;
+  /** Optional subtext rendered below the label in muted ink. Omit
+   *  when the card is a simple yes/no toggle and the label is the
+   *  whole story (e.g. HoH §2(b) qualification rows). */
+  sub?: string;
 }) {
   // Match the services-page selection convention: mintKiss card bg
   // (lighter than mintGlaze) + forestMid dot (lighter than forestDark).
@@ -264,17 +267,19 @@ export function RadioRowCard({
         <div style={{ fontSize: 15, fontWeight: 400, color: labelColor, letterSpacing: -0.1 }}>
           {label}
         </div>
-        <div
-          style={{
-            fontSize: 12.5,
-            color: subColor,
-            opacity: selected ? 0.7 : 1,
-            marginTop: 3,
-            lineHeight: 1.4,
-          }}
-        >
-          {sub}
-        </div>
+        {sub && (
+          <div
+            style={{
+              fontSize: 12.5,
+              color: subColor,
+              opacity: selected ? 0.7 : 1,
+              marginTop: 3,
+              lineHeight: 1.4,
+            }}
+          >
+            {sub}
+          </div>
+        )}
       </div>
     </button>
   );

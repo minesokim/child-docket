@@ -244,6 +244,18 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'business.ownerCount': z.string().max(3),
   'business.preparingPersonal': z.enum(['yes', 'no']),
 
+  // Head of Household qualification (§2(b) / §7703(b) gate). Each
+  // answer is yes/no/not_sure; downgrade or 8867 disclosure happens
+  // in command-room when any non-yes lands.
+  'hohQualify.unmarriedOrConsideredUnmarried': z.enum(['yes', 'no', 'not_sure']),
+  'hohQualify.paidMoreThanHalfHomeCost': z.enum(['yes', 'no', 'not_sure']),
+  'hohQualify.qualifyingPersonLivedWithYou': z.enum(['yes', 'no', 'not_sure']),
+  // §2(b)(1)(B) parent-exception follow-up. Only meaningful when
+  // qualifyingPersonLivedWithYou === 'no'.
+  'hohQualify.qualifyingPersonIsParent': z.enum(['yes', 'no', 'not_sure']),
+  'hohQualify.qualifyingPersonIsChildOrRelative': z.enum(['yes', 'no', 'not_sure']),
+  'hohQualify.qualifyingPersonRelationship': z.string().max(100),
+
   // CA SoS BE Public Search snapshot. Written server-side by the
   // /api/ca-sos/lookup route handler after a successful entity match.
   'business.caSoSStatus': z.string().max(50),

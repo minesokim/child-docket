@@ -52,6 +52,11 @@ export * from './bank-routing.js';
 // server-only). Graceful degradation on every failure mode.
 export * from './ca-sos.js';
 
+// Head of Household §2(b) / §7703(b) qualification helper. Captures
+// the four gating answers + derives a face-value verdict so Antonio
+// sees §6694 risk before Form 8867 due-diligence at filing.
+export * from './hoh-qualification.js';
+
 // Multi-step reasoning trail — canonical shape every agent emits
 // alongside its primary answer. Locked as a contract per CLAUDE.md
 // §9 Agent contract. The UI primitive lives at
