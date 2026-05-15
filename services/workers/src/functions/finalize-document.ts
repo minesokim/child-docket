@@ -56,6 +56,7 @@ import { asTenantId } from '@docket/shared';
 import { getObjectBytes, putObject } from '@docket/storage';
 import {
   binarize,
+  mergePdfs,
   processDocument,
   processMultiPage,
   resolveFinalFilename,
@@ -422,18 +423,60 @@ export const finalizeDocumentFn = inngest.createFunction(
           const frontBuf = await getObjectBytes({
             storageKey: mergeContext.frontStorageKey,
           });
-          processingResult = await processMultiPage({
-            pages: [
-              {
-                input: frontBuf,
-                inputMimeType: mergeContext.frontMimeType,
-              },
-              {
-                input: ownBuf,
-                inputMimeType: docRow.mimeType,
-              },
-            ],
-          });
+          // Multi-page Claude Vision path: when enabled, binarize each
+          // DL side independently, OCR each via Vision (handle each
+          // failure independently — a failed page falls back to image-
+          // only for that page, the other side still gets OCR), wrap
+          // each page as a searchable PDF, then merge. DL OCR value is
+          // marginal (mostly numbers + face photo + a barcode pattern)
+          // but the consistent treatment matters: client uploads a DL
+          // and gets a searchable PDF instead of one path-specific
+          // exception. Cost: ~2x single-page Vision cost.
+          if (process.env.DOCKET_OCR_ENGINE === 'claude_vision') {
+            const pages = [
+              { input: frontBuf, mimeType: mergeContext.frontMimeType },
+              { input: ownBuf, mimeType: docRow.mimeType },
+            ];
+            const perPagePdfs: Buffer[] = [];
+            for (const page of pages) {
+              const binarized = await binarize(page.input);
+              try {
+                const ocr = await ocrViaClaudeVision(binarized, tenantId);
+                const pagePdf = await wrapImageInSearchablePdf(
+                  binarized,
+                  'image/png',
+                  ocr.text,
+                );
+                perPagePdfs.push(pagePdf);
+              } catch (err) {
+                console.warn(
+                  '[finalize-document] DL page Vision OCR failed; using image-only for this page (Tesseract path deliberately skipped):',
+                  err,
+                );
+                const pagePdf = await wrapImageInPdf(binarized, 'image/png', true);
+                perPagePdfs.push(pagePdf);
+              }
+            }
+            const merged = await mergePdfs(perPagePdfs);
+            processingResult = {
+              pdf: merged,
+              sizeBytes: merged.length,
+              binarized: true,
+            };
+          } else {
+            processingResult = await processMultiPage({
+              pages: [
+                {
+                  input: frontBuf,
+                  inputMimeType: mergeContext.frontMimeType,
+                },
+                {
+                  input: ownBuf,
+                  inputMimeType: docRow.mimeType,
+                },
+              ],
+            });
+          }
         } else if (
           process.env.DOCKET_OCR_ENGINE === 'claude_vision' &&
           docRow.mimeType !== 'application/pdf'
