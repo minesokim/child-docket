@@ -530,8 +530,34 @@ function SlotSubtitle({
       // processing" states show the same calm subtitle. For ID docs
       // (DL, SSN), the friendlyDescription is the user's own name —
       // echoing it back is redundant. Keep the slot subtitle.
-      if (isDl || slot.kind === 'ssn_card') return <>{slot.subtitle}</>;
-      return <>{friendly ?? slot.subtitle}</>;
+      //
+      // When phase=='final' AND a finalFilename exists, append a
+      // second-line mono-font "Saved as ..." showing the renamed
+      // PDF. Antonio's intake-finalize pipeline auto-renames per
+      // the classified doc kind (e.g., "2025_W-2_RiversideUnified.pdf")
+      // so clients can see WHAT we filed it as. v0 doc-handling
+      // polish surfacing 2026-05-14.
+      const base = isDl || slot.kind === 'ssn_card' ? slot.subtitle : (friendly ?? slot.subtitle);
+      if (doc.parsePhase === 'final' && doc.finalFilename) {
+        return (
+          <>
+            {base}
+            <div
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, monospace',
+                fontSize: 11,
+                color: '#5b7a4f',
+                marginTop: 3,
+                letterSpacing: 0.1,
+              }}
+            >
+              ✓ Saved as {doc.finalFilename}
+              {doc.binarized ? ' · B&W PDF' : ''}
+            </div>
+          </>
+        );
+      }
+      return <>{base}</>;
     }
     case 'failed':
       return (
