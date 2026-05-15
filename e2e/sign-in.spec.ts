@@ -20,7 +20,7 @@ test.describe('sign-in', () => {
 
   test('e2e-bypass ticket consumes + lands on /welcome', async ({ page, request }) => {
     const ticket = await getBypassTicket(request);
-    test.skip(!ticket, '/api/e2e-bypass denied — Vercel env vars not set yet');
+    test.skip(!ticket, 'e2e bypass route deleted 2026-05-15 — Clerk Testing Tokens rebuild required');
 
     await page.goto(`/login?ticket=${ticket}`);
     // After ticket consumption + setActive, the app glides to /welcome.
@@ -32,7 +32,7 @@ test.describe('sign-in', () => {
 
   test('signed-in user sees welcome surface', async ({ page, request }) => {
     const ticket = await getBypassTicket(request);
-    test.skip(!ticket, '/api/e2e-bypass denied');
+    test.skip(!ticket, 'e2e bypass route deleted 2026-05-15 — Clerk Testing Tokens rebuild required');
 
     await page.goto(`/login?ticket=${ticket}`);
     await page.waitForURL('**/welcome', { timeout: 30_000 });

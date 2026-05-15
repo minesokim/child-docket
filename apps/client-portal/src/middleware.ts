@@ -8,12 +8,21 @@ import { NextResponse } from 'next/server';
 //   - /api/scan-intake-stub → form-submit endpoint for /scan; v0 stub
 //     until C12b lands the prospects table + Resend flow
 //   - root assets       → favicons etc.
-//   - /api/sentry-test  → Sentry capture verification endpoint.
-//     Deliberately throws; needs to be reachable via curl during
-//     deploy verification. Self-guarded by query-flag. REMOVE before
-//     public launch (PRODUCTION-READINESS §B).
 // Everything else (intake forms, returning portal, /docs, etc.) requires
 // an authed session.
+//
+// REMOVED 2026-05-15 per audit + PRODUCTION-READINESS §D
+// pre-public-launch checklist:
+//   - /api/sentry-test (deliberate 500-thrower for Sentry pipeline
+//     verification — even env-gated, the deploy-time attack surface
+//     is unnecessary; verify Sentry via a real error path instead)
+//   - /api/e2e-bypass (Playwright Clerk-OTP bypass — even gated by
+//     four independent env vars, one operator-error env push to prod
+//     turns the route into a full auth bypass; SOC 2 CC6.1 fail).
+//     Playwright tests auto-skip via `test.skip(!process.env.E2E_TEST_PHONE)`
+//     and the bypass helper at e2e/helpers/bypass.ts returns null on
+//     any POST failure. E2E flow needs Clerk Testing Tokens rebuild
+//     before it works again — tracked as a follow-up task.
 const isPublicRoute = createRouteMatcher([
   '/',
   '/login(.*)',
@@ -31,18 +40,11 @@ const isPublicRoute = createRouteMatcher([
   // posture. Static page, no PII, no auth required. Source content
   // canonicalized at docs/security/trust-center-content.md.
   '/trust(.*)',
-  '/api/sentry-test(.*)',
   // /api/health is the vendor-status probe polled by HealthStatusGate
   // (packages/ui). Public so the gate works for unauthenticated routes.
   // Returns only binary service-status booleans; no tenant data.
   // Exact path — descendants stay auth-gated.
   '/api/health',
-  // /api/e2e-bypass — Playwright + automation OTP bypass. Protected
-  // by FOUR independent env gates (see route.ts header). Public path
-  // because the caller is unauthenticated by definition (the bypass
-  // grants the auth). REMOVE BEFORE PUBLIC LAUNCH per
-  // docs/PRODUCTION-READINESS.md launch-prep checklist.
-  '/api/e2e-bypass',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

@@ -8,19 +8,21 @@
 //   pnpm e2e:portal
 //
 // REQUIRED ENV (set in .env.local for local runs; tests read at runtime)
-//   E2E_TEST_PHONE   — must match the Vercel-side env that gates the
-//                       /api/e2e-bypass endpoint (e.g., +15555550199).
+//   E2E_TEST_PHONE   — historically gated /api/e2e-bypass; now unused
+//                       until Clerk Testing Tokens rebuild lands.
 //   E2E_TEST_OTP     — same.
 //   E2E_PORTAL_URL   — defaults to https://docket-portal.vercel.app.
 //                       Override to test a preview deploy.
 //
-// Without those envs, every test is auto-SKIPPED (per the per-test
-// `test.skip(!process.env.E2E_TEST_PHONE, ...)` guard). This means
-// running the suite in a fresh checkout doesn't fail the CI — it
-// just reports "all skipped, missing creds."
-//
-// REMOVE BEFORE PUBLIC LAUNCH per docs/PRODUCTION-READINESS.md
-// pre-public-launch removal checklist.
+// !!! E2E BYPASS DELETED 2026-05-15 !!!
+// The /api/e2e-bypass route was removed per audit + PRODUCTION-READINESS
+// §D pre-public-launch checklist. Tests that depend on bypass-driven
+// auth auto-SKIP via the existing `test.skip(!ticket, ...)` guard
+// (the helper at e2e/helpers/bypass.ts returns null on the 404 now).
+// The whole suite currently reports "all skipped" until the bypass is
+// rebuilt on top of Clerk Testing Tokens
+// (https://clerk.com/docs/testing/playwright/overview). Tracked as a
+// follow-up task.
 
 import { defineConfig, devices } from '@playwright/test';
 import { config as loadEnv } from 'dotenv';

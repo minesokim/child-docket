@@ -21,7 +21,7 @@ test.describe('intake flow (partial — first 5 steps)', () => {
 
   test.beforeEach(async ({ page, request }) => {
     const ticket = await getBypassTicket(request);
-    test.skip(!ticket, '/api/e2e-bypass denied');
+    test.skip(!ticket, 'e2e bypass route deleted 2026-05-15 — Clerk Testing Tokens rebuild required');
     await page.goto(`/login?ticket=${ticket}`);
     await page.waitForURL('**/welcome', { timeout: 30_000 });
   });

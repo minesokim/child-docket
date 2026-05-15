@@ -9,20 +9,17 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 //     (or redirect to sign-in, which 404s through deployment
 //     protection). The serve handler does its own signature
 //     verification — the route is safe to expose.
-//   - /api/sentry-test — Sentry capture verification endpoint. The
-//     route deliberately throws to confirm Sentry receives events.
-//     Auth-gating it would defeat the test (curl can't send Clerk
-//     cookies). The route guards itself with a query-flag so a
-//     random visitor / search crawler doesn't pollute the dashboard.
-//     REMOVE this matcher entry along with the route before public
-//     launch (PRODUCTION-READINESS §B).
 //
 // Sign-up is closed — Antonio is provisioned out of band via the seed
 // script (no public registration on the admin side).
+//
+// REMOVED 2026-05-15 per audit + PRODUCTION-READINESS §D
+// pre-public-launch checklist:
+//   - /api/sentry-test (deliberate 500-thrower for Sentry pipeline
+//     verification — verify Sentry via a real error path instead).
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/api/inngest(.*)',
-  '/api/sentry-test(.*)',
   // /api/health is the vendor-status probe polled by HealthStatusGate
   // (packages/ui). Public so the gate works for unauthenticated routes
   // (e.g., the sign-in page itself can show a "DB is down" banner).

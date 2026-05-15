@@ -124,53 +124,26 @@ export default function LoginPage() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { signIn, setActive, isLoaded: signInLoaded } = useSignIn();
+  // setActive was used by the E2E ticket-consumer useEffect; removed
+  // 2026-05-15 with the /api/e2e-bypass deletion. The OTP flow below
+  // doesn't need setActive — Clerk's signIn.attemptFirstFactor() with
+  // strategy 'phone_code' activates the session implicitly. If the
+  // ticket flow comes back via Clerk Testing Tokens, re-add setActive
+  // here.
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp, isLoaded: signUpLoaded } = useSignUp();
 
   // State persisted across page loads
   const [countryCode, setCountryCode] = usePortalState<string>('phone-country', 'US');
   const [phoneDigits, setPhoneDigits] = usePortalState<string>('phone-digits', '');
 
-  // E2E ticket consumer. Playwright (or any automated client) calls
-  // POST /api/e2e-bypass with phone + otp; on success, the response
-  // contains a Clerk sign-in token. Playwright then navigates to
-  // /login?ticket=<token> and we consume the ticket here. See
-  // /api/e2e-bypass/route.ts for the gates that protect this path.
-  // Tracked for removal in PRODUCTION-READINESS launch-prep.
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const ticket = params.get('ticket');
-    if (!ticket || !signInLoaded || !signIn || !setActive) return;
-    (async () => {
-      try {
-        const res = await signIn.create({ strategy: 'ticket', ticket });
-        if (res.status === 'complete' && res.createdSessionId) {
-          // Strip the ticket from the URL BEFORE activating so it
-          // doesn't end up in browser history. window.history works
-          // here even though we're about to navigate — the next nav
-          // overwrites it cleanly.
-          window.history.replaceState({}, '', window.location.pathname);
-          // ACTUALLY activate the session. Without setActive the
-          // ticket-create succeeds but Clerk's auth state never
-          // flips; middleware keeps bouncing /login → /login. The
-          // earlier comment "glide will handle the redirect" was
-          // wrong — Clerk requires explicit activation here.
-          await setActive({ session: res.createdSessionId });
-          // Navigate to the post-auth destination. /welcome is the
-          // intake-flow entry point; matches the OTP flow's redirect
-          // (line 287 below) so e2e + real users land identically.
-          glide('/welcome');
-        } else {
-          console.warn('[login] ticket consumption returned non-complete status', res.status);
-        }
-      } catch (e) {
-        console.error('[login] ticket consumption failed', e);
-      }
-    })();
-    // signInLoaded gates re-runs; this fires once when both load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signInLoaded]);
+  // E2E ticket-consumer useEffect REMOVED 2026-05-15 along with the
+  // /api/e2e-bypass route per audit + PRODUCTION-READINESS §D
+  // pre-public-launch checklist. Even with four independent env gates,
+  // a public auth-bypass route in production code is a SOC 2 CC6.1
+  // fail (one operator-error env push and the gates open). E2E flow
+  // needs a Clerk Testing Tokens-based rebuild before it works again
+  // — tracked as a follow-up task.
 
   // Invite-link prefill: when a preparer sends a client a sign-in link
   // generated from /clients/new, the URL carries `?phone=...&country=...`.
