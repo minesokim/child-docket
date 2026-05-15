@@ -79,10 +79,19 @@ const OCR_VISION_PROMPT =
 // caller's try/catch falls back to wrapImageInPdf (image-only, non-
 // searchable). Cost: ~$0.001-0.003 per page on Haiku 4.5, vs $0/page
 // + uncatchable serverless crashes on Tesseract.
+type OcrResult = {
+  text: string;
+  costUsd: number;
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+};
+
 async function ocrViaClaudeVision(
   binarizedPng: Buffer,
   tenantId: string,
-): Promise<string> {
+): Promise<OcrResult> {
   // Startup assertion — if ANTHROPIC_API_KEY isn't set, runVisionAgent
   // would throw deep in the SDK and the caller's catch would silently
   // degrade to image-only PDFs forever. Log loudly so a misconfigured
@@ -123,7 +132,14 @@ async function ocrViaClaudeVision(
     );
     throw new Error('OCR output truncated at maxTokens');
   }
-  return result.text;
+  return {
+    text: result.text,
+    costUsd: result.costUsd,
+    latencyMs: result.latencyMs,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+    cachedTokens: result.cachedTokens,
+  };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -432,13 +448,86 @@ export const finalizeDocumentFn = inngest.createFunction(
           // bug 2026-05-14.
           const binarized = await binarize(ownBuf);
           try {
-            const ocrText = await ocrViaClaudeVision(binarized, tenantId);
-            const pdf = await wrapImageInSearchablePdf(binarized, 'image/png', ocrText);
+            const ocr = await ocrViaClaudeVision(binarized, tenantId);
+            const pdf = await wrapImageInSearchablePdf(binarized, 'image/png', ocr.text);
             processingResult = {
               pdf,
               sizeBytes: pdf.length,
               binarized: true,
             };
+            // Cost telemetry — write an audit row capturing the OCR
+            // Vision spend so /dashboard/cost can surface per-doc OCR
+            // costs alongside the classify-document + triage agent
+            // spend (matching the pattern in classify-document.ts
+            // lines 148-173). Done as a fire-and-forget so a failed
+            // audit write doesn't poison the PDF we already produced.
+            // Codex flagged the missing telemetry 2026-05-14.
+            //
+            // RETRY-DUPLICATE RISK (tracked as known-deferred): this
+            // INSERT runs inside the outer step.run('process-and-
+            // upload', ...) that ALSO does the R2 putObject below. If
+            // R2 upload fails after this audit row commits, Inngest
+            // retries the entire step → Vision runs again, second
+            // audit row written. Acceptable for v0 because OCR cost
+            // is small (~$0.001-0.003 per page) and the retry path
+            // is rare. Fix when we see it in telemetry: split the
+            // audit write into its own step.run AFTER the upload step
+            // succeeds (same pattern as the final-audit split at
+            // line 620 of this file).
+            //
+            // PROVIDER BUCKETING: toolName uses the 'anthropic.' prefix
+            // so the cost-rollups SQL at
+            // apps/command-room/src/lib/cost-rollups.ts:123-128
+            // ('tool_name LIKE 'anthropic.%') correctly buckets Vision
+            // OCR spend as Anthropic, not 'other'. Codex caught this
+            // 2026-05-14.
+            try {
+              await withTenant(asTenantId(tenantId), async (db) => {
+                await db.insert(schema.actions).values({
+                  tenantId,
+                  clientId,
+                  userId: null,
+                  agentId: 'document-triage',
+                  actionClass: 'read',
+                  toolName: 'anthropic.ocrViaClaudeVision',
+                  toolInput: {
+                    documentId,
+                    storageKey: docRow.storageKey,
+                    mimeType: docRow.mimeType,
+                    docKind: docRow.aiClassification ?? 'other',
+                    inputBytes: binarized.length,
+                  },
+                  toolOutput: {
+                    textLength: ocr.text.length,
+                    inputTokens: ocr.inputTokens,
+                    outputTokens: ocr.outputTokens,
+                    cachedTokens: ocr.cachedTokens,
+                    // `truncated` is structurally always false here —
+                    // ocrViaClaudeVision throws when outputTokens >=
+                    // maxTokens, so reaching this audit-write means
+                    // we got clean (non-truncated) output. Kept as
+                    // explicit `false` for telemetry-shape stability
+                    // in case the caller branch ever changes.
+                    truncated: false,
+                  },
+                  modelUsed: 'haiku-4-5',
+                  inputTokens: ocr.inputTokens,
+                  outputTokens: ocr.outputTokens,
+                  cachedTokens: ocr.cachedTokens,
+                  costUsd: ocr.costUsd,
+                  latencyMs: ocr.latencyMs,
+                  success: true,
+                });
+              });
+            } catch (auditErr) {
+              // Audit-row write failure doesn't fail the doc pipeline;
+              // log + move on. Spend is still recoverable from the
+              // Anthropic dashboard if needed.
+              console.warn(
+                `[finalize-document] OCR audit-row write failed for documentId=${documentId}:`,
+                auditErr,
+              );
+            }
           } catch (err) {
             console.error(
               '[finalize-document] Claude Vision OCR failed; falling back to image-only PDF (Tesseract path deliberately skipped):',
