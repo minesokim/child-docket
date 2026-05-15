@@ -10,10 +10,12 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "smoke": "tsx scripts/smoke-render.ts"
+    "smoke": "tsx scripts/smoke-render.ts",
+    "smoke-from-scan": "tsx scripts/smoke-from-scan.ts"
   },
   "dependencies": {
     "@docket/shared": "workspace:*",
+    "@docket/tax-graph": "workspace:*",
     "@docket/ui": "workspace:*",
     "@react-pdf/renderer": "^4.3.0",
     "react": "^19.0.0"

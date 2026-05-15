@@ -43,6 +43,11 @@ export {
   type Tier,
   sumImpactByTier,
 } from './types.js';
+export {
+  discoveredToPdfPosition,
+  discoveredToPdfInput,
+  type DiscoveredToPdfOptions,
+} from './from-scan.js';
 
 /**
  * Render a Discovery Scan to a PDF buffer.
