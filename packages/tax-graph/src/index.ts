@@ -4,6 +4,9 @@
 //   - Domain types for the tax-graph ontology
 //   - Citation formatters (effective-date + supersession aware)
 //   - KnowledgeRetriever interface + NullRetriever
+//   - Position Library v0 (20 hand-curated, Antonio-reviewed entries
+//     spanning Tier 1-4 of the Position Framework). Discovery Agent +
+//     Position Agent consume.
 //
 // What does NOT live here:
 //   - DB tables (those are @docket/db)
@@ -14,3 +17,4 @@
 export * from './types.js';
 export * from './citations.js';
 export * from './retrieval.js';
+export * from './positions.js';
