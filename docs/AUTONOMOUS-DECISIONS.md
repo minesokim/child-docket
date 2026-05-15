@@ -1587,5 +1587,75 @@ that posts feedback, never blocks merge. Reversible in one commit.
 
 ---
 
+## [37] 2026-05-14 — Adopt react-scan + react-grab as dev-only Million.dev triplet
+
+**Decision**: Added `react-scan` (renders heatmap) + `react-grab`
+(copies source/component-context for AI-coding paste) to both
+`apps/client-portal/src/app/layout.tsx` and
+`apps/command-room/src/app/layout.tsx` as `<Script>` tags loaded from
+unpkg CDN, gated on `process.env.NODE_ENV === 'development'`. Pairs
+with the already-adopted react-doctor (decision [#36]) — all three
+from Million.dev (Aiden Bai's team). NO npm install — script-tag-only
+integration so the packages can't accidentally end up in a production
+bundle even if someone imports them elsewhere.
+
+**Reasoning**: Two distinct value paths.
+
+react-scan: catches React re-render bugs visually at dev time. Most
+applicable to the command-room data tables (Need You queue, clients
+list) when those land. Zero prod footprint — Next.js dead-code-
+eliminates the `<Script>` tag at build time because the
+`process.env.NODE_ENV === 'development'` literal becomes `false &&
+(...)` in prod build.
+
+react-grab: this one is **for our AI-coding workflow**, not the user's
+UX. Click any UI element in the dev browser → copies source location +
+component stack + nearby code → paste into Claude/Cursor/Codex. The
+exact friction-reduction loop that matters when David is cycling fast
+through intake polish and wants to say "fix this specific element"
+without manually finding the file path.
+
+**Alternative considered**:
+- `npm install -D react-scan react-grab` instead of script-tag. Rejected
+  for v0 because the script-tag pattern can't leak into production via
+  accidental import — the npm-package shape can. Reversible: if we
+  later want programmatic config (e.g. scan options), swap to the npm
+  package + dev-only import.
+- Million.js compiler. Rejected per the same session conversation: last
+  push 2025-12-11 (5 months stale vs scan/grab/doctor active), React
+  19 + RSC compatibility unproven, our perf isn't bottlenecked. If we
+  want compile-time React optimization later, Meta's React Compiler
+  (in beta) is the right bet.
+
+**How to reverse**: delete the gated `<Script>` blocks from
+`apps/client-portal/src/app/layout.tsx` and
+`apps/command-room/src/app/layout.tsx`, and remove the `next/script`
+imports if nothing else uses them. No package.json changes to revert
+(script-tag integration). No code outside the layouts depends on
+these.
+
+**CSP posture**: the existing CSP (`default-src 'self' 'unsafe-inline'
+'unsafe-eval' https: data: blob:`) permits HTTPS script sources, so
+unpkg loads without CSP changes — **but only because the Script src
+is explicit `https://unpkg.com/...`, not scheme-relative `//unpkg.com/...`**.
+Codex caught this on review: scheme-relative URLs resolve against the
+page origin, and Next.js dev runs on http://localhost, so the
+scheme-relative form would resolve to http://unpkg.com and be
+blocked by the `https:`-only CSP. Explicit `https://` forces the
+upgrade even from an http origin (which modern browsers permit for
+sub-resources). When CSP tightens in the follow-up hardening pass
+(per next.config.ts comment), the dev-only gate means the prod CSP
+doesn't need to allow unpkg — only dev does, and dev inherits the
+same permissive baseline.
+
+**Severity**: low. Dev-only by gate. Zero production-bundle impact.
+Reversible in two file edits.
+
+**Commit**: <pending — current commit>
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-14. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
