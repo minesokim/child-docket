@@ -253,7 +253,7 @@ function buildHtmlBody(
 
       <div style="border-top:1px solid #E3DED4;padding-top:20px;margin-top:32px;">
         <p style="font-size:13px;color:#6B7280;line-height:1.5;margin:0 0 8px;">This is a Position Framework artifact, not an audit-defense file or a substitute for engagement-level workpapers. The EA's PTIN is on the return; every position the AI surfaces is the preparer's decision to accept or reject.</p>
-        <p style="font-size:13px;color:#6B7280;line-height:1.5;margin:0;">Sent to ${safeTo} · Docket Inc.</p>
+        <p style="font-size:13px;color:#6B7280;line-height:1.5;margin:0;">Sent to ${safeTo} · Petal Inc.</p>
       </div>
     </div>
   </body>

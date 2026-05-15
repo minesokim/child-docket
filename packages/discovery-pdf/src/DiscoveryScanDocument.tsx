@@ -515,7 +515,7 @@ function MethodologyFooter({ meta }: { meta: DiscoveryScanInput['meta'] }) {
       <Text style={styles.sectionHeader}>Methodology + disclaimer</Text>
       <View style={styles.divider} />
       <Text style={styles.footerText}>
-        Discovery Scans run Docket's Position Framework agent against a
+        Discovery Scans run Petal's Position Framework agent against a
         redacted version of the return. Each candidate position is
         classified into one of four confidence tiers (Settled law,
         Substantial Authority, Reasonable Basis + 8275, MLTN). Positions
@@ -526,7 +526,7 @@ function MethodologyFooter({ meta }: { meta: DiscoveryScanInput['meta'] }) {
         Every position cites primary authority (Internal Revenue Code,
         Treasury Regulations, IRS Publications, Revenue Rulings, Tax
         Court opinions, FTB Publications). Citations resolve against
-        Docket's authority library; the citation verifier flags any
+        Petal's authority library; the citation verifier flags any
         citation that did not match a known authority.
       </Text>
       <Text style={styles.footerText}>
@@ -537,7 +537,7 @@ function MethodologyFooter({ meta }: { meta: DiscoveryScanInput['meta'] }) {
         independent professional judgment.
       </Text>
       <Text style={styles.footerText}>
-        Generated {meta.generatedAt} · {meta.firmName} · Docket Inc.
+        Generated {meta.generatedAt} · {meta.firmName} · Petal Inc.
       </Text>
     </Page>
   );
@@ -553,7 +553,7 @@ export function DiscoveryScanDocument({
   return (
     <Document
       title={`Discovery Scan — ${input.meta.firmName} — TY ${input.meta.taxYear}`}
-      author="Docket"
+      author="Petal"
       subject="Position Framework Discovery Scan"
       creator="@docket/discovery-pdf"
     >

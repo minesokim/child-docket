@@ -11,7 +11,7 @@ This file is the operational + technical spec for shipping the Discovery Scan as
 
 > A free, 24-hour-turnaround Position Framework analysis of one redacted return. We surface every defensible deduction the return missed, classified into 4 confidence tiers (Settled / Substantial Authority / Reasonable Basis / MLTN) with the IRC cite + draft 8275 attached on each position. Refuses below Reasonable Basis. Delivered as a branded PDF.
 
-**The mechanism in plain terms**: prospect uploads a redacted return → Discovery agent runs the Position Framework across the return → outputs a Docket-branded PDF with positions surfaced + classified + cited. Prospect gets the PDF. We get a real dollar number for the close.
+**The mechanism in plain terms**: prospect uploads a redacted return → Discovery agent runs the Position Framework across the return → outputs a Petal-branded PDF with positions surfaced + classified + cited. Prospect gets the PDF. We get a real dollar number for the close.
 
 **Why this is the right top-of-funnel offer**:
 
@@ -34,7 +34,7 @@ This file is the operational + technical spec for shipping the Discovery Scan as
 
 ---
 
-## Landing page — `docket.com/scan`
+## Landing page — `petal.com/scan`
 
 Single-page conversion surface. Production target: live by 5/25/2026.
 
@@ -46,7 +46,7 @@ Single-page conversion surface. Production target: live by 5/25/2026.
 | **H1** | Find every defensible deduction your last return missed. Cited authority on each one. |
 | **Subhead** | 24-hour turnaround. Real Position Framework run on a redacted return. PDF delivered with IRC cites, 4-tier confidence ratings, and draft 8275s on every Tier 3 position. |
 | **Primary CTA** | "Run my scan" → form below |
-| **Trust anchor (small, below CTA)** | Antonio Vazquez, EA at Vazant Consulting, runs his ~250 active clients on the same Position Framework. Currently defending two active 2026 IRS audits using Docket as the substrate. |
+| **Trust anchor (small, below CTA)** | Antonio Vazquez, EA at Vazant Consulting, runs his ~250 active clients on the same Position Framework. Currently defending two active 2026 IRS audits using Petal as the substrate. |
 
 ### Information architecture (below the fold)
 
@@ -59,8 +59,8 @@ Single-page conversion surface. Production target: live by 5/25/2026.
 **Section 2 — "How it works"** (numbered, 4 steps):
 
 1. Upload a redacted return (PDF or PDF + workpapers). Strip client name, address, SSN — keep entity type, AGI bucket, schedules, and line items.
-2. Docket runs the Position Framework across every line.
-3. 24-hour turnaround. You get a Docket-branded PDF.
+2. Petal runs the Position Framework across every line.
+3. 24-hour turnaround. You get a Petal-branded PDF.
 4. Optional: 20-minute follow-up call to walk through positions, talk through whether the founder rate makes sense for your firm.
 
 **Section 3 — "The math behind the offer"** (per MARKETING-FRAMES.md penalty-anchored pricing):
@@ -69,11 +69,11 @@ Single-page conversion surface. Production target: live by 5/25/2026.
 > The §6694 understatement penalty is **$1,000 to $5,000**.
 > An audit defense engagement is **40 to 100 hours** at your realization rate — call it $20K of billable work you're not doing.
 >
-> Founder rate is $250/mo, locked for life, first 50 firms. One prevented §6695(g) penalty pays for half a year of Docket. One prevented §6694 understatement pays for 18 months. One prevented audit defense pays for 5+ years.
+> Founder rate is $250/mo, locked for life, first 50 firms. One prevented §6695(g) penalty pays for half a year of Petal. One prevented §6694 understatement pays for 18 months. One prevented audit defense pays for 5+ years.
 
 **Section 4 — "Who's behind this"** (founder credibility):
 
-> Docket is built by **David Kim** (CEO) and **Haokun Yang** (CTO, 5+ year partnership pre-Docket). Tax-domain coverage runs through **Antonio Vazquez, EA at Vazant Consulting**, on-platform tax advisor (1% equity, 25 years EA practice, ~250 active clients, two active 2026 IRS audits in progress). Backed by 28 PROD migrations, RLS at ENABLE+FORCE, per-tenant DEK encryption, and a cryptographic audit chain. Compliance-first AI built for the preparer's side of the desk.
+> Petal is built by **David Kim** (CEO) and **Haokun Yang** (CTO, 5+ year partnership pre-Petal). Tax-domain coverage runs through **Antonio Vazquez, EA at Vazant Consulting**, on-platform tax advisor (1% equity, 25 years EA practice, ~250 active clients, two active 2026 IRS audits in progress). Backed by 28 PROD migrations, RLS at ENABLE+FORCE, per-tenant DEK encryption, and a cryptographic audit chain. Compliance-first AI built for the preparer's side of the desk.
 
 **Section 5 — "FAQ"** (collapsed accordions):
 
@@ -107,31 +107,31 @@ Single-page conversion surface. Production target: live by 5/25/2026.
 | LinkedIn URL | URL | Optional |
 | Return upload | File (PDF, max 25MB, optional this step — we send upload link separately) | Optional |
 | "I confirm the upload will be redacted of client PII" | Checkbox | Yes |
-| Heard about Docket via | Single-select (Boney-Henderson / cold email / LinkedIn / NAEA event / r/taxpros / Tax Twitter / referral / search / other) | Yes |
+| Heard about Petal via | Single-select (Boney-Henderson / cold email / LinkedIn / NAEA event / r/taxpros / Tax Twitter / referral / search / other) | Yes |
 | CTA | "Run my scan" | |
 
 After submission: form data writes to `Prospects` table in CRM (per `docs/pitch-decks/cold-outreach-templates.md`); auto-send the onboarding email (below); flag in CRM as `stage = scan-offered`.
 
 ### Production stack for the landing page
 
-- **Routing**: new route `apps/client-portal/src/app/scan/page.tsx` (or new marketing site if we extract). Initial deploy: under existing `docket-portal.vercel.app/scan` until brand domain locked.
+- **Routing**: new route `apps/client-portal/src/app/scan/page.tsx` (or new marketing site if we extract). Initial deploy: under existing `petal-portal.vercel.app/scan` until brand domain locked.
 - **Form submission**: Next.js server action → writes to `prospects` table (new migration) + sends transactional email (Resend or Postmark; free tier sufficient for v0).
 - **Upload handling**: presigned R2 URL pattern (already used in client portal); 25MB cap; PDF + image MIME only; AAD bound to `(prospect_id, scan_id, path)` per encryption convention.
 - **Styling**: editorial-warm language (Fraunces + DM Sans, cream canvas, forest green primary) per `packages/ui/src/tokens.ts`.
 - **Analytics**: Vercel Analytics (free tier) + simple conversion event tracking (`scan_form_submit`, `scan_pdf_delivered`, `scan_demo_booked`, `scan_signed`).
-- **Domain**: live at `docket.com/scan` (or whatever brand-domain is locked); 301 from any subdomain variants.
+- **Domain**: live at `petal.com/scan` (or whatever brand-domain is locked); 301 from any subdomain variants.
 
 ---
 
 ## Discovery Scan PDF template structure
 
-The artifact delivered to the prospect. Single PDF, 5-12 pages depending on return complexity. Branded with Docket wordmark, cream + forest green design language. NEVER reads as AI-generated slop.
+The artifact delivered to the prospect. Single PDF, 5-12 pages depending on return complexity. Branded with Petal wordmark, cream + forest green design language. NEVER reads as AI-generated slop.
 
 ### Page 1 — Cover
 
 | Slot | Content |
 |---|---|
-| Wordmark | Docket logo top-left (forest green oklch) |
+| Wordmark | Petal logo top-left (forest green oklch) |
 | Title | "Discovery Scan — [Firm Name]" |
 | Subtitle | "Position Framework analysis · [Tax Year]" |
 | Date | Generated [date] · Prepared for [First Last, EA/CPA] |
@@ -219,17 +219,17 @@ This page is the trust-builder. Showing what the system refuses is more credible
 
 | Slot | Content |
 |---|---|
-| Audit defense story | "Every position in this scan was generated with the chain-of-authority logged. If any of these returns gets audited, the defense file is one click away. That's the Docket substrate, not a feature." |
-| Coverage Map link | "Detailed coverage scope: docket.com/coverage" |
-| Founder rate CTA | "Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. To lock yours: david@docket.com or 20-min call link." |
-| Disclaimer | "This Discovery Scan is a Position Framework artifact, not a complete audit defense file or return preparation service. Positions surfaced require preparer judgment + client facts validation. Docket does not sign returns; the preparer remains responsible for filing. Cited authorities are current as of [date]." |
-| Footer | "Docket · david@docket.com · docket.com" |
+| Audit defense story | "Every position in this scan was generated with the chain-of-authority logged. If any of these returns gets audited, the defense file is one click away. That's the Petal substrate, not a feature." |
+| Coverage Map link | "Detailed coverage scope: petal.com/coverage" |
+| Founder rate CTA | "Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. To lock yours: david@petal.com or 20-min call link." |
+| Disclaimer | "This Discovery Scan is a Position Framework artifact, not a complete audit defense file or return preparation service. Positions surfaced require preparer judgment + client facts validation. Petal does not sign returns; the preparer remains responsible for filing. Cited authorities are current as of [date]." |
+| Footer | "Petal · david@petal.com · petal.com" |
 
 ---
 
 ## Onboarding email (auto-sent when form submitted)
 
-> **Subject:** Your Docket Discovery Scan request — upload link inside
+> **Subject:** Your Petal Discovery Scan request — upload link inside
 >
 > Hi [First name],
 >
@@ -252,7 +252,7 @@ This page is the trust-builder. Showing what the system refuses is more credible
 > - Any unusual transactions, K-1s, foreign income, depreciation, NOLs
 >
 > **Step 2 — We run the Position Framework.**
-> Once your return is in, we run a full 4-tier analysis. 24-hour turnaround. The result is a Docket-branded PDF with every defensible deduction surfaced + classified + cited.
+> Once your return is in, we run a full 4-tier analysis. 24-hour turnaround. The result is a Petal-branded PDF with every defensible deduction surfaced + classified + cited.
 >
 > **Step 3 — You get the PDF.**
 > Delivered to this email address. Optional: 20-minute walkthrough call where we go through positions together and talk about whether the $250/mo founder rate makes sense for [Firm name].
@@ -262,9 +262,9 @@ This page is the trust-builder. Showing what the system refuses is more credible
 > Questions? Just reply to this email.
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
-> *P.S. The §6695(g) due-diligence penalty is $650 per failure. Docket founder rate is $250/mo. One prevented penalty pays for half a year. The math is the offer.*
+> *P.S. The §6695(g) due-diligence penalty is $650 per failure. Petal founder rate is $250/mo. One prevented penalty pays for half a year. The math is the offer.*
 
 ---
 
@@ -302,14 +302,14 @@ This is the build spec for the Discovery agent itself. Lives in `services/worker
     ├─ Log refusals to "Refused positions" section of PDF
     └─ Validate no Tier 4 (MLTN) position made it past floor without explicit preparer-judgment-required flag
 
-[4] PDF rendering (use existing PDF tooling: react-pdf or @react-pdf/renderer; align to Docket design tokens)
+[4] PDF rendering (use existing PDF tooling: react-pdf or @react-pdf/renderer; align to Petal design tokens)
     ├─ Cover + executive summary + position blocks + refused-positions + footer
     ├─ Apply forest green oklch + Fraunces + DM Sans + cream canvas tokens
     ├─ Generate via background job on Inngest
     └─ Store in R2 with AAD-bound encryption (prospect_id, scan_id, "scan-output.pdf")
 
 [5] Delivery
-    ├─ Email PDF to prospect via Resend (subject: "Your Docket Discovery Scan — [Firm Name]")
+    ├─ Email PDF to prospect via Resend (subject: "Your Petal Discovery Scan — [Firm Name]")
     ├─ Update CRM: stage = scan-delivered, scan_pdf_url = R2 link
     ├─ Trigger David alert: new scan delivered to [prospect]; total $ surfaced [$X]
     └─ Log audit chain row: action=scan_delivered, agent=discovery-agent, cost=...

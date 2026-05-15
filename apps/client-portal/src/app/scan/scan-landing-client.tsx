@@ -35,7 +35,7 @@ const FAQ_ITEMS: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'What is the difference between this scan and a tool like Deduction or Perplexity Computer for Taxes?',
-    a: "Those tools are consumer-side. They help individual taxpayers find deductions. Docket is built for the preparer's side of the desk. Every position cites primary authority. Refuses below Reasonable Basis. Generates the audit defense file. Different product, different audience.",
+    a: "Those tools are consumer-side. They help individual taxpayers find deductions. Petal is built for the preparer's side of the desk. Every position cites primary authority. Refuses below Reasonable Basis. Generates the audit defense file. Different product, different audience.",
   },
   {
     q: 'Why are you only offering this to the first 30?',
@@ -214,7 +214,7 @@ function HeroSection({ t }: { t: ReturnType<typeof buildTheme> }) {
       >
         Antonio Vazquez, EA at Vazant Consulting (CA, ~250 active clients), runs
         his book on the same Position Framework. Currently defending two active
-        2026 IRS audits using Docket as the substrate.
+        2026 IRS audits using Petal as the substrate.
       </p>
     </section>
   );
@@ -315,12 +315,12 @@ function HowItWorksSection({ t }: { t: ReturnType<typeof buildTheme> }) {
       body: 'PDF or PDF + workpapers. Max 25MB. Strip client name, address, SSN — keep entity type, AGI bucket, schedules, line items. We send the secure upload link by email after you submit the form below.',
     },
     {
-      title: 'Docket runs the Position Framework',
+      title: 'Petal runs the Position Framework',
       body: 'Every line item gets the 4-tier confidence pass + IRC cite + draft 8275 where applicable. Refuses below Reasonable Basis by default.',
     },
     {
       title: '24-hour turnaround',
-      body: 'You get a Docket-branded PDF in your inbox. Headline number on page 2: total dollars in defensible deductions surfaced across all positions.',
+      body: 'You get a Petal-branded PDF in your inbox. Headline number on page 2: total dollars in defensible deductions surfaced across all positions.',
     },
     {
       title: 'Optional 20-min walkthrough',
@@ -443,7 +443,7 @@ function PricingMathSection({ t }: { t: ReturnType<typeof buildTheme> }) {
         }}
       >
         <p style={{ margin: '0 0 12px', fontWeight: 700 }}>
-          Docket founder rate: $250/mo. Locked for life, first 50 firms.
+          Petal founder rate: $250/mo. Locked for life, first 50 firms.
         </p>
         <p style={{ margin: '0 0 6px' }}>One prevented §6695(g) penalty pays for half a year.</p>
         <p style={{ margin: '0 0 6px' }}>One prevented §6694 understatement pays for 18 months.</p>
@@ -512,7 +512,7 @@ function FoundersSection({ t }: { t: ReturnType<typeof buildTheme> }) {
         <div>
           <h3 style={founderNameStyle(t)}>Haokun Yang</h3>
           <p style={founderBodyStyle(t)}>
-            CTO. Owns the codebase end-to-end. 5+ year partnership pre-Docket.
+            CTO. Owns the codebase end-to-end. 5+ year partnership pre-Petal.
             UCR CS. Built the 13-table Drizzle schema with RLS, per-tenant DEK
             encryption, cryptographic audit chain, and the agent fleet
             currently in production.
@@ -544,7 +544,7 @@ function FoundersSection({ t }: { t: ReturnType<typeof buildTheme> }) {
           Vazant Consulting (CA). 25 years EA practice. ~250 active clients. All
           Position Library content, every tax-position classification, every
           cited-authority decision routes through Antonio. Currently defending
-          two active 2026 IRS audits using Docket as the substrate. Real PTIN.
+          two active 2026 IRS audits using Petal as the substrate. Real PTIN.
           Real risk. Real signal.
         </p>
       </div>
@@ -845,7 +845,7 @@ function FormSection({
         <Field t={t} label="LinkedIn URL" name="linkedin_url" type="url" />
         <Select
           t={t}
-          label="Heard about Docket via"
+          label="Heard about Petal via"
           name="source"
           required
           options={[
@@ -1097,12 +1097,12 @@ function Footer({ t }: { t: ReturnType<typeof buildTheme> }) {
           }}
         >
           <a
-            href="mailto:david@docket.com"
+            href="mailto:david@petal.com"
             style={{ color: 'inherit', textDecoration: 'underline' }}
           >
-            david@docket.com
+            david@petal.com
           </a>{' '}
-          · © 2026 Docket
+          · © 2026 Petal
           {/*
             docket.com brand link dropped from this footer until the
             cutover lands. Same-origin /scan visitors clicking it

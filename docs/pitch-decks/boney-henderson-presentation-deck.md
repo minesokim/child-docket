@@ -26,7 +26,7 @@ Co-create the slide visuals with Antonio. Voice-pass with both Antonio + David b
 
 ## Slide 1 — Title + Antonio's introduction (~2 min)
 
-**Visual**: Docket wordmark (cream + forest green), event title, Antonio + David + date
+**Visual**: Petal wordmark (cream + forest green), event title, Antonio + David + date
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -42,16 +42,16 @@ Co-create the slide visuals with Antonio. Voice-pass with both Antonio + David b
                   Vazant Consulting
 
                     + David Kim
-                    Founder, Docket
+                    Founder, Petal
 
                        [date]
 ═══════════════════════════════════════════════════════════
 ```
 
 **Antonio's speaker notes (90 sec)**:
-> "Thanks Dr. Boney-Henderson, and thanks everyone for showing up. Quick intro — I'm Antonio Vazquez, I run Vazant Consulting in California. I've been an EA for 25 years, I prepare about 250 active client returns a year, and I'm currently defending two active 2026 IRS audits using a tool that David Kim and I built called Docket.
+> "Thanks Dr. Boney-Henderson, and thanks everyone for showing up. Quick intro — I'm Antonio Vazquez, I run Vazant Consulting in California. I've been an EA for 25 years, I prepare about 250 active client returns a year, and I'm currently defending two active 2026 IRS audits using a tool that David Kim and I built called Petal.
 >
-> What I want to do in the next hour is walk you through what Docket is, why I'm betting my practice on it, and what's specifically on offer for this network. I'll be talking, David's on the line for the technical Q&A at the end. Dr. Boney-Henderson, please feel free to interrupt with anything I'm not making clear."
+> What I want to do in the next hour is walk you through what Petal is, why I'm betting my practice on it, and what's specifically on offer for this network. I'll be talking, David's on the line for the technical Q&A at the end. Dr. Boney-Henderson, please feel free to interrupt with anything I'm not making clear."
 
 ---
 
@@ -80,7 +80,7 @@ WHY I'M DOING THIS PRESENTATION
 >
 > Second — every AI tax tool that's been announced in the last 18 months, with serious money behind them, is targeting the top 100 firms. Accrual raised $75M. Black Ore raised $60M. Basis raised at $1.15 billion valuation. They're building autonomous return prep for KPMG and Deloitte. They're not built for us.
 >
-> Third — I'm in the middle of two active 2026 IRS audits right now, and I'm defending them using Docket. So this isn't theoretical for me. I'm sharing my actual production experience."
+> Third — I'm in the middle of two active 2026 IRS audits right now, and I'm defending them using Petal. So this isn't theoretical for me. I'm sharing my actual production experience."
 
 ---
 
@@ -157,11 +157,11 @@ THE FUNDED COMPETITORS ARE NOT BUILT FOR OUR SEGMENT
 >
 > The practice management incumbents — TaxDome, Canopy, Karbon — they shipped some AI features. They're shallow. None of them cite primary authority. None of them refuse positions below Reasonable Basis. None of them generate the audit defense file. They were built before §6695(g) became an active audit lane.
 >
-> Layer 3 is open. This is where Docket lives. Where I live, where you live, where this network lives."
+> Layer 3 is open. This is where Petal lives. Where I live, where you live, where this network lives."
 
 ---
 
-## Slide 5 — What Docket does (~6 min)
+## Slide 5 — What Petal does (~6 min)
 
 **Visual**: 5-pillar grid
 
@@ -193,11 +193,11 @@ THE 5 CAPABILITY PILLARS
 ```
 
 **Antonio's speaker notes (4-5 min)**:
-> "Five things Docket does. Let me focus on the first because it's the headline differentiator.
+> "Five things Petal does. Let me focus on the first because it's the headline differentiator.
 >
 > COMPLIANCE-FIRST POSITION FRAMEWORK. Every position the AI surfaces — every deduction, every credit, every election — comes with a 4-tier confidence rating attached at decision time. Tier 1 is Settled law. Tier 2 is Substantial Authority. Tier 3 is Reasonable Basis with required Form 8275 disclosure. Tier 4 is More Likely Than Not, preparer judgment required. Below Reasonable Basis — refused. Period. The AI WILL NOT surface aggressive territory unsupported.
 >
-> Why this matters: every other 'AI for tax' tool I've seen surfaces deductions and lets you decide. That puts the §6694(a) exposure on YOUR PTIN. Docket flips it. The AI carries the refusal logic; you carry the judgment calls.
+> Why this matters: every other 'AI for tax' tool I've seen surfaces deductions and lets you decide. That puts the §6694(a) exposure on YOUR PTIN. Petal flips it. The AI carries the refusal logic; you carry the judgment calls.
 >
 > And on Tier 3 positions, the AI pre-drafts the Form 8275 disclosure. That alone, for me, is hours saved per return.
 >
@@ -207,7 +207,7 @@ THE 5 CAPABILITY PILLARS
 
 ---
 
-## Slide 6 — What Docket DOES NOT do (Coverage Map) (~3 min)
+## Slide 6 — What Petal DOES NOT do (Coverage Map) (~3 min)
 
 **Visual**: 4-tier coverage table
 
@@ -225,7 +225,7 @@ TIER 3 — JUDGMENT             → Cited authority + preparer review required
 
 TIER 4 — EXTERNAL             → Honest about what we don't know
 
-Detailed scope: docket.com/coverage
+Detailed scope: petal.com/coverage
 ```
 
 **Antonio's speaker notes (2 min)**:
@@ -242,7 +242,7 @@ Detailed scope: docket.com/coverage
 **Visual**: Screen share — Discovery Scan PDF (`docs/discovery-scan-sample-output.md`)
 
 **Antonio's speaker notes**:
-> "Let me show you a Discovery Scan in action. This is a real sample we produced on a hypothetical 5-preparer construction-business S-Corp client. 8 positions surfaced, totaling $43,400 in defensible deductions. 3 refusals — positions Docket explicitly refused to surface, with documented reasoning.
+> "Let me show you a Discovery Scan in action. This is a real sample we produced on a hypothetical 5-preparer construction-business S-Corp client. 8 positions surfaced, totaling $43,400 in defensible deductions. 3 refusals — positions Petal explicitly refused to surface, with documented reasoning.
 >
 > [Walk through 4-5 of the positions live. Spend 60-90 seconds per position. Focus on:
 > - Position #1 (§199A QBI) — Tier 1, full citation chain
@@ -263,7 +263,7 @@ A REAL ACTIVE 2026 IRS AUDIT, DEFENDED USING DOCKET
 
 The notice landed [month].
 The position challenged was [position].
-Docket's audit chain logged [authority cite] at decision time.
+Petal's audit chain logged [authority cite] at decision time.
 Defense file was ready in [X] hours instead of [Y] hours.
 ```
 
@@ -284,7 +284,7 @@ PENALTY-ANCHORED PRICING
 Audit defense (1 prevented, annualized):    $5,000+
 Doc-chase + ChatGPT-armed-client time:      $4,000+
 
-Total annual cost-of-not-using-Docket:    ~$15,000
+Total annual cost-of-not-using-Petal:    ~$15,000
 
 DOCKET FOUNDER TIER:                       $3,000/yr ($250/mo)
 
@@ -298,9 +298,9 @@ LOCKED FOR LIFE. First 50 firms only.
 >
 > One prevented §6695(g) failure: $650. One prevented §6694(a): $1,500 average. One prevented audit defense engagement, annualized: $5,000+ in your billable time you're not spending on client work. Doc-chase plus ChatGPT-armed-client time: $4,000 of opportunity cost.
 >
-> That's roughly $15,000 of annual cost from running without Docket. Conservative.
+> That's roughly $15,000 of annual cost from running without Petal. Conservative.
 >
-> Docket founder rate is $250 a month. $3,000 a year. ROI is 5x minimum. For practices like mine, with two active audits in flight, it's 10-15x.
+> Petal founder rate is $250 a month. $3,000 a year. ROI is 5x minimum. For practices like mine, with two active audits in flight, it's 10-15x.
 >
 > Founder rate is locked for life. Even when standard tiers go up — and they will — your rate stays where it is.
 >
@@ -329,7 +329,7 @@ For Dr. Boney-Henderson's preparer network attendees:
    network member who wants to talk through fit.
 
 How to claim:
-- Email david@docket.com with subject "Boney-Henderson Network"
+- Email david@petal.com with subject "Boney-Henderson Network"
 - Mention this presentation
 ```
 
@@ -340,9 +340,9 @@ How to claim:
 >
 > Second — we're reserving 25 of the 50 founder slots specifically for this network. If you reach out within 30 days mentioning this presentation, you have priority.
 >
-> Third — for any of you who want a 30-minute Zoom to talk through whether Docket fits your practice — David and I will both be on the call. You're not getting a salesperson. You're getting the founder and the lead practitioner.
+> Third — for any of you who want a 30-minute Zoom to talk through whether Petal fits your practice — David and I will both be on the call. You're not getting a salesperson. You're getting the founder and the lead practitioner.
 >
-> Email david@docket.com. Subject line 'Boney-Henderson Network.' That's it."
+> Email david@petal.com. Subject line 'Boney-Henderson Network.' That's it."
 
 ---
 
@@ -355,8 +355,8 @@ How to claim:
 
            Antonio + David here for any questions.
 
-                 david@docket.com
-                 docket.com (coming)
+                 david@petal.com
+                 petal.com (coming)
 
                  Founder rate: $250/mo
                  First 50 firms only.
@@ -366,7 +366,7 @@ How to claim:
 **Anticipated questions + answers**:
 
 **Q: How is this different from TaxDome or Canopy?**
-> A (David): TaxDome and Canopy are practice management with shallow AI bolted on. They handle document storage, client portal, scheduling well. They don't cite authority on positions. They don't refuse below Reasonable Basis. They don't generate audit defense files. Docket is built around the Position Framework first; PM-feel comes from the editorial-warm portal layer.
+> A (David): TaxDome and Canopy are practice management with shallow AI bolted on. They handle document storage, client portal, scheduling well. They don't cite authority on positions. They don't refuse below Reasonable Basis. They don't generate audit defense files. Petal is built around the Position Framework first; PM-feel comes from the editorial-warm portal layer.
 
 **Q: What about SOC 2? Is this safe for taxpayer data?**
 > A (David): SOC 2 Type II controls are built into the codebase. RLS at ENABLE+FORCE. Per-tenant DEK encryption with AAD binding. Cryptographic audit chain. 12-doc policy set in `docs/security/`. WISP compliant with IRS Pub 4557 + FTC Safeguards Rule. SOC 2 Type I attestation targeted Q4 2026, Type II mid-2027.
@@ -395,17 +395,17 @@ THREE WAYS TO START
 1. RUN A FREE DISCOVERY SCAN
    Send a redacted return.
    PDF in 24 hours.
-   Email david@docket.com with subject "Boney-Henderson Scan"
+   Email david@petal.com with subject "Boney-Henderson Scan"
 
 2. BOOK A 30-MINUTE WALKTHROUGH
    Zoom with Antonio + David.
    Talk through your practice's specific fit.
-   Email david@docket.com with subject "BH Network Walkthrough"
+   Email david@petal.com with subject "BH Network Walkthrough"
 
 3. LOCK A FOUNDER SLOT
    $250/mo locked for life.
    25 of 50 slots reserved for this network.
-   Email david@docket.com with subject "BH Network Founder"
+   Email david@petal.com with subject "BH Network Founder"
 
 Whichever fits. No commitment until you sign.
 
@@ -445,7 +445,7 @@ WISP per IRS Pub 4557 + FTC Safeguards Rule + MA 201 CMR 17
 PATH 2 — FOR THE TECHNICAL BUYERS
 
 Public API + MCP server ship in v1.
-Embed Docket's compliance + audit + Position Framework in any
+Embed Petal's compliance + audit + Position Framework in any
 AI tax tool you build or use.
 
 Built on Claude (Sonnet 4.6 default, Haiku 4.5 triage, Opus 4.7 hard).
@@ -466,7 +466,7 @@ Platform tier: custom
 ```
 THE REFUSAL FLOOR — WHY REFUSING IS THE PRODUCT
 
-Docket refuses to surface positions below Reasonable Basis:
+Petal refuses to surface positions below Reasonable Basis:
 
 × Augusta Rule at inflated rate ($5,000+/day when comp is $1,500/day)
 × Conservation easement abuse (Notice 2017-10 listed transaction)
@@ -480,7 +480,7 @@ If the IRS asks "why didn't you claim X?" — the log answers.
 
 ### Backup Slide E — Antonio's typical week (visual)
 
-[Antonio walks through what his day looks like with vs without Docket; voice-passed when case studies land]
+[Antonio walks through what his day looks like with vs without Petal; voice-passed when case studies land]
 
 ---
 

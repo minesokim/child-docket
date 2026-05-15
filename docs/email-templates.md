@@ -1,9 +1,9 @@
 # Email Templates — full lifecycle suite
 
-> *Every email Docket sends, end-to-end. Transactional + lifecycle + manual outreach.*
+> *Every email Petal sends, end-to-end. Transactional + lifecycle + manual outreach.*
 > *Locked 2026-05-11. Re-read every Friday during the 100-by-8/1 sprint.*
 
-This file is the source of truth for **what Docket emails look like**. Cold outreach copy lives in [`docs/pitch-decks/cold-outreach-templates.md`](pitch-decks/cold-outreach-templates.md). Voice rules in [`docs/MARKETING-FRAMES.md`](MARKETING-FRAMES.md). All emails sent via Resend (free tier sufficient for v0; upgrade at 3K/mo sends).
+This file is the source of truth for **what Petal emails look like**. Cold outreach copy lives in [`docs/pitch-decks/cold-outreach-templates.md`](pitch-decks/cold-outreach-templates.md). Voice rules in [`docs/MARKETING-FRAMES.md`](MARKETING-FRAMES.md). All emails sent via Resend (free tier sufficient for v0; upgrade at 3K/mo sends).
 
 ---
 
@@ -11,8 +11,8 @@ This file is the source of truth for **what Docket emails look like**. Cold outr
 
 Per [`docs/MARKETING-FRAMES.md`](MARKETING-FRAMES.md) + CLAUDE.md §19 anti-AI-slop:
 
-1. **From line is always a real human**: `David Kim <david@docket.com>` for prospect-facing, `Docket <hello@docket.com>` for transactional only.
-2. **Subject lines are conversational**, not marketing-y: "Your Docket Discovery Scan is ready" beats "📊 Your Tax Insights Report 📊".
+1. **From line is always a real human**: `David Kim <david@petal.com>` for prospect-facing, `Petal <hello@petal.com>` for transactional only.
+2. **Subject lines are conversational**, not marketing-y: "Your Petal Discovery Scan is ready" beats "📊 Your Tax Insights Report 📊".
 3. **No emojis. No em dashes. No AI vocabulary**: no delve, crucial, robust, comprehensive, nuanced.
 4. **Real names. Real numbers. Real cites.** Antonio's full credential block when relevant.
 5. **Penalty-anchored P.S.** on every prospect-facing email where it fits naturally (founder rate $250/mo, $650 §6695(g), "one prevented penalty pays for half a year").
@@ -41,12 +41,12 @@ Per [`docs/MARKETING-FRAMES.md`](MARKETING-FRAMES.md) + CLAUDE.md §19 anti-AI-s
 | | |
 |---|---|
 | Trigger | Prospect submits `/scan` form |
-| From | `David Kim <david@docket.com>` |
-| Reply-to | `david@docket.com` |
+| From | `David Kim <david@petal.com>` |
+| Reply-to | `david@petal.com` |
 | Send timing | Immediate (< 5 min) |
 
 ```
-Subject: Your Docket Discovery Scan request — upload link inside
+Subject: Your Petal Discovery Scan request — upload link inside
 
 Hi [First name],
 
@@ -72,7 +72,7 @@ Keep:
 
 Step 2 — We run the Position Framework.
 Once your return is in, we run a full 4-tier analysis. 24-hour turnaround.
-The result is a Docket-branded PDF with every defensible deduction
+The result is a Petal-branded PDF with every defensible deduction
 surfaced + classified + cited.
 
 Step 3 — You get the PDF.
@@ -86,16 +86,16 @@ not, you keep the PDF.
 Questions? Just reply to this email.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. The §6695(g) due-diligence penalty is $650 per failure (Rev. Proc.
-2025-32). Docket founder rate is $250/mo. One prevented penalty pays for
+2025-32). Petal founder rate is $250/mo. One prevented penalty pays for
 half a year. The math is the offer.
 
 ---
 You're receiving this because you signed up for a free Discovery Scan at
-docket.com/scan. Reply to ask questions, or ignore if no longer interested.
-docket.com · david@docket.com
+petal.com/scan. Reply to ask questions, or ignore if no longer interested.
+petal.com · david@petal.com
 ```
 
 ### Email 2: Discovery Scan PDF delivered (auto-sent when agent completes)
@@ -103,13 +103,13 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | Discovery agent completes + manual review approved (first 30) OR auto-deliver (after first 30) |
-| From | `David Kim <david@docket.com>` |
-| Reply-to | `david@docket.com` |
+| From | `David Kim <david@petal.com>` |
+| Reply-to | `david@petal.com` |
 | Send timing | Within 24 hours of upload |
 | Attachment | PDF (the Discovery Scan output) |
 
 ```
-Subject: Your Docket Discovery Scan — [Firm Name]
+Subject: Your Petal Discovery Scan — [Firm Name]
 
 Hi [First name],
 
@@ -143,15 +143,15 @@ Founder rate is $250/mo locked for life, [X] of 50 remaining. Happy to
 walk through what an ongoing engagement looks like for [Firm name].
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. Every position in the scan has a draft 8275 attached if it is Tier 3
 (Reasonable Basis with disclosure). That is not a feature, it is the
-design — Docket refuses to surface a position without the disclosure
+design — Petal refuses to surface a position without the disclosure
 pre-drafted.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ### Email 3: Phone OTP (existing — already shipped in production)
@@ -159,20 +159,20 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | User attempts login |
-| From | `Docket <noreply@docket.com>` |
+| From | `Petal <noreply@petal.com>` |
 | Reply-to | None (do-not-reply) |
 | Send timing | < 5 seconds |
 
 ```
-Subject: Your Docket login code
+Subject: Your Petal login code
 
-Your Docket login code is: 384729
+Your Petal login code is: 384729
 
 This code expires in 10 minutes. If you didn't request this, you can
 ignore this email.
 
 ---
-For questions: hello@docket.com
+For questions: hello@petal.com
 ```
 
 ### Email 4: Payment receipt (founder tier signup confirmation)
@@ -180,12 +180,12 @@ For questions: hello@docket.com
 | | |
 |---|---|
 | Trigger | Square payment success webhook |
-| From | `Docket <hello@docket.com>` |
-| Reply-to | `david@docket.com` |
+| From | `Petal <hello@petal.com>` |
+| Reply-to | `david@petal.com` |
 | Send timing | Within 60s of payment success |
 
 ```
-Subject: Welcome to Docket — receipt + next steps
+Subject: Welcome to Petal — receipt + next steps
 
 Hi [First name],
 
@@ -202,7 +202,7 @@ WHAT HAPPENS NEXT
 
 Within 24 hours:
 - David will email you to schedule a 30-min onboarding call
-- We'll provision your Docket tenant
+- We'll provision your Petal tenant
 - We'll send you your first-login link (separate email)
 
 Within 1 week:
@@ -215,10 +215,10 @@ If anything looks wrong on the receipt, reply to this email immediately.
 Welcome to the founder cohort.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 ---
-hello@docket.com · docket.com
+hello@petal.com · petal.com
 ```
 
 ---
@@ -230,12 +230,12 @@ hello@docket.com · docket.com
 | | |
 |---|---|
 | Trigger | David sends manually within 24h of payment receipt |
-| From | `David Kim <david@docket.com>` |
-| Reply-to | `david@docket.com` |
+| From | `David Kim <david@petal.com>` |
+| Reply-to | `david@petal.com` |
 | Send timing | Within 24h |
 
 ```
-Subject: Welcome to Docket — let's get you set up
+Subject: Welcome to Petal — let's get you set up
 
 Hi [First name],
 
@@ -260,14 +260,14 @@ Book a 30-min slot here: [Calendly link]
 Two days I'm holding open this week: [day1 + day2 with times].
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. The founder rate is locked. Even when standard tiers go up, your
 $250/mo doesn't. As long as you remain in good standing, the rate is
 yours.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ### Email 6: Onboarding call confirmation (auto-send via Calendly)
@@ -275,7 +275,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | Calendly booking |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | Immediate |
 
 ```
@@ -291,7 +291,7 @@ Three things to have ready:
 1. Your current tax-prep software credentials (sandbox or test login if you
    prefer not to share prod yet)
 2. A typical client return you'd want surfaced as the first scan
-3. Any questions on the Position Framework or Coverage Map (docket.com/coverage)
+3. Any questions on the Position Framework or Coverage Map (petal.com/coverage)
 
 Looking forward.
 
@@ -306,7 +306,7 @@ Need to reschedule? [Calendly reschedule link]
 | | |
 |---|---|
 | Trigger | David sends manually after onboarding call |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | Within 24h of call |
 
 ```
@@ -335,7 +335,7 @@ ANY TIMING / SCOPE CHANGES — reply to this email.
 David Kim
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ---
@@ -347,7 +347,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | David sends manually 2-3 days after PDF delivered, if prospect didn't reply |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | 2-3 days after PDF delivery, only if no reply |
 
 ```
@@ -359,7 +359,7 @@ Checking in. Sent your Discovery Scan PDF for [Firm name] two days ago.
 
 A few questions usually come up after the PDF lands:
 
-- "Position #3 looks aggressive — would Docket really surface that on every
+- "Position #3 looks aggressive — would Petal really surface that on every
   return like this?" (Answer: only when the cited authority supports it
   at that tier. The Position Library is Antonio-validated before it ships.)
 - "What about state coverage?" (CA is in the seed library; other states
@@ -372,14 +372,14 @@ Want to grab 20 minutes? [Calendly link]
 Or just reply with questions.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. [X] of 50 founder slots remaining at $250/mo locked-for-life. After
 50, the rate jumps to $350/mo for the next 25, then $400 for the final 25.
 The math gets worse the longer it takes.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ### Email 9: Founder-slot scarcity reminder (manual, when slot count crosses threshold)
@@ -387,7 +387,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | David sends manually when founder slots cross 40, 45, 48, 50 (last call) |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | At thresholds; max 2 sends per prospect |
 
 ```
@@ -409,14 +409,14 @@ If not now, when does the timing make sense? I want to honor the
 relationship even if the founder rate is gone by then.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. Just to keep the math current: $650/failure §6695(g), $1,000-5,000
 §6694, $20K average audit defense at realization rate. Founder rate
 $3,000/yr. One prevented penalty pays the year.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ---
@@ -428,7 +428,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | 7 days after founder-tier signup |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | Day 7 post-signup |
 
 ```
@@ -448,15 +448,15 @@ issues]
 Three questions:
 1. What would have made the first week smoother?
 2. What surprises you about the product?
-3. What's one thing you wish Docket did that it doesn't?
+3. What's one thing you wish Petal did that it doesn't?
 
 I read every reply.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ### Email 11: Quarterly Business Review invite (David personal)
@@ -464,7 +464,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | Manual, every 90 days post-signup |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | Quarterly |
 
 ```
@@ -485,7 +485,7 @@ matters. What I'd cover:
    - Time saved estimate: [hours]
 
 2. WHAT'S WORKING + WHAT ISN'T:
-   - What's the highest-value workflow Docket touches for [Firm name]?
+   - What's the highest-value workflow Petal touches for [Firm name]?
    - What's the lowest? Should we cut it or fix it?
 
 3. ROADMAP PREVIEW:
@@ -495,10 +495,10 @@ matters. What I'd cover:
 30 minutes. Pick a slot: [Calendly link]
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ### Email 12: Referral activation (auto-send post-30-day mark)
@@ -506,7 +506,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | 30 days post-signup |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | Day 30 |
 
 ```
@@ -514,7 +514,7 @@ Subject: Refer an EA / small-firm CPA → 1 month free per close
 
 Hi [First name],
 
-You've been on Docket for 30 days. Time to talk referrals.
+You've been on Petal for 30 days. Time to talk referrals.
 
 THE PROGRAM (simple):
 - Refer 1 EA or small-firm CPA who signs founder tier → 1 month free
@@ -527,7 +527,7 @@ You know which EAs would benefit. Warm intros close 4-5x faster than
 cold outreach.
 
 HOW IT WORKS:
-1. Forward them docket.com/scan with a 1-line intro ("Hey [Name], wanted
+1. Forward them petal.com/scan with a 1-line intro ("Hey [Name], wanted
    to share this with you — David built something for our segment.")
 2. They run a free Discovery Scan.
 3. They sign founder tier → your referral credit fires automatically.
@@ -535,14 +535,14 @@ HOW IT WORKS:
 Or just reply with names + I'll reach out direct. Whichever feels right.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. [X] of 50 founder slots left. Refer fast — the rate they get is
 locked at signup, so the earlier the warmer-intro hits, the better the
 math for them.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ---
@@ -555,19 +555,19 @@ docket.com · david@docket.com
 |---|---|
 | Trigger | Manual, when Antonio confirms date with Boney-Henderson |
 | From | `Antonio Vazquez <antonio@vazantconsulting.com>` |
-| Cc | `David Kim <david@docket.com>` |
+| Cc | `David Kim <david@petal.com>` |
 | Reply-to | Antonio + David |
 | Send timing | 2-3 weeks before presentation |
 
 ```
-Subject: 60-min Docket walkthrough for the network — [date]
+Subject: 60-min Petal walkthrough for the network — [date]
 
 [Recipients: Boney-Henderson's preparer network distribution list, with
 Boney-Henderson cc'd]
 
 Hi everyone,
 
-A few of you have heard me mention Docket — the AI tax-OS tool David Kim
+A few of you have heard me mention Petal — the AI tax-OS tool David Kim
 and I have been building. I've been running my book on it since [date]
 and using it on two active 2026 IRS audits.
 
@@ -588,7 +588,7 @@ WHAT WE'LL COVER:
 
 WHO SHOULD ATTEND:
 Any EA or small-firm CPA who's signed a return with EITC, CTC, AOTC, or
-HOH in the last 12 months — Docket's Position Framework was built for
+HOH in the last 12 months — Petal's Position Framework was built for
 your due-diligence exposure first.
 
 Looking forward to seeing you.
@@ -597,7 +597,7 @@ Antonio Vazquez, EA
 Vazant Consulting
 
 ---
-Reply to this email or ping David Kim at david@docket.com.
+Reply to this email or ping David Kim at david@petal.com.
 ```
 
 ### Email 14: NAEA chapter dinner follow-up (David personal)
@@ -605,7 +605,7 @@ Reply to this email or ping David Kim at david@docket.com.
 | | |
 |---|---|
 | Trigger | Manual, 24-48h after meeting prospect at NAEA event |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | 24-48h post-event |
 
 ```
@@ -622,14 +622,14 @@ Two paths:
 
 1. FREE DISCOVERY SCAN — I can run a Position Framework scan on one of
    your returns this week. Redacted upload, 24-hour turnaround, PDF
-   delivered. docket.com/scan or just reply with "scan me."
+   delivered. petal.com/scan or just reply with "scan me."
 
 2. 20-MIN WALKTHROUGH — Zoom, screen-share, real product. [Calendly link]
 
 Pick either, or both, or neither — your call.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. Antonio Vazquez (our on-platform tax advisor + founding firm partner)
 is happy to take your call too if you want to talk EA-to-EA. He's
@@ -637,7 +637,7 @@ defending two active 2026 IRS audits using the product, so the production
 experience is live.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ### Email 15: Loom-as-CTA (manual, when prospect goes quiet)
@@ -645,7 +645,7 @@ docket.com · david@docket.com
 | | |
 |---|---|
 | Trigger | Manual, 7+ days no response after Discovery Scan delivered |
-| From | `David Kim <david@docket.com>` |
+| From | `David Kim <david@petal.com>` |
 | Send timing | When prospect goes quiet |
 
 ```
@@ -668,12 +668,12 @@ If anything in the Loom raises a question, just reply. If now's not the
 time, totally fine — I'll check in next quarter.
 
 David Kim
-CEO, Docket
+CEO, Petal
 
 P.S. [X] of 50 founder slots remaining. After 50, the rate is $350/mo.
 
 ---
-docket.com · david@docket.com
+petal.com · david@petal.com
 ```
 
 ---
@@ -684,16 +684,16 @@ docket.com · david@docket.com
 
 - SPF: `v=spf1 include:_spf.resend.com -all`
 - DKIM: Generate via Resend dashboard, add CNAME records
-- DMARC: `v=DMARC1; p=quarantine; rua=mailto:dmarc@docket.com`
+- DMARC: `v=DMARC1; p=quarantine; rua=mailto:dmarc@petal.com`
 - Reverse DNS for sending IPs (Resend manages)
 
 ### Sending addresses
 
 | Address | Use case |
 |---|---|
-| `david@docket.com` | All prospect-facing + manual sends |
-| `hello@docket.com` | Transactional (receipts, welcome) |
-| `noreply@docket.com` | OTP only (no reply expected) |
+| `david@petal.com` | All prospect-facing + manual sends |
+| `hello@petal.com` | Transactional (receipts, welcome) |
+| `noreply@petal.com` | OTP only (no reply expected) |
 | `antonio@vazantconsulting.com` | Antonio-from sends (Boney-Henderson invite, joint outreach) |
 
 ### Deliverability monitoring
@@ -736,4 +736,4 @@ docket.com · david@docket.com
 
 ---
 
-*Created 2026-05-11. Voice-pass each template with David before first send. Drift between this file and what Docket actually sends is the bug it is designed to prevent.*
+*Created 2026-05-11. Voice-pass each template with David before first send. Drift between this file and what Petal actually sends is the bug it is designed to prevent.*

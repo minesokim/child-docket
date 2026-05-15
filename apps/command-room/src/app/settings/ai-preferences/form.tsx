@@ -191,7 +191,7 @@ export function AiPreferencesForm({ initialValues, canEdit }: Props) {
       </FormSection>
 
       <FormSection
-        title="Docket Personality"
+        title="Petal Personality"
         description="Optional firm-specific tone tweak appended to every agent's system prompt. ≤500 characters."
       >
         <textarea

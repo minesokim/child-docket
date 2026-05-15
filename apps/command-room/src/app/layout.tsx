@@ -5,7 +5,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { HealthStatusGate } from '@docket/ui';
 
 export const metadata: Metadata = {
-  title: 'Docket · Command Room',
+  title: 'Petal · Command Room',
   description: 'The agentic operator for your tax practice.',
 };
 

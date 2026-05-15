@@ -13,11 +13,11 @@ Per MARKETING-FRAMES.md Option B locked 2026-05-11 + CLAUDE.md §19 anti-AI-slop
 
 1. **Lead with the defense-layer framing**, never with the operating-system framing. Cold prospects haven't earned the platform-conversation yet.
 2. **Penalty-anchored pricing always appears in the P.S.** ($650 §6695(g), $250/mo founder rate, "one prevented penalty = half a year").
-3. **Antonio's name and credentials appear verbatim** ("Antonio Vazquez, EA, Vazant Consulting, ~250 active clients, defending two active 2026 IRS audits using Docket").
+3. **Antonio's name and credentials appear verbatim** ("Antonio Vazquez, EA, Vazant Consulting, ~250 active clients, defending two active 2026 IRS audits using Petal").
 4. **No AI vocabulary**: no delve, crucial, robust, comprehensive, nuanced. No em dashes. (See CLAUDE.md §19 voice rules.)
 5. **Real numbers, real names, real cites.** "$650/failure per Rev. Proc. 2025-32" beats "expensive penalties." Link the IRS page once.
 6. **One claim per email.** Stack-rank: defense-layer hook → Antonio proof point → penalty math P.S. Three beats, no more.
-7. **Sign as David Kim, CEO @ Docket**, never as "the Docket team." Real human, real reply-able address.
+7. **Sign as David Kim, CEO @ Petal**, never as "the Petal team." Real human, real reply-able address.
 8. **Target send time**: 8:30-9:30 AM PT or 4:00-5:30 PM PT in recipient's local timezone (when EAs are in inbox, not in client meetings).
 
 ---
@@ -36,12 +36,12 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 >
 > Quick note from a tax-OS founder. The IRS started auditing preparer due-diligence checklists in 2024. The 2026 §6695(g) penalty is **$650 per failure**, per Rev. Proc. 2025-32. Per failure, not per return. A single return with EITC + CTC + AOTC + HOH is four checklists — miss all four, that's $2,600 from one client.
 >
-> Docket is the first AI built to defend the preparer's side of the desk. Every position cites primary authority. Refuses below Reasonable Basis. Generates the audit-defense file as a side effect of normal work. Antonio Vazquez, EA at Vazant Consulting, is using it to defend two active 2026 IRS audits right now.
+> Petal is the first AI built to defend the preparer's side of the desk. Every position cites primary authority. Refuses below Reasonable Basis. Generates the audit-defense file as a side effect of normal work. Antonio Vazquez, EA at Vazant Consulting, is using it to defend two active 2026 IRS audits right now.
 >
 > 20 minutes next week to walk through what it would cover for [Firm name]?
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
 > *P.S. Founder rate is $250/mo, locked for life on the first 50 firms. Less than half of one §6695(g) failure. One prevented penalty pays for half a year.*
 
@@ -55,14 +55,14 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 >
 > Question. How many times this season did a client walk in with a ChatGPT-generated deduction list that looked plausible but had no IRC cite, no Sub Auth, and no awareness of the §6694 understatement penalty sitting on *your* PTIN?
 >
-> Docket is the only AI built so the preparer's side of the desk doesn't have to take that risk. Every deduction it surfaces carries a 4-tier confidence rating (Settled / Substantial / Reasonable Basis / MLTN) with the IRC cite attached at decision time. Refuses below Reasonable Basis by default. Antonio Vazquez, EA at Vazant Consulting, runs his ~250 active clients on it.
+> Petal is the only AI built so the preparer's side of the desk doesn't have to take that risk. Every deduction it surfaces carries a 4-tier confidence rating (Settled / Substantial / Reasonable Basis / MLTN) with the IRC cite attached at decision time. Refuses below Reasonable Basis by default. Antonio Vazquez, EA at Vazant Consulting, runs his ~250 active clients on it.
 >
 > 20 minutes next week?
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
-> *P.S. $250/mo founder rate, first 50 firms only. The §6694 understatement penalty starts at $1,000. One prevented penalty pays for 4 months of Docket.*
+> *P.S. $250/mo founder rate, first 50 firms only. The §6694 understatement penalty starts at $1,000. One prevented penalty pays for 4 months of Petal.*
 
 ---
 
@@ -74,12 +74,12 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 >
 > TaxDome shipped some AI features last year. Canopy too. They're table stakes now. None of them cite primary authority, none refuse below Reasonable Basis, and none generate the audit-defense file. They're shallow because they were built before §6695(g) became an active audit lane in 2024.
 >
-> Docket is the deep version. Every position cited. Every action audit-trailed. The AI is built around your PTIN risk, not around document storage. Antonio Vazquez, EA at Vazant Consulting (~250 active clients), is the founding firm, defending two active 2026 IRS audits using it.
+> Petal is the deep version. Every position cited. Every action audit-trailed. The AI is built around your PTIN risk, not around document storage. Antonio Vazquez, EA at Vazant Consulting (~250 active clients), is the founding firm, defending two active 2026 IRS audits using it.
 >
-> 20-minute call next week to compare what your current stack covers vs what Docket covers?
+> 20-minute call next week to compare what your current stack covers vs what Petal covers?
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
 > *P.S. Founder rate $250/mo, locked for life, first 50 firms. The §6695(g) penalty is $650 per failure. Pricing math is on the website.*
 
@@ -91,7 +91,7 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 >
 > Hi [First name],
 >
-> I'm offering a free Discovery Scan to the first 30 EAs and small firm CPAs who want one. You send me a redacted return (any year, any client). Docket scans it and produces a PDF showing every defensible deduction the return missed, with the IRC cite + audit-defense tier on each position. 24-hour turnaround.
+> I'm offering a free Discovery Scan to the first 30 EAs and small firm CPAs who want one. You send me a redacted return (any year, any client). Petal scans it and produces a PDF showing every defensible deduction the return missed, with the IRC cite + audit-defense tier on each position. 24-hour turnaround.
 >
 > No commitment. If it surfaces real money, we talk about a $250/mo founder slot. If it doesn't, you keep the PDF and we part ways.
 >
@@ -100,9 +100,9 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 > Reply with "scan" and I'll send the upload link.
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
-> *P.S. The §6695(g) due-diligence penalty is $650/failure. Docket is $250/mo founder rate, locked for life on the first 50 firms. Pricing math at docket.com/pricing.*
+> *P.S. The §6695(g) due-diligence penalty is $650/failure. Petal is $250/mo founder rate, locked for life on the first 50 firms. Pricing math at petal.com/pricing.*
 
 ---
 
@@ -116,14 +116,14 @@ Derived from the 30-second hook of the canonical pitch script (PRODUCT-ROADMAP �
 >
 > Quick note from a tax-OS founder. Over the next decade, 60 million Americans will face an IRS notice, audit, or filing deadline without a tax professional. Hundreds of billions in misallocated refunds, missed deductions, and uncontested penalties. Tax pros have the expertise to help. They do not have the capacity to reach everyone.
 >
-> Docket doubles a tax pro's capacity. Antonio Vazquez, EA at Vazant Consulting, went from 200 clients to 400 with the same compliance posture and the same audit-defense file on every return. We are onboarding 100 firms by August 1st. Founder rate is $250/mo for life on the first 50.
+> Petal doubles a tax pro's capacity. Antonio Vazquez, EA at Vazant Consulting, went from 200 clients to 400 with the same compliance posture and the same audit-defense file on every return. We are onboarding 100 firms by August 1st. Founder rate is $250/mo for life on the first 50.
 >
 > 20 minutes next week, or a free Discovery Scan on one of your returns?
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
-> *P.S. The §6695(g) penalty is $650 per failure. Docket is $250/mo founder rate — one prevented penalty pays for half a year. Pricing math at docket.com/pricing.*
+> *P.S. The §6695(g) penalty is $650 per failure. Petal is $250/mo founder rate — one prevented penalty pays for half a year. Pricing math at petal.com/pricing.*
 
 ---
 
@@ -135,16 +135,16 @@ Derived from the 30-second hook of the canonical pitch script (PRODUCT-ROADMAP �
 >
 > Every AI tax tool announced in the last 18 months targets the top-100 firms. Accrual raised $75M, Black Ore $60M, Basis a billion-dollar valuation. They're building autonomous return prep for KPMG-tier firms whose in-house counsel carries the §6694 line.
 >
-> Solo and small-firm EAs personally carry PTIN risk. None of those tools are built for that math. Docket is.
+> Solo and small-firm EAs personally carry PTIN risk. None of those tools are built for that math. Petal is.
 >
 > Compliance-first AI: every position cited, every action audit-trailed, refuses below Reasonable Basis. Built for the preparer's side of the desk, not the partner's side of the table.
 >
 > Antonio Vazquez, EA at Vazant Consulting (~250 clients, defending two active 2026 IRS audits), is the founding firm. 20 minutes next week?
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
-> *P.S. Founder rate $250/mo for life, first 50 firms. The §6695(g) penalty is $650 per failure — one prevented penalty pays for half a year of Docket.*
+> *P.S. Founder rate $250/mo for life, first 50 firms. The §6695(g) penalty is $650 per failure — one prevented penalty pays for half a year of Petal.*
 
 ---
 
@@ -157,7 +157,7 @@ Derived from the 30-second hook of the canonical pitch script (PRODUCT-ROADMAP �
 | Day 7 | LinkedIn connect | LinkedIn DM (see below) | LinkedIn DM variant + connect request |
 | Day 10 | Bump-up #2 | Email | "Last bump on this — I know season's brutal. If now's not the time, who in your network would benefit from a free scan?" |
 | Day 14 | Voicemail | Phone | Voicemail script (below) |
-| Day 21 | Soft close | Email | "Closing the loop here. Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. If timing is right later, the rate will still be honored. Reach out anytime — david@docket.com." |
+| Day 21 | Soft close | Email | "Closing the loop here. Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. If timing is right later, the rate will still be honored. Reach out anytime — david@petal.com." |
 | Day 60+ | Re-engagement | Email | Quarterly value-add: new Coverage Map update, new Antonio audit-defense case study, new partner #2 announcement |
 
 **Do not exceed 5 touches before going dormant.** EAs hate aggressive outreach. The cadence above hits 5 touches over 21 days. After Day 21, they go into the quarterly re-engagement bucket.
@@ -174,7 +174,7 @@ Plain connect, no message. Higher acceptance rate than messaged connects for col
 
 ### LinkedIn DM (after connection, Day 0)
 
-> Hi [First name] — thanks for connecting. Quick reason I reached out: I'm building Docket, the AI defense layer for tax practices. The funded AI tax tools all target Big-4 firms whose in-house counsel carries the §6694 line. EAs and small firms personally carry PTIN risk. Docket is the only AI built for that side of the desk.
+> Hi [First name] — thanks for connecting. Quick reason I reached out: I'm building Petal, the AI defense layer for tax practices. The funded AI tax tools all target Big-4 firms whose in-house counsel carries the §6694 line. EAs and small firms personally carry PTIN risk. Petal is the only AI built for that side of the desk.
 >
 > Antonio Vazquez, EA at Vazant Consulting (~250 active clients), is the founding firm, defending two active 2026 IRS audits using it.
 >
@@ -196,7 +196,7 @@ Plain connect, no message. Higher acceptance rate than messaged connects for col
 
 For EAs who don't reply to email or LinkedIn. Use sparingly — 20-30 second voicemail, conversational tone, real-human energy. NOT a sales pitch.
 
-> Hi [First name], this is David Kim — founder of Docket. I sent you a couple notes about a tool we're building for the EA side of the desk: AI that defends preparer due diligence, cites every position, generates the audit defense file automatically. We've got Antonio Vazquez, EA at Vazant Consulting, running his book on it now. I'd love 20 minutes if you've got it. My number is [PHONE]. If voicemail is the wrong channel, just reply to my email or LinkedIn. Thanks, [First name].
+> Hi [First name], this is David Kim — founder of Petal. I sent you a couple notes about a tool we're building for the EA side of the desk: AI that defends preparer due diligence, cites every position, generates the audit defense file automatically. We've got Antonio Vazquez, EA at Vazant Consulting, running his book on it now. I'd love 20 minutes if you've got it. My number is [PHONE]. If voicemail is the wrong channel, just reply to my email or LinkedIn. Thanks, [First name].
 
 **Voicemail rules**:
 - Always identify yourself + company in the first 5 seconds
@@ -223,7 +223,7 @@ Run these in the first 5 minutes of every Discovery call. Disqualify fast.
 6. **"What's your current practice management stack — TaxDome, Canopy, Karbon, none?"** — If they're already on a PM tool, they're more ready to add a compliance layer. If they're stack-less, they may need the full OS.
 7. **"What's your current tax-prep software — Drake, ProConnect, UltraTax, OLT, Lacerte, CCH?"** — OLT users are easier wins (no AI-native competitor integrates with OLT yet). Drake users are most numerous (~40% of small firms).
 8. **"What % of your practice is representation work vs prep work?"** — High-rep practices (>30%) value the audit defense layer more.
-9. **"Do you handle clients in multiple states? Multi-entity work?"** — Multi-state and multi-entity clients drive higher Docket value (more positions to surface, more audit risk).
+9. **"Do you handle clients in multiple states? Multi-entity work?"** — Multi-state and multi-entity clients drive higher Petal value (more positions to surface, more audit risk).
 10. **"What was your worst preparer-side moment in the last 12 months?"** — Listen for §6694 anxiety, audit anxiety, doc-chase frustration, client-ChatGPT confusion. These map directly to product surfaces.
 
 ### The 3 close questions (use after the demo)
@@ -316,7 +316,7 @@ Use **Airtable Free** (or **HubSpot Free CRM**) until first 50 customers. Migrat
 
 ## Discovery Scan delivery email (sent when scan PDF is ready)
 
-> **Subject:** Your Docket Discovery Scan — [Firm name]
+> **Subject:** Your Petal Discovery Scan — [Firm name]
 >
 > Hi [First name],
 >
@@ -334,15 +334,15 @@ Use **Airtable Free** (or **HubSpot Free CRM**) until first 50 customers. Migrat
 > Founder rate is $250/mo locked for life, [X] of 50 remaining. Happy to walk through what an ongoing engagement looks like for [Firm name].
 >
 > David Kim
-> CEO, Docket
+> CEO, Petal
 >
-> *P.S. Every position in the scan has a draft 8275 attached if it's Tier 3 (Reasonable Basis with disclosure). That's not a feature, it's the design — Docket refuses to surface a position without the disclosure pre-drafted.*
+> *P.S. Every position in the scan has a draft 8275 attached if it's Tier 3 (Reasonable Basis with disclosure). That's not a feature, it's the design — Petal refuses to surface a position without the disclosure pre-drafted.*
 
 ---
 
 ## NAEA / chapter dinner / conference handout (1-page)
 
-For in-person events. Single-page handout, printed on cream paper if budget allows. Layout: Docket wordmark top, three callouts middle, QR code + email bottom.
+For in-person events. Single-page handout, printed on cream paper if budget allows. Layout: Petal wordmark top, three callouts middle, QR code + email bottom.
 
 **Headline**:
 > The AI defense layer for tax practices.
@@ -350,17 +350,17 @@ For in-person events. Single-page handout, printed on cream paper if budget allo
 
 **Three callouts**:
 
-1. **The compliance moat.** Every deduction Docket surfaces carries a 4-tier confidence rating (Settled / Substantial / Reasonable Basis / MLTN) with the IRC cite attached. Refuses below Reasonable Basis by default. Generates the audit-defense file as a side effect of normal work.
+1. **The compliance moat.** Every deduction Petal surfaces carries a 4-tier confidence rating (Settled / Substantial / Reasonable Basis / MLTN) with the IRC cite attached. Refuses below Reasonable Basis by default. Generates the audit-defense file as a side effect of normal work.
 
 2. **Penalty-anchored pricing.** Founder rate $250/mo, locked for life, first 50 firms. The §6695(g) due-diligence penalty is $650 per failure (Rev. Proc. 2025-32). One prevented penalty pays for half a year. One prevented §6694 understatement pays for 18 months.
 
-3. **Antonio's running his book on it.** Antonio Vazquez, EA at Vazant Consulting (CA, ~250 active clients), is the founding firm. Currently defending two active 2026 IRS audits using Docket as the substrate. Real EA, real PTIN, real audits.
+3. **Antonio's running his book on it.** Antonio Vazquez, EA at Vazant Consulting (CA, ~250 active clients), is the founding firm. Currently defending two active 2026 IRS audits using Petal as the substrate. Real EA, real PTIN, real audits.
 
 **CTA**:
-> Free Discovery Scan on one of your returns — 24-hour turnaround. Scan the QR or email **david@docket.com**.
+> Free Discovery Scan on one of your returns — 24-hour turnaround. Scan the QR or email **david@petal.com**.
 
 **Footer**:
-> docket.com · david@docket.com · [phone]
+> petal.com · david@petal.com · [phone]
 
 ---
 
