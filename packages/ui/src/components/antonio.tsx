@@ -201,6 +201,30 @@ const WELCOME_MSG: ChatMsg = {
 };
 const FIRST_OPEN_KEY = 'docket:antonio_chat_first_open_seen';
 
+// Focus-trap helper — returns every focusable descendant of `root`
+// in DOM order. Standard a11y query: anchors with href, non-disabled
+// form controls, anything with non-negative tabIndex.
+//
+// Visibility filter uses getComputedStyle so we catch display:none +
+// visibility:hidden WITHOUT false-positiving on position:fixed (which
+// has offsetParent === null per spec — the naive `offsetParent` check
+// would drop legitimate fixed-position focusable descendants if the
+// dialog ever grows them). Codex caught this 2026-05-14.
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+function getFocusable(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => {
+      if (el.hasAttribute('hidden')) return false;
+      // typeof check guards against jsdom-style test environments where
+      // getComputedStyle may be undefined or throw.
+      if (typeof window === 'undefined' || !window.getComputedStyle) return true;
+      const style = window.getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    },
+  );
+}
+
 export function AskAntonioChat({ t }: { t: Theme }) {
   const owner = useFirmOwner();
   const firstName = owner?.firstName ?? DEFAULT_FIRST_NAME;
@@ -216,6 +240,14 @@ export function AskAntonioChat({ t }: { t: Theme }) {
   // welcome bubble on a returning visit doesn't re-animate every open.
   const animateFromIndex = React.useRef<number>(0);
   const scrollerRef = React.useRef<HTMLDivElement | null>(null);
+  // Focus-trap refs — dialogRef holds the dialog DOM element so we
+  // can query focusable descendants + trap Tab key cycling within
+  // the dialog. lastFocusedRef captures the element that was active
+  // BEFORE the dialog opened so we can restore focus on close.
+  // Implements WCAG 2.4.3 (Focus Order) — codex flagged the gap in
+  // commit 15ad4e2 (react-doctor batch 3 a11y review).
+  const dialogRef = React.useRef<HTMLDivElement | null>(null);
+  const lastFocusedRef = React.useRef<HTMLElement | null>(null);
 
   // Read first-open status on mount. If never opened before, clear the
   // welcome message — it'll be queued on the first open() and animate in.
@@ -280,6 +312,45 @@ export function AskAntonioChat({ t }: { t: Theme }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
+  // Focus trap — WCAG 2.4.3 Focus Order compliance for the modal.
+  // On open: capture the currently-focused element, then move focus
+  // into the dialog (first focusable descendant). On close: restore
+  // focus to the captured element. The tab-cycle interception lives
+  // on the dialog's onKeyDown handler below.
+  React.useEffect(() => {
+    if (!open) return;
+    if (typeof document === 'undefined') return;
+    // Capture the trigger (so we can restore later).
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    // Move focus into the dialog after the slide-up animation lands
+    // — the dialog ref isn't attached until the next frame, and
+    // focusing during the animation can jump scroll position.
+    const id = requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = getFocusable(dialog);
+      // Prefer first interactive element; fall back to the dialog
+      // itself with tabIndex=-1 semantics (the dialog has role=
+      // 'dialog' which is announceable but not focusable by default).
+      if (focusable.length > 0) {
+        focusable[0]!.focus();
+      } else {
+        dialog.focus();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      // Restore focus to the element that opened the dialog.
+      // setTimeout 0 lets React finish unmounting the dialog before
+      // we shift focus — otherwise the focus call no-ops because the
+      // target hasn't re-rendered yet.
+      const target = lastFocusedRef.current;
+      if (target && typeof target.focus === 'function') {
+        setTimeout(() => target.focus(), 0);
+      }
+    };
+  }, [open]);
+
   const send = () => {
     if (!input.trim()) return;
     const msg = input.trim();
@@ -341,12 +412,44 @@ export function AskAntonioChat({ t }: { t: Theme }) {
         }
       `}</style>
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={`Chat with ${firstName}`}
+        // Negative tabIndex makes the dialog programmatically
+        // focusable (for the focus-trap fallback when no focusable
+        // descendants exist) without putting it in the tab order.
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') setOpen(false);
+          if (e.key === 'Escape') {
+            setOpen(false);
+            return;
+          }
+          // Tab cycling — if focus would leave the dialog (Tab from
+          // the last focusable element or Shift+Tab from the first),
+          // wrap around to the other end. Keeps keyboard focus
+          // inside the modal per WCAG 2.4.3 Focus Order.
+          if (e.key === 'Tab') {
+            const dialog = dialogRef.current;
+            if (!dialog) return;
+            const focusable = getFocusable(dialog);
+            if (focusable.length === 0) {
+              e.preventDefault();
+              dialog.focus();
+              return;
+            }
+            const first = focusable[0]!;
+            const last = focusable[focusable.length - 1]!;
+            const active = document.activeElement as HTMLElement | null;
+            if (e.shiftKey && active === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && active === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
         }}
         style={{
           width: '100%',
