@@ -6,9 +6,8 @@
     "overrides": [
       {
         "files": [
-          "apps/client-portal/src/app/(intake)/**",
-          "apps/client-portal/src/app/portal/**",
-          "packages/ui/src/components/**"
+          "src/app/**",
+          "src/components/**"
         ],
         "rules": [
           "react-doctor/no-inline-exhaustive-style"
@@ -16,7 +15,7 @@
       },
       {
         "files": [
-          "packages/ui/src/icons/**"
+          "src/icons/**"
         ],
         "rules": [
           "react-doctor/no-giant-component"
@@ -24,11 +23,32 @@
       },
       {
         "files": [
-          "apps/client-portal/src/app/**",
-          "apps/command-room/src/app/**"
+          "src/app/**",
+          "src/components/**"
         ],
         "rules": [
           "react-doctor/design-no-em-dash-in-jsx-text"
+        ]
+      },
+      {
+        "files": [
+          "src/app/(intake)/**",
+          "src/app/portal/**",
+          "src/components/**"
+        ],
+        "rules": [
+          "react-doctor/no-tiny-text",
+          "react-doctor/no-wide-letter-spacing"
+        ]
+      },
+      {
+        "files": [
+          "src/app/(intake)/**",
+          "src/app/portal/**",
+          "src/app/(auth)/**"
+        ],
+        "rules": [
+          "react-doctor/nextjs-missing-metadata"
         ]
       }
     ]
