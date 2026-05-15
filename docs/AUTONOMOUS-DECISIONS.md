@@ -1651,7 +1651,7 @@ same permissive baseline.
 **Severity**: low. Dev-only by gate. Zero production-bundle impact.
 Reversible in two file edits.
 
-**Commit**: <pending — current commit>
+**Commit**: a6a054b
 
 **User-review status**: pending
 
