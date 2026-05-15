@@ -410,6 +410,85 @@ export async function wrapImageInPdf(
 }
 
 // ────────────────────────────────────────────────────────────────
+// Searchable PDF builder — image + invisible-text overlay.
+//
+// Used by the Claude-Vision OCR path: caller produces the OCR text
+// via a Vision API call, then this helper wraps the binarized image
+// + the text into a single PDF where:
+//   - The visible image renders as-is (binarized B&W scan look).
+//   - The text is rendered with opacity 0 in a tiny font at the top
+//     of the page — invisible to the eye, indexable by every PDF
+//     reader's Cmd+F. Selection works (highlighting the invisible
+//     glyphs copies the text to clipboard).
+//
+// COORDINATE-LEVEL ALIGNMENT NOTE
+//   This embeds the FULL ocrText as a single text run at position
+//   (0, pageH-12). It doesn't map words to their image positions —
+//   for that you'd need Tesseract's per-word bounding boxes OR
+//   Claude Vision's `tool_use` API to return positioned tokens. The
+//   tradeoff: Cmd+F works (the words ARE in the PDF), word-level
+//   highlight-to-position does NOT (the invisible text sits at the
+//   top of the page, not over each word). For tax docs the searchable
+//   text is the load-bearing capability; positional highlight is a
+//   nice-to-have we can add later via the tool_use path.
+//
+// FAILURE
+//   Caller wraps in try/catch + falls back to wrapImageInPdf (image-
+//   only, non-searchable). Same fallback shape as the Tesseract path.
+// ────────────────────────────────────────────────────────────────
+export async function wrapImageInSearchablePdf(
+  imageBytes: Buffer,
+  mimeType: string,
+  ocrText: string,
+): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+
+  let embeddedImage;
+  if (mimeType === 'image/png') {
+    embeddedImage = await pdfDoc.embedPng(imageBytes);
+  } else if (mimeType === 'image/jpeg') {
+    embeddedImage = await pdfDoc.embedJpg(imageBytes);
+  } else {
+    const jpegBytes = await sharp(imageBytes).jpeg({ quality: 92 }).toBuffer();
+    embeddedImage = await pdfDoc.embedJpg(jpegBytes);
+  }
+
+  const aspectRatio = embeddedImage.width / embeddedImage.height;
+  const [pageW, pageH] = pageSizeForImage(aspectRatio);
+
+  const page = pdfDoc.addPage([pageW, pageH]);
+  page.drawImage(embeddedImage, {
+    x: 0,
+    y: 0,
+    width: pageW,
+    height: pageH,
+  });
+
+  // Embed the OCR text as a single invisible run. opacity=0 hides it
+  // visually; it stays selectable + Cmd+F-indexable. Non-ASCII
+  // characters get scrubbed because pdf-lib's default font (Helvetica)
+  // doesn't support them; Cmd+F still finds the ASCII portion which
+  // is sufficient for tax docs (form numbers, dollar amounts, names).
+  const cleanText = ocrText
+    .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (cleanText.length > 0) {
+    page.drawText(cleanText, {
+      x: 0,
+      y: pageH - 12,
+      size: 6,
+      opacity: 0,
+      lineHeight: 7,
+      maxWidth: pageW,
+    });
+  }
+
+  const bytes = await pdfDoc.save();
+  return Buffer.from(bytes);
+}
+
+// ────────────────────────────────────────────────────────────────
 // Multi-page wrap. Each entry becomes one PDF page sized to its
 // own image's aspect ratio. Same image-fitted strategy as
 // wrapImageInPdf — front and back of a DL preview at their native

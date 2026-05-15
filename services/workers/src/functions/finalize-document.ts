@@ -55,10 +55,76 @@ import { schema, withTenant, decryptTreeWithAAD, deriveAAD, getTenantDek } from 
 import { asTenantId } from '@docket/shared';
 import { getObjectBytes, putObject } from '@docket/storage';
 import {
+  binarize,
   processDocument,
   processMultiPage,
   resolveFinalFilename,
+  wrapImageInPdf,
+  wrapImageInSearchablePdf,
 } from '@docket/document-processing';
+import { runVisionAgent } from '@docket/orchestrator';
+
+// Claude Vision OCR prompt — minimal, extracts visible text. Haiku
+// 4.5 vision is the right tier here (the doc-classifier agent uses
+// the same model for shape inference). No need for Sonnet — OCR is
+// transcription, not reasoning.
+const OCR_VISION_PROMPT =
+  'Extract ALL visible text from this document, preserving line breaks. ' +
+  'Include numbers, dollar amounts, names, dates, form numbers, addresses, ' +
+  'and any printed text. Do not summarize, do not add commentary. Return ' +
+  'only the extracted text.';
+
+// Helper for the Claude-Vision OCR path. Calls runVisionAgent on a
+// binarized PNG and returns the OCR text. Throws on API failure; the
+// caller's try/catch falls back to wrapImageInPdf (image-only, non-
+// searchable). Cost: ~$0.001-0.003 per page on Haiku 4.5, vs $0/page
+// + uncatchable serverless crashes on Tesseract.
+async function ocrViaClaudeVision(
+  binarizedPng: Buffer,
+  tenantId: string,
+): Promise<string> {
+  // Startup assertion — if ANTHROPIC_API_KEY isn't set, runVisionAgent
+  // would throw deep in the SDK and the caller's catch would silently
+  // degrade to image-only PDFs forever. Log loudly so a misconfigured
+  // claude_vision deployment is obvious in worker logs.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error(
+      '[finalize-document] DOCKET_OCR_ENGINE=claude_vision but ANTHROPIC_API_KEY is missing; OCR will silently fall back to image-only PDFs',
+    );
+    throw new Error('ANTHROPIC_API_KEY not set');
+  }
+  const result = await runVisionAgent({
+    tenantId: asTenantId(tenantId),
+    // 'document-triage' is the canonical AgentId for OCR + classification
+    // work (see packages/shared/src/index.ts AgentId enum).
+    agentId: 'document-triage',
+    systemPrompt: 'You are an OCR engine. Extract verbatim text from documents.',
+    userPrompt: OCR_VISION_PROMPT,
+    images: [
+      {
+        kind: 'base64',
+        data: binarizedPng.toString('base64'),
+        mediaType: 'image/png',
+      },
+    ],
+    modelTier: 'haiku-4-5',
+    maxTokens: 4000,
+    // cachedSystem deliberately OMITTED — the system prompt is ~10
+    // tokens, well below Anthropic's 1024-token cache minimum. Setting
+    // the flag would be a no-op + misleading per codex review.
+  });
+  // Surface truncation. Dense W-2/1099 OCR can exceed 4k tokens; the
+  // caller's try/catch swallows this and falls back to image-only PDF
+  // so the searchable text isn't silently clipped. Future: bump
+  // maxTokens or pre-segment the page for very-dense docs.
+  if (result.outputTokens >= 4000) {
+    console.warn(
+      `[finalize-document] OCR output hit maxTokens=4000 (out=${result.outputTokens}); falling back to image-only PDF to avoid silent text truncation`,
+    );
+    throw new Error('OCR output truncated at maxTokens');
+  }
+  return result.text;
+}
 
 // ────────────────────────────────────────────────────────────────
 // Slot-id → DL side. Drives DriversLicense → DriversLicenseFront/Back
@@ -352,6 +418,39 @@ export const finalizeDocumentFn = inngest.createFunction(
               },
             ],
           });
+        } else if (
+          process.env.DOCKET_OCR_ENGINE === 'claude_vision' &&
+          docRow.mimeType !== 'application/pdf'
+        ) {
+          // Claude Vision OCR path. Binarize the image ONCE and reuse
+          // for both OCR + the searchable-PDF wrap. On Vision failure
+          // (API down, key missing, output truncated, etc.) fall back
+          // to image-only PDF built from the SAME binarized image —
+          // NEVER re-enter processDocument here because its DOCKET_
+          // ENABLE_OCR branch would route back to Tesseract (the
+          // engine we're trying to avoid). Codex caught the re-entry
+          // bug 2026-05-14.
+          const binarized = await binarize(ownBuf);
+          try {
+            const ocrText = await ocrViaClaudeVision(binarized, tenantId);
+            const pdf = await wrapImageInSearchablePdf(binarized, 'image/png', ocrText);
+            processingResult = {
+              pdf,
+              sizeBytes: pdf.length,
+              binarized: true,
+            };
+          } catch (err) {
+            console.error(
+              '[finalize-document] Claude Vision OCR failed; falling back to image-only PDF (Tesseract path deliberately skipped):',
+              err,
+            );
+            const pdf = await wrapImageInPdf(binarized, 'image/png', true);
+            processingResult = {
+              pdf,
+              sizeBytes: pdf.length,
+              binarized: true,
+            };
+          }
         } else {
           processingResult = await processDocument({
             input: ownBuf,
