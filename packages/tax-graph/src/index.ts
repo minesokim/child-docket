@@ -18,3 +18,4 @@ export * from './types.js';
 export * from './citations.js';
 export * from './retrieval.js';
 export * from './positions.js';
+export * from './discovery-scan.js';
