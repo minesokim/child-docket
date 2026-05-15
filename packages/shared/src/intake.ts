@@ -366,6 +366,15 @@ export type IntakeState = {
 
   documents?: {
     uploadComplete?: boolean;
+    // "What's missing?" free-text captured on /docs. Antonio sees
+    // this in command-room before the prep call so he can prepare
+    // the right follow-ups. The Soraban-pattern intake escape valve:
+    // clients who are waiting on a 1099 or have a complex
+    // doc-collection story can communicate the context without
+    // blocking on a per-doc upload. v0 single freeform field; v1.5
+    // expands to structured pending-items list if Antonio's review
+    // of these notes shows a pattern.
+    gapNotes?: string;
   };
 
   engagement?: {

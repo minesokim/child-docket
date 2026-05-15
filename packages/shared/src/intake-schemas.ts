@@ -318,6 +318,9 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
 
   // Documents (intake-side flag only — actual files live in `documents` table)
   'documents.uploadComplete': z.boolean(),
+  // Submit-with-pending freeform notes (Soraban steal). Captures
+  // "what's missing" context the client can't upload at intake time.
+  'documents.gapNotes': z.string().max(2000),
 
   // Sign — both engagement and consent split into "checked" + "signed"
   'engagement.checked': z.boolean(),

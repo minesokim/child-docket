@@ -43,9 +43,11 @@ import {
   Row,
   Screen,
   Stack,
+  useFirmOwner,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
+import { useIntakeField } from '@/lib/intake-context';
 import {
   type ExpectedDoc,
   type ExpectedDocKind,
@@ -153,6 +155,15 @@ export function DocsOverviewClient({
   const handleContinue = () => nav.next('/engagement');
   const handleBack = () => nav.back('/refund');
 
+  // Submit-with-pending freeform notes (Soraban steal). Captures
+  // "what's missing" context — clients waiting on a 1099, a K-1 from
+  // a partnership, brokerage 1099-B late this year, etc. Antonio
+  // sees this in command-room before the prep call so the call
+  // doesn't open with "wait, what are you waiting on?"
+  const [gapNotes, setGapNotes] = useIntakeField<string>('documents.gapNotes', '');
+  const owner = useFirmOwner();
+  const ownerFirstName = owner?.firstName ?? 'Antonio';
+
   return (
     <Screen t={t}>
       <div
@@ -224,6 +235,79 @@ export function DocsOverviewClient({
             >
               + Send something else
             </Link>
+          </div>
+
+          {/* What's missing — Submit-with-pending freeform notes.
+              Captures the "I'm waiting on..." context Antonio needs
+              to walk into the prep call hot. Soraban-pattern escape
+              valve so clients don't get stuck waiting on a 1099 to
+              advance the intake. Antonio sees this in command-room.
+
+              SECTION HEADER STYLE
+                Uses italic-serif-rustInk to match /state ("States")
+                and /business-info ("Business address") — the
+                "soft section divider within a single concern"
+                pattern. NOT the uppercase-mono treatment used for
+                /business-info "Ownership" (that's reserved for
+                structural blocks separating distinct concerns).
+                Codex flagged the divergence 2026-05-14; the call
+                landed on italic serif because gap-notes is a sub-
+                concern of the docs surface, not a structural pivot. */}
+          <div style={{ marginTop: 32 }}>
+            <div
+              style={{
+                fontFamily: t.serif,
+                fontStyle: 'italic',
+                fontSize: 14,
+                color: t.rustInk,
+                marginBottom: 8,
+                letterSpacing: -0.2,
+              }}
+            >
+              Anything missing?
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: t.muted,
+                lineHeight: 1.45,
+                letterSpacing: -0.2,
+                marginBottom: 12,
+              }}
+            >
+              Still waiting on a 1099, K-1, or brokerage statement?
+              Tell {ownerFirstName} what&apos;s coming so the prep call
+              starts smooth. Optional — leave blank if you have
+              everything.
+            </div>
+            <textarea
+              value={gapNotes}
+              onChange={(e) => void setGapNotes(e.target.value)}
+              placeholder="e.g., Waiting on Vanguard 1099-B (mailed early March), and Schedule K-1 from Acme Holdings LLC (expected end of February)."
+              rows={4}
+              maxLength={2000}
+              style={{
+                width: '100%',
+                background: gapNotes.length > 0 ? t.ease.mintWhisper : '#fffefc',
+                border: 'none',
+                borderRadius: 12,
+                padding: '12px 14px',
+                // 16px matches TextField (fields.tsx:122). 15 was a
+                // visual mistake on the first pass — codex caught it
+                // 2026-05-14. Keep parity so font-size drift can't
+                // creep between input primitives.
+                fontSize: 16,
+                color: t.ease.forestDark,
+                fontFamily: t.sans,
+                letterSpacing: -0.1,
+                outline: 'none',
+                resize: 'vertical',
+                boxShadow:
+                  gapNotes.length > 0 ? 'none' : '0 1px 4px rgba(15, 62, 23, 0.05)',
+                transition: 'background 140ms cubic-bezier(.2,.8,.2,1)',
+                lineHeight: 1.45,
+              }}
+            />
           </div>
         </div>
 
