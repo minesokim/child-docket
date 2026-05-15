@@ -225,7 +225,7 @@ TIER 3 — JUDGMENT             → Cited authority + preparer review required
 
 TIER 4 — EXTERNAL             → Honest about what we don't know
 
-Detailed scope: petal.com/coverage
+Detailed scope: petal.tax/coverage
 ```
 
 **Antonio's speaker notes (2 min)**:
@@ -329,7 +329,7 @@ For Dr. Boney-Henderson's preparer network attendees:
    network member who wants to talk through fit.
 
 How to claim:
-- Email david@petal.com with subject "Boney-Henderson Network"
+- Email david@petal.tax with subject "Boney-Henderson Network"
 - Mention this presentation
 ```
 
@@ -342,7 +342,7 @@ How to claim:
 >
 > Third — for any of you who want a 30-minute Zoom to talk through whether Petal fits your practice — David and I will both be on the call. You're not getting a salesperson. You're getting the founder and the lead practitioner.
 >
-> Email david@petal.com. Subject line 'Boney-Henderson Network.' That's it."
+> Email david@petal.tax. Subject line 'Boney-Henderson Network.' That's it."
 
 ---
 
@@ -355,8 +355,8 @@ How to claim:
 
            Antonio + David here for any questions.
 
-                 david@petal.com
-                 petal.com (coming)
+                 david@petal.tax
+                 petal.tax (coming)
 
                  Founder rate: $250/mo
                  First 50 firms only.
@@ -395,17 +395,17 @@ THREE WAYS TO START
 1. RUN A FREE DISCOVERY SCAN
    Send a redacted return.
    PDF in 24 hours.
-   Email david@petal.com with subject "Boney-Henderson Scan"
+   Email david@petal.tax with subject "Boney-Henderson Scan"
 
 2. BOOK A 30-MINUTE WALKTHROUGH
    Zoom with Antonio + David.
    Talk through your practice's specific fit.
-   Email david@petal.com with subject "BH Network Walkthrough"
+   Email david@petal.tax with subject "BH Network Walkthrough"
 
 3. LOCK A FOUNDER SLOT
    $250/mo locked for life.
    25 of 50 slots reserved for this network.
-   Email david@petal.com with subject "BH Network Founder"
+   Email david@petal.tax with subject "BH Network Founder"
 
 Whichever fits. No commitment until you sign.
 

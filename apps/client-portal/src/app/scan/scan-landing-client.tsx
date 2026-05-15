@@ -1097,10 +1097,10 @@ function Footer({ t }: { t: ReturnType<typeof buildTheme> }) {
           }}
         >
           <a
-            href="mailto:david@petal.com"
+            href="mailto:david@petal.tax"
             style={{ color: 'inherit', textDecoration: 'underline' }}
           >
-            david@petal.com
+            david@petal.tax
           </a>{' '}
           · © 2026 Petal
           {/*

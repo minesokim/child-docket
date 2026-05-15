@@ -102,7 +102,7 @@ Each ~80-130 words. P.S. is mandatory. CTA is always a 20-minute call OR a free 
 > David Kim
 > CEO, Petal
 >
-> *P.S. The §6695(g) due-diligence penalty is $650/failure. Petal is $250/mo founder rate, locked for life on the first 50 firms. Pricing math at petal.com/pricing.*
+> *P.S. The §6695(g) due-diligence penalty is $650/failure. Petal is $250/mo founder rate, locked for life on the first 50 firms. Pricing math at petal.tax/pricing.*
 
 ---
 
@@ -123,7 +123,7 @@ Derived from the 30-second hook of the canonical pitch script (PRODUCT-ROADMAP �
 > David Kim
 > CEO, Petal
 >
-> *P.S. The §6695(g) penalty is $650 per failure. Petal is $250/mo founder rate — one prevented penalty pays for half a year. Pricing math at petal.com/pricing.*
+> *P.S. The §6695(g) penalty is $650 per failure. Petal is $250/mo founder rate — one prevented penalty pays for half a year. Pricing math at petal.tax/pricing.*
 
 ---
 
@@ -157,7 +157,7 @@ Derived from the 30-second hook of the canonical pitch script (PRODUCT-ROADMAP �
 | Day 7 | LinkedIn connect | LinkedIn DM (see below) | LinkedIn DM variant + connect request |
 | Day 10 | Bump-up #2 | Email | "Last bump on this — I know season's brutal. If now's not the time, who in your network would benefit from a free scan?" |
 | Day 14 | Voicemail | Phone | Voicemail script (below) |
-| Day 21 | Soft close | Email | "Closing the loop here. Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. If timing is right later, the rate will still be honored. Reach out anytime — david@petal.com." |
+| Day 21 | Soft close | Email | "Closing the loop here. Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. If timing is right later, the rate will still be honored. Reach out anytime — david@petal.tax." |
 | Day 60+ | Re-engagement | Email | Quarterly value-add: new Coverage Map update, new Antonio audit-defense case study, new partner #2 announcement |
 
 **Do not exceed 5 touches before going dormant.** EAs hate aggressive outreach. The cadence above hits 5 touches over 21 days. After Day 21, they go into the quarterly re-engagement bucket.
@@ -357,10 +357,10 @@ For in-person events. Single-page handout, printed on cream paper if budget allo
 3. **Antonio's running his book on it.** Antonio Vazquez, EA at Vazant Consulting (CA, ~250 active clients), is the founding firm. Currently defending two active 2026 IRS audits using Petal as the substrate. Real EA, real PTIN, real audits.
 
 **CTA**:
-> Free Discovery Scan on one of your returns — 24-hour turnaround. Scan the QR or email **david@petal.com**.
+> Free Discovery Scan on one of your returns — 24-hour turnaround. Scan the QR or email **david@petal.tax**.
 
 **Footer**:
-> petal.com · david@petal.com · [phone]
+> petal.tax · david@petal.tax · [phone]
 
 ---
 

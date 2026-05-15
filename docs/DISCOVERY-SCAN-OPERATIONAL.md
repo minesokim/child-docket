@@ -34,7 +34,7 @@ This file is the operational + technical spec for shipping the Discovery Scan as
 
 ---
 
-## Landing page — `petal.com/scan`
+## Landing page — `petal.tax/scan`
 
 Single-page conversion surface. Production target: live by 5/25/2026.
 
@@ -119,7 +119,7 @@ After submission: form data writes to `Prospects` table in CRM (per `docs/pitch-
 - **Upload handling**: presigned R2 URL pattern (already used in client portal); 25MB cap; PDF + image MIME only; AAD bound to `(prospect_id, scan_id, path)` per encryption convention.
 - **Styling**: editorial-warm language (Fraunces + DM Sans, cream canvas, forest green primary) per `packages/ui/src/tokens.ts`.
 - **Analytics**: Vercel Analytics (free tier) + simple conversion event tracking (`scan_form_submit`, `scan_pdf_delivered`, `scan_demo_booked`, `scan_signed`).
-- **Domain**: live at `petal.com/scan` (or whatever brand-domain is locked); 301 from any subdomain variants.
+- **Domain**: live at `petal.tax/scan` (or whatever brand-domain is locked); 301 from any subdomain variants.
 
 ---
 
@@ -220,10 +220,10 @@ This page is the trust-builder. Showing what the system refuses is more credible
 | Slot | Content |
 |---|---|
 | Audit defense story | "Every position in this scan was generated with the chain-of-authority logged. If any of these returns gets audited, the defense file is one click away. That's the Petal substrate, not a feature." |
-| Coverage Map link | "Detailed coverage scope: petal.com/coverage" |
-| Founder rate CTA | "Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. To lock yours: david@petal.com or 20-min call link." |
+| Coverage Map link | "Detailed coverage scope: petal.tax/coverage" |
+| Founder rate CTA | "Founder rate is $250/mo, locked for life, first 50 firms. [X] of 50 remaining. To lock yours: david@petal.tax or 20-min call link." |
 | Disclaimer | "This Discovery Scan is a Position Framework artifact, not a complete audit defense file or return preparation service. Positions surfaced require preparer judgment + client facts validation. Petal does not sign returns; the preparer remains responsible for filing. Cited authorities are current as of [date]." |
-| Footer | "Petal · david@petal.com · petal.com" |
+| Footer | "Petal · david@petal.tax · petal.tax" |
 
 ---
 

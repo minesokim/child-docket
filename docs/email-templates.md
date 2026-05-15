@@ -11,7 +11,7 @@ This file is the source of truth for **what Petal emails look like**. Cold outre
 
 Per [`docs/MARKETING-FRAMES.md`](MARKETING-FRAMES.md) + CLAUDE.md §19 anti-AI-slop:
 
-1. **From line is always a real human**: `David Kim <david@petal.com>` for prospect-facing, `Petal <hello@petal.com>` for transactional only.
+1. **From line is always a real human**: `David Kim <david@petal.tax>` for prospect-facing, `Petal <hello@petal.tax>` for transactional only.
 2. **Subject lines are conversational**, not marketing-y: "Your Petal Discovery Scan is ready" beats "📊 Your Tax Insights Report 📊".
 3. **No emojis. No em dashes. No AI vocabulary**: no delve, crucial, robust, comprehensive, nuanced.
 4. **Real names. Real numbers. Real cites.** Antonio's full credential block when relevant.
@@ -41,8 +41,8 @@ Per [`docs/MARKETING-FRAMES.md`](MARKETING-FRAMES.md) + CLAUDE.md §19 anti-AI-s
 | | |
 |---|---|
 | Trigger | Prospect submits `/scan` form |
-| From | `David Kim <david@petal.com>` |
-| Reply-to | `david@petal.com` |
+| From | `David Kim <david@petal.tax>` |
+| Reply-to | `david@petal.tax` |
 | Send timing | Immediate (< 5 min) |
 
 ```
@@ -94,8 +94,8 @@ half a year. The math is the offer.
 
 ---
 You're receiving this because you signed up for a free Discovery Scan at
-petal.com/scan. Reply to ask questions, or ignore if no longer interested.
-petal.com · david@petal.com
+petal.tax/scan. Reply to ask questions, or ignore if no longer interested.
+petal.tax · david@petal.tax
 ```
 
 ### Email 2: Discovery Scan PDF delivered (auto-sent when agent completes)
@@ -103,8 +103,8 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | Discovery agent completes + manual review approved (first 30) OR auto-deliver (after first 30) |
-| From | `David Kim <david@petal.com>` |
-| Reply-to | `david@petal.com` |
+| From | `David Kim <david@petal.tax>` |
+| Reply-to | `david@petal.tax` |
 | Send timing | Within 24 hours of upload |
 | Attachment | PDF (the Discovery Scan output) |
 
@@ -151,7 +151,7 @@ design — Petal refuses to surface a position without the disclosure
 pre-drafted.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ### Email 3: Phone OTP (existing — already shipped in production)
@@ -159,7 +159,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | User attempts login |
-| From | `Petal <noreply@petal.com>` |
+| From | `Petal <noreply@petal.tax>` |
 | Reply-to | None (do-not-reply) |
 | Send timing | < 5 seconds |
 
@@ -172,7 +172,7 @@ This code expires in 10 minutes. If you didn't request this, you can
 ignore this email.
 
 ---
-For questions: hello@petal.com
+For questions: hello@petal.tax
 ```
 
 ### Email 4: Payment receipt (founder tier signup confirmation)
@@ -180,8 +180,8 @@ For questions: hello@petal.com
 | | |
 |---|---|
 | Trigger | Square payment success webhook |
-| From | `Petal <hello@petal.com>` |
-| Reply-to | `david@petal.com` |
+| From | `Petal <hello@petal.tax>` |
+| Reply-to | `david@petal.tax` |
 | Send timing | Within 60s of payment success |
 
 ```
@@ -218,7 +218,7 @@ David Kim
 CEO, Petal
 
 ---
-hello@petal.com · petal.com
+hello@petal.tax · petal.tax
 ```
 
 ---
@@ -230,8 +230,8 @@ hello@petal.com · petal.com
 | | |
 |---|---|
 | Trigger | David sends manually within 24h of payment receipt |
-| From | `David Kim <david@petal.com>` |
-| Reply-to | `david@petal.com` |
+| From | `David Kim <david@petal.tax>` |
+| Reply-to | `david@petal.tax` |
 | Send timing | Within 24h |
 
 ```
@@ -267,7 +267,7 @@ $250/mo doesn't. As long as you remain in good standing, the rate is
 yours.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ### Email 6: Onboarding call confirmation (auto-send via Calendly)
@@ -275,7 +275,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | Calendly booking |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | Immediate |
 
 ```
@@ -291,7 +291,7 @@ Three things to have ready:
 1. Your current tax-prep software credentials (sandbox or test login if you
    prefer not to share prod yet)
 2. A typical client return you'd want surfaced as the first scan
-3. Any questions on the Position Framework or Coverage Map (petal.com/coverage)
+3. Any questions on the Position Framework or Coverage Map (petal.tax/coverage)
 
 Looking forward.
 
@@ -306,7 +306,7 @@ Need to reschedule? [Calendly reschedule link]
 | | |
 |---|---|
 | Trigger | David sends manually after onboarding call |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | Within 24h of call |
 
 ```
@@ -335,7 +335,7 @@ ANY TIMING / SCOPE CHANGES — reply to this email.
 David Kim
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ---
@@ -347,7 +347,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | David sends manually 2-3 days after PDF delivered, if prospect didn't reply |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | 2-3 days after PDF delivery, only if no reply |
 
 ```
@@ -379,7 +379,7 @@ P.S. [X] of 50 founder slots remaining at $250/mo locked-for-life. After
 The math gets worse the longer it takes.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ### Email 9: Founder-slot scarcity reminder (manual, when slot count crosses threshold)
@@ -387,7 +387,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | David sends manually when founder slots cross 40, 45, 48, 50 (last call) |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | At thresholds; max 2 sends per prospect |
 
 ```
@@ -416,7 +416,7 @@ P.S. Just to keep the math current: $650/failure §6695(g), $1,000-5,000
 $3,000/yr. One prevented penalty pays the year.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ---
@@ -428,7 +428,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | 7 days after founder-tier signup |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | Day 7 post-signup |
 
 ```
@@ -456,7 +456,7 @@ David Kim
 CEO, Petal
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ### Email 11: Quarterly Business Review invite (David personal)
@@ -464,7 +464,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | Manual, every 90 days post-signup |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | Quarterly |
 
 ```
@@ -498,7 +498,7 @@ David Kim
 CEO, Petal
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ### Email 12: Referral activation (auto-send post-30-day mark)
@@ -506,7 +506,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | 30 days post-signup |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | Day 30 |
 
 ```
@@ -527,7 +527,7 @@ You know which EAs would benefit. Warm intros close 4-5x faster than
 cold outreach.
 
 HOW IT WORKS:
-1. Forward them petal.com/scan with a 1-line intro ("Hey [Name], wanted
+1. Forward them petal.tax/scan with a 1-line intro ("Hey [Name], wanted
    to share this with you — David built something for our segment.")
 2. They run a free Discovery Scan.
 3. They sign founder tier → your referral credit fires automatically.
@@ -542,7 +542,7 @@ locked at signup, so the earlier the warmer-intro hits, the better the
 math for them.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ---
@@ -555,7 +555,7 @@ petal.com · david@petal.com
 |---|---|
 | Trigger | Manual, when Antonio confirms date with Boney-Henderson |
 | From | `Antonio Vazquez <antonio@vazantconsulting.com>` |
-| Cc | `David Kim <david@petal.com>` |
+| Cc | `David Kim <david@petal.tax>` |
 | Reply-to | Antonio + David |
 | Send timing | 2-3 weeks before presentation |
 
@@ -597,7 +597,7 @@ Antonio Vazquez, EA
 Vazant Consulting
 
 ---
-Reply to this email or ping David Kim at david@petal.com.
+Reply to this email or ping David Kim at david@petal.tax.
 ```
 
 ### Email 14: NAEA chapter dinner follow-up (David personal)
@@ -605,7 +605,7 @@ Reply to this email or ping David Kim at david@petal.com.
 | | |
 |---|---|
 | Trigger | Manual, 24-48h after meeting prospect at NAEA event |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | 24-48h post-event |
 
 ```
@@ -622,7 +622,7 @@ Two paths:
 
 1. FREE DISCOVERY SCAN — I can run a Position Framework scan on one of
    your returns this week. Redacted upload, 24-hour turnaround, PDF
-   delivered. petal.com/scan or just reply with "scan me."
+   delivered. petal.tax/scan or just reply with "scan me."
 
 2. 20-MIN WALKTHROUGH — Zoom, screen-share, real product. [Calendly link]
 
@@ -637,7 +637,7 @@ defending two active 2026 IRS audits using the product, so the production
 experience is live.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ### Email 15: Loom-as-CTA (manual, when prospect goes quiet)
@@ -645,7 +645,7 @@ petal.com · david@petal.com
 | | |
 |---|---|
 | Trigger | Manual, 7+ days no response after Discovery Scan delivered |
-| From | `David Kim <david@petal.com>` |
+| From | `David Kim <david@petal.tax>` |
 | Send timing | When prospect goes quiet |
 
 ```
@@ -673,7 +673,7 @@ CEO, Petal
 P.S. [X] of 50 founder slots remaining. After 50, the rate is $350/mo.
 
 ---
-petal.com · david@petal.com
+petal.tax · david@petal.tax
 ```
 
 ---
@@ -684,16 +684,16 @@ petal.com · david@petal.com
 
 - SPF: `v=spf1 include:_spf.resend.com -all`
 - DKIM: Generate via Resend dashboard, add CNAME records
-- DMARC: `v=DMARC1; p=quarantine; rua=mailto:dmarc@petal.com`
+- DMARC: `v=DMARC1; p=quarantine; rua=mailto:dmarc@petal.tax`
 - Reverse DNS for sending IPs (Resend manages)
 
 ### Sending addresses
 
 | Address | Use case |
 |---|---|
-| `david@petal.com` | All prospect-facing + manual sends |
-| `hello@petal.com` | Transactional (receipts, welcome) |
-| `noreply@petal.com` | OTP only (no reply expected) |
+| `david@petal.tax` | All prospect-facing + manual sends |
+| `hello@petal.tax` | Transactional (receipts, welcome) |
+| `noreply@petal.tax` | OTP only (no reply expected) |
 | `antonio@vazantconsulting.com` | Antonio-from sends (Boney-Henderson invite, joint outreach) |
 
 ### Deliverability monitoring

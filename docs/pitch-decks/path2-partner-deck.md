@@ -18,8 +18,8 @@
 **Footer:**
 - David Kim, CEO · minseodavid@gmail.com
 - Haokun Yang, CTO
-- Developer docs: docs.petal.com (when public)
-- MCP server: mcp.petal.com (when public)
+- Developer docs: docs.petal.tax (when public)
+- MCP server: mcp.petal.tax (when public)
 
 **Visual:** technical-architecture diagram-style background. Forest green primary. Minimal text. Developer audience.
 
@@ -238,7 +238,7 @@
 
 **Three-step onboarding path:**
 
-1. **Today (Developer tier, free)**: register at developer.petal.com (when public). Get API keys. Hit `POST /v1/positions/classify` with a test position. Confirm latency + response shape match your integration spec.
+1. **Today (Developer tier, free)**: register at developer.petal.tax (when public). Get API keys. Hit `POST /v1/positions/classify` with a test position. Confirm latency + response shape match your integration spec.
 2. **Week 2-3 (integration sprint)**: pick a pattern (A / B / C from Slide 4). Build the integration against Developer tier with rate-limit headroom for testing.
 3. **Production launch (Partner tier, $999/mo)**: upgrade to Partner tier with billing. SLA + support + uptime guarantees activate. Production traffic flows.
 
@@ -266,8 +266,8 @@
 **Contact:**
 - David Kim, CEO · minseodavid@gmail.com
 - Haokun Yang, CTO · [email]
-- Developer docs: docs.petal.com (when public)
-- MCP server: mcp.petal.com (when public)
+- Developer docs: docs.petal.tax (when public)
+- MCP server: mcp.petal.tax (when public)
 - Repo (private, NDA-gated for serious partner conversations): github.com/minesokim/child-petal
 
 **Speaker notes:**
@@ -302,8 +302,8 @@
 ## Discipline notes for David before any Path 2 partner pitch
 
 - **Bring Haokun** if at all possible. Path 2 conversations are developer-to-developer. Haokun's presence shortcuts most technical objections.
-- **API documentation URL** (`docs.petal.com`) needs to be live before any partner conversation. If it's not live, share the markdown source under NDA.
-- **MCP server URL** (`mcp.petal.com`) status: track in `docs/STATE.md`. Update slide deck when public.
+- **API documentation URL** (`docs.petal.tax`) needs to be live before any partner conversation. If it's not live, share the markdown source under NDA.
+- **MCP server URL** (`mcp.petal.tax`) status: track in `docs/STATE.md`. Update slide deck when public.
 - **Live demo**: have a working integration example for at least one of the three patterns (A / B / C from Slide 4) before the first partner pitch. Show it on screen during the call.
 - **NDA template**: have a developer-friendly NDA ready to send before sharing repo access or detailed architecture diagrams.
 - **Q&A discipline**: tax-domain questions defer to Antonio + 24-hour follow-up. Technical questions Haokun handles in real time. Pricing + contract questions David handles.
