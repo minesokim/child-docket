@@ -17,7 +17,37 @@
 // `if` blocks to page components.
 // ────────────────────────────────────────────────────────────────
 
-import { isEntityOnlyFiling, type IntakeState } from '@docket/shared';
+import {
+  isCommunityPropertyState,
+  isEntityOnlyFiling,
+  type IntakeState,
+} from '@docket/shared';
+
+// Small local helper so the inline closure stays readable. Wraps
+// the @docket/shared check to operate on the primary-state string
+// shape we carry in intake state (either "California" or "CA").
+function requiresForm8958Helper(primaryState: string | undefined): boolean {
+  if (!primaryState) return false;
+  // Accept either "CA" or "California" — community-property helper
+  // expects a 2-letter code, but intake stores the expanded form
+  // after the /state onBlur autofill. Try the 2-letter slice first.
+  const trimmed = primaryState.trim();
+  const upper = trimmed.toUpperCase().slice(0, 2);
+  if (isCommunityPropertyState(upper)) return true;
+  // Fall back to full-name match for the 9 community states.
+  const FULL_NAMES: Record<string, true> = {
+    arizona: true,
+    california: true,
+    idaho: true,
+    louisiana: true,
+    nevada: true,
+    'new mexico': true,
+    texas: true,
+    washington: true,
+    wisconsin: true,
+  };
+  return !!FULL_NAMES[trimmed.toLowerCase()];
+}
 
 export type IntakeSection =
   | 'welcome'      // welcome / tutorial / service path
@@ -222,6 +252,38 @@ export const INTAKE_FLOW: readonly IntakeStep[] = [
       !!s.spouse?.fullName &&
       !!s.spouse?.dateOfBirth &&
       !!s.spouse?.ssn,
+    next: (s) => {
+      // MFS + community property state → Form 8958 surface before
+      // /deps. Pub 555 / §66 detection lives in @docket/shared.
+      if (
+        s.filing?.status === 'mfs' &&
+        requiresForm8958Helper(s.state?.primaryState)
+      ) {
+        return '/community-property';
+      }
+      return '/deps';
+    },
+  },
+  {
+    id: 'community-property',
+    route: '/community-property',
+    label: 'Community property',
+    section: 'about-you',
+    // Triggered when MFS AND primary state is one of the 9 mandatory
+    // community property states. See packages/shared/src/community-
+    // property.ts + IRS Pub 555.
+    isApplicable: (s) =>
+      !isEntityOnlyFiling(s) &&
+      s.filing?.status === 'mfs' &&
+      requiresForm8958Helper(s.state?.primaryState),
+    isComplete: (s) => {
+      const m = s.mfsCommunityProperty;
+      return (
+        !!m?.acknowledged &&
+        !!m?.financeShape &&
+        !!m?.livedApartAllYear
+      );
+    },
     next: () => '/deps',
   },
   {

@@ -22,7 +22,7 @@ import {
 } from '@docket/ui';
 import { useState } from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
-import { useFieldReveal, useIntakeField } from '@/lib/intake-context';
+import { useFieldReveal, useIntakeAnswers, useIntakeField } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
 import type { FilingStatus } from '@docket/shared';
@@ -67,13 +67,18 @@ export default function SpousePage() {
     if (iso) void setDobIso(iso);
   };
 
-  const stateSnapshot = { filing: { status: filingStatus }, spouse: { fullName, dateOfBirth: dobIso, ssn } };
+  // Use the FULL intake answers snapshot. The next() routing for /spouse
+  // reads state.primaryState (for MFS + community-property detection) —
+  // a partial snapshot would silently route MFS-CP users straight to
+  // /deps and skip the /community-property step. Codex caught this
+  // 2026-05-14.
+  const answers = useIntakeAnswers();
   const handleNext = () => {
-    const target = getNextStep('/spouse', stateSnapshot);
+    const target = getNextStep('/spouse', answers);
     if (target) nav.next(target);
   };
   const handleBack = () => {
-    const target = getPrevStep('/spouse', stateSnapshot);
+    const target = getPrevStep('/spouse', answers);
     if (target) nav.back(target);
   };
 
@@ -113,7 +118,9 @@ export default function SpousePage() {
             <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.4">
               <path d="M2 5l2 2 3-4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Because you&apos;re filing jointly
+            {filingStatus === 'mfs'
+              ? "Because you're filing separately"
+              : "Because you're filing jointly"}
           </span>
         </div>
 
@@ -122,7 +129,9 @@ export default function SpousePage() {
             <Stack gap={10}>
               <H1 t={t}>Tell me about your spouse.</H1>
               <Body t={t} size={15}>
-                Basic info for the joint return.
+                {filingStatus === 'mfs'
+                  ? "Even though you're filing separately, the IRS needs your spouse's basic info on the return."
+                  : 'Basic info for the joint return.'}
               </Body>
             </Stack>
             <AntonioNote t={t}>

@@ -57,6 +57,11 @@ export * from './ca-sos.js';
 // sees §6694 risk before Form 8867 due-diligence at filing.
 export * from './hoh-qualification.js';
 
+// Community property + Form 8958 detection (§66 / Pub 555). True
+// when filing.status === 'mfs' AND state is one of the nine
+// mandatory community property states (AZ CA ID LA NV NM TX WA WI).
+export * from './community-property.js';
+
 // Multi-step reasoning trail — canonical shape every agent emits
 // alongside its primary answer. Locked as a contract per CLAUDE.md
 // §9 Agent contract. The UI primitive lives at

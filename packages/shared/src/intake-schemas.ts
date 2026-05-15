@@ -256,6 +256,17 @@ export const PATH_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   'hohQualify.qualifyingPersonIsChildOrRelative': z.enum(['yes', 'no', 'not_sure']),
   'hohQualify.qualifyingPersonRelationship': z.string().max(100),
 
+  // MFS + community property → Form 8958 surface (§66 / Pub 555).
+  'mfsCommunityProperty.acknowledged': z.boolean(),
+  'mfsCommunityProperty.financeShape': z.enum([
+    'fully_separate',
+    'mostly_separate',
+    'mostly_joint',
+    'fully_joint',
+  ]),
+  'mfsCommunityProperty.livedApartAllYear': z.enum(['yes', 'no', 'not_sure']),
+  'mfsCommunityProperty.notes': z.string().max(2000),
+
   // CA SoS BE Public Search snapshot. Written server-side by the
   // /api/ca-sos/lookup route handler after a successful entity match.
   'business.caSoSStatus': z.string().max(50),

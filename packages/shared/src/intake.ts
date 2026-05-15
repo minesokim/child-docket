@@ -201,6 +201,34 @@ export type IntakeState = {
     occupation?: string;
   };
 
+  // ── MFS in community property state → Form 8958 surface ─────────
+  // Triggered when filing.status === 'mfs' AND state.primaryState is
+  // one of the 9 mandatory community property states (AZ CA ID LA
+  // NV NM TX WA WI). The actual line-item allocation happens in
+  // command-room; this just flags the case + captures the few
+  // signals Antonio needs to start. See packages/shared/src/
+  // community-property.ts + IRS Pub 555.
+  mfsCommunityProperty?: {
+    // Client acknowledged that Form 8958 will be needed on the
+    // return. Required to advance past the step.
+    acknowledged?: boolean;
+    // Shape of the spouses' finances. Drives whether §66(c)
+    // spousal-allocation-relief is conversational fit.
+    financeShape?:
+      | 'fully_separate'
+      | 'mostly_separate'
+      | 'mostly_joint'
+      | 'fully_joint';
+    // Have the spouses lived apart for all of 2025? Bears on §66(c)
+    // applicability + on community-vs-separate income classification
+    // for the year.
+    livedApartAllYear?: 'yes' | 'no' | 'not_sure';
+    // Free-text — anything the client wants Antonio to know about
+    // their financial arrangement that didn't fit above (prenup,
+    // post-nup, transmutation agreement, separation agreement).
+    notes?: string;
+  };
+
   dependents?: {
     count?: number;
     list?: IntakeDependent[];
@@ -398,6 +426,13 @@ export const SENSITIVE_INTAKE_PATHS: readonly string[] = [
   'business.ownerSsn',
   'refund.bankRouting',
   'refund.bankAccount',
+  // MFS + community property notes can carry prenup / separation-
+  // agreement / financial-arrangement details that the client wouldn't
+  // expect to land in plaintext. Encrypted at rest per the same
+  // per-tenant DEK path as SSN/EIN. §7216 posture: §301.7216-2 carve-
+  // out for the service provider relationship, but defense-in-depth
+  // makes the encrypted-at-rest treatment the right floor.
+  'mfsCommunityProperty.notes',
 ] as const;
 
 /** True if the dotted path matches one of the SENSITIVE_INTAKE_PATHS globs. */
