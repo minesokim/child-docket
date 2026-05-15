@@ -385,22 +385,45 @@ export function EncryptedTextField({
 
   if (!editing && masked) {
     // Masked display + Edit affordance — always filled by definition.
+    // Rendered as a <button> for keyboard accessibility — the masked
+    // chip IS the affordance to reveal encrypted PII; Enter/Space
+    // must work for screen-reader + keyboard users. Visual styling
+    // is identical to the prior div (background reset, no border,
+    // text-aligned-left padding). react-doctor a11y fix 2026-05-14.
     return (
-      <div
-        onClick={handleStartEdit}
+      <button
+        type="button"
+        onClick={() => void handleStartEdit()}
+        disabled={revealing}
+        aria-label={
+          revealing
+            ? 'Revealing encrypted field'
+            : 'Edit encrypted field (will reveal current value)'
+        }
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           padding: '12px 14px',
           background: t.ease.mintWhisper,
+          border: 'none',
           borderRadius: 12,
           cursor: revealing ? 'wait' : 'text',
           opacity: revealing ? 0.6 : 1,
           transition: 'opacity 140ms cubic-bezier(.2,.8,.2,1)',
+          width: '100%',
+          textAlign: 'left',
+          fontFamily: 'inherit',
+          color: 'inherit',
         }}
       >
+        {/* aria-hidden on the masked-value span + the EncryptedPill
+            so screen readers in browse mode only announce the
+            button's aria-label, not the literal "·····6789" dots
+            (codex catch 2026-05-14). Sighted users still see the
+            chip; AT users hear the action. */}
         <span
+          aria-hidden="true"
           style={{
             flex: 1,
             fontFamily: mono ? t.mono : t.sans,
@@ -411,8 +434,10 @@ export function EncryptedTextField({
         >
           {value}
         </span>
-        <EncryptedPill t={t} />
-      </div>
+        <span aria-hidden="true">
+          <EncryptedPill t={t} />
+        </span>
+      </button>
     );
   }
 

@@ -88,58 +88,91 @@ export function SignaturePad({
   // White paper surface in both states — legal signing should feel
   // like a contract, not a celebration. The script-font signature
   // appearing on the white card is the visual signal of state.
+  //
+  // A11y: unsigned state is a <button> so keyboard users (Enter /
+  // Space) can sign — this is a legal-binding action and must work
+  // without a mouse for IRS Pub 1345 + ADA / WCAG 2.1 AA compliance.
+  // Signed state renders as a plain div (no longer interactive).
+  // react-doctor a11y fix 2026-05-14.
+  const surfaceStyle: React.CSSProperties = {
+    background: '#fffefc',
+    border: 'none',
+    borderRadius: t.radius,
+    padding: signed ? '14px 18px' : '28px 18px',
+    width: '80%',
+    marginInline: 'auto',
+    boxSizing: 'border-box',
+    boxShadow: '0 2px 12px rgba(15, 23, 12, 0.06)',
+  };
+
+  if (signed) {
+    // role="status" + aria-live="polite" announce the state change
+    // to screen readers when the button unmounts post-sign (codex
+    // catch 2026-05-14 — without this the focus handoff is silent
+    // for keyboard + AT users).
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        style={{ ...surfaceStyle, cursor: 'default' }}
+      >
+        <div
+          style={{
+            fontFamily: '"Caveat", "Brush Script MT", cursive',
+            fontSize: 28,
+            color: t.ink,
+            lineHeight: 1,
+          }}
+        >
+          {name || 'Signature'}
+        </div>
+        <div
+          style={{
+            fontFamily: t.mono,
+            fontSize: 10,
+            color: t.muted,
+            letterSpacing: 0.5,
+            marginTop: 4,
+          }}
+        >
+          {timestamp || formatNowTimestamp()}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      onClick={() => !signed && onSign()}
+    <button
+      type="button"
+      onClick={onSign}
+      aria-label="Tap to sign this document"
       style={{
-        background: '#fffefc',
-        border: 'none',
-        borderRadius: t.radius,
-        padding: signed ? '14px 18px' : '28px 18px',
-        cursor: signed ? 'default' : 'pointer',
-        width: '80%',
-        marginInline: 'auto',
-        boxSizing: 'border-box',
-        boxShadow: '0 2px 12px rgba(15, 23, 12, 0.06)',
+        ...surfaceStyle,
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontFamily: 'inherit',
+        color: 'inherit',
       }}
     >
-      {signed ? (
-        <div>
-          <div
-            style={{
-              fontFamily: '"Caveat", "Brush Script MT", cursive',
-              fontSize: 28,
-              color: t.ink,
-              lineHeight: 1,
-            }}
-          >
-            {name || 'Signature'}
-          </div>
-          <div
-            style={{
-              fontFamily: t.mono,
-              fontSize: 10,
-              color: t.muted,
-              letterSpacing: 0.5,
-              marginTop: 4,
-            }}
-          >
-            {timestamp || formatNowTimestamp()}
-          </div>
-        </div>
-      ) : (
-        <Row justify="center" gap={8}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M2 12l3-1 8-8 1 1-8 8-1 3-3-3z"
-              stroke={t.muted}
-              strokeWidth="1.3"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span style={{ fontSize: 14, color: t.muted }}>Tap to sign</span>
-        </Row>
-      )}
-    </div>
+      <Row justify="center" gap={8}>
+        {/* Pen icon — decorative; "Tap to sign" text below carries
+            the label. aria-hidden so screen readers don't read it. */}
+        <svg
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+        >
+          <path
+            d="M2 12l3-1 8-8 1 1-8 8-1 3-3-3z"
+            stroke={t.muted}
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span style={{ fontSize: 14, color: t.muted }}>Tap to sign</span>
+      </Row>
+    </button>
   );
 }
