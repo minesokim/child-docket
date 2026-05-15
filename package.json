@@ -9,6 +9,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "react-doctor": "npx -y react-doctor@latest -y .",
     "clean": "turbo clean && rm -rf node_modules",
     "e2e:portal": "playwright test",
     "e2e:portal:install": "playwright install chromium",

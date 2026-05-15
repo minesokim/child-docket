@@ -1515,5 +1515,77 @@ the warmup distorts.
 
 ---
 
-*Last updated: 2026-05-13. Backfilled from session start; subsequent
+## [36] 2026-05-14 — Adopt react-doctor (Million.dev) as advisory CI check
+
+**Decision**: Added `.github/workflows/react-doctor.yml` running
+react-doctor in advisory mode (`fail-on: none` + `continue-on-error:
+true`, belt-and-suspenders) on every PR + push to main. Action
+SHA-pinned to `71695512513bf12e6021800d59d2162be0170077` (the commit
+at millionco/react-doctor main HEAD when this workflow shipped —
+2026-05-14 Pacific / 2026-05-15 UTC), matching the existing ci.yml
+third-party action pinning convention. Workflow scopes to
+`@docket/client-portal,@docket/command-room,@docket/ui` via the
+action's `project` input, runs in offline mode for deterministic
+local scoring. Root `package.json` gains a `pnpm react-doctor` script
+wrapping `npx -y react-doctor@latest -y .` — the leading `-y` tells
+npx to auto-accept the package, the trailing `-y` is react-doctor's
+own `--yes` flag for "skip prompts, scan all workspace projects."
+
+**Reasoning**: react-doctor catches the exact React anti-patterns
+CLAUDE.md §19 disciplines against — derived state in useState,
+fetch-in-effect, array-index-as-key, cascading setState, unsafe DOM
+rendering, barrel-import bloat, giant components. A local scan
+returned **82/100** with 130 findings across 18/26 files in
+`@docket/ui`. The bulk is design-locked (49 "inline style exhaustion"
+findings expected per §11 intake/portal zero-design-drift rule; 10
+"giant component" findings on solar.tsx — known AMBER liability), but
+the residual is actionable and real: 6 array-index-as-key in
+signature.tsx, 7+7 a11y click-without-key in signature.tsx, fetch-in-
+effect in health-gate.tsx, derived-state-effect in fields.tsx, 2
+cascading setState in antonio.tsx, 4 React-19-deprecated `useContext`
+sites. MIT license, 9.6k stars, last push today, maintained by the
+same team behind Million.js (vetted track record).
+
+**Alternative considered**:
+- ESLint-plugin only (`react-doctor/eslint-plugin`) instead of the CLI
+  + GHA. Rejected for v0 because the GHA gives us the score-trend
+  signal + inline PR annotations + a unified PR-comment summary that
+  ESLint's lint-staged + CI matrix wouldn't equal without bespoke
+  glue.
+- Skip adoption — accept the §19 anti-AI-slop discipline as
+  manual-only. Rejected because the discipline is exactly what
+  static analysis automates, and we've already shipped one fetch-in-
+  effect (health-gate.tsx) and one derived-state-effect (fields.tsx)
+  that should have been caught at PR time.
+- Gate PRs on `fail-on: warning` immediately. Rejected — current 130
+  findings mean every PR would fail. Need a triage pass + an
+  `ignore.overrides` config carving out design-locked paths before
+  gating.
+
+**How to reverse**: delete `.github/workflows/react-doctor.yml`,
+remove the `react-doctor` script from root `package.json`. No other
+files depend on the action. The bare CLI keeps working as
+`npx -y react-doctor@latest .` (manual invocation; will prompt for a
+workspace project — pass `-y` to scan all, matching the deleted
+package.json script). No codebase ties.
+
+**Promotion path to gating** (separate decision when ready): (1) Land
+fixes for the 4–6 real findings (signature.tsx a11y + array keys,
+fetch-in-effect, derived-state-effect, cascading setState). (2) Add
+`react-doctor.config.json` at repo root with `ignore.overrides`
+exempting `apps/client-portal/src/app/**` and
+`packages/ui/src/components/**` from the `inline-exhaustive-style`
+rule, plus `packages/ui/src/icons/**` from `giant-component`. (3)
+Flip `fail-on: warning` in the workflow.
+
+**Severity**: low. Advisory mode is purely additive — adds a CI job
+that posts feedback, never blocks merge. Reversible in one commit.
+
+**Commit**: <pending — current commit>
+
+**User-review status**: pending
+
+---
+
+*Last updated: 2026-05-14. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*

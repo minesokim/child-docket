@@ -1,0 +1,93 @@
+name: React Doctor
+
+# Adopted 2026-05-14 per AUTONOMOUS-DECISIONS [#36]. Advisory-only static
+# analysis from Million.dev (Aiden Bai's team, same group behind Million.js).
+# Catches the anti-AI-slop React patterns CLAUDE.md §19 disciplines against:
+# derived state in useState, fetch-in-effect, array-index-as-key, cascading
+# setState, unsafe DOM rendering, barrel-import bloat, giant components.
+#
+# POSTURE
+#   Advisory ONLY. `fail-on: none` means this workflow never blocks merge.
+#   The existing `ci.yml` typecheck + tests + audit + integration-tests jobs
+#   stay as the merge gate. React Doctor surfaces drift via the PR-comment
+#   summary + inline annotations — nothing more — until we triage what's
+#   actionable vs design-locked (intake/portal inline-style usage per §11
+#   is deliberate; solar.tsx "giant component" is a known liability).
+#
+#   Promotion path to gating: once the real findings land (signature.tsx
+#   a11y, fetch-in-effect in health-gate.tsx, derived-state-effect in
+#   fields.tsx, cascading setState in antonio.tsx, array-index-as-key in
+#   signature.tsx), add a react-doctor.config.json with ignore.overrides
+#   for the design-locked paths and flip `fail-on: warning` to gate PRs.
+#
+# THIRD-PARTY ACTION POSTURE
+#   Matches ci.yml convention: first-party `actions/*` stays tag-pinned
+#   (low compromise risk per ci.yml header), third-party actions are
+#   SHA-pinned with a human-version comment. Dependabot github-actions
+#   ecosystem (.github/dependabot.yml) bumps weekly.
+#
+# COST
+#   ~22s per run on Linux runners (vs 1.4s local Windows). Free for public
+#   repos; well within Pro tier for private. Runs in parallel with ci.yml.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs when the same PR is pushed again.
+concurrency:
+  group: react-doctor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # Required so the composite action can post the PR-comment summary
+  # via its embedded actions/github-script step. Falls back to read on
+  # forks (default fork-PR token scope) — annotations still emit; the
+  # PR-comment posting silently no-ops.
+  pull-requests: write
+
+jobs:
+  react-doctor:
+    name: Static analysis (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Belt-and-suspenders advisory: even on a fork PR where the
+    # `pull-requests: write` permission downgrades to read and the
+    # action's PR-comment-posting step 403s, the workflow exits green.
+    # Combined with `fail-on: none` below, react-doctor is purely
+    # additive — it CANNOT fail a merge.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # react-doctor needs the full history for any diff computation
+          # the action chooses to do internally. fetch-depth: 0 == full
+          # clone.
+          fetch-depth: 0
+
+      - name: Run react-doctor
+        # Pinned to the commit at https://github.com/millionco/react-doctor
+        # main HEAD when this workflow shipped (2026-05-14 Pacific /
+        # 2026-05-15 UTC). Dependabot github-actions ecosystem bumps
+        # weekly per .github/dependabot.yml.
+        uses: millionco/react-doctor@71695512513bf12e6021800d59d2162be0170077
+        with:
+          # Explicit workspace scope. Without this, the action would
+          # prompt to pick a project (CI auto-skips the prompt, so
+          # behavior is implementation-defined). Listing the three
+          # React workspaces makes scope deterministic.
+          project: "@docket/client-portal,@docket/command-room,@docket/ui"
+          # Required for the action to post the PR-comment summary +
+          # inline annotations. Fork-PR token won't have write scope;
+          # `continue-on-error` above swallows that 403 cleanly.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Skip the react.doctor API call for scoring; calculate
+          # locally. Deterministic scoring in CI, no external dependency.
+          offline: "true"
+          # Advisory only — never fail the job on react-doctor findings.
+          # The existing ci.yml protocol-gate + typecheck + tests + audit
+          # remain the merge gates.
+          fail-on: none
