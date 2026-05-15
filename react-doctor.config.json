@@ -1,0 +1,36 @@
+{
+  "ignore": {
+    "rules": [
+      "react-doctor/server-auth-actions"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "apps/client-portal/src/app/(intake)/**",
+          "apps/client-portal/src/app/portal/**",
+          "packages/ui/src/components/**"
+        ],
+        "rules": [
+          "react-doctor/no-inline-exhaustive-style"
+        ]
+      },
+      {
+        "files": [
+          "packages/ui/src/icons/**"
+        ],
+        "rules": [
+          "react-doctor/no-giant-component"
+        ]
+      },
+      {
+        "files": [
+          "apps/client-portal/src/app/**",
+          "apps/command-room/src/app/**"
+        ],
+        "rules": [
+          "react-doctor/design-no-em-dash-in-jsx-text"
+        ]
+      }
+    ]
+  }
+}

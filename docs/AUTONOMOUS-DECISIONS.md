@@ -1657,5 +1657,53 @@ Reversible in two file edits.
 
 ---
 
+## [38] 2026-05-14 — Suppress react-doctor false-positives + design-locked findings via config
+
+**Decision**: Added `react-doctor.config.json` at repo root suppressing
+three things: (a) globally — `react-doctor/server-auth-actions` (false
+positive against our `resolveClient` / `getCurrentDocketUser` wrapper
+convention); (b) path-scoped on intake/portal/UI components —
+`no-inline-exhaustive-style` (design-locked per CLAUDE.md §11);
+(c) path-scoped on `packages/ui/src/icons/**` — `no-giant-component`
+(known AMBER liability on `solar.tsx`); (d) path-scoped on app surfaces
+— `design-no-em-dash-in-jsx-text` (Antonio's voice uses em-dashes per
+§19). Sibling `docs/REACT-DOCTOR-CONFIG.md` documents the rationale
+for each suppression + the real-findings list (a11y, array-keys,
+cascading-setState, missing-metadata) that are NOT suppressed and
+should land in followup commits.
+
+**Reasoning**: CI run #25898023171 surfaced 386 findings at 69/100.
+~250 of those are the design-locked or convention-related rules
+above — known intentional patterns, not regressions. Without
+suppressing them the CI signal is noise. The 14+14 a11y findings in
+signature.tsx, the 8 array-index-as-key sites, the 2 derived-state
+sites (different from the EncryptedTextField fix), and the 2
+cascading-setState sites in antonio.tsx are the REAL findings —
+those stay surfaced.
+
+**Alternative considered**:
+- Inline `// react-doctor-disable-next-line` comments at each call
+  site. Rejected for the wrapper-convention case — would need 100+
+  comments across every server action. Config-level suppression is
+  the correct surface.
+- Refactor server actions to call `auth()` directly + then call our
+  wrappers. Rejected: doubles the boilerplate without changing
+  security posture. The wrapper IS the auth check.
+- Wait until react-doctor adds wrapper-aware analysis. Rejected:
+  open-ended timeline; we need the CI score useful now.
+
+**How to reverse**: delete `react-doctor.config.json` and `docs/
+REACT-DOCTOR-CONFIG.md`. CI score drops back to the pre-suppression
+~69; the real findings stay visible at the same severities.
+
+**Severity**: low. Advisory mode means none of this gates merges
+either way. The config just makes the score legible.
+
+**Commit**: <pending — current commit>
+
+**User-review status**: pending
+
+---
+
 *Last updated: 2026-05-14. Backfilled from session start; subsequent
 decisions get appended in real-time per the /decisions-log skill.*
