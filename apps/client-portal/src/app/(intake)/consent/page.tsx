@@ -21,6 +21,7 @@ import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
+import { LegalCheckbox } from '@/components/legal-checkbox';
 import { recordIntakeSignature } from '@/lib/intake/sign';
 
 const TITLE = '§7216 Consent - Use & Disclosure of Tax Information';
@@ -152,79 +153,19 @@ export default function ConsentPage() {
         <Stack gap={16} style={{ padding: '20px 24px 16px', flex: 1 }}>
           <LegalDoc t={t} title={TITLE} paras={PARAS} />
 
-          <Row gap={10} align="flex-start">
-            <div
-              onClick={() => setChecked(!checked)}
-              style={{
-                width: 22,
-                height: 22,
-                flexShrink: 0,
-                borderRadius: 5,
-                background: checked ? t.ease.forestMid : t.ease.keylimeWash,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 1,
-              }}
-            >
-              {checked && (
-                <svg width="12" height="10" viewBox="0 0 12 10">
-                  <path
-                    d="M1 5l3.5 3.5L11 1"
-                    stroke="#fff"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </div>
-            <div
-              onClick={() => setChecked(!checked)}
-              style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
-            >
-              I give Antonio permission to use my tax information to prepare my return
-            </div>
-          </Row>
+          <LegalCheckbox
+            t={t}
+            checked={checked}
+            onChange={() => setChecked(!checked)}
+            label="I give Antonio permission to use my tax information to prepare my return"
+          />
 
-          <Row gap={10} align="flex-start">
-            <div
-              onClick={() => setAiChecked(!aiChecked)}
-              style={{
-                width: 22,
-                height: 22,
-                flexShrink: 0,
-                borderRadius: 5,
-                background: aiChecked ? t.ease.forestMid : t.ease.keylimeWash,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 1,
-              }}
-            >
-              {aiChecked && (
-                <svg width="12" height="10" viewBox="0 0 12 10">
-                  <path
-                    d="M1 5l3.5 3.5L11 1"
-                    stroke="#fff"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </div>
-            <div
-              onClick={() => setAiChecked(!aiChecked)}
-              style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
-            >
-              I authorize Vazant Consulting to use Zero-Data-Retention AI services (Anthropic Claude, AWS Bedrock) to assist in preparing my return. Antonio reviews every AI output before use.
-            </div>
-          </Row>
+          <LegalCheckbox
+            t={t}
+            checked={aiChecked}
+            onChange={() => setAiChecked(!aiChecked)}
+            label="I authorize Vazant Consulting to use Zero-Data-Retention AI services (Anthropic Claude, AWS Bedrock) to assist in preparing my return. Antonio reviews every AI output before use."
+          />
 
           {/*
             Third checkbox — TCPA SMS consent. Optional (per FCC/TCPA the
@@ -233,42 +174,16 @@ export default function ConsentPage() {
             The taxpayer's choice is persisted to intake state and
             recorded in the signature audit_payload at sign time.
           */}
-          <Row gap={10} align="flex-start">
-            <div
-              onClick={() => setSmsChecked(!smsChecked)}
-              style={{
-                width: 22,
-                height: 22,
-                flexShrink: 0,
-                borderRadius: 5,
-                background: smsChecked ? t.ease.forestMid : t.ease.keylimeWash,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 1,
-              }}
-            >
-              {smsChecked && (
-                <svg width="12" height="10" viewBox="0 0 12 10">
-                  <path
-                    d="M1 5l3.5 3.5L11 1"
-                    stroke="#fff"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </div>
-            <div
-              onClick={() => setSmsChecked(!smsChecked)}
-              style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
-            >
-              <strong style={{ fontWeight: 600 }}>(Optional)</strong> I consent to receive text-message updates from Vazant Consulting (account, document, signature, and appointment notifications). Reply STOP to opt out anytime; message and data rates may apply.
-            </div>
-          </Row>
+          <LegalCheckbox
+            t={t}
+            checked={smsChecked}
+            onChange={() => setSmsChecked(!smsChecked)}
+            label={
+              <>
+                <strong style={{ fontWeight: 600 }}>(Optional)</strong> I consent to receive text-message updates from Vazant Consulting (account, document, signature, and appointment notifications). Reply STOP to opt out anytime; message and data rates may apply.
+              </>
+            }
+          />
 
           <div>
             <div

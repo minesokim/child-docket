@@ -21,6 +21,7 @@ import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeField, useIntakeStepNumber } from '@/lib/intake-context';
 import { getNextStep, getPrevStep } from '@/lib/intake-flow';
 import { IntakeContinueButton } from '@/components/intake-continue-button';
+import { LegalCheckbox } from '@/components/legal-checkbox';
 import { recordIntakeSignature } from '@/lib/intake/sign';
 
 const TITLE = 'Engagement Letter - 2025 Tax Year';
@@ -99,42 +100,12 @@ export default function EngagementPage() {
         <Stack gap={16} style={{ padding: '20px 24px 16px', flex: 1 }}>
           <LegalDoc t={t} title={TITLE} paras={PARAS} />
 
-          <Row gap={10} align="flex-start">
-            <div
-              onClick={() => setChecked(!checked)}
-              style={{
-                width: 22,
-                height: 22,
-                flexShrink: 0,
-                borderRadius: 5,
-                background: checked ? t.ease.forestMid : t.ease.keylimeWash,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 1,
-              }}
-            >
-              {checked && (
-                <svg width="12" height="10" viewBox="0 0 12 10">
-                  <path
-                    d="M1 5l3.5 3.5L11 1"
-                    stroke="#fff"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </div>
-            <div
-              onClick={() => setChecked(!checked)}
-              style={{ fontSize: 14, color: t.inkSoft, cursor: 'pointer', lineHeight: 1.5 }}
-            >
-              I&apos;ve read and agree to the engagement letter
-            </div>
-          </Row>
+          <LegalCheckbox
+            t={t}
+            checked={checked}
+            onChange={() => setChecked(!checked)}
+            label="I've read and agree to the engagement letter"
+          />
 
           <div>
             <div
