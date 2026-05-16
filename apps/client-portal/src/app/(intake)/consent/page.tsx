@@ -15,6 +15,8 @@ import {
   Screen,
   SignaturePad,
   Stack,
+  useFirmOwner,
+  useTenantName,
 } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
@@ -24,29 +26,35 @@ import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { LegalCheckbox } from '@/components/legal-checkbox';
 import { recordIntakeSignature } from '@/lib/intake/sign';
 
-const TITLE = '§7216 Consent - Use & Disclosure of Tax Information';
-const PARAS = [
-  'Federal law requires this consent form be provided to you. Unless authorized by law, we cannot use or disclose your tax return information for any purpose other than preparing your return without your consent.',
-  'You are not required to complete this form. If we obtain your signature on this form by conditioning our services on your consent, your consent will not be valid. Your consent is valid for the amount of time that you specify.',
-  'By signing below, you authorize Antonio Vazquez, Enrolled Agent, to use the information you provide solely for the purpose of preparing your 2025 federal and state income tax returns. This consent is valid until the returns are filed and accepted by the applicable tax authorities.',
-  'You also authorize Vazant Consulting to use secure artificial-intelligence services (Anthropic Claude and AWS Bedrock) operating under Zero Data Retention agreements to assist in preparing your return. These services do not retain your information after processing, and they will not use your information to train any model. Antonio reviews and approves every AI-generated output before it is used or sent to a tax authority.',
-  // TCPA-compliant SMS consent (V1 add-on per PRODUCTION-READINESS §D).
-  // Required before any outbound SMS — Twilio messages without prior
-  // express consent risk $500-$1,500 per text in TCPA penalties. Wording
-  // mirrors the FCC/TCPA template for express consent to commercial
-  // automated text messages, with clear right-to-revoke.
-  'You consent to receive text messages from Vazant Consulting at the phone number you provided, including (a) account and tax-status updates, (b) document and signature requests, and (c) appointment reminders. Message frequency varies. Message and data rates may apply. Reply STOP to any message to opt out at any time; reply HELP for help. Consent is not a condition of services — you can decline and continue to receive non-SMS communication.',
-  'If you believe your tax return information has been disclosed or used improperly in a manner unauthorized by law or without your permission, you may contact the Treasury Inspector General for Tax Administration (TIGTA).',
-];
-
-// The exact §7216 text the user is consenting to. Frozen + hashed
-// server-side at signing time so a later copy edit can't retroactively
-// alter "what they consented to" — IRS 26 CFR 301.7216-3 retention.
-const FULL_DOCUMENT_TEXT = `${TITLE}\n\n${PARAS.join('\n\n')}`;
+// Default values when the TenantDisplayProvider hasn't mounted the
+// firm-owner/tenant data yet (dev mode pre-seed, mid-migration).
+// Audit (2026-05-15) caught the previous module-level hardcodes
+// ("Antonio Vazquez, Enrolled Agent" + "Vazant Consulting") being
+// SHA-256 hashed into signatures.audit_payload for EVERY tenant —
+// onboarding tenant #2 (a CPA firm at a different practice name)
+// under the prior code would have produced legally-invalid §7216
+// consent referencing Antonio's firm. The component-scoped useMemo
+// below derives the text from useFirmOwner() + useTenantName() so
+// the hash captures the actual firm's identity at sign-time.
+//
+// Credential suffix ("Enrolled Agent" / "CPA" / "JD/Esq") dropped in
+// this commit because FirmOwner doesn't carry credential info yet.
+// Future cleanup: add a `credential` field to FirmOwner + concatenate
+// conditionally. For now, "[Owner Name]" without credential is
+// strictly better than "[Owner Name], Enrolled Agent" on a non-EA
+// firm — less specific, but correct rather than wrong.
+const DEFAULT_OWNER_NAME = 'Antonio Vazquez';
+const DEFAULT_OWNER_FIRST_NAME = 'Antonio';
+const DEFAULT_TENANT_NAME = 'Vazant Consulting';
 
 export default function ConsentPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
+  const owner = useFirmOwner();
+  const tenantNameCtx = useTenantName();
+  const preparerName = owner?.name ?? DEFAULT_OWNER_NAME;
+  const preparerFirstName = owner?.firstName ?? DEFAULT_OWNER_FIRST_NAME;
+  const tenantName = tenantNameCtx ?? DEFAULT_TENANT_NAME;
   const [checked, setChecked] = useIntakeField<boolean>('consent.checked', false);
   // Separate AI-disclosure consent. Per IRS 26 CFR 301.7216-3, USE
   // and DISCLOSURE consents technically require separate documents +
@@ -70,6 +78,35 @@ export default function ConsentPage() {
   const [signed, setSigned] = useIntakeField<boolean>('consent.signed', false);
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [signError, setSignError] = React.useState<string | null>(null);
+
+  // The exact §7216 text the user is consenting to. Built from tenant
+  // context + memoized so the SHA-256 hash captures the version of the
+  // text this client actually saw. The server hashes documentText into
+  // signatures.audit_payload, so a later edit (or a tenant swap) can
+  // never retroactively alter "what they consented to" — IRS 26 CFR
+  // 301.7216-3 retention requirement.
+  const { title: TITLE, paras: PARAS, fullText: FULL_DOCUMENT_TEXT } =
+    React.useMemo(() => {
+      const title = '§7216 Consent - Use & Disclosure of Tax Information';
+      const paras = [
+        'Federal law requires this consent form be provided to you. Unless authorized by law, we cannot use or disclose your tax return information for any purpose other than preparing your return without your consent.',
+        'You are not required to complete this form. If we obtain your signature on this form by conditioning our services on your consent, your consent will not be valid. Your consent is valid for the amount of time that you specify.',
+        `By signing below, you authorize ${preparerName} to use the information you provide solely for the purpose of preparing your 2025 federal and state income tax returns. This consent is valid until the returns are filed and accepted by the applicable tax authorities.`,
+        `You also authorize ${tenantName} to use secure artificial-intelligence services (Anthropic Claude and AWS Bedrock) operating under Zero Data Retention agreements to assist in preparing your return. These services do not retain your information after processing, and they will not use your information to train any model. ${preparerFirstName} reviews and approves every AI-generated output before it is used or sent to a tax authority.`,
+        // TCPA-compliant SMS consent (V1 add-on per PRODUCTION-READINESS §D).
+        // Required before any outbound SMS — Twilio messages without prior
+        // express consent risk $500-$1,500 per text in TCPA penalties. Wording
+        // mirrors the FCC/TCPA template for express consent to commercial
+        // automated text messages, with clear right-to-revoke.
+        `You consent to receive text messages from ${tenantName} at the phone number you provided, including (a) account and tax-status updates, (b) document and signature requests, and (c) appointment reminders. Message frequency varies. Message and data rates may apply. Reply STOP to any message to opt out at any time; reply HELP for help. Consent is not a condition of services — you can decline and continue to receive non-SMS communication.`,
+        'If you believe your tax return information has been disclosed or used improperly in a manner unauthorized by law or without your permission, you may contact the Treasury Inspector General for Tax Administration (TIGTA).',
+      ];
+      return {
+        title,
+        paras,
+        fullText: `${title}\n\n${paras.join('\n\n')}`,
+      };
+    }, [preparerName, preparerFirstName, tenantName]);
 
   // SMS consent is OPTIONAL by TCPA design (consent is not a condition
   // of services). The signature gate requires §7216 + AI checkboxes,
@@ -144,8 +181,9 @@ export default function ConsentPage() {
             </div>
             <H1 t={t}>Permission to prepare your return</H1>
             <Body t={t} size={15}>
-              Under IRS rule §7216, I need your separate permission to use your tax information to
-              prepare your return. This is separate from the engagement letter you just signed.
+              Under IRS rule §7216, {preparerFirstName} needs your separate permission
+              to use your tax information to prepare your return. This is
+              separate from the engagement letter you just signed.
             </Body>
           </Stack>
         </div>
@@ -157,14 +195,14 @@ export default function ConsentPage() {
             t={t}
             checked={checked}
             onChange={() => setChecked(!checked)}
-            label="I give Antonio permission to use my tax information to prepare my return"
+            label={`I give ${preparerFirstName} permission to use my tax information to prepare my return`}
           />
 
           <LegalCheckbox
             t={t}
             checked={aiChecked}
             onChange={() => setAiChecked(!aiChecked)}
-            label="I authorize Vazant Consulting to use Zero-Data-Retention AI services (Anthropic Claude, AWS Bedrock) to assist in preparing my return. Antonio reviews every AI output before use."
+            label={`I authorize ${tenantName} to use Zero-Data-Retention AI services (Anthropic Claude, AWS Bedrock) to assist in preparing my return. ${preparerFirstName} reviews every AI output before use.`}
           />
 
           {/*
@@ -180,7 +218,7 @@ export default function ConsentPage() {
             onChange={() => setSmsChecked(!smsChecked)}
             label={
               <>
-                <strong style={{ fontWeight: 600 }}>(Optional)</strong> I consent to receive text-message updates from Vazant Consulting (account, document, signature, and appointment notifications). Reply STOP to opt out anytime; message and data rates may apply.
+                <strong style={{ fontWeight: 600 }}>(Optional)</strong> I consent to receive text-message updates from {tenantName} (account, document, signature, and appointment notifications). Reply STOP to opt out anytime; message and data rates may apply.
               </>
             }
           />

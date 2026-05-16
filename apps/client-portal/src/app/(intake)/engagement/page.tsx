@@ -15,6 +15,7 @@ import {
   Screen,
   SignaturePad,
   Stack,
+  useFirmOwner,
 } from '@docket/ui';
 import * as React from 'react';
 import { usePortalNav } from '@/lib/portal-nav';
@@ -24,28 +25,65 @@ import { IntakeContinueButton } from '@/components/intake-continue-button';
 import { LegalCheckbox } from '@/components/legal-checkbox';
 import { recordIntakeSignature } from '@/lib/intake/sign';
 
-const TITLE = 'Engagement Letter - 2025 Tax Year';
-const PARAS = [
-  'This letter confirms the terms of the engagement between Antonio Vazquez, Enrolled Agent ("Preparer") and the undersigned client ("Client") for the preparation of the Client\'s 2025 federal and state income tax returns.',
-  'Scope of services: Preparer will prepare the returns based solely on information provided by Client. Preparer will make reasonable inquiries where information appears incomplete or inconsistent, but is not obligated to audit or independently verify the data.',
-  'Responsibilities: Client is responsible for providing all income, deduction, and credit information in a timely manner. Client understands that failure to disclose relevant information may result in incorrect returns and potential penalties.',
-  'Fees and payment: Fees are based on the complexity of the return and are estimated in advance. A $50 deposit is required to secure an appointment and is credited against the final fee. Balance is due upon completion, before filing.',
-  'Confidentiality: All information provided by Client will be held in strict confidence and used solely for the purpose of preparing the returns, except as otherwise authorized in writing.',
-];
-
-// The exact text the user is agreeing to. Frozen at component-eval
-// time and sent to the server on signing. The server hashes it with
-// SHA-256 into the signatures.audit_payload so a later edit to the
-// engagement copy can't retroactively alter "what they signed".
-const FULL_DOCUMENT_TEXT = `${TITLE}\n\n${PARAS.join('\n\n')}`;
+// Default preparer name when the TenantDisplayProvider hasn't mounted
+// the firm-owner data yet (dev mode pre-seed, mid-migration). Matches
+// the legacy hardcode that used to live in PARAS so a missing-context
+// case never produces an empty preparer reference in the signed legal
+// text. The audit (2026-05-15) caught the previous module-level
+// hardcode being baked into the SHA-256 of signatures.audit_payload
+// for EVERY tenant — onboarding tenant #2 (a CPA firm) under the
+// prior code would have produced a legally-invalid engagement letter
+// naming Antonio's firm. The component-scoped useMemo below derives
+// the text from useFirmOwner() so the hash captures the actual firm's
+// owner name at sign-time.
+//
+// Credential suffix ("Enrolled Agent" / "CPA" / "JD") is intentionally
+// dropped in this commit because FirmOwner doesn't carry credential
+// info yet. A future cleanup adds a `credential` field to FirmOwner
+// + concatenates conditionally. For now "[Owner Name] (Preparer)" is
+// strictly better than "[Owner Name], Enrolled Agent" applied to a
+// non-EA firm — less specific, but correct rather than wrong.
+const DEFAULT_OWNER_NAME = 'Antonio Vazquez';
 
 export default function EngagementPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
+  const owner = useFirmOwner();
+  const preparerName = owner?.name ?? DEFAULT_OWNER_NAME;
   const [checked, setChecked] = useIntakeField<boolean>('engagement.checked', false);
   const [signed, setSigned] = useIntakeField<boolean>('engagement.signed', false);
+  // engagement.letterSigned is the canonical flag the portal Profile
+  // tab reads to show this document as signed. Kept in sync with
+  // engagement.signed for backward compat with the existing 8879-vs-
+  // letter distinction; v1.5 splits into two distinct fields.
+  const [, setEngagementLetterSigned] = useIntakeField<boolean>(
+    'engagement.letterSigned',
+    false,
+  );
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [signError, setSignError] = React.useState<string | null>(null);
+
+  // The exact text the user is agreeing to. Built from tenant context
+  // + memoized so the SHA-256 hash captures the version of the text
+  // this client actually saw. The server hashes documentText into
+  // signatures.audit_payload, so a later edit (or a tenant swap) can
+  // never retroactively alter "what they signed."
+  const { title: TITLE, paras: PARAS, fullText: FULL_DOCUMENT_TEXT } =
+    React.useMemo(() => {
+      const title = 'Engagement Letter - 2025 Tax Year';
+      const paras = [
+        `This letter confirms the terms of the engagement between ${preparerName} ("Preparer") and the undersigned client ("Client") for the preparation of the Client's 2025 federal and state income tax returns.`,
+        'Scope of services: Preparer will prepare the returns based solely on information provided by Client. Preparer will make reasonable inquiries where information appears incomplete or inconsistent, but is not obligated to audit or independently verify the data.',
+        'Responsibilities: Client is responsible for providing all income, deduction, and credit information in a timely manner. Client understands that failure to disclose relevant information may result in incorrect returns and potential penalties.',
+        'Fees and payment: Fees are based on the complexity of the return and are estimated in advance. A $50 deposit is required to secure an appointment and is credited against the final fee. Balance is due upon completion, before filing.',
+        'Confidentiality: All information provided by Client will be held in strict confidence and used solely for the purpose of preparing the returns, except as otherwise authorized in writing.',
+      ];
+      return {
+        title,
+        paras,
+        fullText: `${title}\n\n${paras.join('\n\n')}`,
+      };
+    }, [preparerName]);
 
   const ready = checked && signed;
 
@@ -63,6 +101,12 @@ export default function EngagementPage() {
     });
     if (result.ok) {
       setSigned(true);
+      // Mirror to engagement.letterSigned so the portal Profile tab's
+      // signed-documents list shows this as signed (the Profile tab
+      // reads letterSigned, not signed, because `signed` is also used
+      // for the 8879 — same field carrying two meanings on the legacy
+      // intake. v1.5 splits these properly.)
+      void setEngagementLetterSigned(true);
     } else {
       setSignError(result.error ?? 'Could not record signature. Please try again.');
     }
