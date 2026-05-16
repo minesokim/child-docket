@@ -524,44 +524,49 @@ The core product differentiator. Competitors show dashboards you read. Docket sh
 
 ## 9. Agent fleet
 
-### Actually built and tested (as of 5/2/2026)
-Both live in `services/workers/src/agents/`. Both call `runDocketAgent` for cost telemetry + audit hook. Both have unit tests under `services/workers/src/test/`.
+### Actually built and tested (as of 2026-05-15)
+All live in `services/workers/src/agents/`. All call `runDocketAgent` for cost telemetry + audit hook. Test coverage varies; the four newest have dedicated test files at `services/workers/src/agents/*.test.ts`.
 
 | Agent | Model | Status | Notes |
 |---|---|---|---|
-| **Triage Classifier** | Haiku 4.5 | ✅ Built + tested | Classifies an inbound signal (Gmail message, doc upload, etc.) into one of 11 `issue_type` enum values with confidence + reasoning. JSON-schema-validated output. 258 LOC. |
-| **Inbox Drafter** | Sonnet 4.6 | ✅ Built + tested | Drafts a reply in Antonio's voice (bilingual, channel-aware) with confidence + reasoning. 209 LOC, 140-line system prompt. |
+| **Triage Classifier** | Haiku 4.5 | ✅ Built + tested | Classifies an inbound signal (Gmail message, doc upload, etc.) into one of 11 `issue_type` enum values with confidence + reasoning. JSON-schema-validated output. ~165 LOC. |
+| **Inbox Drafter** | Sonnet 4.6 | ✅ Built + tested | Drafts a reply in Antonio's voice (bilingual, channel-aware) with confidence + reasoning. ~295 LOC. Voice rules anchored at `packages/prompts/src/inbox-drafter.ts`. |
+| **Doc Classifier** | Haiku 4.5 (vision) | ✅ Built (Claude Vision OCR) | Classifies uploaded documents (W-2 / 1099-NEC / 1099-K / 1099-INT / 1099-DIV / K-1 / driver's license / etc.) post-OCR. ~170 LOC. Per the multi-page DL routing + Tesseract→Claude Vision engine swap. |
+| **Discovery Agent** | Sonnet 4.6 | ✅ Built + RAG-grounded + tested | The wedge agent. Position Framework run over IntakeState + doc summaries. RAG via `PostgresRetriever` (BM25 + Voyage-3-Large cosine + RRF fusion). ~728 LOC. Trust-gate enforced on output. Test coverage at `discovery-agent.test.ts` + `discovery-agent.format.test.ts`. |
+| **Memory Curator** | Haiku 4.5 | ✅ Built + tested | Extracts Memories from inbound messages + doc parses + intake answers → writes `client_facts` rows. ~210 LOC. Test at `memory-curator.test.ts`. |
+| **Nudge Agent** | Sonnet 4.6 | ✅ Built + tested | Life-event + drift + milestone surface (Slant marquee feature, locked 2026-05-13). Daily Inngest cron walks `client_facts` + `engagement` state + `nudge_rules`. ~250 LOC. Test at `nudge-agent.test.ts`. |
+| **Notice Triage** | Haiku 4.5 | ✅ Built | IRS-notice classifier (CP2000 / CP504 / LT11 et al.). ~225 LOC. |
+| **Notice Drafter** | Sonnet 4.6 | ✅ Built | Drafts notice-response cover letter + redacted-return references. ~305 LOC. |
 
-### Inngest functions (paper plumbing)
-Two functions are registered in `services/workers/src/functions/` but the integration points are stubbed (8× `TODO(week-1)` markers). They will not fire usefully until the Gmail OAuth path + tenants/integrations table queries land.
+### Inngest functions (mostly shipped)
+Nine functions are registered in `services/workers/src/functions/`. Most are wired end-to-end; the original "8× `TODO(week-1)` markers" caveat from the 5/2 revision is now stale — current count is 1 remaining `TODO(week-1)` (Twilio inbound → downstream classification).
 
-- `gmail-poll.ts` — cron every 10 min, **feature-flagged OFF**. Real `tenants` query stubbed.
-- `classify-gmail-message.ts` — event-driven. Real Gmail fetch + client matching + issue persistence + draft persistence all stubbed.
+- `gmail-poll.ts` — Gmail OAuth + tenant scan every 10 min. **Shipped.** Feature-flagged `ENABLE_GMAIL_POLL`.
+- `classify-gmail-message.ts` — event-driven Gmail → triage-classifier → issue + draft persistence. **Shipped.**
+- `classify-document.ts` + `finalize-document.ts` — full doc-classification pipeline. **Shipped.**
+- `classify-notice.ts` — IRS-notice classification. **Shipped.**
+- `cost-outlier-alert.ts` + `cost-runaway-alert.ts` + `cost-spike-alert.ts` — cost-telemetry alarms.
+- `verify-actions-chain.ts` — nightly cryptographic audit-chain verification (per migration 0022).
 
 ### Designed but NOT built
 | Agent | Status | Why deferred |
 |---|---|---|
-| **Morning Brief** | Paper spec only | Needs `ledger`, `knowledge`, `xero` MCP servers (none built); Gmail integration not flowing yet |
-| **OLT Prep Handoff** *(or Notice Triage — Antonio's choice week 1)* | Paper spec only | Needs `olt` browser automation MCP server (not built; M2+ per build order) |
-| **Document Triage** | Paper spec only | Needs `documents` MCP server + Cloudflare R2 + Haiku vision pipeline (per `docs/DOCS-CAPTURE-PIPELINE.md`) |
-| **Notice Response** | Paper spec only | Needs `irs-solutions` MCP + knowledge graph |
-| **Discovery Agent** *(continuous scanner across 9 categories — the wedge)* | Paper spec only | Continuous, year-round, across entire firm's book. NOT just deductions. Nine categories: tax-saving opportunities (Augusta · §179 · S-corp election thresholds · QBI bunching · Roth conversion windows · AOTC · §199A optimization · cost segregation · charitable bunching) · cross-doc discrepancies (1099-NEC vs Xero vs bank deposits) · YoY discrepancies · missing docs · compliance gaps (BOI · SoI · CA SoS suspension · payroll deadlines · 1099-K thresholds) · audit risk signals · strategy moments (business crosses $250K → S-corp · client crosses $1M → estate) · cross-platform reconciliation · lifecycle moments · client-side life events. Each finding carries category tag + severity (informational/opportunity/risk/critical-deadline) + cited authority if it's a tax position + dollar impact estimate + action card. Runs nightly cron + on-demand + event-triggered. Distinct from Tax Reviewer Agent (filing-time gate). See [`docs/POSITION-FRAMEWORK.md`](docs/POSITION-FRAMEWORK.md) §4. Phase-3 work. |
-| **Tax Reviewer Agent** *(filing-time gate)* | Paper spec only | Triggered when preparer clicks "Review before file" on a return. Looks at completed return + source docs + math + form structure. Outputs: errors blocking file, errors needing disclosure, cosmetic auto-fixes. Each error classified by tier (Tier 1 mistake = file blocked; Tier 3 = surface for EA decision; cosmetic = inline fix). Discovery findings can become Tax Reviewer blockers. Different mental model — Discovery is proactive scanner; Tax Reviewer is gate before filing. Both needed. |
-| **Strategy Agent** *(EA-initiated multi-year modeling)* | Paper spec only | Same dependencies as Discovery + entity/retirement/depreciation rule encoding. POSITION-FRAMEWORK §4. |
-| **Position Agent** *(aggressive territory: defend or refuse)* | Paper spec only | Same dependencies. The refusal-floor logic is the load-bearing piece. POSITION-FRAMEWORK §2. |
-| **Nudges Agent** *(life-event + drift + milestone surface)* | Paper spec only | Locked 2026-05-13 after Slant.app research. Daily cron walks `client_facts` + `engagement` state + `calendar_events` + `nudge_rules`, drafts approved-pending preparer-to-client outreach. See §8 Nudges. Ships V1.5 alongside Reminders execution scheduler. |
-| **Memory Curator Agent** *(continuous Memories extraction)* | Paper spec only | Background job that extracts plain-English Memories from every inbound message, meeting transcript, doc parse, and intake answer → writes `client_facts` rows tagged `kind='memory'`. Drives the Memories tab UI (§4). Locked 2026-05-13 after Slant.app research; their "Memories" surface is the strongest single steal from their product. Ships Phase 5. |
-| **Notetaker Agent** *(meeting transcript → action items)* | Paper spec only | Records meeting (Zoom / Google Meet / phone), transcribes via Deepgram/Gladia (L5), routes through Memory Curator to extract Memories + action items + sentiment + follow-up commitments. Output ties to client record + creates Tasks in engagement workflow. V1.5 ship. Slant's #2 marketing capability — strong proof point that financial-services-adjacent buyers expect this. |
-| **Pre-Meeting Brief Agent** *(N-hour-ahead client meeting prep)* | Paper spec only | Fires N hours before any `calendar_events` row tagged as a client meeting (default: 1hr for in-day meetings, 24hr for next-day). Pulls top 5 Memories for attendees + summarizes last 3 messages + surfaces pending TaxPositions awaiting client decision + lists open issues + surfaces overdue payments + flags any year-over-year changes worth raising. Output: 1-page brief rendered on the meeting card in Calendar + emailed to Antonio 1hr pre-meeting. Generalizes the existing Pre-Signature Checklist (which only fires for 8879 sign meetings) to all client meetings. V1.5 ship. Slant pitches "Pre-and post-meeting automation" as a Notetaker subfeature; we split it into a dedicated agent so it can fire for meetings that don't involve a Notetaker recording. |
-| **Action-Item Extractor** *(Notetaker → Tasks in engagement)* | Paper spec only | Runs on every Notetaker transcript post-meeting. Extracts: action items by owner (Antonio commits / client commits), follow-up commitments with due dates, decisions reached. Creates `tasks` rows in the active engagement for each Antonio-owned action item with the due date pre-populated. Creates `pending_promises` entries (Promise Keeper agent input) for client-owned items. Drafts a follow-up email to the client summarizing what was decided + what each side committed to. V1.5 ship. This is the concrete "transcript → workflow" chain that Slant pitches generically; for tax it ties to the engagement state machine. |
-| **Practice Pattern, Promise Keeper, Outcome Prediction, Phone Agent** | Paper spec only | v1+, post-5/15 |
+| **Morning Brief** | Paper spec only | Needs `ledger`, `knowledge`, `xero` MCP servers (none built); Gmail integration is flowing now but downstream brief composition isn't wired. |
+| **OLT Prep Handoff** | Paper spec only | Needs `olt` browser automation MCP server (not built; M2+ per build order). |
+| **Tax Reviewer Agent** *(filing-time gate)* | Paper spec only | Triggered when preparer clicks "Review before file" on a return. Looks at completed return + source docs + math + form structure. Outputs: errors blocking file, errors needing disclosure, cosmetic auto-fixes. Discovery findings can become Tax Reviewer blockers. Different mental model — Discovery is proactive scanner; Tax Reviewer is gate before filing. Both needed. |
+| **Strategy Agent** *(EA-initiated multi-year modeling)* | Paper spec only | Builds on Discovery's RAG substrate + entity/retirement/depreciation rule encoding. POSITION-FRAMEWORK §4. |
+| **Position Agent** *(aggressive territory: defend or refuse)* | Paper spec only | Same dependencies. The refusal-floor logic is the load-bearing piece. POSITION-FRAMEWORK §2. Note: `refusalIf` evaluation against `IntakeState` is unimplemented today — the v0 catalog scanner emits zero genuine refusals because of this, audit-flagged 2026-05-15. |
+| **Notetaker Agent** *(meeting transcript → action items)* | Paper spec only | Records meeting (Zoom / Google Meet / phone), transcribes via Deepgram/Gladia (L5), routes through Memory Curator. V1.5 ship. |
+| **Pre-Meeting Brief Agent** *(N-hour-ahead client meeting prep)* | Paper spec only | Fires N hours before any `calendar_events` row tagged as a client meeting. Generalizes the existing Pre-Signature Checklist. V1.5 ship. |
+| **Action-Item Extractor** *(Notetaker → Tasks in engagement)* | Paper spec only | Runs on every Notetaker transcript post-meeting. V1.5 ship. |
+| **Practice Pattern, Promise Keeper, Outcome Prediction, Phone Agent** | Paper spec only | v1+, post-7/30. |
 
 ### Agent contract — what's enforced today
 - System prompt + scoped model tier (Haiku/Sonnet/Opus): ✅ in `runDocketAgent`
 - Cost telemetry tagged with tenant + agent + action class: ✅ via `onAction` hook
 - Audit-trail hook on every call: ✅ at orchestrator level (caller wires it to the `actions` table)
-- Trust gate before external action: ❌ not built (placeholder field on tenant; no enforcement code yet)
-- Per-agent playbook bundle: ❌ not built (`packages/playbooks/` doesn't exist)
+- Trust gate before external action: 🟡 **partially shipped.** `assertTrustGate` helper at `packages/shared/src/trust-gate.ts` (67 tests pass). Called from 5 agents (discovery-agent, inbox-drafter, notice-drafter, flows/discovery-scan, mcp-gateway). NOT centrally enforced inside `runDocketAgent` — any future agent that forgets to opt in silently bypasses the L1-L4 trust ladder. Audit punch list flags centralization as a follow-up.
+- Per-agent playbook bundle: ❌ not built (`packages/playbooks/` doesn't exist).
 
 ### Critical authorization boundary (non-negotiable)
 
@@ -1117,34 +1122,67 @@ docket/
 3. Components consume via `useFirmOwner()` / `useTenantName()` / `initialsOf()`.
 4. Avoids prop-drilling firm-owner data through 27+ pages.
 
-### Verified working (5/2/2026)
-- `pnpm install` clean
+### Verified working (2026-05-15)
+- `pnpm install` clean.
 - Both Next.js apps deployed to Vercel and serving real traffic:
-  - `apps/client-portal` → `https://docket-portal.vercel.app` (production rebuild)
-  - `apps/client-portal` legacy demo → `https://docket-client-portal.vercel.app` (mocks; do NOT point real flows here — kept alive for marketing/Loom)
-  - `apps/command-room` → Vercel host configured this session; check Vercel dashboard
-- 12 migrations applied against Neon dev branch. Database state post-`0012_actions_allow_fk_cascade_null.sql`.
-- 112 tests pass: `cd packages/shared && bun test src` (the `pnpm test` glob doesn't expand on Windows; run from package dir).
-- Hello-world Claude SDK verified: Sonnet 4.6, $0.0005, 1.8s latency. Haiku 4.5 verified: $0.0001 per Priya doc-mismatch classification, <1s.
-- Both agents (triage-classifier, inbox-drafter) call `runDocketAgent` cleanly with cost telemetry and audit hooks firing.
+  - `apps/client-portal` → `https://docket-portal.vercel.app` (production). Vercel project name is still `docket-portal` post-Petal-rebrand — see `docs/BRAND-RENAME-INVENTORY.md`.
+  - `apps/client-portal` legacy demo → `https://docket-client-portal.vercel.app` (mocks; do NOT point real flows here — kept alive for marketing/Loom).
+  - `apps/command-room` → `docket-command-room.vercel.app` (check Vercel dashboard for canonical URL).
+- **36 migrations applied** against Neon dev branch (0000–0035). Last applied: `0035_engagement_projects_one_primary.sql`.
+- Test counts as of 2026-05-15:
+  - `@docket/shared` — **317 tests** pass (`cd packages/shared && bun test src`).
+  - `@docket/tax-graph` — 71 tests.
+  - `@docket/db` — 57 pass + 2 skip (RLS skips without `DATABASE_URL_RLS_TEST`).
+  - `services/orchestrator` — 67 tests.
+  - `services/workers` — 62 tests across 4 agent test files.
+- Hello-world Claude SDK verified: Sonnet 4.6, $0.0005, 1.8s latency. Haiku 4.5 verified: $0.0001 per doc-classification, <1s.
+- **Seven agents** call `runDocketAgent` cleanly with cost telemetry + audit hooks firing (triage-classifier, inbox-drafter, doc-classifier, discovery-agent, memory-curator, nudge-agent, notice-drafter, notice-triage — see §9).
 - Phone-OTP auth works end-to-end against Clerk + Twilio. Phone-binding gate redirects unbound phones to `/no-access`.
-- 28 intake pages persist field writes via `useIntakeField` → `saveIntakeField` server action → Postgres (encrypted for SSN/EIN/bank, RLS-scoped per tenant).
+- 28 intake pages persist field writes via `useIntakeField` → `saveIntakeField` server action → Postgres (encrypted for SSN/EIN/bank/path-bound AAD, RLS-scoped per tenant).
+- Cryptographic audit chain shipped (migration 0022). Nightly Inngest `verify-actions-chain` cron verifies per-tenant SHA-256 chain integrity.
+- Webhook signature verification helper shipped at `packages/shared/src/webhook-verification.ts`; Twilio + Square + DocuSign + Inngest routes all verify HMAC before any DB read/write.
+- AAD binding shipped: `deriveAAD({tenantId, clientId, taxYear, path})` at `packages/db/src/encryption.ts:223`. Called from `unlock.ts` + intake-write paths.
 
 ### Known stubs and mocks (must not be claimed as "done")
-- **Form 8879 mock route** at `/portal/sign-8879` — gated behind `NEXT_PUBLIC_ENABLE_MOCK_8879=true`. Hard-disabled in prod by default. Real DocuSign + LexisNexis KBA path is Day 13 of build order.
-- **Stripe placeholder copy** still on `/deposit` page despite `STRIPE_*` env vars being dropped. Square Checkout integration is Day 8–9.
-- **Twilio "Send via SMS"** button on `/clients/new` — currently greyed out with "Coming soon" hint. Per-tenant Twilio creds + server action not built.
-- **Preparer-side SSN/EIN reveal** — masked-only on command-room today. Mirror of `client-portal/src/lib/intake/reveal.ts` not yet built; gated read by `firm_owner | preparer | reviewer` is the planned shape.
-- **Sidebar dead links** in command-room: `/messages`, `/documents`, `/settings` 404. Need at least placeholder routes.
-- **Trust escalation gate** — placeholder enum on tenant; no enforcement code.
-- **MCP gateway** — does not exist (orchestrator is pre-MCP).
+
+**Substantially refreshed 2026-05-15 after the 5-agent audit. ~half the prior items resolved; new audit-surfaced gaps added.**
+
+Resolved between 5/2 and 5/15:
+- ✅ **Stripe placeholder on `/deposit`** — replaced with Square Checkout (per-tenant token vault + payments table + webhook handler).
+- ✅ **Twilio "Send via SMS"** — wired with `sendInviteSms` server action + per-tenant Twilio creds + Twilio API integration.
+- ✅ **Preparer-side SSN/EIN reveal** — `apps/command-room/src/lib/intake/unlock.ts` shipped (per-session unlock, role gate, rate limit, AAD-aware decrypt, audit row).
+- ✅ **Sidebar dead links** — `/messages`, `/documents`, `/settings` (and 5 sub-routes) all built.
+- ✅ **MCP gateway** — `packages/mcp-gateway/` shipped (992 LOC; trust-gate + audit-chain integration).
+- ✅ **Webhook signature verification helper** — `packages/shared/src/webhook-verification.ts` (317 tests covering Twilio + Square + DocuSign + Inngest).
+- ✅ **AAD on AES-GCM** — bound to `(tenantId, clientId, taxYear, path)` via `deriveAAD()`. Legacy 3-tier fallback (AAD-bound → AAD-less → master-KEK) is still active during the migration window; `pnpm --filter @docket/db reencrypt-legacy` walker has NOT been run prod-wide yet — that's an open operator action.
+- ✅ **Form 8879 mock route** — the mock SignaturePad + hardcoded fake tax figures REMOVED 2026-05-15 (audit fix). The `/portal/sign-8879` URL now renders an honest "we're wiring this up" placeholder; the real KBA-backed flow lives at `[id]/sign-iframe.tsx` and is reachable via the DocuSign envelope URL with envelope id. `NEXT_PUBLIC_ENABLE_MOCK_8879` env var no longer read.
+- ✅ **`/api/e2e-bypass` + `/api/sentry-test` (both apps)** — DELETED 2026-05-15 per PRODUCTION-READINESS §D pre-public-launch checklist. Public auth-bypass + deliberate-500 routes don't belong in deployed code, even env-gated.
+- ✅ **Sentry DSN configured** — both apps wired with `app:` tag; scrubber at `packages/shared/src/sentry-scrubber.ts` walks message/extra/breadcrumbs/request/user. PII `console.log` paths on `unlock.ts` + `send-invite-sms.ts` migrated to `Sentry.addBreadcrumb` 2026-05-15.
+- ✅ **Trust escalation gate (partial)** — `assertTrustGate` helper at `packages/shared/src/trust-gate.ts` with 67 tests + called from 5 agents. Central enforcement inside `runDocketAgent` is still a follow-up (audit punch list).
+
+Still open:
+- **Hardcoded "Vazant Consulting" / "Antonio Vazquez" copy** — engagement letter + §7216 consent text fixed 2026-05-15 (tenant-aware via `useFirmOwner`/`useTenantName` — legal payload integrity for tenant #2). **Remaining surfaces:** `/portal/profile` Firm-info card + `VAZANT CONSULTING` footer, `/portal/messages` header, `apps/client-portal/src/app/page.tsx`, `apps/client-portal/src/app/(intake)/welcome/content.tsx`, `apps/client-portal/src/app/(intake)/deposit/page.tsx`. Plus the Petal-rename-pending surfaces inventoried at `docs/BRAND-RENAME-INVENTORY.md`.
+- **Trial fonts** in `apps/client-portal/public/fonts/trial/` (Suisse Int'l + FAIRE Octave). License expired **2026-05-14**. Founder decision 2026-05-15: defer removal — not yet serving real production traffic. License OR revert before public launch.
+- **In-process rate limiter** (`packages/shared/src/rate-limit.ts:31` per-Vercel-lambda `new Map`). Upstash Redis swap queued. ~20 call sites depend on this.
 - **`tenants.clerk_org_id` is NULL** in dev — Antonio hasn't created the Clerk Organization yet, so the email-claim fallback path in `current-user.ts` is the active one.
-- **Hardcoded "Vazant Consulting" / "Antonio Vazquez" copy** in `apps/client-portal/src/app/(intake)/welcome/content.tsx`, `apps/client-portal/src/app/page.tsx`, `apps/client-portal/src/app/(intake)/deposit/page.tsx`, `apps/client-portal/src/app/portal/sign-8879/page.tsx` (mock only). Marked with TODO(multi-firm). Not load-bearing until tenant #2.
-- **Trial fonts** in `public/fonts/trial/` (Suisse Int'l + FAIRE Octave). License forbids commercial use; trial expires 5/14/2026. License OR revert before that date.
-- **Sentry SDK installed**, no DSN set yet → `Sentry.captureException` is a no-op. Founder will sign up before real client onboards.
-- **Rate limiter is in-process** (per-Vercel-lambda Map). Upstash Redis swap is Day 9.
-- **Webhook signature verification helper** not built — needed before Square / DocuSign / Twilio / Inngest webhooks land.
-- **AAD on AES-GCM** not bound to `(tenant_id, client_id, path)`. Master-KEK fallback path in `encryption.ts:194-215` is still live; run `pnpm --filter @docket/db reencrypt-legacy --dry-run` before any real client onboards.
+- **Discovery Scan landing → Discovery agent pipeline** — `/api/scan-intake-stub` persists prospect rows + fires Sentry breadcrumb, but does NOT enqueue an Inngest event to run `composeDiscoveryScan`. Manual David-review gate per `docs/DISCOVERY-SCAN-OPERATIONAL.md` "Manual gate during first 30 scans" — intentional. Auto-pipeline ships after the first 30 manual scans validate cost + quality.
+- **Position Library v0 review status** — all 20 entries at `content/position-library/v0/positions/*.md` are `DRAFT-DAVID`. The `reviewStatus` ingestion gate default-denies these from prospect-facing scans. Antonio review session is gating the wedge — until those flip to `ANTONIO-VALIDATED`, real prospects can't receive scan PDFs with surfaced positions.
+- **Refusal floor evaluation** — every catalog entry has a `refusalIf` array; neither the deterministic scanner nor the LLM Discovery agent evaluates it against `IntakeState` today. PDF's "Refused — below Reasonable Basis" section is permanently empty in v0. Audit-flagged; fix is v1 work.
+- **`reencrypt-legacy` walker not run prod-wide** — AAD-less + master-KEK fallback paths at `encryption.ts:285-296` stay active until the walker completes. Operator action.
+- **Drizzle journal stops at 0016** — migrations 0017-0035 are applied via `packages/db/scripts/apply-N.ts` orchestrators (run from CI per `.github/workflows/ci.yml`). The `pnpm --filter @docket/db migrate` command referenced in §22 only applies through the journal; a new contributor following the boot ritual ends up 19 migrations behind prod with no obvious explanation for the resulting `column X does not exist` errors. See updated §22 below.
+- **`.githooks/pre-commit` + `commit-msg` silent `exit 0` when `bun` is missing from PATH** — softer bypass than `--no-verify`, equally invisible. On a fresh Windows dev machine without bun, every commit skips the typecheck + shared-tests + protocol-gate enforcement. Audit-flagged; fix queued.
+- **MFA enforcement** for `firm_owner`/`preparer`/`reviewer` roles is Clerk-dashboard-config-only, no code-level enforcement. SOC 2 CC6.1 gap.
+- **Master KEK in `process.env.PII_ENCRYPTION_KEY`** — Vercel-env-only. No KMS, no HSM, no split-knowledge. Rotation script exists but is manual.
+- **Vision agent** at `services/orchestrator/src/vision-agent.ts` has NO Bedrock fallover. Anthropic outage = doc-classification pipeline dark.
+- **ZDR claim** asserted at `apps/client-portal/src/app/trust/page.tsx` + WISP + §7216 consent text + this CLAUDE.md §6, but no SDK header/flag verifies it. Anthropic-account-tier proof must live somewhere; operator action queued.
+
+Operator actions queued (not engineering work):
+- Unset `E2E_BYPASS_ENABLED` / `E2E_TEST_PHONE` / `E2E_TEST_OTP` / `E2E_ALLOW_PROD_BYPASS` from Vercel `docket-portal` envs (routes deleted 2026-05-15; envs are now noise).
+- Unset `NEXT_PUBLIC_ENABLE_MOCK_8879` from Vercel envs.
+- Verify Anthropic Console account tier supports ZDR; document or rewrite the public ZDR claim.
+- Provision DNS + Resend domain + 3 mailboxes at the final brand domain (deferred pending name decision per `BRAND-RENAME-INVENTORY.md`).
+- Apply Vouch + Embroker E&O + Cyber bundle per `docs/CYBER-INSURANCE-RECOMMENDATION.md` ($1M aggregate each, target $2,500-3,500/yr).
+- Schedule Antonio review pass over the 20-position library; flip review-status to `ANTONIO-VALIDATED`.
 
 ---
 
@@ -1223,15 +1261,21 @@ The client popup has its own billing tab. **Don't add BillingCard to popup overv
 
 When loading this project cold, in this order:
 
-1. **Read this CLAUDE.md** (you are here). It now reflects reality as of 5/2/2026, not aspiration.
-2. **Then read the most recent session handoff** in `docs/OVERNIGHT-HANDOFF-*.md` or `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas (what shipped, what's open, what the founder decided, in-context decisions not yet logged to AUTONOMOUS-DECISIONS.md, and any token-efficiency or workflow patterns the prior session adopted). When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in. Latest as of 2026-05-13: [`docs/OVERNIGHT-HANDOFF-2026-05-13.md`](docs/OVERNIGHT-HANDOFF-2026-05-13.md) — covers C24-C29 substrate shipping + agent-platform research + token-efficiency pass + the C30 Agent SDK migration plan for the next session.
+1. **Read this CLAUDE.md** (you are here). It now reflects reality as of 2026-05-15, not aspiration. Several §18 stubs that prior CLAUDE.md revisions listed as "not built" are shipped now; re-read §9 + §18 for the current honest state.
+2. **Then read the most recent session handoff** in `docs/OVERNIGHT-HANDOFF-*.md` or `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas. When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in. Latest handoff: [`docs/OVERNIGHT-HANDOFF-2026-05-13.md`](docs/OVERNIGHT-HANDOFF-2026-05-13.md). The 2026-05-15 audit + fix sprint isn't in a handoff file — its outputs are `docs/BRAND-RENAME-INVENTORY.md` + the §18 known-stubs rewrite above + the audit punch list embedded in the recent commit trailers.
 3. **Verify the dev DB is caught up** before writing any code that touches schema:
+
    ```bash
-   pnpm --filter @docket/db migrate
+   pnpm --filter @docket/db migrate          # applies Drizzle-journaled migrations 0000-0016
+   pnpm --filter @docket/db apply-post-journal  # applies hand-orchestrated 0017-0035
    ```
+
+   **⚠️ CRITICAL TRAP — the Drizzle journal stops at 0016.** Migrations 0017–0035 (19 of them) are applied via `packages/db/scripts/apply-N.ts` orchestrators run from CI (`.github/workflows/ci.yml` lines ~196-233). If you run ONLY `pnpm --filter @docket/db migrate`, you end up 19 migrations behind prod and will hit `column X does not exist` errors with no obvious cause. The wrapper command `apply-post-journal` (if present) chains both; otherwise run the individual scripts in `packages/db/scripts/`. Audit-flagged 2026-05-15.
+
 4. **Skim the live deployments** before assuming what works:
    - Open `https://docket-portal.vercel.app/login` → should show login UI
-   - Open the command-room URL (in Vercel dashboard) → `/clients` should show the empty state
+   - Open `https://docket-portal.vercel.app/scan` → Discovery Scan landing page (cold-traffic prospect funnel)
+   - Open the command-room URL (`docket-command-room.vercel.app`, check Vercel dashboard) → `/clients` should show the empty state
 5. **Strategic detail:** [`docs/STRATEGIC-BRIEF.md`](docs/STRATEGIC-BRIEF.md) — full strategic synthesis.
 6. **The journey, not the destination:** [`docs/DECISION-JOURNEY.md`](docs/DECISION-JOURNEY.md) — chronological narrative of how we got here, what we considered, what we rejected, when to revisit each lock-in.
 7. **User's verbatim framings:** [`docs/SLICES.md`](docs/SLICES.md) — actual passages the user wrote at each decision point. The framings ARE the product. When in doubt about voice, re-read.
