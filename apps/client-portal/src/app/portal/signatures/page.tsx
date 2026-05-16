@@ -204,14 +204,30 @@ export default function PortalSignaturesPage() {
               <Eyebrow t={t} style={{ marginBottom: 12 }}>
                 Awaiting you
               </Eyebrow>
+              {/*
+                SigCard locked unconditionally as of 2026-05-15 audit:
+                the mock /portal/sign-8879 route was removed and the
+                DocuSign envelope-completed webhook isn't wired into
+                the portal yet. Routing a click to the placeholder
+                produces a back-button loop (codex caught this on the
+                Task 3 review). Re-enable by passing a real envelope
+                deep-link as `onSign` once the envelope id is queryable
+                from this page's data layer.
+              */}
               <SigCard
                 t={t}
                 form="Form 8879"
                 subtitle="E-file authorization. Required before Antonio can transmit your return to the IRS."
                 status="pending"
-                locked={!depositPaid}
-                reason="AVAILABLE AFTER PAYMENT"
-                onSign={() => router.push('/portal/sign-8879')}
+                locked={true}
+                reason={
+                  !depositPaid
+                    ? 'AVAILABLE AFTER PAYMENT'
+                    : 'AVAILABLE WHEN YOUR PREPARER SENDS THE ENVELOPE'
+                }
+                onSign={() => {
+                  /* no-op: see comment above */
+                }}
               />
             </div>
           )}

@@ -1,18 +1,36 @@
 'use client';
 
-// Form 8879 e-file authorization sign flow.
+// Form 8879 e-file authorization sign flow — index route.
 //
-// SECURITY GATE (May 2026 audit): the implementation below is a MOCK.
-// It flips `engagement.signed = true` after a fake signature pad and
-// displays HARDCODED tax figures (AGI / refund / SSN suffix / bank
-// destination) that are NOT the taxpayer's real return. IRS Pub 1345
-// requires credit-bureau KBA on every remote 8879 — this mock has none.
+// HISTORICAL: this file previously housed a `Sign8879Mock` flow gated
+// behind `NEXT_PUBLIC_ENABLE_MOCK_8879=true`. The mock displayed
+// HARDCODED tax figures (AGI / refund / SSN suffix / bank destination)
+// that were NOT the taxpayer's real return, and used a fake signature
+// pad to flip `engagement.signed = true` without DocuSign and without
+// the IRS Pub 1345-required credit-bureau KBA.
 //
-// This route is therefore HARD-DISABLED in production until DocuSign
-// + LexisNexis KBA lands (Day 13 of the 14-day rebuild plan). Set the
-// `NEXT_PUBLIC_ENABLE_MOCK_8879=true` env var ONLY for demo/Loom
-// recording. Real California taxpayer e-file authorization must not
-// be issued through this route.
+// Mock removed 2026-05-15 per audit + PRODUCTION-READINESS §D
+// pre-public-launch checklist. Even with the env gate, a single
+// `vercel env add NEXT_PUBLIC_ENABLE_MOCK_8879 true production`
+// turned the route into a legally-effectless 8879 issuer in front of
+// real California taxpayers. Deleting the mock surface is the only
+// SOC 2 + IRS-Pub-1345 compliant move.
+//
+// The real KBA-backed flow lives at `[id]/sign-iframe.tsx`. Real
+// taxpayers reach it via the DocuSign envelope URL (which carries the
+// envelope id, generated upstream in command-room by
+// `apps/command-room/src/components/sign-8879-form.tsx` calling
+// `request-sign-8879.ts`). The bare `/portal/sign-8879` URL (no id)
+// was the destination of 4 in-app CTAs (signatures page, portal home,
+// portal-stage map, _portal-frame.tsx pathname guard); those CTAs are
+// now disabled at the source (Task 3 follow-up — see home/page.tsx
+// + signatures/page.tsx + portal-stage.ts edits in this commit) so
+// users no longer reach this placeholder via loop. Direct URL entry
+// or a stale link is the only remaining path here, and the back
+// button returns cleanly to /portal/home.
+//
+// The `NEXT_PUBLIC_ENABLE_MOCK_8879` env var is no longer read by any
+// code path. It's been removed from `.env.example`.
 
 import {
   Body,
@@ -20,30 +38,12 @@ import {
   buildTheme,
   Eyebrow,
   H1,
-  H2,
-  HandCheckmark,
-  Row,
   Screen,
-  SignaturePad,
   Stack,
 } from '@docket/ui';
 import { useRouter } from 'next/navigation';
-import * as React from 'react';
-import { useIntakeField } from '@/lib/intake-context';
 
-const MOCK_8879_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MOCK_8879 === 'true';
-
-export default function Sign8879Page() {
-  if (!MOCK_8879_ENABLED) {
-    return <Sign8879Disabled />;
-  }
-  return <Sign8879Mock />;
-}
-
-// Honest placeholder shown to real clients until DocuSign + KBA ships.
-// No fake tax figures, no fake signature surface, no claim of legal
-// effect — just an explanation and a way back to the portal home.
-function Sign8879Disabled() {
+export default function Sign8879IndexPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const router = useRouter();
   return (
@@ -73,316 +73,6 @@ function Sign8879Disabled() {
           Back to portal
         </Button>
       </div>
-    </Screen>
-  );
-}
-
-function Sign8879Mock() {
-  const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const router = useRouter();
-  const [fullName] = useIntakeField<string>('personal.fullName', '');
-  // engagement.signed marks the 8879 as signed in v0. Day 13 swaps this
-  // for the real DocuSign + KBA flow with a separate `signatures` row;
-  // this flag stays as the cheap UI gate.
-  const [, setSigned8879] = useIntakeField<boolean>('engagement.signed', false);
-  const [signed, setSigned] = React.useState(false);
-  const [submitting, setSubmitting] = React.useState(false);
-
-  // No persona-name fallback. Real client signing the 8879 must have
-  // their actual name (the form is legally tied to it). If fullName is
-  // somehow empty we show empty - better than rendering somebody else's
-  // name on a federal tax document.
-  const firstName = fullName.split(' ')[0] || 'there';
-
-  const onSubmit = () => {
-    if (!signed || submitting) return;
-    setSubmitting(true);
-    // Show the success animation, then commit and route home. The
-    // setIntakeField persists to Postgres via the debounced save path;
-    // by the time the user lands on /home, the layout's getOrCreate
-    // call sees the updated flag.
-    setTimeout(() => {
-      void setSigned8879(true);
-      router.push('/portal/home');
-    }, 2100);
-  };
-
-  return (
-    <Screen t={t} style={{ position: 'relative' }}>
-      <div
-        style={{
-          padding: '14px 18px 12px',
-          borderBottom: `1px solid ${t.borderSoft}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          background: t.bg,
-        }}
-      >
-        <button
-          onClick={() => router.back()}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 4,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            color: t.inkSoft,
-            fontFamily: t.sans,
-            fontSize: 14,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M9 3L5 7l4 4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back
-        </button>
-        <div style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontFamily: t.mono, fontSize: 10, color: t.muted, letterSpacing: 1.2 }}>
-            E-FILE AUTHORIZATION
-          </div>
-          <div style={{ fontFamily: t.serif, fontSize: 15, color: t.ink, marginTop: 2 }}>
-            Form 8879
-          </div>
-        </div>
-        <div style={{ width: 48 }} />
-      </div>
-
-      <div style={{ padding: '20px 20px 18px', flex: 1 }}>
-        <Stack gap={14}>
-          <div>
-            <Eyebrow t={t}>Taxpayer</Eyebrow>
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 19,
-                color: t.ink,
-                marginTop: 4,
-              }}
-            >
-              {fullName}
-            </div>
-            <div
-              style={{
-                fontFamily: t.mono,
-                fontSize: 11,
-                color: t.muted,
-                marginTop: 2,
-                letterSpacing: 0.3,
-              }}
-            >
-              SSN ···-··-4829 · Tax year 2025
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: t.borderSoft }} />
-
-          <div>
-            <Eyebrow t={t}>Return summary</Eyebrow>
-            <div
-              style={{
-                marginTop: 10,
-                background: t.bgElev,
-                borderRadius: 10,
-                padding: '14px 16px',
-              }}
-            >
-              <Row justify="space-between" style={{ marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: t.inkSoft }}>Adjusted gross income</span>
-                <span style={{ fontSize: 13, color: t.ink, fontFamily: t.mono }}>$84,320</span>
-              </Row>
-              <Row justify="space-between" style={{ marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: t.inkSoft }}>Total tax</span>
-                <span style={{ fontSize: 13, color: t.ink, fontFamily: t.mono }}>$11,468</span>
-              </Row>
-              <Row justify="space-between" style={{ marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: t.inkSoft }}>Federal withholding</span>
-                <span style={{ fontSize: 13, color: t.ink, fontFamily: t.mono }}>$13,260</span>
-              </Row>
-              <div style={{ height: 1, background: t.border, margin: '8px 0' }} />
-              <Row justify="space-between">
-                <span style={{ fontSize: 14, color: t.ink, fontWeight: 500 }}>Refund</span>
-                <span
-                  style={{
-                    fontSize: 15,
-                    color: '#2e6b42',
-                    fontFamily: t.serif,
-                    fontWeight: 500,
-                  }}
-                >
-                  $1,792
-                </span>
-              </Row>
-            </div>
-          </div>
-
-          <div>
-            <Eyebrow t={t}>Declaration</Eyebrow>
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 14,
-                lineHeight: 1.6,
-                color: t.inkSoft,
-                marginTop: 8,
-                textWrap: 'pretty' as React.CSSProperties['textWrap'],
-              }}
-            >
-              Under penalties of perjury, I declare that I have examined a copy of my 2025 federal
-              individual income tax return (Form 1040) and accompanying schedules, and to the best
-              of my knowledge and belief, it is true, correct, and complete.
-            </div>
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 14,
-                lineHeight: 1.6,
-                color: t.inkSoft,
-                marginTop: 10,
-              }}
-            >
-              I consent to allow my Electronic Return Originator (Antonio Vazquez, EA - P00456789)
-              to send my return to the IRS, to receive the acknowledgement of acceptance or reason
-              for rejection, and if necessary, to transmit the corrected return.
-            </div>
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 14,
-                lineHeight: 1.6,
-                color: t.inkSoft,
-                marginTop: 10,
-              }}
-            >
-              I authorize the U.S. Treasury and its designated Financial Agent to initiate an ACH
-              electronic funds deposit entry to the financial institution account indicated in my
-              tax return for my refund.
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: t.bgElev,
-              border: `1px solid ${t.border}`,
-              borderRadius: 10,
-              padding: '12px 14px',
-            }}
-          >
-            <div
-              style={{
-                fontFamily: t.mono,
-                fontSize: 10,
-                color: t.rustInk,
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-                marginBottom: 6,
-              }}
-            >
-              Refund destination
-            </div>
-            <div style={{ fontFamily: t.serif, fontSize: 14, color: t.ink }}>
-              Chase · Checking ····6291
-            </div>
-            <div
-              style={{
-                fontFamily: t.mono,
-                fontSize: 11,
-                color: t.muted,
-                marginTop: 2,
-              }}
-            >
-              Direct deposit · 1–3 weeks after acceptance
-            </div>
-          </div>
-
-          <div style={{ marginTop: 10 }}>
-            <Eyebrow t={t}>Your signature</Eyebrow>
-            <div style={{ marginTop: 10 }}>
-              <SignaturePad t={t} signed={signed} onSign={() => setSigned(true)} name={fullName} />
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontFamily: t.mono,
-              fontSize: 9.5,
-              color: t.muted,
-              letterSpacing: 0.6,
-              marginTop: 4,
-            }}
-          >
-            YOUR SIGNATURE IS CRYPTOGRAPHICALLY TIMESTAMPED PER IRS CIRCULAR 230.
-          </div>
-        </Stack>
-      </div>
-
-      <div
-        style={{
-          position: 'sticky',
-          bottom: 0,
-          padding: '14px 18px 16px',
-          borderTop: `1px solid ${t.borderSoft}`,
-          background: t.bg,
-        }}
-      >
-        <Button
-          t={t}
-          onClick={onSubmit}
-          style={{
-            width: '100%',
-            opacity: signed && !submitting ? 1 : 0.55,
-            cursor: signed && !submitting ? 'pointer' : 'not-allowed',
-          }}
-        >
-          {submitting ? 'Submitting…' : signed ? 'Submit signature' : 'Sign to submit'}
-        </Button>
-      </div>
-
-      {submitting && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 80,
-            background: t.bg,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 22,
-            padding: '0 32px',
-          }}
-        >
-          <HandCheckmark t={t} size={112} />
-          <div style={{ textAlign: 'center' }}>
-            <div
-              style={{
-                fontFamily: t.serif,
-                fontSize: 28,
-                color: t.ink,
-                letterSpacing: -0.6,
-                marginBottom: 8,
-              }}
-            >
-              You&apos;re all set, {firstName}
-            </div>
-            <div
-              style={{
-                fontSize: 14,
-                color: t.inkSoft,
-                lineHeight: 1.5,
-                maxWidth: 280,
-                margin: '0 auto',
-              }}
-            >
-              Your return has been signed and sent to Antonio. He&apos;ll transmit it to the IRS
-              within the hour.
-            </div>
-          </div>
-        </div>
-      )}
     </Screen>
   );
 }

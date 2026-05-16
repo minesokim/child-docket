@@ -152,7 +152,14 @@ export function getStageCopy(stage: PortalStage, ctx: StageContext): StageCopy {
         title: `Your ${taxYear} return is ready to sign.`,
         body: `${ownerName} prepared your return. Review it, then sign Form 8879 to authorize e-filing.`,
         cta: 'Sign Form 8879',
-        ctaHref: '/portal/sign-8879',
+        // ctaHref defensively points at /portal/home until the
+        // envelope-aware deep-link flow lands. The bare
+        // /portal/sign-8879 route now renders an honest "we're wiring
+        // this up" placeholder (mock removed 2026-05-15 per audit);
+        // routing a CTA there from this stage would loop the user.
+        // The real ctaHref should resolve to /portal/sign-8879/${envelopeId}
+        // once the envelope id is plumbed through to the caller.
+        ctaHref: '/portal/home',
         tone: 'action',
       };
 

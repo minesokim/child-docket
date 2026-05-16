@@ -48,7 +48,15 @@ export default function PortalHomePage() {
   // than show them somebody else's name.
   const firstName = (fullName ?? '').split(' ')[0] || 'there';
   const needsPayment = !depositPaid;
-  const needsSign = depositPaid && !signed8879;
+  // needsSign was historically `depositPaid && !signed8879`. The mock
+  // 8879 route at /portal/sign-8879/page.tsx flipped the flag without a
+  // real DocuSign envelope; that mock was removed 2026-05-15 per the
+  // audit, and there's no replacement webhook handler yet that flips
+  // `engagement.signed` from a real envelope-completed event. Until
+  // the envelope flow lands, the home SigCard renders in the inactive
+  // "pending" visual state (padlock icon, "Available when envelope
+  // sent" copy) instead of looping the user to a dead-end placeholder.
+  const needsSign = false;
   const allDone = depositPaid && signed8879;
 
   // Compute the canonical portal stage. v0 inputs come from IntakeState;
@@ -58,8 +66,13 @@ export default function PortalHomePage() {
     intakeComplete: Boolean(fullName),
     docsUploaded,
     depositPaid,
-    // 8879 sent at deposit completion (mock-only until real DocuSign).
-    eightyseventynineSent: depositPaid,
+    // 8879 envelope-sent gate. Historically tied to depositPaid (the
+    // mock-only path). With the mock removed (audit, 2026-05-15) and
+    // no DocuSign envelope-tracking wired into the portal yet, this
+    // stays false so the portal stage stays in `docs_received` instead
+    // of advancing to `review_ready` (which would render a Sign CTA
+    // that loops to a dead-end placeholder).
+    eightyseventynineSent: false,
     eightyseventynineSigned: signed8879,
     filed: allDone,
     filingAcknowledged: allDone,
@@ -77,8 +90,18 @@ export default function PortalHomePage() {
   // Triggers a server save via useIntakeField; the user's deposit.paid
   // gets persisted under their tenant DEK.
   const onPay = () => void setDepositPaid(true);
-  const onSign = () => router.push('/portal/sign-8879');
-  void setSigned8879; // intentionally unused locally - sign action lives in /portal/sign-8879
+  // onSign is a defensive no-op until the DocuSign envelope flow is
+  // wired. With needsSign=false above, the SigCard's onClick is gated
+  // off this handler via the parent's `onClick={needsSign ? onSign : undefined}`
+  // — so this never fires today. Kept as a named handler so the
+  // function signature stays stable for the future wire-up; replace
+  // with `router.push(\`/portal/sign-8879/\${envelopeId}\`)` once the
+  // envelope-id is queryable from the portal layout context.
+  const onSign = () => {};
+  void setSigned8879; // intentionally unused locally; the real setter
+                      // will be the DocuSign envelope-completed webhook
+                      // (apps/command-room/src/app/api/webhooks/docusign/connect)
+                      // once it's hooked up to flip engagement.signed.
 
   return (
     <>
@@ -502,7 +525,9 @@ function SignRow({
               ? 'Signed Apr 14 · 2:38 PM PT'
               : needsSign
                 ? 'Ready to sign · E-file authorization'
-                : 'Available after payment'}
+                : needsPayment
+                  ? 'Available after payment'
+                  : 'Available when your preparer sends the envelope'}
           </div>
         </div>
         {needsSign && (
