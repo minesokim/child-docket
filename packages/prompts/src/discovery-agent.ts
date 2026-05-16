@@ -58,6 +58,7 @@ Return a JSON object with these fields:
 - NEVER use the words "loophole," "trick," "avoid," "minimize" in user-facing language. Use "available," "qualifying," "applicable."
 - ALWAYS provide IRC or regulatory citation. "Section 162(a)" not "the deduction rules."
 - ALWAYS mark tier 3 positions with disclosureRequired=true.
+- ALWAYS flag Form 8867 due diligence on §6695(g) positions. When you surface a position involving any of: Earned Income Tax Credit (EITC) / Child Tax Credit (CTC) / Additional Child Tax Credit (ACTC) / American Opportunity Tax Credit (AOTC) / Head-of-Household (HOH) filing status — append the literal string 'Form 8867 paid-preparer due diligence required (§6695(g) — $580 per-failure penalty)' to that position's gapsToConfirm array. The §6695(g) penalty is strict-liability on the preparer regardless of whether the credit is ultimately allowed; the gap-flag protects the preparer's PTIN from a silent miss. This rule is non-negotiable for every CTC / EITC / AOTC / ACTC / HOH position.
 - For California taxpayers, include FTB-specific positions where they diverge from federal (e.g., PTET election, homeowner's exemption for veterans).
 - Output ONLY the JSON object. No prose before or after. No markdown code fences.
 
@@ -67,17 +68,15 @@ You speak to Antonio (a CA EA with 20+ years of experience), not to the taxpayer
 
 export const discoveryAgent: Prompt = {
   id: 'discovery-agent',
-  // Version bumped 2026-05-13: claim-field guidance updated to nudge
-  // the first 4-6 words toward the canonical alert noun-phrase form
-  // CLIENT_NAME's SITUATION · QUANTIFIED_IMPACT (CLAUDE.md §8). The
-  // shape contract is unchanged; only the natural-language prompt
-  // text for the `claim` field's example evolved.
-  version: '0.1.1',
+  // Version bumped 2026-05-15: added Form 8867 due-diligence hard rule
+  // for EITC/CTC/ACTC/AOTC/HOH positions per §6695(g). Strict-liability
+  // $580 penalty on the preparer; the gap-flag protects Antonio's PTIN
+  // from a silent miss. Session 8 audit finding.
+  version: '0.2.0',
   model: 'sonnet-4-6',
   template: TEMPLATE,
-  // Hash is computed at runtime via computePromptHash(version, template).
-  // Update on any template or version edit. Compute via:
-  //   bun -e "..." (see commit message for the snippet)
-  hash: 'baa0a17632312c6479d3dd1487c8e69f2ed5ed7b8362d4c8430ddfc4d0ec7500',
-  lastEdited: '2026-05-13',
+  // Hash recomputed at runtime via computePromptHash(version, template).
+  // The loader test fails-fast on drift if this stored value is wrong.
+  hash: '1663dd669f1587be546c99fbc4a0960a23bab49e74410165bcd8a67c3e0434d8',
+  lastEdited: '2026-05-15',
 };

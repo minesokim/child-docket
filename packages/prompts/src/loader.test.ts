@@ -42,7 +42,10 @@ describe('@docket/prompts / getPrompt', () => {
   test('returns the registered inbox-drafter', async () => {
     const p = await getPrompt('inbox-drafter');
     expect(p.id).toBe('inbox-drafter');
-    expect(p.version).toBe('1.0.0');
+    // Version 1.1.0 bumped 2026-05-15: removed hardcoded "Antonio"
+    // voice + signature defaults; replaced with context.preparerFullName
+    // references (Session 8 multi-tenant audit).
+    expect(p.version).toBe('1.1.0');
     expect(p.model).toBe('sonnet-4-6');
     expect(p.template.startsWith('You are the Inbox Drafter')).toBe(true);
   });
@@ -135,5 +138,71 @@ describe('@docket/prompts / hash verification', () => {
     const h1 = await computePromptHash('1.0.0', t);
     const h2 = await computePromptHash('1.0.0', t);
     expect(h1).toBe(h2);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// Prompt content invariants (Session 8 audit, 2026-05-15).
+//
+// These tests assert SPECIFIC TEXT-LEVEL guarantees that compliance
+// or multi-tenant correctness depend on. Each test guards a Tier 0
+// finding from the prompt audit:
+//
+//   1. discovery-agent MUST instruct the model to flag Form 8867
+//      on EITC/CTC/ACTC/AOTC/HOH positions per §6695(g). The
+//      $580/failure strict-liability penalty falls on the preparer
+//      regardless of whether the credit is allowed.
+//   2. notice-drafter MUST NOT hardcode any specific preparer's
+//      signature ("Antonio Vazquez, EA" was the original v0.1.0
+//      bug). Tenant #2's notices would have been signed with
+//      Antonio's name + implicit PTIN otherwise.
+//   3. inbox-drafter MUST NOT hardcode "Antonio" / "Antonio Vazquez,
+//      EA" as signature defaults. Same shape as #2.
+//
+// If any of these regress in a future edit, the corresponding test
+// fails before the prompt cache + Sentry breadcrumb tell us in
+// production.
+// ────────────────────────────────────────────────────────────────
+
+describe('@docket/prompts / content invariants (Session 8 audit)', () => {
+  test('discovery-agent prompt mentions Form 8867 (§6695(g) due diligence)', () => {
+    // The hard rule is keyed on "Form 8867" + the explicit
+    // reference to §6695(g). Both must be present so a future edit
+    // that drops one but not the other still fails.
+    expect(discoveryAgent.template).toContain('Form 8867');
+    expect(discoveryAgent.template).toContain('§6695(g)');
+    // And the strict-liability $580/failure number.
+    expect(discoveryAgent.template).toContain('$580');
+    // And the canonical trigger list — EITC, CTC, ACTC, AOTC, HOH.
+    for (const credit of ['EITC', 'CTC', 'ACTC', 'AOTC']) {
+      expect(discoveryAgent.template).toContain(credit);
+    }
+  });
+
+  test('notice-drafter prompt has no hardcoded preparer signature', () => {
+    // The v0.1.0 bug: 'Antonio Vazquez, EA' appeared as a hard
+    // signature instruction. v0.2.0 replaces it with explicit
+    // guidance to read context.preparerFullName.
+    expect(noticeDrafter.template).not.toMatch(
+      /MUST read 'Antonio Vazquez/i,
+    );
+    expect(noticeDrafter.template).not.toContain(
+      `'Antonio Vazquez, EA'`,
+    );
+    // And the FIX must mention context.preparerFullName so a future
+    // edit that strips both the bug AND the fix still fails.
+    expect(noticeDrafter.template).toContain('context.preparerFullName');
+  });
+
+  test('inbox-drafter prompt has no hardcoded preparer name as signature default', () => {
+    // The v1.0.0 bug: '"Antonio" | "Antonio Vazquez, EA" | other'
+    // appeared as the signature field example. v1.1.0 replaces
+    // those defaults with context.preparerSignOff /
+    // context.preparerFullName references.
+    expect(inboxDrafter.template).not.toContain(
+      `"Antonio" | "Antonio Vazquez, EA"`,
+    );
+    expect(inboxDrafter.template).toContain('context.preparerFullName');
+    expect(inboxDrafter.template).toContain('context.preparerSignOff');
   });
 });
