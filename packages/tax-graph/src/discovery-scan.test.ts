@@ -389,4 +389,62 @@ describe('scanPositionLibrary', () => {
     // Every catalog entry should be in rejected (no_trigger_match).
     expect(result.rejected.length).toBeGreaterThan(0);
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // Session 10 audit (2026-05-16) — refusalIf surfacing.
+  //
+  // Pre-fix: the catalog's refusalIf clauses were stripped at scan
+  // time, leaving the EA's preparer-defense review pass with no
+  // visibility into the disqualifying conditions on each surfaced
+  // position. Per CLAUDE.md §9 audit finding + POSITION-FRAMEWORK
+  // §6 (the framework refusal floor is enforced by the preparer's
+  // review pass; this field is the data hand-off that makes the
+  // review possible).
+  //
+  // These tests verify the catalog's refusalIf array flows through
+  // to DiscoveredPosition.refusalConditions on every surfaced
+  // position. Downstream consumers (PDF, command-room card) read
+  // refusalConditions to render the preparer-facing warnings.
+  // ─────────────────────────────────────────────────────────────
+
+  test('refusalIf clauses flow to DiscoveredPosition.refusalConditions', () => {
+    // W-2 only client surfaces standard_deduction. The catalog entry
+    // has one refusalIf clause: "MFS where spouse itemizes
+    // (§63(c)(6)(A))". The scanner must carry this through verbatim.
+    const result = scanPositionLibrary(intakeForW2Only());
+    const stdDed = result.positions.find(
+      (p) => p.positionType === 'standard_deduction',
+    );
+    expect(stdDed).toBeDefined();
+    expect(stdDed!.refusalConditions).toEqual([
+      'MFS where spouse itemizes (§63(c)(6)(A))',
+    ]);
+  });
+
+  test('multi-clause refusalIf flows through verbatim (mortgage_interest)', () => {
+    // mortgage_interest has TWO refusalIf clauses. The scanner must
+    // preserve order + content — the EA reads them as a checklist.
+    const result = scanPositionLibrary(intakeForW2Only());
+    const mortgage = result.positions.find(
+      (p) => p.positionType === 'mortgage_interest',
+    );
+    if (mortgage) {
+      expect(mortgage.refusalConditions.length).toBeGreaterThanOrEqual(2);
+      expect(mortgage.refusalConditions).toContain(
+        'Home equity debt not used to buy/build/substantially improve residence (TCJA disallowed)',
+      );
+    }
+  });
+
+  test('refusalConditions is always an array (never null/undefined)', () => {
+    // Every surfaced position must carry the field as an array, even
+    // if the catalog entry happened to have zero refusalIf clauses
+    // (none exist today, but a future catalog edit might). Empty
+    // array, not null — keeps consumers' .map() / .length calls
+    // safe.
+    const result = scanPositionLibrary(intakeForSelfEmployedSoleProp());
+    for (const p of result.positions) {
+      expect(Array.isArray(p.refusalConditions)).toBe(true);
+    }
+  });
 });

@@ -468,5 +468,12 @@ function buildDiscoveredPosition(
     documentationChecklist: entry.documentationChecklist,
     matchedTriggers,
     sourceArtifactIds: options.sourceArtifactIds ?? [],
+    // Carry the catalog's refusalIf clauses through to the surfaced
+    // position. Pre-Session-10 these were stripped here, so the EA
+    // never saw them. Now every surfaced position flows the
+    // disqualifying-conditions list to the PDF + command-room card
+    // so the preparer's review pass can verify none apply before
+    // approving (CLAUDE.md §9 + POSITION-FRAMEWORK.md §6).
+    refusalConditions: entry.refusalIf,
   };
 }

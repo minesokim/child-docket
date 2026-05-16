@@ -172,6 +172,25 @@ export function discoveredToPdfPosition(
     (dp.estimatedSavingsLow + dp.estimatedSavingsHigh) / 2,
   );
 
+  // gapsToConfirm composition (Session 10 refusalIf surfacing,
+  // 2026-05-16):
+  //   - First: refusalConditions (the catalog's refusalIf clauses)
+  //     prefixed with "Verify NOT applicable:" so the EA reads them
+  //     as DISQUALIFYING fact patterns to rule out before approving.
+  //     Pre-Session-10 these were stripped at scan time and the EA
+  //     never saw them on the position card. The preparer-defense
+  //     framework requires them to be surfaced for the §6694 +
+  //     audit-defense story to hold.
+  //   - Then: documentationChecklist (existing behavior) — items
+  //     to collect/verify FOR the position (the affirmative side).
+  // Splitting at the level of "must NOT apply" vs "must HAVE" keeps
+  // the EA's review pass scannable. CLAUDE.md §9 + POSITION-
+  // FRAMEWORK.md §6.
+  const refusalNotes = dp.refusalConditions.map(
+    (clause) => `Verify NOT applicable: ${clause}`,
+  );
+  const gapsToConfirm = [...refusalNotes, ...dp.documentationChecklist];
+
   return {
     claim: dp.displayName,
     tier,
@@ -183,13 +202,7 @@ export function discoveredToPdfPosition(
     auditRisk,
     disclosureRequired: dp.disclosureRequired,
     rationale: dp.shortDescription,
-    // Documentation checklist becomes the "gaps to confirm" list —
-    // the items the EA needs to collect or verify before claiming
-    // the position. Naming difference is intentional: the catalog
-    // says "documentation"; the PDF says "gaps to confirm" because
-    // some items may already exist (no actual gap) and the EA
-    // mentally checks them off during review.
-    gapsToConfirm: dp.documentationChecklist,
+    gapsToConfirm,
   };
 }
 

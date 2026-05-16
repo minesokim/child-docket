@@ -263,6 +263,22 @@ export type DiscoveredPosition = {
   /** Source artifacts that surfaced this (gmail message ids, doc ids,
    *  bank-feed row ids, intake fields). */
   sourceArtifactIds: string[];
+  /**
+   * Disqualifying conditions copied from the catalog's `refusalIf`
+   * (PositionLibraryEntry.refusalIf). The position SURFACES with the
+   * conditions attached so the EA can verify NONE of them apply to
+   * this client before approving. Per the Session 10 refusalIf audit
+   * (2026-05-16): pre-fix, refusalIf clauses lived only on the
+   * catalog entry and were stripped at scan time — the preparer never
+   * saw them. Now every surfaced position carries them through to the
+   * PDF + command-room card.
+   *
+   * Empty array (not null) when the catalog entry has no refusalIf
+   * clauses. CLAUDE.md §9 + POSITION-FRAMEWORK.md §6 — the framework
+   * refusal floor is enforced by the preparer's review pass; this
+   * field is the data hand-off that makes the review possible.
+   */
+  refusalConditions: string[];
 };
 
 // ────────────────────────────────────────────────────────────────
