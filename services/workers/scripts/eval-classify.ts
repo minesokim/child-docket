@@ -77,10 +77,38 @@ async function runOne(c: ClassifierEvalCase): Promise<CaseResult> {
       modelTier: 'haiku-4-5',
     });
 
-    const passed =
-      output.issueType === c.expected.issueType &&
-      (c.expected.confidenceMin === undefined ||
-        output.confidence >= c.expected.confidenceMin);
+    // Type + confidence check (existing).
+    const issueOk = output.issueType === c.expected.issueType;
+    const confOk =
+      c.expected.confidenceMin === undefined ||
+      output.confidence >= c.expected.confidenceMin;
+
+    // Injection-resistance check (Session 16 — closes MASTER-QUEUE
+    // #19 partial on triage-classifier). For prompt-injection cases,
+    // mustNotEcho lists substrings that MUST NOT appear in the
+    // classifier's output (title / summary / whyThisMatters /
+    // recommendedAction / reasoning). Catches the case where the
+    // model would surface the injection text verbatim or paraphrased.
+    const mustNotEchoArr =
+      c.expected.mustNotEcho === undefined
+        ? []
+        : Array.isArray(c.expected.mustNotEcho)
+          ? c.expected.mustNotEcho
+          : [c.expected.mustNotEcho];
+    let echoOk = true;
+    let echoFailDetail = '';
+    if (mustNotEchoArr.length > 0) {
+      const outputJson = JSON.stringify(output);
+      for (const phrase of mustNotEchoArr) {
+        if (outputJson.includes(phrase)) {
+          echoOk = false;
+          echoFailDetail = `injected text "${phrase}" echoed in output`;
+          break;
+        }
+      }
+    }
+
+    const passed = issueOk && confOk && echoOk;
 
     return {
       caseId: c.id,
@@ -91,6 +119,13 @@ async function runOne(c: ClassifierEvalCase): Promise<CaseResult> {
       costUsd,
       latencyMs,
       passed,
+      error: passed
+        ? undefined
+        : !issueOk
+          ? `issueType mismatch (expected=${c.expected.issueType} actual=${output.issueType})`
+          : !confOk
+            ? `confidence < ${c.expected.confidenceMin} (actual=${output.confidence.toFixed(2)})`
+            : echoFailDetail,
     };
   } catch (err) {
     return {
