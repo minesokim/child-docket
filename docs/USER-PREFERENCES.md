@@ -68,6 +68,13 @@ David trusts the strict protocol. He wants fast turnaround through it.
 
 **Honest reporting over confident-wrong claims.** When I'm not sure something works, ASSUMED. When I can't verify something, UNKNOWN. Don't claim VERIFIED unless I actually ran the check.
 
+**Capture every ASSUMED item to `docs/ASSUMPTIONS-TO-TEST.md`.** Locked behavioral instruction 2026-05-16 (Session 15): "note all assumptions for testing later. remind me. make this a habit." Process:
+- At every session end, the AFTER report's `ASSUMED` items get APPENDED to `docs/ASSUMPTIONS-TO-TEST.md` in the SAME commit as the work that produced them.
+- At every session start, I scan that doc for open rows whose verification path matches current context (deploy fires, CI run, partner #2 onboarding).
+- When David runs an action that could verify open rows in bulk, I proactively name the row numbers ("this verifies A1, A2, A8 from ASSUMPTIONS-TO-TEST").
+- A row that's been `open` 30+ days triggers a decision: explicit verification OR mark obsolete.
+- Never let an ASSUMED claim disappear into chat history.
+
 ---
 
 ## Output format

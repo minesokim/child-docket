@@ -111,7 +111,9 @@ Pruning lower than 14 days old; older work lives in commit history + AUTONOMOUS-
 | D11 | FINANCIALS-FOR-ANTONIO.md + PRODUCT-FOR-ANTONIO.md | `d30f0c3` | 5/16 |
 | D12 | MASTER-QUEUE.md + USER-PREFERENCES.md + CLAUDE.md §22 boot ritual update | `74d4f17` | 5/16 |
 | D13 | Vision agent Bedrock fallover (isTransientAnthropicError + bedrockClient top-level exports + runVisionAgent with fallover + 7 new tests) | `c833c2e` | 5/16 |
-| D14 | Form 8879 client SMS notification — auto-fire on envelope creation (Session 15 partial-close of #9; SMS-only; en/es bilingual; 10 new tests on message-body composition; tsconfig excludes for *.test.ts) | this commit | 5/16 |
+| D14 | Form 8879 client SMS notification — auto-fire on envelope creation (Session 15 partial-close of #9; SMS-only; en/es bilingual; 10 new tests on message-body composition; tsconfig excludes for *.test.ts) | `9f054f8` | 5/16 |
+| D15 | ASSUMPTIONS-TO-TEST.md habit codified — every session's ASSUMED claims captured in `docs/ASSUMPTIONS-TO-TEST.md`; CLAUDE.md §22 boot ritual updated; USER-PREFERENCES.md updated; 25 open assumptions backfilled from Sessions 3-15 | this commit | 5/16 |
+| D16 | Form 8879 reminder cadence cron — hourly Inngest function `send8879Reminders` walks pending signatures per tenant's `reminder_rules`, fires reminders via the workers-side helper `send8879NotificationWorker` (en/es bilingual reminder mode; quiet-hours respected; attempt count derived from actions audit rows, no migration); 14 new tests (10 message-body + 4 quiet-hours math); Session 15 partial-close of #9 | this commit | 5/16 |
 
 ---
 

@@ -181,6 +181,12 @@ const ALLOWLIST: ReadonlyArray<CallerEntry> = [
     justification:
       'Cost-telemetry runaway-spend alarm. Detects sustained high-spend windows per tenant. Two call sites: (1) tenant scan, (2) per-tenant audit trail insert for the alarm event.',
   },
+  {
+    file: 'services/workers/src/functions/send-8879-reminders.ts',
+    count: 2,
+    justification:
+      'Hourly cron for 8879 reminder cadence (Session 15 partial-close of MASTER-QUEUE #9). Iterates ALL tenants with reminder_rules trigger=eightyseventynine_pending enabled, walks pending signatures per tenant, fires send8879NotificationWorker per row that crosses the interval-hours threshold + remains under max_attempts. Same global-iteration pattern as gmail-poll + verify-actions-chain. Two call sites: (1) tenant list query in step.run "list-tenants-with-rule", (2) per-tenant transaction inside runForTenant() that scans signatures + actions + fires reminders.',
+  },
 
   // ─── Documentation-only mentions (no real call site) ────────────
   {
