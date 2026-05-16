@@ -23,6 +23,25 @@
 //     map (~6 fields), not one. 6/min lets the preparer move between
 //     ~6 clients per minute, which is unusually fast.
 //
+// OBSERVABILITY POSTURE (2026-05-15 audit follow-up)
+//   This path used to emit ~16 console.log lines per call to Vercel
+//   function logs (DEK length, intake row id, tax year, paths count,
+//   decrypted-field count, audit insertion timing). Vercel logs are
+//   NOT a compliance-grade sink (no encryption at rest guarantee,
+//   accessible to anyone with Vercel team access). Per SOC 2 CC6.7
+//   the PII-adjacent telemetry needs to land in Sentry where the
+//   scrubber in packages/shared/src/sentry-scrubber.ts redacts
+//   sensitive-keyed fields + PII regexes before transmission, and
+//   Sentry has tighter access controls than the Vercel log tail.
+//
+//   The replacement: every prior console.log is now either
+//   (a) a Sentry.addBreadcrumb that rides along with any captured
+//   exception from this same handler invocation — visible in the
+//   Sentry event timeline, scrubbed by the existing config; or
+//   (b) dropped entirely when the prior log was redundant or had
+//   no PII-adjacent value (DEK length is constant; "entering
+//   withTenant" was scaffolding).
+//
 // PATH ENUMERATION
 //   Walks the SENSITIVE_INTAKE_PATHS globs against the actual answers
 //   tree to enumerate concrete paths with values. dependents.list.*.ssn
@@ -54,25 +73,33 @@ export type UnlockClientPIIResult =
   | { ok: false; error: string };
 
 export async function unlockClientPII(clientId: string): Promise<UnlockClientPIIResult> {
-  // Stage-by-stage logging. Every line lands in Vercel function logs
-  // so when this hangs/fails in production we can see exactly which
-  // step died. Format: "[unlockClientPII] <stage>: <detail>". The
-  // outer try makes sure NO exception escapes to the client — if we
-  // hit the catch, the UI gets a clean error instead of a hung promise.
-  console.log('[unlockClientPII] start clientId=', clientId);
+  Sentry.addBreadcrumb({
+    category: 'unlock-pii',
+    level: 'info',
+    message: 'start',
+    data: { clientIdTail: clientId.slice(-6) },
+  });
   try {
     // 1. Auth + role gate.
     const user = await getCurrentDocketUser();
     if (!user) {
-      console.log('[unlockClientPII] no user — returning no-session');
+      Sentry.addBreadcrumb({
+        category: 'unlock-pii',
+        level: 'warning',
+        message: 'no-session — returning Not signed in',
+      });
       return { ok: false, error: 'Not signed in' };
     }
-    console.log('[unlockClientPII] user=', user.id, 'role=', user.role, 'tenant=', user.tenantId);
 
     try {
       assertRole(user, ['firm_owner', 'preparer', 'reviewer']);
     } catch {
-      console.log('[unlockClientPII] role gate rejected role=', user.role);
+      Sentry.addBreadcrumb({
+        category: 'unlock-pii',
+        level: 'warning',
+        message: 'role-gate rejected',
+        data: { role: user.role },
+      });
       return { ok: false, error: 'Role not authorized to unlock' };
     }
 
@@ -80,7 +107,12 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
     // ~6 fields. 6/min still lets a preparer move fast between clients.
     const limit = consumeRateToken(`pii-unlock:${user.clerkUserId}`, 6, 60_000);
     if (!limit.allowed) {
-      console.log('[unlockClientPII] rate-limited retryAfterMs=', limit.retryAfterMs);
+      Sentry.addBreadcrumb({
+        category: 'unlock-pii',
+        level: 'warning',
+        message: 'rate-limited',
+        data: { retryAfterMs: limit.retryAfterMs },
+      });
       return {
         ok: false,
         error: `Too many unlock requests. Try again in ${Math.ceil(limit.retryAfterMs / 1000)}s.`,
@@ -88,15 +120,11 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
     }
 
     const startedAt = Date.now();
-    console.log('[unlockClientPII] entering withTenant');
 
     return await withTenant(asTenantId(user.tenantId), async (db) => {
-      console.log('[unlockClientPII] inside withTenant — fetching DEK');
       const dek = await getTenantDek(db, asTenantId(user.tenantId));
-      console.log('[unlockClientPII] DEK fetched ok, length=', dek?.length);
 
       // Latest intake row for this client (most recent tax year).
-      console.log('[unlockClientPII] querying intake_responses');
       const [row] = await db
         .select()
         .from(schema.intakeResponses)
@@ -105,10 +133,20 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
         .limit(1);
 
       if (!row) {
-        console.log('[unlockClientPII] no intake row found for clientId=', clientId);
+        Sentry.addBreadcrumb({
+          category: 'unlock-pii',
+          level: 'warning',
+          message: 'intake-not-found',
+          data: { clientIdTail: clientId.slice(-6) },
+        });
         return { ok: false, error: 'Intake not found' };
       }
-      console.log('[unlockClientPII] intake row id=', row.id, 'taxYear=', row.taxYear);
+      Sentry.addBreadcrumb({
+        category: 'unlock-pii',
+        level: 'info',
+        message: 'intake-row-loaded',
+        data: { taxYear: row.taxYear },
+      });
 
       const answers = (row.answers ?? {}) as Record<string, unknown>;
 
@@ -130,7 +168,6 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
           if (getAtPath(answers, itemPath) != null) concretePaths.push(itemPath);
         }
       }
-      console.log('[unlockClientPII] concrete paths=', concretePaths.length);
 
       // Decrypt every concrete path. Use the AAD-aware decryptor so
       // saves written by saveIntakeField (which encrypts with
@@ -141,6 +178,7 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
       // exist during the migration window. taxYear comes from the
       // intake row we just loaded so the binding matches the writer.
       const plaintext: Record<string, string> = {};
+      let decryptFailures = 0;
       for (const path of concretePaths) {
         const stored = getAtPath(answers, path);
         if (stored == null) continue;
@@ -159,11 +197,27 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
             plaintext[path] = stored;
           }
         } catch (decryptErr) {
-          // One bad value shouldn't tank the whole unlock. Log + skip.
-          console.error('[unlockClientPII] decrypt failed path=', path, 'err=', decryptErr);
+          // One bad value shouldn't tank the whole unlock. Capture +
+          // skip. Sentry sees the exception with the path that failed
+          // (path names are not PII; they're config like
+          // 'spouse.ssn' or 'dependents.list.0.ssn').
+          decryptFailures += 1;
+          Sentry.captureException(decryptErr, {
+            tags: { component: 'command-room-pii-unlock', stage: 'decrypt-field' },
+            extra: { path },
+          });
         }
       }
-      console.log('[unlockClientPII] decrypted count=', Object.keys(plaintext).length);
+      Sentry.addBreadcrumb({
+        category: 'unlock-pii',
+        level: 'info',
+        message: 'decrypt-summary',
+        data: {
+          decryptedCount: Object.keys(plaintext).length,
+          attemptedCount: concretePaths.length,
+          decryptFailures,
+        },
+      });
 
       const expiresAt = Date.now() + PII_UNLOCK_DURATION_MS;
 
@@ -171,7 +225,6 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
       // unlocked (path names only, no plaintext). tool_output records
       // the count + expiry.
       const latencyMs = Date.now() - startedAt;
-      console.log('[unlockClientPII] inserting audit row');
       await db.insert(schema.actions).values({
         tenantId: user.tenantId,
         clientId,
@@ -184,20 +237,21 @@ export async function unlockClientPII(clientId: string): Promise<UnlockClientPII
         latencyMs,
         success: true,
       });
-      console.log('[unlockClientPII] complete latencyMs=', latencyMs);
+      Sentry.addBreadcrumb({
+        category: 'unlock-pii',
+        level: 'info',
+        message: 'complete',
+        data: { latencyMs },
+      });
 
       return { ok: true, plaintext, expiresAt };
     });
   } catch (error) {
-    // Real error (with message + stack) lands here; the client sees a
-    // generic message so we don't leak internals.
-    console.error('[unlockClientPII] CAUGHT:', error);
-    if (error instanceof Error) {
-      console.error('[unlockClientPII] message:', error.message);
-      console.error('[unlockClientPII] stack:', error.stack);
-    }
+    // Real error (with message + stack) goes to Sentry via the existing
+    // scrubber. Client sees a generic message so we don't leak internals.
+    // The Sentry event captures the breadcrumbs above for the timeline.
     Sentry.captureException(error, {
-      tags: { component: 'command-room-pii-unlock' },
+      tags: { component: 'command-room-pii-unlock', stage: 'outer-catch' },
     });
     return {
       ok: false,

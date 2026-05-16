@@ -88,19 +88,34 @@ export async function sendInviteSms(
    */
   customBody?: string,
 ): Promise<SendInviteSmsResult> {
-  console.log('[sendInviteSms] start clientId=', clientId, 'hasCustomBody=', customBody != null);
+  Sentry.addBreadcrumb({
+    category: 'sms-invite',
+    level: 'info',
+    message: 'start',
+    data: { clientIdTail: clientId.slice(-6), hasCustomBody: customBody != null },
+  });
   const startedAt = Date.now();
 
   try {
     // 1. Auth + role gate.
     const user = await requireRole(['firm_owner', 'preparer', 'reviewer', 'admin']);
-    console.log('[sendInviteSms] user=', user.id, 'role=', user.role, 'tenant=', user.tenantId);
+    Sentry.addBreadcrumb({
+      category: 'sms-invite',
+      level: 'info',
+      message: 'user-authorized',
+      data: { role: user.role },
+    });
     await assertWritable();
 
     // 2. Rate limit. 6/min/user — same shape as the unlock flow.
     const limit = consumeRateToken(`sms-invite:${user.clerkUserId}`, 6, 60_000);
     if (!limit.allowed) {
-      console.log('[sendInviteSms] rate-limited retryAfterMs=', limit.retryAfterMs);
+      Sentry.addBreadcrumb({
+        category: 'sms-invite',
+        level: 'warning',
+        message: 'rate-limited',
+        data: { retryAfterMs: limit.retryAfterMs },
+      });
       return {
         ok: false,
         error: `Too many SMS sends. Try again in ${Math.ceil(limit.retryAfterMs / 1000)}s.`,
@@ -120,25 +135,44 @@ export async function sendInviteSms(
         .limit(1);
 
       if (!client) {
-        console.log('[sendInviteSms] client not found id=', clientId);
+        Sentry.addBreadcrumb({
+          category: 'sms-invite',
+          level: 'warning',
+          message: 'client-not-found',
+          data: { clientIdTail: clientId.slice(-6) },
+        });
         return { ok: false, error: 'Client not found' };
       }
       if (!client.phone) {
-        console.log('[sendInviteSms] client has no phone id=', clientId);
+        Sentry.addBreadcrumb({
+          category: 'sms-invite',
+          level: 'warning',
+          message: 'client-has-no-phone',
+          data: { clientIdTail: clientId.slice(-6) },
+        });
         return { ok: false, error: 'Client has no phone number on file' };
       }
 
       // 4. Load tenant Twilio creds.
       const creds = await getTenantCredential(db, asTenantId(user.tenantId), 'twilio');
       if (!creds) {
-        console.log('[sendInviteSms] twilio creds not configured for tenant');
+        Sentry.addBreadcrumb({
+          category: 'sms-invite',
+          level: 'warning',
+          message: 'twilio-creds-not-configured',
+        });
         return {
           ok: false,
           error:
             'Twilio not configured for this firm. Run `pnpm --filter @docket/db set-tenant-cred --tenant=<slug> --kind=twilio` to set it up.',
         };
       }
-      console.log('[sendInviteSms] twilio creds loaded from=', creds.fromNumber);
+      Sentry.addBreadcrumb({
+        category: 'sms-invite',
+        level: 'info',
+        message: 'twilio-creds-loaded',
+        data: { fromNumberMasked: maskPhone(creds.fromNumber) },
+      });
 
       // 5. Sender ≠ recipient (prevents foot-gunning).
       if (creds.fromNumber === client.phone) {
@@ -181,7 +215,12 @@ export async function sendInviteSms(
         From: creds.fromNumber,
         Body: body,
       });
-      console.log('[sendInviteSms] POSTing to twilio for client phone=', maskPhone(client.phone));
+      Sentry.addBreadcrumb({
+        category: 'sms-invite',
+        level: 'info',
+        message: 'twilio-post-start',
+        data: { toMasked: maskPhone(client.phone) },
+      });
 
       const response = await fetch(twilioUrl, {
         method: 'POST',
@@ -205,7 +244,12 @@ export async function sendInviteSms(
         } catch {
           // Non-JSON error body — fall back to status-only.
         }
-        console.error('[sendInviteSms] twilio rejected:', twilioMsg);
+        Sentry.addBreadcrumb({
+          category: 'sms-invite',
+          level: 'error',
+          message: 'twilio-rejected',
+          data: { twilioStatus: response.status, twilioMessage: twilioMsg.slice(0, 200) },
+        });
 
         // Audit the failure too — trying to send and failing is itself
         // an event worth keeping (rate-limit calibration, abuse detection).
@@ -235,7 +279,11 @@ export async function sendInviteSms(
       const json = (await response.json()) as { sid?: string; status?: string };
       const sid = json.sid;
       if (!sid) {
-        console.error('[sendInviteSms] twilio response missing sid:', json);
+        Sentry.captureMessage('Twilio response missing sid', {
+          level: 'error',
+          tags: { component: 'command-room-send-invite-sms', stage: 'twilio-response-parse' },
+          extra: { twilioStatus: json.status ?? 'unknown' },
+        });
         return { ok: false, error: 'Twilio response missing message SID — check logs.' };
       }
 
@@ -254,18 +302,21 @@ export async function sendInviteSms(
         latencyMs,
         success: true,
       });
-      console.log('[sendInviteSms] sent sid=', sid, 'latencyMs=', latencyMs);
+      Sentry.addBreadcrumb({
+        category: 'sms-invite',
+        level: 'info',
+        message: 'sent',
+        data: { sidTail: sid.slice(-8), latencyMs },
+      });
 
       return { ok: true, sid, toMasked: maskPhone(client.phone), sentAt };
     });
   } catch (error) {
-    console.error('[sendInviteSms] CAUGHT:', error);
-    if (error instanceof Error) {
-      console.error('[sendInviteSms] message:', error.message);
-      console.error('[sendInviteSms] stack:', error.stack);
-    }
+    // Sentry captures the exception with the breadcrumb trail above —
+    // no need to redundantly console.error the message/stack (Vercel
+    // logs aren't a compliance sink; Sentry is).
     Sentry.captureException(error, {
-      tags: { component: 'command-room-send-invite-sms' },
+      tags: { component: 'command-room-send-invite-sms', stage: 'outer-catch' },
     });
     return {
       ok: false,
