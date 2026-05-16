@@ -1,6 +1,8 @@
 // Document classifier — the agent that turns an uploaded scan / photo
 // / PDF into structured fields for the documents row.
 //
+// SKIP-TRUST-GATE: classifies document type (W-2 / 1099-NEC / K-1 / driver's license / etc.) and extracts structured fields — does not emit tax positions or recommend filing actions. The L1-L4 trust ladder applies to position-emitting agents (Discovery, Strategy, Position); doc-classifier feeds those agents with raw structured input but doesn't claim authority on what to file.
+//
 // Input: image bytes (R2-fetched) + original filename.
 // Output: docKind + confidence + extractedFields + suggestedFilename + legibility.
 //

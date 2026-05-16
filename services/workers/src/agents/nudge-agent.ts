@@ -1,5 +1,7 @@
 // Nudge Agent — proactive outreach surfacing.
 //
+// SKIP-TRUST-GATE: drafts preparer-to-client outreach (life-event reminders, quarterly-estimate prompts, drift alerts) for preparer approve/edit/dismiss — does not emit tax positions or recommend filing actions. Every nudge requires explicit preparer approval before any outbound send (the critical-authorization boundary at send-time), so the L1-L4 trust ladder for position decisions doesn't apply at this layer. If a future iteration of this agent ever surfaces a position recommendation alongside the outreach draft, that branch needs its own assertTrustGate call.
+//
 // Per CLAUDE.md §8 Nudges section + §9 Nudges Agent. Daily cron
 // walks enabled nudge_rules (migration 0033) + client_facts +
 // engagement state + calendar_events. Produces nudges rows for

@@ -1,5 +1,7 @@
 // Triage classifier — the agent that decides what kind of issue a signal is.
 //
+// SKIP-TRUST-GATE: classifies issue types, not tax positions — emits no positionTier so the L1-L4 trust ladder doesn't apply at this layer. Downstream handlers that ACT on the classified issue (drafting a reply, queuing a doc request, escalating to Antonio) carry their own trust-gate calls or route through the critical-authorization boundary at send-time.
+//
 // Input: a normalized signal (Gmail message, portal upload, manual flag).
 // Output: classified IssueType + severity + confidence + recommended action + evidence + sources.
 //

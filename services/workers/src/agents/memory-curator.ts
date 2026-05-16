@@ -1,5 +1,7 @@
 // Memory Curator — extracts plain-English memories from client artifacts.
 //
+// SKIP-TRUST-GATE: extracts plain-English "facts about this client" memories from intake answers, message threads, doc parses, and meeting transcripts — does not emit tax positions or recommend filing actions. Memories surface in the per-client Memories tab for preparer reference; they don't drive return-prep decisions directly. Position-emitting agents that consume these memories carry their own trust-gate calls.
+//
 // Per CLAUDE.md §9 Memory Curator Agent: "Background job that
 // extracts plain-English Memories from every inbound message,
 // meeting transcript, doc parse, and intake answer → writes

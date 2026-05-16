@@ -1,6 +1,8 @@
 // Notice Triage agent — classifies an IRS / state notice + extracts
 // the structured fields a preparer needs to act.
 //
+// SKIP-TRUST-GATE: classifies notice type (CP2000 / CP504 / LT11 et al.) and extracts the structured fields (amounts owed, deadline dates, taxpayer IDs, line items) — does not emit tax positions or recommend filing actions. Downstream notice-drafter carries the trust-gate call because IT proposes the response position; this agent just reads the notice.
+//
 // Per CLAUDE.md section 13 white-space bet #4 (EA representation
 // rights as a second pillar) + section 9 agent fleet.
 //
