@@ -101,3 +101,16 @@ export {
   PostgresRetriever,
   type PostgresRetrieverOpts,
 } from './postgres-retriever.js';
+
+// Webhook replay-protection dedup. Pairs with migration 0037
+// (webhook_events table). Called from every inbound-webhook route
+// AFTER signature verification + BEFORE state mutation. See
+// webhook-dedup.ts header for the full design + the three Tier 0
+// replay vulnerabilities this closes (Square refund accumulation,
+// DocuSign envelope-completed reversal, Twilio inbound-sms
+// audit-row spam).
+export {
+  tryRecordWebhookEvent,
+  type WebhookProvider,
+  type TryRecordResult,
+} from './webhook-dedup.js';

@@ -79,6 +79,15 @@ const PLATFORM_TABLES = new Set<string>([
   // app-layer guard must hold. Documented in Session 5; not RLS-
   // protectable by definition (the row exists before any tenant).
   'prospects',
+  // Webhook replay-protection dedup table. Each row is
+  // (provider, event_id, received_at) — NO tenant-confidential
+  // data. Platform-global by design so the route handlers can
+  // dedup before tenant resolution (e.g., Square's webhook
+  // resolves tenant from payments.reference_id, which requires a
+  // row read; the dedup check has to land BEFORE that read to be
+  // a real replay defense). See migration 0037 header for the
+  // full reasoning. Documented in Session 6 webhook audit.
+  'webhook_events',
 ]);
 
 // Helper: get the SQL table name for a Drizzle pgTable export.

@@ -29,6 +29,7 @@ import { eq, and } from 'drizzle-orm';
 import {
   getAdminDb,
   schema,
+  tryRecordWebhookEvent,
   type DocketDb,
 } from '@docket/db';
 import { verifySquareSignature } from '@docket/shared/webhooks';
@@ -114,6 +115,33 @@ export async function POST(req: NextRequest) {
 
   const eventType = payload.type;
   const adminDb = getAdminDb();
+
+  // Replay-protection dedup (Session 6 webhook audit, migration 0037).
+  // The signed payload's `event_id` is Square-issued + globally unique
+  // per event. An attacker who captured a legit refund.created event
+  // could replay it indefinitely; refundedCents accumulates on each
+  // replay (line 233 below). The INSERT ON CONFLICT DO NOTHING is
+  // atomic — if the row existed, this is a replay, return 200 + skip.
+  // Square retries on non-2xx for 5 days, so a 200 silently no-ops
+  // their retry queue when we've already processed.
+  //
+  // If Square sends an event WITHOUT an event_id (configuration
+  // events typically have it, but the field is technically optional
+  // in the API doc), tryRecordWebhookEvent treats it as first-seen
+  // and we still process. That's safer than silent-drop.
+  if (payload.event_id) {
+    const dedup = await tryRecordWebhookEvent(
+      adminDb,
+      'square',
+      payload.event_id,
+    );
+    if (!dedup.isFirst) {
+      console.log(
+        `[square-webhook] replay of event ${payload.event_id} — already processed; dropping`,
+      );
+      return new Response('ok', { status: 200 });
+    }
+  }
 
   try {
     switch (eventType) {

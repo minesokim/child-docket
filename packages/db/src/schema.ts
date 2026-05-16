@@ -2121,3 +2121,41 @@ export const tenantSettings = pgTable('tenant_settings', {
     .notNull()
     .defaultNow(),
 });
+
+// ────────────────────────────────────────────────────────────────
+// Migration 0037: webhook_events.
+//
+// Replay-protection dedup table. Each inbound webhook (square /
+// docusign / twilio / future resend) records (provider, event_id)
+// here AFTER signature verification + BEFORE any state mutation.
+// INSERT ON CONFLICT DO NOTHING; if no row is returned, it's a
+// replay and the handler short-circuits with a 200.
+//
+// Platform-global table — NOT tenant-scoped. Each provider's event
+// id is globally unique within that provider's namespace. The table
+// is added to rls-coverage.test.ts PLATFORM_TABLES allowlist; no
+// RLS policies apply by design (no tenant-confidential data).
+//
+// Detail in migrations/0037_webhook_events.sql header.
+// ────────────────────────────────────────────────────────────────
+export const webhookEvents = pgTable(
+  'webhook_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    provider: text('provider').notNull(),
+    eventId: text('event_id').notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    providerEventUniq: uniqueIndex('webhook_events_provider_event_unique').on(
+      t.provider,
+      t.eventId,
+    ),
+    providerCheck: check(
+      'webhook_events_provider_check',
+      sql`${t.provider} IN ('square', 'docusign', 'twilio', 'resend')`,
+    ),
+  }),
+);

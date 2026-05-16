@@ -28,7 +28,14 @@
 import { type NextRequest } from 'next/server';
 import { sql } from 'drizzle-orm';
 import * as Sentry from '@sentry/nextjs';
-import { getAdminDb, persistAgentAction, decryptIfMarkedForTenant, getTenantDek, isEncrypted } from '@docket/db';
+import {
+  getAdminDb,
+  persistAgentAction,
+  decryptIfMarkedForTenant,
+  getTenantDek,
+  isEncrypted,
+  tryRecordWebhookEvent,
+} from '@docket/db';
 import { asTenantId, asClientId } from '@docket/shared';
 import { verifyTwilioSignature } from '@docket/shared/webhooks';
 
@@ -68,65 +75,77 @@ export async function POST(req: NextRequest) {
     return new Response('missing From/To', { status: 400 });
   }
 
-  // Resolve tenant by recipient (To) phone. Need to read the
-  // tenant_credentials table to match — this is the only way to
-  // route inbound SMS to a tenant since Twilio's webhook URL is
-  // single (tenant-disambiguating URLs would require per-tenant
-  // Twilio numbers AND per-tenant URLs, which adds operational
-  // complexity for v0).
+  // Resolve tenant by recipient (To) phone. Session 6 webhook audit
+  // (2026-05-15) rewrote this lookup. The previous implementation
+  // SELECTed ALL tenant_credentials rows where kind='twilio', then
+  // looped in app code fetching every tenant's DEK + attempting an
+  // AES-GCM decrypt to find the matching authToken. Two issues:
+  //   1. DoS: each request did N DB reads (DEK lookup) + N decrypt
+  //      attempts where N = number of Twilio-configured tenants.
+  //      An unauthenticated attacker could sustainably DoS by
+  //      POSTing garbage to this public endpoint.
+  //   2. Tenant enumeration via timing: response latency differed
+  //      based on whether the To number matched a configured
+  //      tenant (decrypt overhead is observable).
+  //
+  // Fix: pre-filter in SQL by value->>'fromNumber' (plaintext
+  // routing key inside the JSONB). The query returns at most ONE
+  // row (one tenant per Twilio number is the invariant). We then
+  // fetch one DEK + do one decrypt.
   //
   // Cross-tenant scoping concern: getAdminDb bypasses RLS. We're
-  // ONLY reading kind='twilio' rows here, AND we filter by the
-  // exact fromNumber. The match either succeeds (tenant found) or
-  // fails (rejected). No cross-tenant data leak — we only return
-  // (tenantId, decrypted authToken) for a tenant whose Twilio
-  // sender matches the inbound's recipient.
+  // ONLY reading the kind='twilio' row whose fromNumber matches
+  // the inbound's To. No data leak — the SQL filter does the
+  // narrowing.
   const db = getAdminDb();
   const tenantRows = await db.execute<TenantTwilioRow>(sql`
     SELECT tenant_id::text AS tenant_id, value AS cred
     FROM tenant_credentials
     WHERE kind = 'twilio'
+      AND value->>'fromNumber' = ${toNumber}
+    LIMIT 1
   `);
-  const allTwilioCreds = tenantRows as unknown as TenantTwilioRow[];
+  const candidate = (tenantRows as unknown as TenantTwilioRow[])[0] ?? null;
 
   let matchedTenantId: string | null = null;
   let matchedAuthToken: string | null = null;
 
-  for (const row of allTwilioCreds) {
-    const credObj = row.cred as Record<string, unknown> | null;
-    if (!credObj) continue;
-    const dek = await getTenantDek(db, asTenantId(row.tenant_id));
-    let parsed: Record<string, unknown>;
-    try {
-      // tenant_credentials value is a JSONB containing
-      // { accountSid, authToken (encrypted-marker), fromNumber }.
-      // accountSid + fromNumber are plaintext for routing; authToken
-      // is the encrypted secret.
-      const fromCandidate = credObj.fromNumber;
-      if (typeof fromCandidate !== 'string' || fromCandidate !== toNumber) {
-        continue;
+  if (candidate) {
+    const credObj = candidate.cred as Record<string, unknown> | null;
+    if (credObj) {
+      try {
+        const dek = await getTenantDek(db, asTenantId(candidate.tenant_id));
+        const authMaybe = credObj.authToken;
+        const authPlaintext = isEncrypted(authMaybe)
+          ? (decryptIfMarkedForTenant(authMaybe, dek) as string)
+          : String(authMaybe ?? '');
+        if (authPlaintext.length > 0) {
+          matchedTenantId = candidate.tenant_id;
+          matchedAuthToken = authPlaintext;
+        }
+      } catch {
+        // DEK fetch or decrypt failed — treat as no match. Sentry
+        // breadcrumb so an operator chasing "tenant configured but
+        // not receiving SMS" has a trail.
+        Sentry.captureMessage(
+          'twilio inbound: matched fromNumber but authToken decrypt failed',
+          {
+            level: 'warning',
+            tags: { component: 'twilio-inbound', tenant: candidate.tenant_id },
+          },
+        );
       }
-      const authMaybe = credObj.authToken;
-      const authPlaintext =
-        isEncrypted(authMaybe) ? (decryptIfMarkedForTenant(authMaybe, dek) as string) : String(authMaybe ?? '');
-      parsed = { authToken: authPlaintext };
-    } catch (err) {
-      // Couldn't decrypt this tenant's authToken — skip; not a match.
-      continue;
-    }
-    if (typeof parsed.authToken === 'string' && parsed.authToken.length > 0) {
-      matchedTenantId = row.tenant_id;
-      matchedAuthToken = parsed.authToken;
-      break;
     }
   }
 
+  // Single 401 response for BOTH unknown-recipient and bad-signature
+  // paths. Returning 404 ("unknown recipient") here would leak which
+  // To numbers are registered to an attacker probing the endpoint —
+  // they could enumerate Antonio's Twilio numbers by response code.
+  // 401 + "signature invalid" gives an attacker no information
+  // beyond "auth failed" regardless of cause.
   if (!matchedTenantId || !matchedAuthToken) {
-    // No tenant matched the recipient phone. Could be:
-    //   - The To phone isn't configured for any tenant
-    //   - The tenant exists but the cred decrypt failed
-    // Either way, we don't have a valid signing key to verify; reject.
-    return new Response('unknown recipient', { status: 404 });
+    return new Response('signature invalid', { status: 401 });
   }
 
   // Verify the signature using the matched tenant's auth token.
@@ -142,6 +161,23 @@ export async function POST(req: NextRequest) {
       tags: { component: 'twilio-inbound', tenant: matchedTenantId },
     });
     return new Response('signature invalid', { status: 401 });
+  }
+
+  // Replay-protection dedup (Session 6 webhook audit, migration 0037).
+  // MessageSid is Twilio's globally-unique per-message identifier.
+  // Twilio retries delivery on non-2xx for up to 4 hours; we want
+  // each retry to be idempotent. INSERT ON CONFLICT DO NOTHING is
+  // the dedup primitive. A captured-from-the-wire replayed legit
+  // event hits this same dedup, so an attacker can't spam the
+  // actions table by replaying a single valid signature indefinitely.
+  if (messageSid) {
+    const dedup = await tryRecordWebhookEvent(db, 'twilio', messageSid);
+    if (!dedup.isFirst) {
+      console.log(
+        `[twilio-inbound] replay of MessageSid ${messageSid} — already processed; dropping`,
+      );
+      return new Response('', { status: 200 });
+    }
   }
 
   // Match the sender (From) phone to a client.

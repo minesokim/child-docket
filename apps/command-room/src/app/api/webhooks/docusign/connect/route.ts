@@ -33,6 +33,7 @@ import { and, eq } from 'drizzle-orm';
 import {
   getAdminDb,
   schema,
+  tryRecordWebhookEvent,
   type DocketDb,
 } from '@docket/db';
 import { verifyDocuSignSignature } from '@docket/shared/webhooks';
@@ -139,13 +140,45 @@ export async function POST(req: NextRequest) {
     return new Response('missing envelopeId', { status: 400 });
   }
 
+  // Replay-protection dedup (Session 6 webhook audit, migration 0037).
+  // DocuSign's per-event `uri` field is the unique resource URL for
+  // the event (e.g.,
+  // /restapi/v2.1/accounts/<acct>/envelopes/<env>/recipients/1).
+  // It's stable + globally unique per event. Critical defense:
+  // an attacker who captured a legit envelope-completed event can
+  // replay it to flip a previously-voided or kba-failed signature
+  // back to 'signed' — silent reversal of an audit-trail finality
+  // marker. INSERT ON CONFLICT DO NOTHING blocks that.
+  //
+  // If `uri` is missing (older DocuSign API or unexpected payload
+  // shape), fall back to a composite key of envelopeId + event +
+  // generatedDateTime so we still get SOME dedup. The composite is
+  // not 100% replay-proof if an attacker replays the exact same
+  // payload twice (same generatedDateTime), but it covers the
+  // realistic case where DocuSign's retry mechanism re-sends the
+  // identical event.
+  const docusignEventId =
+    payload.uri ??
+    `${envelopeId}:${event}:${payload.generatedDateTime ?? 'unknown'}`;
+  const adminDb = getAdminDb();
+  const dedup = await tryRecordWebhookEvent(
+    adminDb,
+    'docusign',
+    docusignEventId,
+  );
+  if (!dedup.isFirst) {
+    console.log(
+      `[docusign-connect] replay of event ${docusignEventId} — already processed; dropping`,
+    );
+    return new Response('ok', { status: 200 });
+  }
+
   // 4. Find the signatures row. DocuSign's envelopeId lives inside
   // signatures.audit_payload — query by JSON path. Keeping the
   // Connect handler outside withTenant() is fine because we use
   // the admin DB to look up first (cross-tenant lookup is necessary;
   // the webhook itself is tenant-agnostic), then re-bind via
   // withTenant for the UPDATE.
-  const adminDb = getAdminDb();
   const matchedRow = await findSignatureRowByEnvelopeId(adminDb, envelopeId);
   if (!matchedRow) {
     // Envelope not in our system — could be a different DocuSign
