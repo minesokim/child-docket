@@ -1,26 +1,43 @@
 'use client';
 
-// Returning portal - Docs tab. Document tracker grouped by category with
-// progress bar + upload zone. Simplified port: drops the deep preview/info
-// modal flow from the JSX prototype (defer until docs pipeline is wired).
+// Returning portal — Docs tab.
 //
-// UPLOAD PIPELINE
-//   The dropzone + "Take a photo" button feed straight into the same
-//   server actions the intake docs flow uses (requestUploadUrl →
-//   browser PUT to R2 → confirmUpload). No slot binding — these come
-//   in as uncategorized uploads and surface to the preparer in
-//   command-room (Q1b: hidden from this client-side checklist by
-//   design, the mock list above is decorative until the pipeline lands
-//   real data). The two controls share one onPick handler; the only
-//   difference is whether the camera capture hint is set.
+// Audit (2026-05-15) caught this page rendering 9 hardcoded mock
+// documents (W-2 Acme Inc / 1099-NEC Freelance / 1099-K Stripe /
+// 1099-INT Chase / Revenue summary 2025 / Expense receipts / Driver's
+// license / Engagement letter / §7216 consent) on EVERY load + real
+// uploads silently disappeared from view after the "Sent" toast.
+// Mock data leaking to live users + a UX black hole on the actual
+// upload flow.
+//
+// Mock removed in this commit:
+//   - DOCS array (9 hardcoded entries with fake dates + statuses)
+//   - DocRow / DocGroup / abbrev helpers (consumed only DOCS)
+//   - The progress-bar percent + "X of Y uploaded" line driven off
+//     the mock counts
+//   - The grouped Income/Business/Identity/Agreements rendering
+//   - The "Download all as ZIP" button (mock-only; no zip endpoint
+//     exists today)
+//
+// Preserved (real, working code):
+//   - Upload pipeline: requestUploadUrl + browser PUT to R2 +
+//     confirmUpload, with phase-aware UI (idle / uploading / sent /
+//     failed). This was already wired to real R2 buckets via the
+//     /api/intake/upload-presigned + /api/intake/upload-confirm
+//     server actions that intake also uses.
+//   - The four panel components (UploadDropzone / UploadingPanel /
+//     SentPanel / FailedPanel) and the putWithProgress XHR helper.
+//
+// Phase 2 lands a `documents` query that pulls this client's actual
+// uploaded + classified docs from the DB and renders them under the
+// upload zone. Until then, the empty state below the upload zone
+// tells the user where the upload actually goes.
 
 import {
   Body,
   Button,
   buildTheme,
-  Card,
   H1,
-  ProgressBar,
   Row,
   Stack,
   Wordmark,
@@ -29,178 +46,6 @@ import type { Theme } from '@docket/ui';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { confirmUpload, requestUploadUrl } from '@/lib/docs/upload';
-
-type Doc = {
-  name: string;
-  date: string;
-  status: 'uploaded' | 'pending';
-  extracted?: boolean;
-  group: string;
-};
-
-const DOCS: Doc[] = [
-  { name: 'W-2 (Acme Inc)', date: 'FEB 3, 2026', status: 'uploaded', extracted: true, group: 'Income' },
-  { name: '1099-NEC (Freelance)', date: 'FEB 3, 2026', status: 'uploaded', extracted: true, group: 'Income' },
-  { name: '1099-K (Stripe)', date: 'FEB 10, 2026', status: 'uploaded', group: 'Income' },
-  { name: '1099-INT (Chase)', date: 'NOT YET UPLOADED', status: 'pending', group: 'Income' },
-  { name: 'Revenue summary 2025', date: 'FEB 5, 2026', status: 'uploaded', extracted: true, group: 'Business' },
-  { name: 'Expense receipts', date: 'NOT YET UPLOADED', status: 'pending', group: 'Business' },
-  { name: "Driver's license", date: 'JAN 14, 2026', status: 'uploaded', group: 'Identity' },
-  { name: 'Engagement letter', date: 'JAN 14, 2026', status: 'uploaded', group: 'Agreements' },
-  { name: '§7216 consent', date: 'AWAITING SIGNATURE', status: 'pending', group: 'Agreements' },
-];
-
-function abbrev(name: string): string {
-  // Best-effort 2–3 char tag for the icon well.
-  const lower = name.toLowerCase();
-  if (lower.startsWith('w-2')) return 'W2';
-  if (lower.startsWith('1099-nec')) return 'NEC';
-  if (lower.startsWith('1099-k')) return '1099K';
-  if (lower.startsWith('1099-int')) return 'INT';
-  if (lower.startsWith('1099-div')) return 'DIV';
-  if (lower.startsWith('revenue')) return 'REV';
-  if (lower.startsWith('expense')) return 'EXP';
-  if (lower.startsWith("driver")) return 'ID';
-  if (lower.startsWith('engagement')) return 'ENG';
-  if (lower.startsWith('§7216') || lower.startsWith('7216')) return '7216';
-  return name.slice(0, 3).toUpperCase();
-}
-
-function DocRow({ t, doc }: { t: Theme; doc: Doc }) {
-  const isUploaded = doc.status === 'uploaded';
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        padding: '14px 0',
-        opacity: isUploaded ? 1 : 0.85,
-      }}
-    >
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          background: isUploaded ? t.tintAccent : t.bgElev,
-          border: `1px solid ${isUploaded ? t.rustSoft : t.borderSoft}`,
-          color: isUploaded ? t.rustInk : t.muted,
-          fontFamily: t.mono,
-          fontSize: 9.5,
-          fontWeight: 600,
-          letterSpacing: 0.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        {abbrev(doc.name)}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 14,
-            color: t.ink,
-            fontWeight: 500,
-            letterSpacing: -0.1,
-          }}
-        >
-          {doc.name}
-        </div>
-        <div
-          style={{
-            fontFamily: t.mono,
-            fontSize: 11,
-            color: t.muted,
-            letterSpacing: 0.3,
-            marginTop: 2,
-          }}
-        >
-          {isUploaded ? `Uploaded ${doc.date}` : doc.date}
-          {doc.extracted && (
-            <span style={{ color: t.green, marginLeft: 8 }}>● AI READ</span>
-          )}
-        </div>
-      </div>
-      {isUploaded ? (
-        <button
-          style={{
-            background: 'none',
-            border: 'none',
-            color: t.rustInk,
-            fontSize: 12,
-            fontFamily: t.sans,
-            cursor: 'pointer',
-            padding: 6,
-            marginRight: -6,
-          }}
-        >
-          View
-        </button>
-      ) : (
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 10,
-            color: t.muted,
-            letterSpacing: 0.6,
-          }}
-        >
-          -
-        </span>
-      )}
-    </div>
-  );
-}
-
-function DocGroup({
-  t,
-  label,
-  docs,
-}: {
-  t: Theme;
-  label: string;
-  docs: Doc[];
-}) {
-  const uploaded = docs.filter((d) => d.status === 'uploaded').length;
-  return (
-    <div style={{ marginBottom: 22 }}>
-      <Row justify="space-between" align="baseline" style={{ marginBottom: 8 }}>
-        <span
-          style={{
-            fontFamily: t.sans,
-            fontSize: 12.5,
-            color: t.muted,
-            letterSpacing: 0.4,
-            textTransform: 'uppercase',
-          }}
-        >
-          {label}
-        </span>
-        <span
-          style={{
-            fontFamily: t.mono,
-            fontSize: 11,
-            color: t.muted,
-            letterSpacing: 0.3,
-          }}
-        >
-          {uploaded}/{docs.length}
-        </span>
-      </Row>
-      <Card t={t} style={{ padding: '4px 18px' }}>
-        {docs.map((d, i) => (
-          <React.Fragment key={d.name}>
-            <DocRow t={t} doc={d} />
-            {i < docs.length - 1 && <div style={{ height: 1, background: t.borderSoft }} />}
-          </React.Fragment>
-        ))}
-      </Card>
-    </div>
-  );
-}
 
 type UploadPhase =
   | { kind: 'idle' }
@@ -234,64 +79,64 @@ export default function PortalDocsPage() {
       try {
         let preflight;
         try {
-        preflight = await requestUploadUrl({
-          filename: file.name,
-          mimeType: file.type || 'application/octet-stream',
-          sizeBytes: file.size,
-        });
+          preflight = await requestUploadUrl({
+            filename: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            sizeBytes: file.size,
+          });
         } catch (err) {
-        console.error('[portal/docs] requestUploadUrl threw:', err);
-        setPhase({
-          kind: 'failed',
-          error: 'Could not start the upload. Check your connection and try again.',
-        });
-        return;
+          console.error('[portal/docs] requestUploadUrl threw:', err);
+          setPhase({
+            kind: 'failed',
+            error: 'Could not start the upload. Check your connection and try again.',
+          });
+          return;
         }
         if (!preflight.ok) {
-        setPhase({ kind: 'failed', error: preflight.error });
-        return;
+          setPhase({ kind: 'failed', error: preflight.error });
+          return;
         }
 
         const putOk = await putWithProgress(
-        preflight.uploadUrl,
-        preflight.headers,
-        file,
-        (pct) =>
-          setPhase((prev) =>
-            prev.kind === 'uploading' ? { ...prev, percent: pct } : prev,
-          ),
+          preflight.uploadUrl,
+          preflight.headers,
+          file,
+          (pct) =>
+            setPhase((prev) =>
+              prev.kind === 'uploading' ? { ...prev, percent: pct } : prev,
+            ),
         );
         if (!putOk.ok) {
-        setPhase({ kind: 'failed', error: putOk.error });
-        return;
+          setPhase({ kind: 'failed', error: putOk.error });
+          return;
         }
 
         let confirmed;
         try {
-        confirmed = await confirmUpload({
-          storageKey: preflight.storageKey,
-          filename: file.name,
-          mimeType: file.type || 'application/octet-stream',
-          sizeBytes: file.size,
-        });
+          confirmed = await confirmUpload({
+            storageKey: preflight.storageKey,
+            filename: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            sizeBytes: file.size,
+          });
         } catch (err) {
-        console.error('[portal/docs] confirmUpload threw:', err);
-        setPhase({
-          kind: 'failed',
-          error: 'Upload finished but we could not register it. Try again in a moment.',
-        });
-        return;
+          console.error('[portal/docs] confirmUpload threw:', err);
+          setPhase({
+            kind: 'failed',
+            error: 'Upload finished but we could not register it. Try again in a moment.',
+          });
+          return;
         }
         if (!confirmed.ok) {
-        setPhase({ kind: 'failed', error: confirmed.error });
-        return;
+          setPhase({ kind: 'failed', error: confirmed.error });
+          return;
         }
 
         setPhase({ kind: 'sent', filename: file.name });
-        // Refresh server data so the docs list (once wired) picks up the
-        // new row. Today the list is hardcoded mock data so the user
-        // won't see their upload here yet — the "Sent" message is the
-        // signal. Antonio sees it in command-room either way.
+        // Refresh server data so a future docs-list query (Phase 2)
+        // picks up the new row. The SentPanel below explicitly tells
+        // the user the file landed with their preparer — no need for
+        // the user to see it in their own portal list to know it's in.
         router.refresh();
       } finally {
         // Always clear the in-flight flag so a retry / send-another
@@ -310,15 +155,6 @@ export default function PortalDocsPage() {
     const ref = mode === 'camera' ? cameraInputRef : fileInputRef;
     ref.current?.click();
   };
-
-  const groups: Record<string, Doc[]> = {};
-  for (const d of DOCS) {
-    (groups[d.group] = groups[d.group] || []).push(d);
-  }
-
-  const uploadedCount = DOCS.filter((d) => d.status === 'uploaded').length;
-  const totalCount = DOCS.length;
-  const pct = Math.round((uploadedCount / totalCount) * 100);
 
   return (
     <>
@@ -347,13 +183,11 @@ export default function PortalDocsPage() {
         <Stack gap={20}>
           <Stack gap={10}>
             <H1 t={t}>Documents</H1>
-            <Row justify="space-between" align="flex-end">
-              <Body t={t} size={14} muted>
-                {uploadedCount} of {totalCount} uploaded
-              </Body>
-              <div style={{ fontSize: 13, color: t.rustInk, fontWeight: 500 }}>{pct}%</div>
-            </Row>
-            <ProgressBar t={t} value={uploadedCount} total={totalCount} />
+            <Body t={t} size={14} muted>
+              Upload tax documents here. Anything you send goes straight
+              to your preparer&apos;s queue — they&apos;ll classify it
+              and add it to your return.
+            </Body>
           </Stack>
 
           {/* Hidden file inputs — one general, one camera. The visible
@@ -409,16 +243,64 @@ export default function PortalDocsPage() {
             />
           )}
 
-          <div>
-            {['Income', 'Business', 'Identity', 'Agreements'].map((label) =>
-              groups[label] ? (
-                <DocGroup key={label} t={t} label={label} docs={groups[label]!} />
-              ) : null,
-            )}
+          {/* Empty-state placeholder for the per-client docs list. The
+              real query lands in Phase 2; until then the upload flow
+              is the only interactive surface here, and the empty state
+              tells the user what to expect rather than rendering fake
+              entries. */}
+          <div
+            style={{
+              padding: '24px 20px',
+              border: `1px dashed ${t.borderSoft}`,
+              borderRadius: t.radius,
+              background: t.bgElev,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: t.serif,
+                fontSize: 15,
+                color: t.ink,
+                marginBottom: 6,
+              }}
+            >
+              Your document list lives with your preparer
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: t.inkSoft,
+                lineHeight: 1.5,
+                marginBottom: 10,
+                maxWidth: 320,
+                margin: '0 auto 10px',
+              }}
+            >
+              Once you upload, your preparer tags it (W-2, 1099-NEC,
+              etc.) and tracks it against your checklist. You won&apos;t
+              need to keep a list yourself.
+            </div>
+            <div
+              style={{
+                fontFamily: t.mono,
+                fontSize: 10,
+                color: t.muted,
+                letterSpacing: 0.6,
+                textTransform: 'uppercase',
+              }}
+            >
+              Per-client document tracker is wired up in Phase 2
+            </div>
           </div>
 
-          <Button t={t} variant="ghost" style={{ width: '100%' }}>
-            Download all as ZIP
+          <Button
+            t={t}
+            variant="ghost"
+            disabled
+            style={{ width: '100%', opacity: 0.55, cursor: 'not-allowed' }}
+          >
+            Download all as ZIP — available when your return is filed
           </Button>
         </Stack>
       </div>

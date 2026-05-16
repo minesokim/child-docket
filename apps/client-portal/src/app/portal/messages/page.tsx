@@ -1,163 +1,40 @@
 'use client';
 
-// Returning portal - Messages tab. Chat thread w/ Antonio + system "answer"
-// cards (the AI auto-responder for factual questions). 1-to-1 port of
-// ScreenMessages.
+// Returning portal — Messages tab.
+//
+// Audit (2026-05-15) caught this page rendering a hardcoded conversation
+// between "Maria" and Antonio about a Stripe 1099-K to EVERY real
+// client — mock data leaking to live users. The replacement: a clean
+// empty state that's honest about the feature's wire-up status, plus
+// the existing header so visual identity carries through.
+//
+// The full Messages surface (DB-backed thread between client + Antonio,
+// AI-system "answer" cards driven by the triage-classifier, attach-
+// photo flow) is queued for Phase 2. Until that ships, this page
+// shows nothing rather than something fake.
+//
+// Removed in this commit (was mock-only):
+//   - Hardcoded chat bubbles ("Hey Maria - I'm finishing up your return"
+//     etc., the FRIDAY/APRIL 4 date header, the 1099-K Stripe attachment
+//     reference, the "11 of 12 documents" system card, the "Antonio
+//     uploaded your return for review" system card, the TODAY date
+//     header with the 8879-ready message)
+//   - The sticky send-input bar at the bottom (had no submit handler;
+//     would have misled users into thinking messages got delivered).
+//
+// What still renders (intentional):
+//   - The header strip with Antonio's avatar + name + the ENCRYPTED
+//     · PORTAL MESSAGES sub-line. Tenant-hardcoded "Antonio Vazquez"
+//     string here is the same hardcode the engagement-letter +
+//     §7216-consent pages carry, and it's all getting fixed together
+//     in the Vazant-hardcoding commit (audit punch-list Task 10).
+//     Leaving in this commit so the diff stays scoped to the
+//     mock-data removal.
 
 import { AvatarSlot, buildTheme, Row } from '@docket/ui';
-import type { Theme } from '@docket/ui';
-import * as React from 'react';
-
-function Bubble({
-  t,
-  from,
-  time,
-  attachment,
-  children,
-}: {
-  t: Theme;
-  from: 'me' | 'them';
-  time?: string;
-  attachment?: string;
-  children?: React.ReactNode;
-}) {
-  const mine = from === 'me';
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: mine ? 'flex-end' : 'flex-start',
-        marginBottom: 4,
-      }}
-    >
-      <div style={{ maxWidth: '78%' }}>
-        <div
-          style={{
-            background: mine ? t.rust : t.card,
-            color: mine ? '#fff' : t.ink,
-            border: mine ? 'none' : `1px solid ${t.border}`,
-            borderRadius: 18,
-            borderBottomRightRadius: mine ? 4 : 18,
-            borderBottomLeftRadius: mine ? 18 : 4,
-            padding: attachment ? '8px 8px 10px' : '10px 14px',
-            fontSize: 14.5,
-            lineHeight: 1.45,
-          }}
-        >
-          {attachment && (
-            <div
-              style={{
-                background: mine ? 'rgba(255,255,255,0.12)' : t.bgElev,
-                border: mine ? '1px solid rgba(255,255,255,0.16)' : `1px solid ${t.borderSoft}`,
-                padding: '8px 10px',
-                borderRadius: 10,
-                fontSize: 12.5,
-                color: mine ? 'rgba(255,255,255,0.95)' : t.ink,
-                fontFamily: t.mono,
-                letterSpacing: 0.2,
-                marginBottom: children ? 8 : 0,
-              }}
-            >
-              📎 {attachment}
-            </div>
-          )}
-          {children && <div style={{ padding: attachment ? '0 6px' : 0 }}>{children}</div>}
-        </div>
-        {time && (
-          <div
-            style={{
-              textAlign: mine ? 'right' : 'left',
-              fontSize: 10,
-              color: t.muted,
-              fontFamily: t.mono,
-              letterSpacing: 0.3,
-              marginTop: 4,
-              padding: '0 8px',
-            }}
-          >
-            {time}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SystemCard({
-  t,
-  time,
-  title = 'Status',
-  children,
-}: {
-  t: Theme;
-  time?: string;
-  title?: string;
-  kind?: 'info' | 'answer';
-  children: React.ReactNode;
-}) {
-  return (
-    <div style={{ margin: '14px 0', display: 'flex', justifyContent: 'center' }}>
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '94%',
-          background: t.bgElev,
-          border: `1px solid ${t.borderSoft}`,
-          borderRadius: t.radius,
-          padding: '12px 14px 14px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: t.sans,
-              fontSize: 11,
-              color: t.muted,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-            }}
-          >
-            {title}
-          </span>
-          {time && (
-            <span
-              style={{
-                fontFamily: t.mono,
-                fontSize: 9,
-                color: t.muted,
-                letterSpacing: 0.4,
-              }}
-            >
-              {time}
-            </span>
-          )}
-        </div>
-
-        <div
-          style={{
-            fontSize: 13.5,
-            color: t.inkSoft,
-            lineHeight: 1.45,
-          }}
-        >
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function PortalMessagesPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
-  const [draft, setDraft] = React.useState('');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
@@ -170,7 +47,9 @@ export default function PortalMessagesPage() {
         <Row gap={12}>
           <AvatarSlot t={t} size={40} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: t.serif, fontSize: 17, color: t.ink }}>Antonio Vazquez</div>
+            <div style={{ fontFamily: t.serif, fontSize: 17, color: t.ink }}>
+              Antonio Vazquez
+            </div>
             <Row gap={5}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <rect x="2" y="4.5" width="6" height="4" rx="0.5" stroke={t.muted} strokeWidth="0.9" />
@@ -191,209 +70,72 @@ export default function PortalMessagesPage() {
         </Row>
       </div>
 
-      <div style={{ padding: '16px 20px', flex: 1 }}>
-        <div
-          style={{
-            textAlign: 'center',
-            fontFamily: t.mono,
-            fontSize: 10,
-            color: t.muted,
-            letterSpacing: 0.5,
-            marginBottom: 14,
-          }}
-        >
-          FRIDAY, APRIL 4
-        </div>
-
-        <Bubble t={t} from="them" time="10:24 AM">
-          Hey Maria - I&apos;m finishing up your return. Could you send a photo of your 1099-K from
-          Stripe when you get a moment?
-        </Bubble>
-
-        <Bubble t={t} from="me" time="11:02 AM" attachment="1099-K_Stripe_2025.jpg · 1.2MB" />
-
-        <Bubble t={t} from="me" time="11:02 AM">
-          Here it is! Let me know if you need anything else.
-        </Bubble>
-
-        <Bubble t={t} from="them" time="11:08 AM">
-          Got it, thanks. Already reading cleanly - I&apos;ll flag if anything else comes up.
-        </Bubble>
-
-        <Bubble t={t} from="me" time="4:31 PM">
-          How many documents am I still missing?
-        </Bubble>
-
-        <SystemCard t={t} time="4:31 PM" title="Status · Document check" kind="answer">
-          <div style={{ marginBottom: 8 }}>
-            You&apos;ve uploaded{' '}
-            <span style={{ color: t.rustInk, fontFamily: t.mono, fontWeight: 500 }}>
-              11 of 12
-            </span>{' '}
-            required documents.
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 32px',
+        }}
+      >
+        <div style={{ maxWidth: 320, textAlign: 'center' }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              margin: '0 auto 20px',
+              borderRadius: 14,
+              background: t.bgElev,
+              border: `1px solid ${t.borderSoft}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path
+                d="M4 8a3 3 0 013-3h8a3 3 0 013 3v5a3 3 0 01-3 3H9l-4 3v-3a3 3 0 01-1-2V8z"
+                stroke={t.muted}
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div
+            style={{
+              fontFamily: t.serif,
+              fontSize: 19,
+              color: t.ink,
+              marginBottom: 8,
+            }}
+          >
+            No messages yet
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              color: t.inkSoft,
+              lineHeight: 1.5,
+              marginBottom: 14,
+            }}
+          >
+            When Antonio sends you an update or needs something for your
+            return, the conversation will appear here. We&apos;ll also
+            text you so you don&apos;t have to keep checking back.
           </div>
           <div
             style={{
               fontFamily: t.mono,
               fontSize: 10,
               color: t.muted,
-              letterSpacing: 1,
-              marginBottom: 6,
+              letterSpacing: 0.6,
               textTransform: 'uppercase',
             }}
           >
-            Still needed
+            Two-way messaging is wired up in Phase 2
           </div>
-          <div
-            style={{
-              padding: '8px 10px',
-              background: t.bgElev,
-              border: `1px solid ${t.borderSoft}`,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 5,
-                background: t.tintAccent,
-                border: `1px solid ${t.rustSoft}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: t.mono,
-                fontSize: 9,
-                color: t.rustInk,
-                fontWeight: 600,
-                letterSpacing: 0.3,
-                flexShrink: 0,
-              }}
-            >
-              DIV
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: t.ink }}>Form 1099-DIV</div>
-              <div style={{ fontSize: 11, color: t.muted }}>
-                From Fidelity · any dividends received
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: 10,
-              paddingTop: 8,
-              borderTop: `1px dashed ${t.borderSoft}`,
-              fontSize: 11.5,
-              color: t.muted,
-              fontStyle: 'italic',
-            }}
-          >
-            Need something more specific? Just keep typing and Antonio will get back to you.
-          </div>
-        </SystemCard>
-
-        <SystemCard t={t} time="APR 8 · 2:10 PM" kind="info">
-          Antonio uploaded your return for review.
-        </SystemCard>
-
-        <div
-          style={{
-            textAlign: 'center',
-            fontFamily: t.mono,
-            fontSize: 10,
-            color: t.muted,
-            letterSpacing: 0.5,
-            margin: '14px 0',
-          }}
-        >
-          TODAY
         </div>
-
-        <Bubble t={t} from="them" time="1:45 PM">
-          Return&apos;s ready. You can view it in the portal. Once you pay the balance, I&apos;ll
-          send the 8879.
-        </Bubble>
-      </div>
-
-      <div
-        style={{
-          position: 'sticky',
-          bottom: 0,
-          padding: '10px 14px 14px',
-          background: t.bgElev,
-          borderTop: `1px solid ${t.borderSoft}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          zIndex: 5,
-        }}
-      >
-        <button
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            cursor: 'pointer',
-          }}
-          aria-label="Attach photo"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke={t.inkSoft} strokeWidth="1.3" />
-            <circle cx="8" cy="8" r="2.5" stroke={t.inkSoft} strokeWidth="1.3" />
-          </svg>
-        </button>
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Message Antonio…"
-          style={{
-            flex: 1,
-            padding: '10px 14px',
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 999,
-            fontSize: 16,
-            color: t.ink,
-            outline: 'none',
-            fontFamily: t.sans,
-          }}
-        />
-        <button
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: draft.trim() ? t.rust : t.borderSoft,
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            cursor: draft.trim() ? 'pointer' : 'default',
-          }}
-          aria-label="Send message"
-          disabled={!draft.trim()}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path
-              d="M2 7h10M8 3l4 4-4 4"
-              stroke={draft.trim() ? '#fff' : t.muted}
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
       </div>
     </div>
   );

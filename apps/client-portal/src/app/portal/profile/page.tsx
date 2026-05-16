@@ -135,19 +135,47 @@ export default function PortalProfilePage() {
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [phone] = useIntakeField<string>('personal.phone', '');
   const [signed8879] = useIntakeField<boolean>('engagement.signed', false);
+  // Engagement letter + §7216 consent are signed during the intake
+  // flow (apps/client-portal/src/app/(intake)/engagement + /consent).
+  // The intake records boolean flags into the engagement-letter and
+  // consent-7216 paths; pull them here so the Signed Documents card
+  // reflects this client's actual state instead of a hardcoded
+  // "Apr 17, 2026 · 2:14 PM PT" timestamp that the audit caught
+  // rendering for every user.
+  const [engagementLetterSigned] = useIntakeField<boolean>(
+    'engagement.letterSigned',
+    false,
+  );
+  const [consent7216Signed] = useIntakeField<boolean>('consent.signed', false);
 
   // No persona-name fallback. If fullName is empty we render an empty
   // string rather than show a different person's name on the user's
   // own profile page.
   const initial = fullName.charAt(0).toUpperCase() || '·';
 
+  // Signed-document list. Until Phase 2 wires a per-client `signatures`
+  // query (which carries the real signed-at timestamp + audit chain
+  // row + envelope id for re-download), we show signed/pending state
+  // from the intake boolean flags + a deliberately-vague "Signed
+  // during onboarding" note instead of fabricated timestamps. The
+  // prior hardcoded "Apr 17, 2026 · 2:14 PM PT" strings were the same
+  // for every user regardless of when they signed — the audit caught
+  // this as mock data leaking into a live surface.
   const signedDocs = [
-    { name: 'Engagement Letter', when: 'Apr 17, 2026 · 2:14 PM PT', pending: false },
-    { name: '§7216 Consent', when: 'Apr 17, 2026 · 2:16 PM PT', pending: false },
+    {
+      name: 'Engagement Letter',
+      pending: !engagementLetterSigned,
+      when: engagementLetterSigned ? 'Signed during onboarding' : null,
+    },
+    {
+      name: '§7216 Consent',
+      pending: !consent7216Signed,
+      when: consent7216Signed ? 'Signed during onboarding' : null,
+    },
     {
       name: 'Form 8879',
-      when: signed8879 ? 'Apr 14, 2026 · 2:18 PM PT' : null,
       pending: !signed8879,
+      when: signed8879 ? 'Signed after return ready' : null,
     },
   ];
 
@@ -297,7 +325,7 @@ export default function PortalProfilePage() {
                           letterSpacing: 0.3,
                         }}
                       >
-                        {d.pending ? 'Pending signature' : `Signed ${d.when}`}
+                        {d.pending ? 'Pending signature' : d.when ?? 'Signed'}
                       </div>
                     </div>
                     {d.pending ? (
