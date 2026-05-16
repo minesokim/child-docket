@@ -42,10 +42,10 @@ describe('@docket/prompts / getPrompt', () => {
   test('returns the registered inbox-drafter', async () => {
     const p = await getPrompt('inbox-drafter');
     expect(p.id).toBe('inbox-drafter');
-    // Version 1.1.0 bumped 2026-05-15: removed hardcoded "Antonio"
-    // voice + signature defaults; replaced with context.preparerFullName
-    // references (Session 8 multi-tenant audit).
-    expect(p.version).toBe('1.1.0');
+    // Version 1.2.0 bumped 2026-05-16 (Session 9): added content-
+    // boundary instruction naming originalMessage.body as HOSTILE-
+    // PARTY input. Prior bump 1.1.0 was Session 8 multi-tenant fix.
+    expect(p.version).toBe('1.2.0');
     expect(p.model).toBe('sonnet-4-6');
     expect(p.template.startsWith('You are the Inbox Drafter')).toBe(true);
   });
@@ -204,5 +204,55 @@ describe('@docket/prompts / content invariants (Session 8 audit)', () => {
     );
     expect(inboxDrafter.template).toContain('context.preparerFullName');
     expect(inboxDrafter.template).toContain('context.preparerSignOff');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Session 9 audit (2026-05-16) — prompt-injection content
+  // boundaries. Each drafter MUST contain explicit guidance that
+  // names its highest-risk taxpayer/external-supplied fields as
+  // DATA-not-INSTRUCTIONS. If a future edit strips this, the
+  // injection-defense regresses silently. These tests are the
+  // line-of-defense at lint time before any real prompt cache
+  // serves the regressed version.
+  // ─────────────────────────────────────────────────────────────
+
+  test('discovery-agent prompt names intakeAnswers + documentSummaries as DATA', () => {
+    // The defense block must call out BOTH taxpayer-derived
+    // fields the agent reads. If either is missing the next
+    // editor could quietly strip the protection on one field.
+    expect(discoveryAgent.template).toContain('intakeAnswers');
+    expect(discoveryAgent.template).toContain('documentSummaries');
+    // And the "DATA, not instructions" framing must be present
+    // — the specific words are the load-bearing instruction.
+    expect(discoveryAgent.template).toMatch(/DATA[, ]+not.{0,20}instruction/i);
+    // And the IGNORE-PRIOR-INSTRUCTIONS pattern must be called
+    // out as a non-directive — the canonical injection sample.
+    expect(discoveryAgent.template).toContain('IGNORE PRIOR INSTRUCTIONS');
+  });
+
+  test('notice-drafter prompt names triage + noticeTextExcerpt as DATA', () => {
+    expect(noticeDrafter.template).toContain('noticeTextExcerpt');
+    expect(noticeDrafter.template).toMatch(/DATA[, ]+not.{0,20}instruction/i);
+    // The template-switching path is the specific attack on
+    // notice-drafter: a forged notice that tells the model to
+    // switch to manual-review (skipping our drafting work).
+    // The defense text MUST mention that triage.recommended_
+    // response_template is the source of truth.
+    expect(noticeDrafter.template).toContain('recommended_response_template');
+  });
+
+  test('inbox-drafter prompt names originalMessage.body as HOSTILE-PARTY input', () => {
+    expect(inboxDrafter.template).toContain('originalMessage.body');
+    // The "HOSTILE" framing is the strongest signal we can give
+    // the model + the next maintainer — the body is from a
+    // third party who can write anything. If a future edit
+    // softens this to "user input" without the threat framing,
+    // the defense weakens. Keep the word in.
+    expect(inboxDrafter.template).toMatch(/HOSTILE/);
+    expect(inboxDrafter.template).toMatch(/DATA[, ]+not.{0,20}instruction/i);
+    // The IGNORE-PRIOR-INSTRUCTIONS canonical sample must be
+    // called out as a non-directive — the model needs the
+    // concrete example to recognize the pattern.
+    expect(inboxDrafter.template).toContain('IGNORE PRIOR INSTRUCTIONS');
   });
 });
