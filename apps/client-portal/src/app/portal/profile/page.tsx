@@ -10,11 +10,22 @@ import {
   H1,
   Row,
   Stack,
+  useFirmOwner,
+  useTenantName,
   Wordmark,
 } from '@docket/ui';
 import type { Theme } from '@docket/ui';
 import * as React from 'react';
 import { useIntakeField } from '@/lib/intake-context';
+
+// Tenant-fallback defaults used when the TenantDisplayProvider hasn't
+// mounted yet (dev pre-seed). Same pattern as the engagement letter +
+// §7216 consent pages — see `apps/client-portal/src/app/(intake)/
+// engagement/page.tsx` for the original. The Session 11 audit closed
+// the remaining hardcodes that previously baked "Antonio Vazquez,
+// Enrolled Agent" + "VAZANT CONSULTING" verbatim into this surface.
+const DEFAULT_OWNER_NAME = 'Antonio Vazquez';
+const DEFAULT_TENANT_NAME = 'Vazant Consulting';
 
 function ProfileIcon({
   kind,
@@ -132,6 +143,23 @@ function ExtLinkRow({
 
 export default function PortalProfilePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
+  // Firm-owner + tenant display data come from TenantDisplayProvider
+  // mounted by the portal layout (server-side resolution of the
+  // tenant per the inbound Clerk session). Fall back to the legacy
+  // Antonio + Vazant defaults if the provider hasn't mounted — same
+  // failure mode as the intake engagement letter page (commit
+  // b3a3cb0). Multi-tenant correctness: tenant #2 sees their own
+  // firm name + owner name on the Profile tab post-onboarding.
+  const owner = useFirmOwner();
+  const tenantName = useTenantName();
+  const preparerDisplayName = owner?.name ?? DEFAULT_OWNER_NAME;
+  // The "Firm info" card has displayed credentials ("Enrolled Agent")
+  // verbatim since v0. FirmOwner doesn't carry a credential field
+  // yet, so we drop the suffix until that lands (v1.5). Strictly
+  // less specific than the wrong-firm-credential case (e.g., showing
+  // "CPA" suffix on an EA owner). Tenant-specific credentials come
+  // back when FirmOwner gains a `credential` field.
+  const firmDisplayName = tenantName ?? DEFAULT_TENANT_NAME;
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [phone] = useIntakeField<string>('personal.phone', '');
   // Engagement letter signed during the intake flow at
@@ -389,7 +417,7 @@ export default function PortalProfilePage() {
                       letterSpacing: -0.2,
                     }}
                   >
-                    Antonio Vazquez, Enrolled Agent
+                    {preparerDisplayName}
                   </div>
                   <div style={{ fontSize: 12.5, color: t.muted, marginTop: 2 }}>
                     Claremont, California
@@ -482,7 +510,7 @@ export default function PortalProfilePage() {
               letterSpacing: 0.8,
             }}
           >
-            VAZANT CONSULTING · v1.0.0
+            {firmDisplayName.toUpperCase()} · v1.0.0
           </div>
         </Stack>
       </div>

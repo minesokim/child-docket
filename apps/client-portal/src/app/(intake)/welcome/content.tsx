@@ -17,15 +17,39 @@
 // presence, status pill below CTA replaces the stacked muted footnotes
 // for cleaner hierarchy.
 
-import { Body, Button, buildTheme, Screen, Stack, VideoPlaceholder } from '@docket/ui';
+import {
+  Body,
+  Button,
+  buildTheme,
+  Screen,
+  Stack,
+  useFirmOwner,
+  useTenantName,
+  VideoPlaceholder,
+} from '@docket/ui';
 import { usePortalNav } from '@/lib/portal-nav';
 import { useIntakeAnswers } from '@/lib/intake-context';
 import { getResumeStep, hasIntakeProgress } from '@/lib/intake-flow';
+
+// Tenant-fallback defaults used when TenantDisplayProvider hasn't
+// mounted yet (dev pre-seed). Session 11 audit closed the remaining
+// hardcodes that previously baked "Vazant Consulting" + "Antonio
+// Vazquez, Enrolled Agent" verbatim into this onboarding screen.
+const DEFAULT_TENANT_NAME = 'Vazant Consulting';
+const DEFAULT_OWNER_NAME = 'Antonio Vazquez';
 
 export function WelcomeContent() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const nav = usePortalNav();
   const answers = useIntakeAnswers();
+  // Firm-owner + tenant display name come from TenantDisplayProvider
+  // mounted by the (intake) layout (resolveClient server-side). The
+  // headline + subtext below render the correct firm name + owner
+  // greeting for whichever tenant the inbound phone belongs to.
+  const owner = useFirmOwner();
+  const tenantName = useTenantName();
+  const firmDisplayName = tenantName ?? DEFAULT_TENANT_NAME;
+  const preparerDisplayName = owner?.name ?? DEFAULT_OWNER_NAME;
 
   // Returning vs first-time: based on whether ANY meaningful field is
   // populated (not just whether tutorial finished). This catches users
@@ -82,26 +106,17 @@ export function WelcomeContent() {
               color: t.ease.forestDark,
             }}
           >
-            {/*
-              TODO(multi-firm): tenant.name should drive this string.
-              Day 2 audit-hardening landed the data boundary (RLS,
-              phone-based binding, tenants.clerkOrgId); UI strings
-              like this stay hardcoded "Vazant Consulting" until the
-              second firm onboards. To unblock then: thread
-              tenantName through IntakeProvider and read via a
-              useTenant() hook here + in /portal/profile.
-            */}
             {isReturning ? (
               <>
                 Welcome back to
                 <br />
-                Vazant Consulting
+                {firmDisplayName}
               </>
             ) : (
               <>
                 Welcome to
                 <br />
-                Vazant Consulting
+                {firmDisplayName}
               </>
             )}
           </div>
@@ -109,7 +124,7 @@ export function WelcomeContent() {
             <Body t={t} size={15} style={{ maxWidth: 340, margin: '0 auto' }}>
               {isReturning
                 ? 'Picking up where you left off. Your progress is saved.'
-                : "I'm Antonio Vazquez, Enrolled Agent. Watch this short intro to see how we'll work together."}
+                : `I'm ${preparerDisplayName}. Watch this short intro to see how we'll work together.`}
             </Body>
           </div>
         </Stack>

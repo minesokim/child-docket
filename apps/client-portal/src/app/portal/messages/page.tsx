@@ -31,10 +31,22 @@
 //     Leaving in this commit so the diff stays scoped to the
 //     mock-data removal.
 
-import { AvatarSlot, buildTheme, Row } from '@docket/ui';
+import { AvatarSlot, buildTheme, Row, useFirmOwner } from '@docket/ui';
+
+// Tenant-fallback default when TenantDisplayProvider hasn't mounted
+// (dev pre-seed). Same pattern as engagement/page.tsx + profile/page.tsx.
+const DEFAULT_OWNER_NAME = 'Antonio Vazquez';
 
 export default function PortalMessagesPage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
+  // Firm-owner data comes from TenantDisplayProvider mounted by the
+  // portal layout (server-side resolution per the inbound Clerk
+  // session). Session 11 audit removed the literal "Antonio Vazquez"
+  // hardcode that previously rendered on the messages header
+  // regardless of which tenant the client belonged to.
+  const owner = useFirmOwner();
+  const preparerDisplayName = owner?.name ?? DEFAULT_OWNER_NAME;
+  const preparerFirstName = owner?.firstName ?? 'Antonio';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
@@ -48,7 +60,7 @@ export default function PortalMessagesPage() {
           <AvatarSlot t={t} size={40} />
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: t.serif, fontSize: 17, color: t.ink }}>
-              Antonio Vazquez
+              {preparerDisplayName}
             </div>
             <Row gap={5}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -120,7 +132,7 @@ export default function PortalMessagesPage() {
               marginBottom: 14,
             }}
           >
-            When Antonio sends you an update or needs something for your
+            When {preparerFirstName} sends you an update or needs something for your
             return, the conversation will appear here. We&apos;ll also
             text you so you don&apos;t have to keep checking back.
           </div>
