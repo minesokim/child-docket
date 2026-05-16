@@ -29,7 +29,7 @@
 //   audit trail needs both.
 
 import { type NextRequest } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   getAdminDb,
   schema,
@@ -273,15 +273,179 @@ export async function POST(req: NextRequest) {
     return new Response('internal error', { status: 500 });
   }
 
+  // 7. Antonio-side notification: write an issue row so the status
+  // transition surfaces in Antonio's Need You queue at /home (and
+  // the per-client Activity feed). Session 16 partial-close of
+  // MASTER-QUEUE #9. The issue type depends on the new status:
+  //   - 'signed' (KBA passed) → ero_pending, severity=high. Antonio's
+  //     next step is to sign the ERO authorization + transmit via OLT.
+  //   - 'kba-failed'           → signature_pending, severity=high.
+  //     Re-send a FRESH envelope per IRS Pub 1345.
+  //   - 'declined' (voided/declined) → signature_pending, severity=
+  //     medium. Discuss with client before re-sending.
+  //
+  // Best-effort: failure to write the issue does NOT 500 the webhook
+  // (DocuSign would retry the entire thing; the status UPDATE has
+  // already landed). Issue-write errors land in Vercel logs.
+  //
+  // Why not SMS/email to Antonio: Antonio's phone isn't stored in
+  // any table today (users has email but no phone column). Adding a
+  // phone column is a migration; Resend email is blocked on brand
+  // decision per CLAUDE.md §18. The Need You queue is the v0
+  // notification channel — Antonio sees the new issue next time he
+  // loads /home. SMS/email push notifications are V1.5.
+  try {
+    await writeSignatureStatusIssue(adminDb, {
+      tenantId: matchedRow.tenantId,
+      clientId: matchedRow.clientId,
+      engagementId: matchedRow.engagementId,
+      signatureRowId: matchedRow.id,
+      newStatus,
+      kbaGateNote,
+    });
+  } catch (issueErr) {
+    // Don't 500 the webhook on an issue-write failure — the
+    // signature status is correct + Antonio will see it on
+    // /clients/[id] next page load even without the queue row.
+    console.error(
+      '[docusign-connect] issue-write failed (non-fatal):',
+      issueErr instanceof Error ? issueErr.message : 'unknown',
+    );
+  }
+
   console.log(
     `[docusign-connect] signature ${matchedRow.id} status=${newStatus} (kba_passed=${kbaPassedAt !== null}); envelope=${envelopeId}`,
   );
   return new Response('ok', { status: 200 });
 }
 
+/**
+ * Write an issue row in the Need You queue when a signature status
+ * transitions. Pure helper — easy to test in isolation if a future
+ * commit adds a stand-alone test file.
+ *
+ * Best-effort: the caller wraps in try/catch and doesn't 500 on
+ * failure. Logs errors to Vercel runtime; Sentry capture is OUT of
+ * the webhook handler (this file follows the same posture as
+ * verify-actions-chain.ts — Inngest/Vercel logs are the surface).
+ */
+async function writeSignatureStatusIssue(
+  db: DocketDb,
+  input: {
+    tenantId: string;
+    clientId: string;
+    engagementId: string | null;
+    signatureRowId: string;
+    newStatus: 'signed' | 'declined' | 'kba-failed';
+    kbaGateNote: string | null;
+  },
+): Promise<void> {
+  // Fetch the client's first name + last name for the issue title.
+  // RLS scope: same as the rest of the webhook — admin path, bypass
+  // policies + current_tenant_id set inside an explicit tx.
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
+    await tx.execute(
+      sql`SET LOCAL app.current_tenant_id = ${input.tenantId}::text`,
+    );
+
+    // Idempotency guard. tryRecordWebhookEvent (caller-side) already
+    // dedups DocuSign's retry traffic, but a defense-in-depth check
+    // here closes the small window where: webhook A and webhook B for
+    // the SAME (signatureRowId, signatureStatus) somehow both pass
+    // dedup (e.g., dedup table corruption or a future code path
+    // bypassing tryRecordWebhookEvent). Without this, the Need You
+    // queue would render two identical "X signed their 8879" cards.
+    // Codex review (Session 16) flagged this.
+    const existingRows = await tx.execute<{ id: string }>(sql`
+      SELECT id FROM issues
+       WHERE tenant_id = ${input.tenantId}::uuid
+         AND evidence->>'signatureRowId' = ${input.signatureRowId}
+         AND evidence->>'signatureStatus' = ${input.newStatus}
+         AND status = 'open'
+       LIMIT 1
+    `);
+    if ((existingRows as unknown as Array<{ id: string }>).length > 0) {
+      console.log(
+        `[docusign-connect] open issue already exists for signature ${input.signatureRowId} status=${input.newStatus}; skipping duplicate insert`,
+      );
+      return;
+    }
+
+    const clientRows = await tx.execute<{ full_name: string }>(sql`
+      SELECT full_name FROM clients WHERE id = ${input.clientId}::uuid LIMIT 1
+    `);
+    const clientFullName =
+      (clientRows as unknown as Array<{ full_name: string }>)[0]?.full_name ??
+      'the client';
+    const firstName = clientFullName.split(/\s+/)[0] ?? clientFullName;
+
+    let type: 'ero_pending' | 'signature_pending';
+    let severity: 'high' | 'medium' | 'low';
+    let title: string;
+    let summary: string;
+    let recommendedAction: string;
+
+    if (input.newStatus === 'signed') {
+      type = 'ero_pending';
+      severity = 'high';
+      title = `${firstName} signed their 8879 — ready to e-file`;
+      summary = `Client signed 8879 + KBA passed. Awaiting ERO countersignature + e-file transmission.`;
+      recommendedAction =
+        'Sign the ERO authorization + transmit the return via OLT (or your tax software).';
+    } else if (input.newStatus === 'kba-failed') {
+      type = 'signature_pending';
+      severity = 'high';
+      title = `${firstName}'s 8879 KBA failed`;
+      summary =
+        input.kbaGateNote ??
+        'Client failed identity verification. Re-send a fresh envelope per IRS Pub 1345.';
+      recommendedAction =
+        'Re-send a FRESH envelope; DocuSign retries against the same envelope are not IRS-compliant.';
+    } else {
+      // 'declined' — voided in DocuSign OR client clicked Decline
+      type = 'signature_pending';
+      severity = 'medium';
+      title = `${firstName}'s 8879 was declined`;
+      summary =
+        input.kbaGateNote ??
+        'Client declined to sign OR envelope was voided.';
+      recommendedAction =
+        'Discuss with the client before re-sending. If voided in DocuSign, re-send a fresh envelope.';
+    }
+
+    await tx.insert(schema.issues).values({
+      tenantId: input.tenantId,
+      clientId: input.clientId,
+      engagementId: input.engagementId,
+      type,
+      severity,
+      status: 'open',
+      title,
+      summary,
+      recommendedAction,
+      sources: [
+        {
+          kind: 'signature',
+          ref: input.signatureRowId,
+          label: 'Form 8879',
+        },
+      ],
+      evidence: {
+        signatureRowId: input.signatureRowId,
+        signatureStatus: input.newStatus,
+        webhookEvent: 'docusign-connect',
+      },
+      classifiedBy: 'docusign-connect-webhook',
+    });
+  });
+}
+
 interface MatchedRow {
   id: string;
   tenantId: string;
+  clientId: string;
+  engagementId: string | null;
   auditPayload: Record<string, unknown> | null;
 }
 
@@ -292,26 +456,40 @@ async function findSignatureRowByEnvelopeId(
   // signatures.auditPayload is a JSONB column. Use jsonb operator
   // to filter on envelopeId. Drizzle's helper around raw SQL is the
   // cleanest path here.
-  const rows = await db.execute<{ id: string; tenant_id: string; audit_payload: Record<string, unknown> | null }>(
+  const rows = await db.execute<{
+    id: string;
+    tenant_id: string;
+    client_id: string;
+    engagement_id: string | null;
+    audit_payload: Record<string, unknown> | null;
+  }>(
     {
       // sql template via raw — drizzle's sql helper would also work
       // but we're outside the typed query builder for this JSON probe.
-      sql: `SELECT id::text AS id, tenant_id::text AS tenant_id, audit_payload
-            FROM signatures
-            WHERE audit_payload->>'envelopeId' = $1
-            LIMIT 1`,
+      sql: `SELECT id::text AS id,
+                   tenant_id::text AS tenant_id,
+                   client_id::text AS client_id,
+                   engagement_id::text AS engagement_id,
+                   audit_payload
+              FROM signatures
+             WHERE audit_payload->>'envelopeId' = $1
+             LIMIT 1`,
       params: [envelopeId],
     } as unknown as Parameters<typeof db.execute>[0],
   );
   const arr = rows as unknown as Array<{
     id: string;
     tenant_id: string;
+    client_id: string;
+    engagement_id: string | null;
     audit_payload: Record<string, unknown> | null;
   }>;
   if (arr.length === 0) return null;
   return {
     id: arr[0]!.id,
     tenantId: arr[0]!.tenant_id,
+    clientId: arr[0]!.client_id,
+    engagementId: arr[0]!.engagement_id,
     auditPayload: arr[0]!.audit_payload,
   };
 }

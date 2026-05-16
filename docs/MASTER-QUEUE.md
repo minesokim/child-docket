@@ -5,7 +5,7 @@
 > *DESIGN-PARTNER-ACQUISITION-PLAN.md + PRODUCTION-READINESS.md +*
 > *POST-5-15.md + recent session findings.*
 >
-> *Last updated: 2026-05-16 (Session 13)*
+> *Last updated: 2026-05-16 (Session 16)*
 
 ## How to read this
 
@@ -44,7 +44,7 @@ Phase 3 + Phase 4 work per PRODUCT-ROADMAP.md. Mostly engineering items unblocke
 | # | Item | Why | Status | Owner | Blocker | Target |
 |---|---|---|---|---|---|---|
 | 8 | OLT browser automation MCP server | Wedge demo + Antonio's primary tax software. Per CLAUDE.md §3 it's a forced integration moat (no AI-native competitor integrates with OLT). | queued | Claude | None | 6/20 |
-| 9 | Form 8879 KBA-backed signing wired end-to-end | IRS Pub 1345 compliance for remote 8879. Session 15 (5/16) closed the SMS-notification gap — Antonio uploads PDF → envelope created → client SMS'd automatically with signing link. Remaining gaps for FULL end-to-end: (a) Resend email channel (blocked on brand decision per §18), (b) reminder cadence (per migration 0031 `reminder_rules`), (c) Antonio-side notification when client signs. | in-progress | Claude | Item #15 (Resend) for email channel | 6/15 |
+| 9 | Form 8879 KBA-backed signing wired end-to-end | IRS Pub 1345 compliance for remote 8879. Sessions 15-16 (5/16) closed the three substrate gaps: initial SMS on envelope creation (commit `9f054f8`) → hourly reminder cadence cron via `reminder_rules` (commit `e018ca4`) → Antonio-side notification via issues table when signature transitions (this commit). Only remaining gap: Resend email channel (blocked on brand decision per §18). | mostly-done | Claude | Item #15 (Resend) for email channel | 6/15 |
 | 10 | Calendar surface (first-class top-level) | CLAUDE.md §4 Calendar requirement. Needs `google-calendar` MCP server + `calendar_events` table (migration 0031 already shipped). | queued | Claude | None | 6/27 |
 | 11 | Notice triage + drafter real-notice testing | Substrate shipped; needs real CP2000 / CP504 / LT11 testing against Antonio's actual case load. | queued | Antonio + Claude | Antonio's audit case timing | 6/20 |
 | 12 | Partner #2 acquisition pipeline | Per L14 (90-day Antonio-dependency mitigation). Mid-market firm preferred, 20-100 staff, different network than Antonio. | queued | David | None | 6/27 |
@@ -113,7 +113,8 @@ Pruning lower than 14 days old; older work lives in commit history + AUTONOMOUS-
 | D13 | Vision agent Bedrock fallover (isTransientAnthropicError + bedrockClient top-level exports + runVisionAgent with fallover + 7 new tests) | `c833c2e` | 5/16 |
 | D14 | Form 8879 client SMS notification — auto-fire on envelope creation (Session 15 partial-close of #9; SMS-only; en/es bilingual; 10 new tests on message-body composition; tsconfig excludes for *.test.ts) | `9f054f8` | 5/16 |
 | D15 | ASSUMPTIONS-TO-TEST.md habit codified — every session's ASSUMED claims captured in `docs/ASSUMPTIONS-TO-TEST.md`; CLAUDE.md §22 boot ritual updated; USER-PREFERENCES.md updated; 25 open assumptions backfilled from Sessions 3-15 | this commit | 5/16 |
-| D16 | Form 8879 reminder cadence cron — hourly Inngest function `send8879Reminders` walks pending signatures per tenant's `reminder_rules`, fires reminders via the workers-side helper `send8879NotificationWorker` (en/es bilingual reminder mode; quiet-hours respected; attempt count derived from actions audit rows, no migration); 14 new tests (10 message-body + 4 quiet-hours math); Session 15 partial-close of #9 | this commit | 5/16 |
+| D16 | Form 8879 reminder cadence cron — hourly Inngest function `send8879Reminders` walks pending signatures per tenant's `reminder_rules`, fires reminders via the workers-side helper `send8879NotificationWorker` (en/es bilingual reminder mode; quiet-hours respected; attempt count derived from actions audit rows, no migration); 14 new tests (10 message-body + 4 quiet-hours math); Session 15 partial-close of #9 | `e018ca4` | 5/16 |
+| D17 | Antonio-side sign-notification — DocuSign Connect webhook writes an issues row when signature status transitions (signed → ero_pending/high "X signed their 8879 — ready to e-file"; kba-failed → signature_pending/high with Pub-1345 re-send guidance; declined → signature_pending/medium). Surfaces in Need You queue at /home on next page load. Best-effort write inside tx with bypass_rls + current_tenant_id; webhook doesn't 500 if issue-write fails (status UPDATE has already landed). Session 16 close of MASTER-QUEUE #9 substrate (only Resend email channel remains, blocked on brand). | this commit | 5/16 |
 
 ---
 
