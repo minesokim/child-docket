@@ -690,3 +690,203 @@ describe('decryptTreeWithAAD — path-aware tree decryption', () => {
     expect(out.legacy.value).toBe('master-only');
   });
 });
+
+// ────────────────────────────────────────────────────────────────
+// Tier 0 invariants — added 2026-05-15 from the strict-protocol
+// AES-GCM correctness review. Each test documents a property the
+// implementation must hold; if any of these regresses, the failure
+// mode is catastrophic (PII exposure, signature-chain integrity,
+// tenant isolation). Keep them at the bottom of the file so a
+// future contributor sees the high-stakes invariants clearly.
+// ────────────────────────────────────────────────────────────────
+
+describe('Tier 0 invariants — IV uniqueness at scale', () => {
+  test('1000 encryptions of the same plaintext produce 1000 unique IVs', async () => {
+    // GCM is catastrophically broken if the same (key, IV) pair is
+    // used twice. Node's randomBytes(12) gives 96-bit IVs with
+    // collision probability ~2^-48 over 2^32 encryptions per key
+    // (NIST SP 800-38D limit). At 1000 ops we're nowhere near the
+    // bound — but verifying uniqueness here catches any future bug
+    // that swaps randomBytes for a static / counter-based IV.
+    const { encryptFieldForTenant } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const ivs = new Set<string>();
+    for (let i = 0; i < 1000; i++) {
+      const marker = encryptFieldForTenant('123-45-6789', dek);
+      const buf = Buffer.from(marker.__enc, 'base64');
+      // First 12 bytes of the encoded blob = the IV.
+      const iv = buf.subarray(0, 12).toString('hex');
+      ivs.add(iv);
+    }
+    expect(ivs.size).toBe(1000);
+  });
+});
+
+describe('Tier 0 invariants — ciphertext never contains plaintext substring', () => {
+  test('encrypted SSN does not contain the digits anywhere in the blob', async () => {
+    const { encryptFieldForTenant } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    const plaintext = '123-45-6789';
+    // Run 50 times because base64 collisions on accidental encoding
+    // bugs would appear stochastically. Any leak shows up here.
+    for (let i = 0; i < 50; i++) {
+      const marker = encryptFieldForTenant(plaintext, dek);
+      const blob = marker.__enc;
+      const raw = Buffer.from(blob, 'base64').toString('utf8');
+      expect(blob).not.toContain('123-45-6789');
+      expect(blob).not.toContain('123456789');
+      expect(raw).not.toContain('123-45-6789');
+      expect(raw).not.toContain('123456789');
+    }
+  });
+});
+
+describe('Tier 0 invariants — empty + edge-case plaintext', () => {
+  test('empty string round-trips', async () => {
+    const { encryptFieldForTenant, decryptFieldForTenant } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const encrypted = encryptFieldForTenant('', dek);
+    expect(decryptFieldForTenant(encrypted, dek)).toBe('');
+  });
+
+  test('single-byte plaintext round-trips', async () => {
+    const { encryptFieldForTenant, decryptFieldForTenant } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const encrypted = encryptFieldForTenant('x', dek);
+    expect(decryptFieldForTenant(encrypted, dek)).toBe('x');
+  });
+
+  test('plaintext with null byte round-trips', async () => {
+    const { encryptFieldForTenant, decryptFieldForTenant } = await import(
+      '../src/encryption.js'
+    );
+    const dek = randomBytes(32);
+    const plaintext = 'a\x00b';
+    const encrypted = encryptFieldForTenant(plaintext, dek);
+    expect(decryptFieldForTenant(encrypted, dek)).toBe(plaintext);
+  });
+});
+
+describe('Tier 0 invariants — AAD delimiter injection (defense-in-depth)', () => {
+  // The AAD construction in deriveAAD joins components with `;` and
+  // separates field-name from value with `:`. If a component value
+  // ever contains `;` or `:`, two different logical inputs can
+  // produce identical AAD bytes — a collision vulnerability.
+  //
+  // Today's inputs are constrained (UUIDs + numbers + schema-defined
+  // paths), so this is a defense-in-depth gap, not an exploitable
+  // bug. The tests here verify the validation prevents it.
+
+  test('input containing delimiter character `;` is rejected', async () => {
+    const { deriveAAD } = await import('../src/encryption.js');
+    expect(() =>
+      deriveAAD({ tenantId: 'evil;client:fake' }),
+    ).toThrow(/delimiter/i);
+  });
+
+  test('input containing delimiter character `:` is rejected', async () => {
+    const { deriveAAD } = await import('../src/encryption.js');
+    expect(() =>
+      deriveAAD({ clientId: 'evil:value' }),
+    ).toThrow(/delimiter/i);
+  });
+
+  test('path containing `;` is rejected', async () => {
+    const { deriveAAD } = await import('../src/encryption.js');
+    expect(() =>
+      deriveAAD({ tenantId: 'abc', path: 'personal;client:foo.ssn' }),
+    ).toThrow(/delimiter/i);
+  });
+
+  test('legitimate UUID + dotted path inputs still work', async () => {
+    const { deriveAAD } = await import('../src/encryption.js');
+    const aad = deriveAAD({
+      tenantId: '550e8400-e29b-41d4-a716-446655440000',
+      clientId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+      taxYear: 2025,
+      path: 'dependents.list.0.ssn',
+    });
+    expect(aad.length).toBeGreaterThan(0);
+    expect(aad.toString('utf8')).toBe(
+      'tenant:550e8400-e29b-41d4-a716-446655440000;client:6ba7b810-9dad-11d1-80b4-00c04fd430c8;year:2025;path:dependents.list.0.ssn',
+    );
+  });
+});
+
+describe('Tier 0 invariants — migration-window vulnerability (documented + tested)', () => {
+  // This test EXPLICITLY demonstrates the known migration-window
+  // vulnerability flagged in CLAUDE.md §18: legacy AAD-less ciphertexts
+  // can be relocated to any other path/row in the same tenant and
+  // decryptIfMarkedForTenantWithAAD will successfully decrypt them via
+  // Tier 2 (AAD-less fallback). The fix is the `reencrypt-legacy`
+  // walker (Operator Action queued in audit punch list) which rewrites
+  // every legacy AAD-less ciphertext as AAD-bound, after which the
+  // Tier 2 + Tier 3 fallback paths can be removed entirely.
+  //
+  // This test exists so the vulnerability is TESTED-AND-KNOWN rather
+  // than HIDDEN. When the walker runs prod-wide + the fallbacks get
+  // removed, this test should be DELETED (the vulnerability closes
+  // when the migration window closes).
+
+  test('LEGACY AAD-less ciphertext successfully relocates via Tier 2 fallback', async () => {
+    const {
+      encryptFieldForTenant,
+      decryptIfMarkedForTenantWithAAD,
+      deriveAAD,
+    } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    // Step 1: encrypt without AAD (simulating a legacy v0 write).
+    const legacy = encryptFieldForTenant('123-45-6789', dek);
+    // Step 2: an attacker with DB write access moves this blob from
+    // its original (tenant, client, path) to a different one. The
+    // caller decrypts using the NEW location's AAD.
+    const aadAtNewLocation = deriveAAD({
+      tenantId: '550e8400-e29b-41d4-a716-446655440000',
+      clientId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      path: 'bank.routingNumber', // wrong path; was 'personal.ssn'
+    });
+    // VULNERABILITY: this succeeds via Tier 2 (AAD-less fallback)
+    // because the original ciphertext was written without AAD, so the
+    // GCM auth tag verifies against the empty-AAD baseline regardless
+    // of the row context. When the migration completes + fallbacks
+    // are removed, this expectation flips to .toThrow().
+    const plaintext = decryptIfMarkedForTenantWithAAD(
+      legacy,
+      dek,
+      aadAtNewLocation,
+    );
+    expect(plaintext).toBe('123-45-6789');
+  });
+
+  test('AAD-bound ciphertext CANNOT be relocated (the fix the migration enables)', async () => {
+    const {
+      encryptFieldForTenantWithAAD,
+      decryptIfMarkedForTenantWithAAD,
+      deriveAAD,
+    } = await import('../src/encryption.js');
+    const dek = randomBytes(32);
+    // Encrypt AAD-bound at original location.
+    const aadOriginal = deriveAAD({
+      tenantId: '550e8400-e29b-41d4-a716-446655440000',
+      clientId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      path: 'personal.ssn',
+    });
+    const bound = encryptFieldForTenantWithAAD('123-45-6789', dek, aadOriginal);
+    // Relocate.
+    const aadAtNewLocation = deriveAAD({
+      tenantId: '550e8400-e29b-41d4-a716-446655440000',
+      clientId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      path: 'bank.routingNumber',
+    });
+    // Tier 1 fails (AAD mismatch). Tier 2 fails (auth tag was
+    // computed with AAD bytes folded in; no-AAD verify fails). Tier 3
+    // fails (wrong key). All three fallbacks throw → decryptor throws.
+    expect(() =>
+      decryptIfMarkedForTenantWithAAD(bound, dek, aadAtNewLocation),
+    ).toThrow();
+  });
+});

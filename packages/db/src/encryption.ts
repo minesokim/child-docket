@@ -219,7 +219,52 @@ export function decryptDek(marker: EncryptedMarker): Buffer {
  * 2024 can't be relocated into the same client's TY 2025 row and
  * still authenticate. Per-row binding (not just per-tenant) is the
  * point of AAD.
+ *
+ * DELIMITER-INJECTION DEFENSE (added 2026-05-15 from the strict-
+ * protocol AES-GCM correctness review):
+ *
+ *   This function joins components with `;` and separates field-name
+ *   from value with `:`. If a component value ever contained `;` or
+ *   `:`, two different logical inputs could produce identical AAD
+ *   bytes — a collision vulnerability that would defeat the
+ *   ciphertext-relocation defense.
+ *
+ *   Concrete collision (before this defense):
+ *     deriveAAD({tenantId: "a", clientId: "b"})
+ *       -> "tenant:a;client:b"
+ *     deriveAAD({tenantId: "a;client:b"})
+ *       -> "tenant:a;client:b"   ← SAME BYTES
+ *
+ *   Today's inputs are UUIDs + numbers + schema-defined dotted paths,
+ *   none of which contain `:` or `;` — so the practical risk is
+ *   near-zero. But the function should ENFORCE the constraint, not
+ *   rely on every future caller to know it. This validation is the
+ *   enforcement.
+ *
+ *   The check rejects (throws) any input that would collide. Existing
+ *   AAD-bound ciphertexts in production were written with inputs that
+ *   already satisfied the constraint (UUIDs, etc.), so their AAD
+ *   bytes are unchanged by this validation — they continue to
+ *   decrypt cleanly.
+ *
+ *   If a future change ever needs path components that include `:`
+ *   or `;` (extremely unlikely given the schema), a length-prefixed
+ *   or JSON-canonicalized AAD format is the right answer — not
+ *   removing this validation.
  */
+const AAD_DELIMITER_REGEX = /[;:]/;
+
+function rejectIfDelimiter(component: string, fieldName: string): void {
+  if (AAD_DELIMITER_REGEX.test(component)) {
+    throw new Error(
+      `deriveAAD: ${fieldName} contains a forbidden delimiter character (";" or ":"). ` +
+        `These characters would cause AAD-byte collision with other inputs ` +
+        `(see packages/db/src/encryption.ts deriveAAD doc). ` +
+        `Received: ${JSON.stringify(component)}`,
+    );
+  }
+}
+
 export function deriveAAD(input: {
   tenantId?: string;
   clientId?: string | null;
@@ -227,12 +272,22 @@ export function deriveAAD(input: {
   path?: string;
 }): Buffer {
   const parts: string[] = [];
-  if (input.tenantId) parts.push(`tenant:${input.tenantId}`);
-  if (input.clientId) parts.push(`client:${input.clientId}`);
+  if (input.tenantId) {
+    rejectIfDelimiter(input.tenantId, 'tenantId');
+    parts.push(`tenant:${input.tenantId}`);
+  }
+  if (input.clientId) {
+    rejectIfDelimiter(input.clientId, 'clientId');
+    parts.push(`client:${input.clientId}`);
+  }
   if (input.taxYear !== undefined && input.taxYear !== null) {
+    // taxYear is a number; toString() can't produce `:` or `;`.
     parts.push(`year:${input.taxYear}`);
   }
-  if (input.path) parts.push(`path:${input.path}`);
+  if (input.path) {
+    rejectIfDelimiter(input.path, 'path');
+    parts.push(`path:${input.path}`);
+  }
   return Buffer.from(parts.join(';'), 'utf8');
 }
 
