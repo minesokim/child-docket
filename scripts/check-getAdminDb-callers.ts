@@ -137,6 +137,18 @@ const ALLOWLIST: ReadonlyArray<CallerEntry> = [
     justification:
       'Discovery Scan prospect intake. Inserts into the `prospects` table which is explicitly NO-RLS per migration 0030 (a pre-tenant lead-capture table). The route is public + unauthenticated by design (cold-traffic landing page); RLS bypass is the only path because no tenant scope exists at the time of insert.',
   },
+  {
+    file: 'apps/command-room/src/app/prospects/page.tsx',
+    count: 1,
+    justification:
+      'Prospects admin surface (Session 12, L16 100-customers-by-8/1 CRM tracking). Reads the `prospects` platform-global table (NO-RLS per migration 0030 + Session 5 PLATFORM_TABLES allowlist). Role-gated to firm_owner via requireRole(); David is the only firm_owner today. Once tenant #2 onboards, the gate tightens to a platform_admin role (V1.5).',
+  },
+  {
+    file: 'apps/command-room/src/app/prospects/actions.ts',
+    count: 1,
+    justification:
+      'Prospects status-update server action (Session 12). Writes to the `prospects` platform-global table (NO-RLS). assertRole([firm_owner]) is the access boundary; the prospects table has no tenant_id so withTenant() does not apply.',
+  },
 
   // ─── Inngest crons (operate globally across tenants) ────────────
   {
@@ -203,7 +215,9 @@ function listActualCallers(): Map<string, number> {
       // very script.
       `git grep -F -n "getAdminDb(" -- ` +
         `"*.ts" ` +
+        `"*.tsx" ` +
         `":(exclude)*.test.ts" ` +
+        `":(exclude)*.test.tsx" ` +
         `":(exclude)*/scripts/*" ` +
         `":(exclude)scripts/*" ` +
         `":(exclude)*.md"`,

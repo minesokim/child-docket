@@ -103,6 +103,16 @@ function IconProjects() {
     </svg>
   );
 }
+// Funnel-shape icon for the Prospects nav item — visually distinct
+// from IconUsers (Clients) since prospects + clients are different
+// pipeline stages per CLAUDE.md §4 Prospects vs Clients vs Former.
+function IconProspects() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 4h18l-7 9v6l-4 2v-8z" />
+    </svg>
+  );
+}
 
 const NAV: NavSection[] = [
   {
@@ -118,7 +128,14 @@ const NAV: NavSection[] = [
   },
   {
     label: 'Operations',
-    items: [{ href: '/dashboard/cost', label: 'Cost', icon: <IconWallet /> }],
+    items: [
+      // Prospects added 2026-05-16 (Session 12, L16 100-customers-by-
+      // 8/1 — CRM/funnel tracking is must-ship #4 due 5/18). Listed
+      // BEFORE Cost because David scans new submissions daily; Cost
+      // is a periodic check-in.
+      { href: '/prospects', label: 'Prospects', icon: <IconProspects /> },
+      { href: '/dashboard/cost', label: 'Cost', icon: <IconWallet /> },
+    ],
   },
   {
     label: 'Settings',
