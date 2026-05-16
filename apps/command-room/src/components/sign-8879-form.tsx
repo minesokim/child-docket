@@ -45,6 +45,15 @@ interface Props {
   hasDocuSignCred: boolean;
 }
 
+// Notification status surfaced from the server action — same shape
+// as Send8879NotificationResult but narrowed for client-side display.
+// Session 15 (2026-05-16) added this to show Antonio whether the SMS
+// fired automatically or whether he needs to use the copy-link
+// fallback.
+type NotificationStatus =
+  | { ok: true; channel: 'sms'; toMasked: string }
+  | { ok: false; reason: string; message: string };
+
 type State =
   | { kind: 'idle' }
   | { kind: 'reading' }
@@ -53,9 +62,10 @@ type State =
       kind: 'success';
       signatureRowId: string;
       portalLink: string;
+      notification: NotificationStatus;
     }
   | { kind: 'error'; message: string; existingRowId?: string }
-  | { kind: 'copied' };
+  | { kind: 'copied'; notification: NotificationStatus };
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB DocuSign cap
 const PDF_MIN_BYTES = 1024;
@@ -77,7 +87,11 @@ export function Sign8879Form({
     async (url: string) => {
       try {
         await navigator.clipboard.writeText(url);
-        setState((s) => (s.kind === 'success' ? { ...s, kind: 'copied' as const } : s));
+        setState((s) =>
+          s.kind === 'success'
+            ? { kind: 'copied' as const, notification: s.notification }
+            : s,
+        );
         setTimeout(() => {
           setState((s) =>
             s.kind === 'copied'
@@ -156,10 +170,22 @@ export function Sign8879Form({
       }
 
       if (result.ok) {
+        const notification: NotificationStatus = result.notification.ok
+          ? {
+              ok: true,
+              channel: result.notification.channel,
+              toMasked: result.notification.toMasked,
+            }
+          : {
+              ok: false,
+              reason: result.notification.reason,
+              message: result.notification.message,
+            };
         setState({
           kind: 'success',
           signatureRowId: result.signatureRowId,
           portalLink: `${portalBaseUrl}/portal/sign-8879/${result.signatureRowId}`,
+          notification,
         });
         // Trigger a re-render of the parent /clients/[id] so the
         // Signatures section picks up the new pending row.
@@ -346,8 +372,44 @@ export function Sign8879Form({
           }}
         >
           <div style={{ fontSize: 13, fontWeight: 500, color: '#1f4621' }}>
-            ✓ 8879 envelope created. Send this link to the client:
+            ✓ 8879 envelope created.
           </div>
+          {/*
+            Notification status — Session 15 (2026-05-16). The server
+            action fires send8879Notification automatically; this
+            row tells Antonio whether the SMS landed (so the copy-
+            link below is informational) or whether it failed (so
+            he uses the copy-link as the manual fallback).
+          */}
+          {state.notification.ok ? (
+            <div
+              style={{
+                fontSize: 12,
+                color: '#1f4621',
+                background: '#fff',
+                border: '1px solid #1f4621',
+                borderRadius: 4,
+                padding: '6px 10px',
+              }}
+            >
+              Texted to {state.notification.toMasked}. Antonio's link is below if
+              you want to also paste it into email or portal chat.
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: 12,
+                color: '#8a3a2a',
+                background: '#fff7f4',
+                border: '1px solid #c98a78',
+                borderRadius: 4,
+                padding: '6px 10px',
+              }}
+            >
+              Auto-text failed: {state.notification.message} Send the link
+              manually via your preferred channel:
+            </div>
+          )}
           <div
             style={{
               fontFamily: t.mono,

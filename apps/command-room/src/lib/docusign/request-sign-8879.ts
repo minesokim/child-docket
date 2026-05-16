@@ -70,6 +70,10 @@ import {
   createEnvelope,
   createRecipientView,
 } from '@docket/docusign-shared';
+import {
+  send8879Notification,
+  type Send8879NotificationResult,
+} from './send-8879-notification';
 
 const ALLOWED_ROLES = new Set(['firm_owner', 'preparer']);
 
@@ -86,6 +90,20 @@ export type RequestSign8879Result =
        * (separate server action) keyed off the signatures row.
        */
       signingUrl: string;
+      /**
+       * Notification status. Session 15 (2026-05-16): after the
+       * envelope is created, requestSign8879 fires
+       * send8879Notification to text the signing link to the
+       * client. Best-effort — the envelope exists even when the
+       * SMS fails, and the UI shows fall-back "copy link"
+       * affordance in that case. Result of the notification
+       * attempt is surfaced here so the success card can render
+       * "Sent via SMS to +1•••••1234" or "Send failed: <reason>".
+       *
+       * Email channel (Resend) blocked on brand decision per
+       * CLAUDE.md §18; SMS-only for v0.
+       */
+      notification: Send8879NotificationResult;
     }
   | {
       ok: false;
@@ -485,12 +503,29 @@ export async function requestSign8879(
         })
         .where(eq(schema.signatures.id, signatureRowId));
 
-      // 5. Audit log.
+      // 5. Audit log for envelope creation.
       await writeAuditRow(user, input.clientId, true, {
         stage: 'envelope-create',
         envelopeId: envelopeResult.envelopeId,
         signatureRowId,
         latencyMs: Date.now() - startedAt,
+        taxYear: input.taxYear,
+      });
+
+      // 6. Fire the client notification (Session 15, 2026-05-16).
+      // Best-effort: SMS the signing link to the client so they
+      // don't wait for Antonio to manually copy + send. Failure
+      // here does NOT undo the envelope; the success card surfaces
+      // the notification result + the manual "copy link" fallback.
+      // The helper writes its own audit row + Sentry breadcrumbs;
+      // we only need to capture the result for the UI.
+      const notification = await send8879Notification({
+        db,
+        tenantId: asTenantId(user.tenantId),
+        senderUserId: asUserId(user.id),
+        senderFullName: user.name,
+        signatureRowId,
+        clientId: input.clientId,
         taxYear: input.taxYear,
       });
 
@@ -500,6 +535,7 @@ export async function requestSign8879(
         signatureRowId,
         status: envelopeResult.status,
         signingUrl: viewResult.signingUrl,
+        notification,
       };
     });
   } catch (err) {

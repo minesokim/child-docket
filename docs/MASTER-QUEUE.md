@@ -44,7 +44,7 @@ Phase 3 + Phase 4 work per PRODUCT-ROADMAP.md. Mostly engineering items unblocke
 | # | Item | Why | Status | Owner | Blocker | Target |
 |---|---|---|---|---|---|---|
 | 8 | OLT browser automation MCP server | Wedge demo + Antonio's primary tax software. Per CLAUDE.md §3 it's a forced integration moat (no AI-native competitor integrates with OLT). | queued | Claude | None | 6/20 |
-| 9 | Form 8879 KBA-backed signing wired end-to-end | IRS Pub 1345 compliance for remote 8879. Currently substrate-only (`apps/client-portal/src/app/portal/sign-8879/[id]/sign-iframe.tsx`); needs DocuSign Identify KBA flow + audit-chain wiring. | queued | Claude | Item #7 | 6/15 |
+| 9 | Form 8879 KBA-backed signing wired end-to-end | IRS Pub 1345 compliance for remote 8879. Session 15 (5/16) closed the SMS-notification gap — Antonio uploads PDF → envelope created → client SMS'd automatically with signing link. Remaining gaps for FULL end-to-end: (a) Resend email channel (blocked on brand decision per §18), (b) reminder cadence (per migration 0031 `reminder_rules`), (c) Antonio-side notification when client signs. | in-progress | Claude | Item #15 (Resend) for email channel | 6/15 |
 | 10 | Calendar surface (first-class top-level) | CLAUDE.md §4 Calendar requirement. Needs `google-calendar` MCP server + `calendar_events` table (migration 0031 already shipped). | queued | Claude | None | 6/27 |
 | 11 | Notice triage + drafter real-notice testing | Substrate shipped; needs real CP2000 / CP504 / LT11 testing against Antonio's actual case load. | queued | Antonio + Claude | Antonio's audit case timing | 6/20 |
 | 12 | Partner #2 acquisition pipeline | Per L14 (90-day Antonio-dependency mitigation). Mid-market firm preferred, 20-100 staff, different network than Antonio. | queued | David | None | 6/27 |
@@ -110,7 +110,8 @@ Pruning lower than 14 days old; older work lives in commit history + AUTONOMOUS-
 | D10 | `/prospects` admin CRM page + status-update action | `7faff8b` | 5/16 |
 | D11 | FINANCIALS-FOR-ANTONIO.md + PRODUCT-FOR-ANTONIO.md | `d30f0c3` | 5/16 |
 | D12 | MASTER-QUEUE.md + USER-PREFERENCES.md + CLAUDE.md §22 boot ritual update | `74d4f17` | 5/16 |
-| D13 | Vision agent Bedrock fallover (isTransientAnthropicError + bedrockClient top-level exports + runVisionAgent with fallover + 7 new tests) | this commit | 5/16 |
+| D13 | Vision agent Bedrock fallover (isTransientAnthropicError + bedrockClient top-level exports + runVisionAgent with fallover + 7 new tests) | `c833c2e` | 5/16 |
+| D14 | Form 8879 client SMS notification — auto-fire on envelope creation (Session 15 partial-close of #9; SMS-only; en/es bilingual; 10 new tests on message-body composition; tsconfig excludes for *.test.ts) | this commit | 5/16 |
 
 ---
 
