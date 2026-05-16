@@ -1261,8 +1261,10 @@ The client popup has its own billing tab. **Don't add BillingCard to popup overv
 
 When loading this project cold, in this order:
 
-1. **Read this CLAUDE.md** (you are here). It now reflects reality as of 2026-05-15, not aspiration. Several §18 stubs that prior CLAUDE.md revisions listed as "not built" are shipped now; re-read §9 + §18 for the current honest state.
-2. **Then read the most recent session handoff** in `docs/OVERNIGHT-HANDOFF-*.md` or `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas. When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in. Latest handoff: [`docs/OVERNIGHT-HANDOFF-2026-05-13.md`](docs/OVERNIGHT-HANDOFF-2026-05-13.md). The 2026-05-15 audit + fix sprint isn't in a handoff file — its outputs are `docs/BRAND-RENAME-INVENTORY.md` + the §18 known-stubs rewrite above + the audit punch list embedded in the recent commit trailers.
+1. **Read this CLAUDE.md** (you are here). It now reflects reality as of 2026-05-16, not aspiration. Several §18 stubs that prior CLAUDE.md revisions listed as "not built" are shipped now; re-read §9 + §18 for the current honest state.
+2. **Read [`docs/USER-PREFERENCES.md`](docs/USER-PREFERENCES.md)** — David's voice / decision flow / quality bar / what he pushes back on. Calibration captured in one place so it survives compaction + session handoffs. Added 2026-05-16 (Session 13).
+3. **Read [`docs/MASTER-QUEUE.md`](docs/MASTER-QUEUE.md)** — single ordered "what's next" doc. Consolidates the forward-looking queue from PRODUCT-ROADMAP + DESIGN-PARTNER-ACQUISITION-PLAN + the punch lists. If you have to ask "what's next?" this doc didn't do its job. Added 2026-05-16 (Session 13).
+4. **Then read the most recent session handoff** in `docs/OVERNIGHT-HANDOFF-*.md` or `docs/SESSION-HANDOFF-*.md` — the latest captures session-specific deltas. When this CLAUDE.md and a newer handoff disagree, **the handoff wins** until a docs-pass folds it back in. Latest handoff: [`docs/OVERNIGHT-HANDOFF-2026-05-13.md`](docs/OVERNIGHT-HANDOFF-2026-05-13.md). The 2026-05-15 + 2026-05-16 audit + fix sprints aren't in handoff files — their outputs are `docs/BRAND-RENAME-INVENTORY.md` + the §18 known-stubs rewrite above + the audit punch list embedded in the recent commit trailers + MASTER-QUEUE.md (Done section).
 3. **Verify the dev DB is caught up** before writing any code that touches schema:
 
    ```bash
