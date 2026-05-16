@@ -232,6 +232,9 @@ jobs:
       - name: Apply migration 0034 (projects + engagement_projects)
         run: bun run packages/db/scripts/apply-34.ts
 
+      - name: Apply migration 0036 (authorities tighten WITH CHECK)
+        run: bun run packages/db/scripts/apply-36.ts
+
       # Integration smoke. Proves:
       #   - Composite FK rejects cross-tenant client_id binding
       #   - Audit chain trigger fires with chain_seq + prev_hash + row_hash

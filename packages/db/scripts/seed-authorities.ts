@@ -213,106 +213,125 @@ async function main() {
   const db = getAdminDb();
   console.log(`Seeding ${SEEDS.length} authorities + chunks...`);
 
+  // Wrap the entire seeding loop in one transaction so we can SET
+  // LOCAL app.bypass_rls = 'on' once at the top. This is required
+  // after migration 0036 — the IS NULL escape on authorities +
+  // authority_chunks WITH CHECK was removed (it was a privilege-
+  // escalation path; see migration 0036 header). The bypass policy
+  // is the new admin write path, and SET LOCAL only persists for
+  // the duration of an explicit transaction.
+  //
+  // Atomicity bonus: if any iteration fails partway through, the
+  // whole seed rolls back. Before 0036, each db.execute() was its
+  // own auto-commit tx so a mid-loop failure left a half-seeded DB.
   let inserted = 0;
   let updated = 0;
   let chunksInserted = 0;
 
-  for (const seed of SEEDS) {
-    const contentHash = authorityHash(seed);
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
 
-    // Postgres array literal: '{2024,2025}'. Empty array = '{}'.
-    const taxYearsLiteral = `{${seed.applicableTaxYears.join(',')}}`;
+    for (const seed of SEEDS) {
+      const contentHash = authorityHash(seed);
 
-    // No unique constraint on slug exists yet (only an index), so we
-    // can't ON CONFLICT (slug). Read-then-insert/update pattern.
-    const existingRows = await db.execute<{ id: string }>(
-      sql`SELECT id::text AS id FROM authorities WHERE slug = ${seed.slug} LIMIT 1`,
-    );
-    const existing = (existingRows as unknown as Array<{ id: string }>)[0];
+      // Postgres array literal: '{2024,2025}'. Empty array = '{}'.
+      const taxYearsLiteral = `{${seed.applicableTaxYears.join(',')}}`;
 
-    let authorityId: string;
-    let wasInserted: boolean;
-    if (existing) {
-      await db.execute(sql`
-        UPDATE authorities SET
-          title = ${seed.title},
-          citation_label = ${seed.citationLabel},
-          external_url = ${seed.externalUrl},
-          source_uri = ${seed.sourceUri},
-          effective_date = ${seed.effectiveDate}::date,
-          applicable_tax_years = ${taxYearsLiteral}::int[],
-          content_hash = ${contentHash},
-          updated_at = now()
-        WHERE id = ${existing.id}::uuid
-      `);
-      authorityId = existing.id;
-      wasInserted = false;
-    } else {
-      const insertedRows = await db.execute<{ id: string }>(sql`
-        INSERT INTO authorities (
-          tenant_id, kind, jurisdiction, citation_label, title, slug,
-          external_url, source_uri, effective_date, applicable_tax_years,
-          content_hash, metadata
-        )
-        VALUES (
-          NULL,
-          ${seed.kind}::authority_kind,
-          ${seed.jurisdiction}::authority_jurisdiction,
-          ${seed.citationLabel},
-          ${seed.title},
-          ${seed.slug},
-          ${seed.externalUrl},
-          ${seed.sourceUri},
-          ${seed.effectiveDate}::date,
-          ${taxYearsLiteral}::int[],
-          ${contentHash},
-          ${'{}'}::jsonb
-        )
-        RETURNING id::text AS id
-      `);
-      const inserted = (insertedRows as unknown as Array<{ id: string }>)[0];
-      if (!inserted) {
-        console.error(`  FAIL: no row returned for ${seed.slug}`);
-        continue;
+      // No unique constraint on slug exists yet (only an index), so we
+      // can't ON CONFLICT (slug). Read-then-insert/update pattern.
+      const existingRows = await tx.execute<{ id: string }>(
+        sql`SELECT id::text AS id FROM authorities WHERE slug = ${seed.slug} LIMIT 1`,
+      );
+      const existing = (existingRows as unknown as Array<{ id: string }>)[0];
+
+      let authorityId: string;
+      let wasInserted: boolean;
+      if (existing) {
+        await tx.execute(sql`
+          UPDATE authorities SET
+            title = ${seed.title},
+            citation_label = ${seed.citationLabel},
+            external_url = ${seed.externalUrl},
+            source_uri = ${seed.sourceUri},
+            effective_date = ${seed.effectiveDate}::date,
+            applicable_tax_years = ${taxYearsLiteral}::int[],
+            content_hash = ${contentHash},
+            updated_at = now()
+          WHERE id = ${existing.id}::uuid
+        `);
+        authorityId = existing.id;
+        wasInserted = false;
+      } else {
+        const insertedRows = await tx.execute<{ id: string }>(sql`
+          INSERT INTO authorities (
+            tenant_id, kind, jurisdiction, citation_label, title, slug,
+            external_url, source_uri, effective_date, applicable_tax_years,
+            content_hash, metadata
+          )
+          VALUES (
+            NULL,
+            ${seed.kind}::authority_kind,
+            ${seed.jurisdiction}::authority_jurisdiction,
+            ${seed.citationLabel},
+            ${seed.title},
+            ${seed.slug},
+            ${seed.externalUrl},
+            ${seed.sourceUri},
+            ${seed.effectiveDate}::date,
+            ${taxYearsLiteral}::int[],
+            ${contentHash},
+            ${'{}'}::jsonb
+          )
+          RETURNING id::text AS id
+        `);
+        const insertedRow = (insertedRows as unknown as Array<{ id: string }>)[0];
+        if (!insertedRow) {
+          console.error(`  FAIL: no row returned for ${seed.slug}`);
+          continue;
+        }
+        authorityId = insertedRow.id;
+        wasInserted = true;
       }
-      authorityId = inserted.id;
-      wasInserted = true;
+
+      if (wasInserted) inserted += 1;
+      else updated += 1;
+      const row = { id: authorityId, was_inserted: wasInserted };
+
+      // Replace chunks atomically: delete existing, insert fresh.
+      // Authority_chunks has FK ON DELETE CASCADE so this is clean.
+      await tx.execute(
+        sql`DELETE FROM authority_chunks WHERE authority_id = ${row.id}::uuid`,
+      );
+
+      for (let i = 0; i < seed.chunks.length; i++) {
+        const c = seed.chunks[i]!;
+        // Postgres text-array literal: escape commas/braces. The seed
+        // section_path values are short clean strings so simple
+        // wrapping in {} + double-quoting each element is safe.
+        const sectionPathLiteral = `{${c.sectionPath
+          .map((s) => `"${s.replace(/"/g, '\\"')}"`)
+          .join(',')}}`;
+        await tx.execute(sql`
+          INSERT INTO authority_chunks (
+            authority_id, ordinal, section_path, heading, text, content_hash
+          )
+          VALUES (
+            ${row.id}::uuid,
+            ${i},
+            ${sectionPathLiteral}::text[],
+            ${c.heading},
+            ${c.text},
+            ${chunkHash(c.text)}
+          )
+        `);
+        chunksInserted += 1;
+      }
+
+      console.log(
+        `  ${row.was_inserted ? 'INSERTED' : 'UPDATED'}  ${seed.citationLabel} (${seed.chunks.length} chunks)`,
+      );
     }
-
-    if (wasInserted) inserted += 1;
-    else updated += 1;
-    const row = { id: authorityId, was_inserted: wasInserted };
-
-    // Replace chunks atomically: delete existing, insert fresh.
-    // Authority_chunks has FK ON DELETE CASCADE so this is clean.
-    await db.execute(sql`DELETE FROM authority_chunks WHERE authority_id = ${row.id}::uuid`);
-
-    for (let i = 0; i < seed.chunks.length; i++) {
-      const c = seed.chunks[i]!;
-      // Postgres text-array literal: escape commas/braces. The seed
-      // section_path values are short clean strings so simple
-      // wrapping in {} + double-quoting each element is safe.
-      const sectionPathLiteral = `{${c.sectionPath.map((s) => `"${s.replace(/"/g, '\\"')}"`).join(',')}}`;
-      await db.execute(sql`
-        INSERT INTO authority_chunks (
-          authority_id, ordinal, section_path, heading, text, content_hash
-        )
-        VALUES (
-          ${row.id}::uuid,
-          ${i},
-          ${sectionPathLiteral}::text[],
-          ${c.heading},
-          ${c.text},
-          ${chunkHash(c.text)}
-        )
-      `);
-      chunksInserted += 1;
-    }
-
-    console.log(
-      `  ${row.was_inserted ? 'INSERTED' : 'UPDATED'}  ${seed.citationLabel} (${seed.chunks.length} chunks)`,
-    );
-  }
+  });
 
   console.log(
     `\nDone: ${inserted} inserted, ${updated} updated, ${chunksInserted} chunks total.`,
