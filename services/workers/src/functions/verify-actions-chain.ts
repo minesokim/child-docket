@@ -42,6 +42,26 @@
 //   cron, we set `app.bypass_rls = on` on the connection inside each
 //   step.run().
 //
+//   KNOWN POSTURE GAP (Session 4 audit, 2026-05-15):
+//   `SET LOCAL app.bypass_rls = 'on'` outside an explicit transaction
+//   is a Postgres no-op (the setting reverts at the implicit auto-
+//   commit boundary). getAdminDb() returns a plain non-tx Drizzle
+//   client, so each db.execute() runs in its own implicit tx; the
+//   SET LOCAL is effectively dead. Additionally, the RLS policy on
+//   `actions` (migration 0001) does NOT include a bypass_rls escape
+//   clause — it checks tenant_id = current_tenant_id() only. The
+//   cron currently works in production ONLY because Neon's default
+//   `neondb_owner` role carries the BYPASSRLS attribute, so RLS is
+//   bypassed at the role level regardless of the app.bypass_rls GUC.
+//   If we ever migrate to a non-BYPASSRLS application role (per the
+//   migration 0001 design intent — see "docket_app role" comments
+//   that were never fully built into a 0002_roles migration), the
+//   cron will silently report ALL tenants as "intact" with zero rows
+//   scanned. Mitigation queued: convert verify_actions_chain to a
+//   SECURITY DEFINER function owned by a BYPASSRLS role, OR wrap
+//   the cron's queries in an explicit db.transaction() and add a
+//   bypass_rls clause to the actions RLS policy. V1.5 work.
+//
 // SCHEDULE
 //   `0 7 * * *` — 07:00 UTC nightly (00:00 PT). Off-peak so a slow
 //   sequential walk doesn't compete with daytime traffic.
