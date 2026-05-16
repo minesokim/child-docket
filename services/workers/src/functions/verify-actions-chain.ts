@@ -42,25 +42,32 @@
 //   cron, we set `app.bypass_rls = on` on the connection inside each
 //   step.run().
 //
-//   KNOWN POSTURE GAP (Session 4 audit, 2026-05-15):
-//   `SET LOCAL app.bypass_rls = 'on'` outside an explicit transaction
-//   is a Postgres no-op (the setting reverts at the implicit auto-
-//   commit boundary). getAdminDb() returns a plain non-tx Drizzle
-//   client, so each db.execute() runs in its own implicit tx; the
-//   SET LOCAL is effectively dead. Additionally, the RLS policy on
-//   `actions` (migration 0001) does NOT include a bypass_rls escape
-//   clause — it checks tenant_id = current_tenant_id() only. The
-//   cron currently works in production ONLY because Neon's default
-//   `neondb_owner` role carries the BYPASSRLS attribute, so RLS is
-//   bypassed at the role level regardless of the app.bypass_rls GUC.
-//   If we ever migrate to a non-BYPASSRLS application role (per the
-//   migration 0001 design intent — see "docket_app role" comments
-//   that were never fully built into a 0002_roles migration), the
-//   cron will silently report ALL tenants as "intact" with zero rows
-//   scanned. Mitigation queued: convert verify_actions_chain to a
-//   SECURITY DEFINER function owned by a BYPASSRLS role, OR wrap
-//   the cron's queries in an explicit db.transaction() and add a
-//   bypass_rls clause to the actions RLS policy. V1.5 work.
+//   POSTURE GAP — CLOSED in Session 11 (2026-05-16):
+//   Pre-Session-11 the cron called SET LOCAL app.bypass_rls on a
+//   non-tx-wrapped Drizzle client. postgres-js auto-commits each
+//   query so SET LOCAL reverted at the implicit COMMIT boundary,
+//   making the GUC effectively dead. Additionally, the RLS policy
+//   on `actions` (migration 0001) had no bypass_rls escape clause —
+//   it checked tenant_id = current_tenant_id() only. The cron worked
+//   in production ONLY because Neon's default `neondb_owner` role
+//   carries the BYPASSRLS attribute. A future migration to a non-
+//   BYPASSRLS role would have caused the cron to silently report
+//   ALL tenants as "intact" with zero rows scanned.
+//
+//   Session 11 fix (two-part):
+//     (a) Migration 0038 adds <table>_bypass policies to all 12
+//         0001-era tables (users, clients, ... notice_responses),
+//         making bypass_rls a real policy-readable GUC.
+//     (b) This file wraps each step's queries in db.transaction()
+//         so SET LOCAL takes effect inside the tx + persists for
+//         the duration of the queries (apply-38 smoke proves the
+//         cross-tenant SELECT path works after the fix).
+//
+//   The cron is now correct regardless of the connecting role's
+//   BYPASSRLS attribute. The docket_app / docket_admin role split
+//   from the 0001 design intent remains unimplemented — that's
+//   V1.5 work, but no longer load-bearing for the cron's
+//   correctness.
 //
 // SCHEDULE
 //   `0 7 * * *` — 07:00 UTC nightly (00:00 PT). Off-peak so a slow
@@ -143,15 +150,31 @@ export const verifyActionsChain = inngest.createFunction(
   // 07:00 UTC nightly = 00:00 PT (off-peak for the v1 mid+down market).
   { cron: '0 7 * * *' },
   async ({ step, logger }) => {
-    // Step 1 — bypass RLS for the admin-cron context. The session
-    // GUC is connection-scoped; setting it here applies to the same
-    // connection used in subsequent steps within this fn.
+    // Step 1 — bypass RLS for the admin-cron context. Migration 0038
+    // (Session 11) added <table>_bypass policies to the 12 0001-era
+    // tables; bypass_rls is now a real policy-readable GUC, not just
+    // a comment-level assertion. CRITICAL — we wrap each step's
+    // queries in db.transaction() so SET LOCAL persists for the
+    // duration of the queries inside. Pre-Session-11 the cron called
+    // SET LOCAL on a non-tx-wrapped Drizzle client; postgres-js
+    // auto-commits each query so SET LOCAL reverted at the implicit
+    // COMMIT boundary, making the bypass GUC effectively dead. The
+    // cron worked anyway because Neon's neondb_owner role carries
+    // BYPASSRLS at the role level — but if we ever migrated to a
+    // non-BYPASSRLS role, the cron would silently report all tenants
+    // as "intact" with zero rows scanned. Wrapping in db.transaction
+    // makes the bypass GUC actually take effect inside the tx + makes
+    // the cron correct regardless of the connecting role's
+    // BYPASSRLS attribute.
     const tenants = await step.run('list-all-tenants', async () => {
       const db = getAdminDb();
-      // Set bypass FIRST so the SELECT below crosses tenant lines.
-      await db.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
-      const rows = await db.select({ id: schema.tenants.id }).from(schema.tenants);
-      return rows as TenantRow[];
+      return await db.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
+        const rows = await tx
+          .select({ id: schema.tenants.id })
+          .from(schema.tenants);
+        return rows as TenantRow[];
+      });
     });
 
     if (tenants.length === 0) {
@@ -165,14 +188,23 @@ export const verifyActionsChain = inngest.createFunction(
     for (const tenant of tenants) {
       const result = await step.run(`verify-${tenant.id}`, async () => {
         const db = getAdminDb();
-        await db.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
-        // verify_actions_chain returns the id of the first mismatch
-        // (NULL if chain intact). One row, one column.
-        const rows = await db.execute<{ verify_actions_chain: string | null }>(
-          sql`SELECT verify_actions_chain(${tenant.id}::uuid) AS verify_actions_chain`,
-        );
-        const brokenRowId = rows[0]?.verify_actions_chain ?? null;
-        return { tenant_id: tenant.id, broken_row_id: brokenRowId };
+        return await db.transaction(async (tx) => {
+          await tx.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
+          // verify_actions_chain returns the id of the first mismatch
+          // (NULL if chain intact). One row, one column. Inside the
+          // tx, the bypass_rls GUC is effective + the per-table
+          // bypass policies (migration 0038) permit cross-tenant
+          // reads. Without the tx wrap, SET LOCAL would be a no-op
+          // per the auto-commit boundary — see migration 0038 header
+          // + Session 4 audit finding.
+          const rows = await tx.execute<{
+            verify_actions_chain: string | null;
+          }>(
+            sql`SELECT verify_actions_chain(${tenant.id}::uuid) AS verify_actions_chain`,
+          );
+          const brokenRowId = rows[0]?.verify_actions_chain ?? null;
+          return { tenant_id: tenant.id, broken_row_id: brokenRowId };
+        });
       });
 
       if (result.broken_row_id === null) {
@@ -184,29 +216,34 @@ export const verifyActionsChain = inngest.createFunction(
         // event to Inngest's dashboard + Vercel runtime logs.
         await step.run(`record-broken-${tenant.id}`, async () => {
           const db = getAdminDb();
-          await db.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
-          // SET LOCAL the tenant so the chain-extension trigger picks
-          // up the right per-tenant prev_hash.
-          await db.execute(
-            sql`SET LOCAL app.current_tenant_id = ${result.tenant_id}::text`,
-          );
-          await db.execute(sql`
-            INSERT INTO actions (
-              tenant_id, action_class, tool_name,
-              latency_ms, success, tool_input
-            )
-            VALUES (
-              ${result.tenant_id}::uuid,
-              'send-internal'::action_class,
-              'verify_actions_chain.detected_tamper',
-              0,
-              false,
-              ${JSON.stringify({
-                broken_row_id: result.broken_row_id,
-                detected_at: new Date().toISOString(),
-              })}::jsonb
-            )
-          `);
+          await db.transaction(async (tx) => {
+            // The tamper-report INSERT runs under the affected
+            // tenant's context so the chain-extension trigger picks
+            // up the right per-tenant prev_hash. Bypass also set in
+            // case the tenant_isolation policy ever drifts to a
+            // shape that wouldn't permit the admin context.
+            await tx.execute(sql`SET LOCAL app.bypass_rls = 'on'`);
+            await tx.execute(
+              sql`SET LOCAL app.current_tenant_id = ${result.tenant_id}::text`,
+            );
+            await tx.execute(sql`
+              INSERT INTO actions (
+                tenant_id, action_class, tool_name,
+                latency_ms, success, tool_input
+              )
+              VALUES (
+                ${result.tenant_id}::uuid,
+                'send-internal'::action_class,
+                'verify_actions_chain.detected_tamper',
+                0,
+                false,
+                ${JSON.stringify({
+                  broken_row_id: result.broken_row_id,
+                  detected_at: new Date().toISOString(),
+                })}::jsonb
+              )
+            `);
+          });
         });
         logger.error('chain-tampering', { ...result });
       }

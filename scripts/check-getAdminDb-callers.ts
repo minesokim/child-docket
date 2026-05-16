@@ -147,9 +147,9 @@ const ALLOWLIST: ReadonlyArray<CallerEntry> = [
   },
   {
     file: 'services/workers/src/functions/verify-actions-chain.ts',
-    count: 4,
+    count: 3,
     justification:
-      'Nightly cryptographic audit-chain verification (migration 0022). Iterates ALL tenants, verifies each tenant\'s actions table chain integrity (chain_seq + prev_hash + row_hash), reports tampering. Same global-iteration pattern as gmail-poll. Three real call sites: (1) tenant list query, (2) per-tenant chain read, (3) tamper-report write. Fourth occurrence is a comment reference added 2026-05-15 (Session 4 RLS-posture audit block) — the matcher catches comment mentions identically to real calls; that posture documentation is intentional.',
+      'Nightly cryptographic audit-chain verification (migration 0022). Iterates ALL tenants, verifies each tenant\'s actions table chain integrity (chain_seq + prev_hash + row_hash), reports tampering. Same global-iteration pattern as gmail-poll. Three call sites, each now wrapped in db.transaction() so SET LOCAL app.bypass_rls = \'on\' takes effect inside the tx (Session 11 RLS posture finish, 2026-05-16; pairs with migration 0038 bypass policies). Pre-fix the SET LOCAL was a no-op at the auto-commit boundary; cron worked only because Neon\'s neondb_owner has BYPASSRLS at the role level. Post-fix the cron is correct regardless of the connecting role\'s BYPASSRLS attribute.',
   },
   {
     file: 'services/workers/src/functions/cost-outlier-alert.ts',
