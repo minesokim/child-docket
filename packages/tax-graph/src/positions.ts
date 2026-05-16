@@ -266,7 +266,38 @@ export type DiscoveredPosition = {
 };
 
 // ────────────────────────────────────────────────────────────────
-// THE LIBRARY — 20 v0 entries, Antonio-approved.
+// THE LIBRARY — 20 v0 entries.
+//
+// ⚠️ SCOPE + REVIEW-STATUS CLARIFIER (2026-05-15 audit fix)
+// ───────────────────────────────────────────────────────────────
+// PRIOR comment text on this line said "Antonio-approved." That
+// claim was FALSE — every source memo at
+// content/position-library/v0/positions/p001..p020-*.md carries
+// `Review status: DRAFT-DAVID` + the footer "Pending Antonio
+// review. Status DRAFT-DAVID until Antonio signs off." The
+// reviewStatus ingestion gate (packages/db/scripts/
+// ingest-position-library.ts) default-DENIES these entries from
+// prospect-facing scans precisely because they haven't been
+// authority-validated by an EA.
+//
+// This TS module is a TYPED MIRROR of the source memos and the
+// authority_chunks ingestion. Useful for:
+//   - The deterministic scanner at discovery-scan.ts (a dev/debug
+//     comparator, NOT the production path — see that file's
+//     scope clarifier).
+//   - Static-typed access to the taxonomy in tooling.
+//
+// The PRODUCTION Position Library source-of-truth is the
+// authority_chunks DB ingestion (Voyage-3-Large embeddings,
+// dated effective_from, reviewStatus-gated). The LLM Discovery
+// agent at services/workers/src/agents/discovery-agent.ts pulls
+// from authority_chunks, not from this module.
+//
+// Antonio review session is queued as the wedge unlock for the
+// 100-customers-by-8/1 sprint. Until those 20 source memos flip
+// to ANTONIO-VALIDATED, no real prospect should receive a scan
+// PDF with surfaced positions from this catalog.
+// ───────────────────────────────────────────────────────────────
 //
 // Curation rules:
 //   1. Every entry MUST cite a primary IRC section.

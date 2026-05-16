@@ -1,13 +1,43 @@
-// Adapter — convert Discovery Scan output to PDF input shape.
+// Adapter — convert deterministic-scanner output to PDF input shape.
+//
+// ⚠️ SCOPE CLARIFIER (2026-05-15 audit fix)
+// ───────────────────────────────────────────────────────────────
+// This adapter bridges the DEV/DEBUG deterministic scanner at
+// @docket/tax-graph/discovery-scan.ts to the PDF renderer. It is
+// NOT the production path from the /scan landing page to a
+// delivered Petal-branded PDF.
+//
+// The PRODUCTION pipeline is:
+//   /scan form submit (apps/client-portal/src/app/api/scan-intake-stub)
+//     → manual David review (per DISCOVERY-SCAN-OPERATIONAL.md
+//                            "Manual gate during first 30 scans")
+//     → composeDiscoveryScan flow
+//       (services/workers/src/flows/discovery-scan.ts)
+//     → LLM Discovery agent
+//       (services/workers/src/agents/discovery-agent.ts)
+//     → its own adapter into DiscoveryScanInput
+//     → @docket/discovery-pdf renderer
+//     → R2 upload + Resend delivery
+//
+// This adapter (`from-scan.ts`) is invoked only by the dev smoke at
+// `scripts/smoke-from-scan.ts`. It's useful for testing the PDF
+// renderer's output shape against deterministic input without
+// needing the LLM agent + authority-RAG corpus + Anthropic credits.
+//
+// Audit found I (Claude) shipped this adapter today (2026-05-15)
+// without realizing the LLM Discovery agent already had its own
+// adapter shipped 5/12. This banner exists so the next reader sees
+// the duality + doesn't mistake the smoke path for the prod path.
+// ───────────────────────────────────────────────────────────────
 //
 // The catalog scanner (@docket/tax-graph/discovery-scan.ts) emits
 // DiscoveredPosition[] with string-tier + explicit IRC/TreasReg/case
 // fields. The PDF renderer expects PdfPosition[] with numeric-tier +
 // PdfCitation[] array of source/cite/summary tuples.
 //
-// This function is the BRIDGE — it lets the Discovery Scan landing
-// page wire the deterministic catalog scanner into the existing PDF
-// builder without rewriting either. The two systems can evolve
+// This function is the BRIDGE — it lets the deterministic catalog
+// scanner emit PDF input for the dev smoke without rewriting either
+// the scanner or the renderer. The two systems can evolve
 // independently as long as this adapter stays in sync.
 //
 // USAGE

@@ -1,5 +1,47 @@
 // Discovery Scan — deterministic Position Library scanner.
 //
+// ⚠️ SCOPE CLARIFIER (2026-05-15 audit fix)
+// ───────────────────────────────────────────────────────────────────
+// This is NOT the production Discovery Scan path. The production
+// path is the LLM-driven Discovery agent at
+// `services/workers/src/agents/discovery-agent.ts` (728 LOC,
+// RAG-grounded via `PostgresRetriever` + BM25 + Voyage-3-Large +
+// RRF fusion + Sonnet 4.6 classifier) plus the composeDiscoveryScan
+// orchestrator at `services/workers/src/flows/discovery-scan.ts`.
+// The production substrate sources cited authority from a
+// versioned `authority_chunks` table (dated `effective_from` /
+// `superseded_at` per POSITION-FRAMEWORK.md §5: "retrieval over a
+// curated, dated authority library. The AI never relies on
+// parametric recall for a citation it could be wrong about").
+//
+// This deterministic scanner exists as:
+//   1. A typed reference for the Position Library taxonomy (the 20
+//      v0 entries here mirror the source memos at
+//      content/position-library/v0/positions/p001..p020-*.md +
+//      their ingested form at authority_chunks).
+//   2. A cheap-lowbar comparator for the LLM Discovery agent — run
+//      both, diff the surfaced positions, flag discrepancies.
+//   3. An offline-without-LLM-cost development aid for testing the
+//      PDF adapter + downstream pipeline shape without burning
+//      Anthropic credits or needing a live RAG corpus.
+//
+// What this scanner is NOT:
+//   - The wedge for the 100-customers-by-8/1 acquisition push (that
+//     runs through the LLM agent).
+//   - The path the /scan landing form should call when wired
+//     (that's `composeDiscoveryScan`).
+//   - A source of cited authority for delivery to prospects — its
+//     citations are frozen from a TS module rather than retrieved
+//     from a dated authority library, so they can drift from the
+//     authoritative version over time.
+//
+// Audit found that I (Claude) shipped this scanner today
+// (2026-05-15) WITHOUT grepping services/workers/ first to discover
+// the LLM Discovery agent. The duplicate-architecture mistake is
+// real; the scanner stays in the repo as a dev/debug aid + this
+// banner exists so the next reader doesn't repeat my mistake.
+// ───────────────────────────────────────────────────────────────────
+//
 // Complement to the LLM-driven runDiscovery in services/workers. This
 // pure-logic scanner enumerates POSITION_LIBRARY_V0 against a
 // taxpayer's intake state + optional document summaries, runs the
