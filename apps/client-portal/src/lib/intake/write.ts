@@ -137,20 +137,56 @@ export async function saveIntakeField(
         })
         .where(eq(schema.intakeResponses.id, existing.id));
 
-      // 7. Side-effect: keep clients.full_name in sync with the
-      // taxpayer's self-reported legal name. Preparers create client
-      // rows with a placeholder name (the name they know the client
-      // by); when the client types their full legal name on /personal,
-      // we want the command-room client list and detail page header
-      // to reflect THAT — not the placeholder. Plain text, not
-      // encrypted (full_name is not in SENSITIVE_INTAKE_PATHS).
-      if (path === 'personal.fullName' && typeof validatedValue === 'string') {
+      // 7. Side-effect: keep the clients table in sync with intake-
+      // collected fields the COMMAND ROOM reads directly. The 8879
+      // request action (and other server actions) validates against
+      // `clients.email` / `clients.full_name` / `clients.state` — NOT
+      // against the JSON inside intake_responses.answers. Without
+      // mirroring these fields, intake input is invisible to the
+      // preparer-side flow and 8879 requests fail with
+      // 'client-incomplete' even after a complete intake.
+      //
+      // Mirror-back set:
+      //   - personal.fullName     → clients.full_name
+      //   - personal.email        → clients.email          (Session 17 fix)
+      //   - personal.addressState → clients.state          (Session 17 fix)
+      //
+      // Explicitly NOT mirrored:
+      //   - personal.phone — bound to Clerk identity at sign-in time;
+      //     re-keying the binding from intake is unsafe.
+      //   - personal.ssn — sensitive, encrypted in intake_responses
+      //     only; never written plaintext into clients.
+      //   - personal.dateOfBirth / occupation / street / city / zip —
+      //     no corresponding clients.* column today.
+      //
+      // All three mirrored fields are plain text (none in
+      // SENSITIVE_INTAKE_PATHS).
+      if (typeof validatedValue === 'string') {
         const trimmed = validatedValue.trim();
         if (trimmed.length > 0) {
-          await db
-            .update(schema.clients)
-            .set({ fullName: trimmed, updatedAt: new Date() })
-            .where(eq(schema.clients.id, authed.clientId));
+          if (path === 'personal.fullName') {
+            await db
+              .update(schema.clients)
+              .set({ fullName: trimmed, updatedAt: new Date() })
+              .where(eq(schema.clients.id, authed.clientId));
+          } else if (path === 'personal.email') {
+            // Lowercase to match the canonical form set by
+            // command-room's createClient — email comparisons stay
+            // case-insensitive that way.
+            const normalized = trimmed.toLowerCase();
+            await db
+              .update(schema.clients)
+              .set({ email: normalized, updatedAt: new Date() })
+              .where(eq(schema.clients.id, authed.clientId));
+          } else if (path === 'personal.addressState') {
+            // StateCodeSchema (packages/shared/src/intake-schemas.ts)
+            // already validates as a 2-letter US state code; trimming
+            // is belt-and-suspenders.
+            await db
+              .update(schema.clients)
+              .set({ state: trimmed, updatedAt: new Date() })
+              .where(eq(schema.clients.id, authed.clientId));
+          }
         }
       }
 
