@@ -143,6 +143,33 @@ jobs:
       - name: pnpm audit (full report, advisory only)
         run: pnpm audit --audit-level moderate || true
 
+  security-lint:
+    # Hard guardrails on the two RLS-bypass + trust-gate surfaces. Each
+    # check fails the build when drift is detected (new getAdminDb()
+    # caller without an allowlist entry, or a new agent file that
+    # neither calls assertTrustGate nor carries a SKIP-TRUST-GATE
+    # marker). Wired in 2026-05-15 (Session 7 — trust-gate central
+    # enforcement); closes todo follow-up #15.
+    name: security-lint (getAdminDb + trust-gate coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # check-getAdminDb-callers.ts uses `git grep` against the
+          # tree; needs the full ref to enumerate production code.
+          fetch-depth: 1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+
+      - name: getAdminDb caller allowlist check
+        run: bun run scripts/check-getAdminDb-callers.ts
+
+      - name: Trust-gate coverage check
+        run: bun run scripts/check-trust-gate-coverage.ts
+
   integration-tests:
     name: integration (migrations + triggers + audit chain)
     runs-on: ubuntu-latest

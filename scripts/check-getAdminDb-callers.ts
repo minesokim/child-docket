@@ -147,9 +147,9 @@ const ALLOWLIST: ReadonlyArray<CallerEntry> = [
   },
   {
     file: 'services/workers/src/functions/verify-actions-chain.ts',
-    count: 3,
+    count: 4,
     justification:
-      'Nightly cryptographic audit-chain verification (migration 0022). Iterates ALL tenants, verifies each tenant\'s actions table chain integrity (chain_seq + prev_hash + row_hash), reports tampering. Same global-iteration pattern as gmail-poll. Three call sites: (1) tenant list query, (2) per-tenant chain read, (3) tamper-report write.',
+      'Nightly cryptographic audit-chain verification (migration 0022). Iterates ALL tenants, verifies each tenant\'s actions table chain integrity (chain_seq + prev_hash + row_hash), reports tampering. Same global-iteration pattern as gmail-poll. Three real call sites: (1) tenant list query, (2) per-tenant chain read, (3) tamper-report write. Fourth occurrence is a comment reference added 2026-05-15 (Session 4 RLS-posture audit block) — the matcher catches comment mentions identically to real calls; that posture documentation is intentional.',
   },
   {
     file: 'services/workers/src/functions/cost-outlier-alert.ts',
@@ -168,6 +168,14 @@ const ALLOWLIST: ReadonlyArray<CallerEntry> = [
     count: 2,
     justification:
       'Cost-telemetry runaway-spend alarm. Detects sustained high-spend windows per tenant. Two call sites: (1) tenant scan, (2) per-tenant audit trail insert for the alarm event.',
+  },
+
+  // ─── Documentation-only mentions (no real call site) ────────────
+  {
+    file: 'packages/db/src/webhook-dedup.ts',
+    count: 1,
+    justification:
+      'JSDoc-comment reference (2026-05-15, Session 6 webhook audit). The tryRecordWebhookEvent helper takes a DocketDb argument from the caller; this file does NOT itself call getAdminDb(). The docstring mentions getAdminDb() as the typical caller pattern for the webhook routes. The literal-string matcher catches the comment reference — documenting it here keeps the allowlist canonical.',
   },
 ];
 

@@ -5,7 +5,18 @@
 // telemetry, automatic failover. Adds: trust-escalation gate, MCP tool
 // routing, sub-agents (later).
 
-import type { ActionLogEntry, AgentId, TenantId } from '@docket/shared';
+import type {
+  ActionClass,
+  ActionLogEntry,
+  AgentId,
+  TenantId,
+  TrustLevel,
+} from '@docket/shared';
+import {
+  assertTrustGate,
+  type PositionTier,
+  type TrustGateDecision,
+} from '@docket/shared';
 import {
   callClaudeWithFallover,
   type CallClaudeResult,
@@ -58,6 +69,44 @@ export type DocketAgentOptions = {
    */
   promptId?: string;
   promptVersion?: string;
+  /**
+   * OPTIONAL central trust-gate enforcement.
+   *
+   * If the agent's NEXT step after this LLM call is a side-effecting
+   * action with a KNOWN-UP-FRONT action class (e.g., a classifier
+   * that's deciding whether to send-external a confirmation, or an
+   * outreach flow with a fixed action shape), pass downstreamAction
+   * here. runDocketAgent will call assertTrustGate(...) and surface
+   * the result on DocketAgentResult.gateDecision. The CALLER must
+   * still branch on gateDecision before executing the side effect —
+   * this option doesn't STOP the side effect, it just hands the
+   * caller a decision computed by the central gate.
+   *
+   * When omitted (the legacy + most-common case), runDocketAgent
+   * does NOT call assertTrustGate and gateDecision is undefined.
+   * Agents whose action class depends on the LLM output (e.g.,
+   * discovery-agent inferring highest position tier, inbox-drafter
+   * inferring send-external vs send-internal from the issue type)
+   * keep calling assertTrustGate themselves AFTER the LLM returns.
+   *
+   * Either pattern satisfies check-trust-gate-coverage.ts. The CI
+   * lint guard checks for "assertTrustGate(" in the agent file —
+   * a downstreamAction-based call site still matches via the
+   * import + usage somewhere in the agent's wrapper.
+   *
+   * Per CLAUDE.md §8 trust escalation + POSITION-FRAMEWORK §6 +
+   * the Session 7 trust-gate central-enforcement audit.
+   */
+  downstreamAction?: {
+    actionClass: ActionClass;
+    /** Required when actionClass is position-bearing (send-external
+     *  for a tax-position output). Omit for non-position generic
+     *  comms. */
+    positionTier?: PositionTier;
+    /** Firm's currently-configured trust level
+     *  (tenants.defaultTrustLevel). */
+    trustLevel: TrustLevel;
+  };
 };
 
 export type DocketAgentResult = {
@@ -76,6 +125,13 @@ export type DocketAgentResult = {
   cachedTokens: number;
   costUsd: number;
   latencyMs: number;
+  /**
+   * Populated iff the caller passed `downstreamAction` on the
+   * options. Contains the central trust-gate decision the caller
+   * must branch on before executing the downstream side effect.
+   * Undefined when downstreamAction was omitted.
+   */
+  gateDecision?: TrustGateDecision;
 };
 
 export async function runDocketAgent(opts: DocketAgentOptions): Promise<DocketAgentResult> {
@@ -138,6 +194,21 @@ export async function runDocketAgent(opts: DocketAgentOptions): Promise<DocketAg
     });
   }
 
+  // Central trust-gate enforcement, OPT-IN per call site. When the
+  // caller supplied `downstreamAction`, evaluate the gate and surface
+  // the decision on the result. Caller is responsible for branching
+  // on `gateDecision.allowed` before executing the side effect — this
+  // helper does NOT stop the side effect, it provides the decision.
+  // Session 7 trust-gate audit (2026-05-15).
+  let gateDecision: TrustGateDecision | undefined;
+  if (opts.downstreamAction) {
+    gateDecision = assertTrustGate({
+      trustLevel: opts.downstreamAction.trustLevel,
+      actionClass: opts.downstreamAction.actionClass,
+      positionTier: opts.downstreamAction.positionTier,
+    });
+  }
+
   return {
     text: result.text,
     modelUsed: tier,
@@ -147,5 +218,6 @@ export async function runDocketAgent(opts: DocketAgentOptions): Promise<DocketAg
     cachedTokens,
     costUsd,
     latencyMs: result.latencyMs,
+    ...(gateDecision ? { gateDecision } : {}),
   };
 }

@@ -134,3 +134,133 @@ describe('runDocketAgent — cost formula', () => {
     expect(result.cachedTokens).toBe(900_000);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Central trust-gate enforcement (Session 7 audit, 2026-05-15).
+// runDocketAgent OPTIONALLY accepts a downstreamAction descriptor
+// + surfaces the central assertTrustGate decision on the result.
+// Tests verify the four shapes:
+//   1. omitted   → gateDecision undefined (backward compat)
+//   2. allowed   → gateDecision = { allowed: true }
+//   3. blocked   → gateDecision = { allowed: false, requires:'human-approval' }
+//   4. refusal   → gateDecision = { allowed: false, requires:'refusal' }
+// ─────────────────────────────────────────────────────────────
+
+describe('runDocketAgent — central trust-gate enforcement', () => {
+  function cannedTrivialResponse() {
+    return makeCannedResponse({
+      text: 'r',
+      inputTokens: 1,
+      outputTokens: 1,
+    });
+  }
+
+  test('downstreamAction omitted → gateDecision is undefined (backward compat)', async () => {
+    cannedResponses.length = 0;
+    cannedResponses.push(cannedTrivialResponse());
+    const result = await runDocketAgent({
+      tenantId: TENANT_A,
+      agentId: AGENT_A,
+      systemPrompt: 'p',
+      userPrompt: 'p',
+    });
+    expect(result.gateDecision).toBeUndefined();
+  });
+
+  test('downstreamAction read action → gateDecision allowed (never-gated class)', async () => {
+    cannedResponses.length = 0;
+    cannedResponses.push(cannedTrivialResponse());
+    const result = await runDocketAgent({
+      tenantId: TENANT_A,
+      agentId: AGENT_A,
+      systemPrompt: 'p',
+      userPrompt: 'p',
+      downstreamAction: {
+        actionClass: 'read',
+        trustLevel: 1,
+      },
+    });
+    expect(result.gateDecision).toEqual({ allowed: true });
+  });
+
+  test('downstreamAction send-external at L1 → gateDecision blocks for human-approval', async () => {
+    // L1 firm + generic send-external (no positionTier) requires EA
+    // approval per the trust-gate decision table.
+    cannedResponses.length = 0;
+    cannedResponses.push(cannedTrivialResponse());
+    const result = await runDocketAgent({
+      tenantId: TENANT_A,
+      agentId: AGENT_A,
+      systemPrompt: 'p',
+      userPrompt: 'p',
+      downstreamAction: {
+        actionClass: 'send-external',
+        trustLevel: 1,
+      },
+    });
+    expect(result.gateDecision).toBeDefined();
+    expect(result.gateDecision?.allowed).toBe(false);
+    if (result.gateDecision?.allowed === false) {
+      expect(result.gateDecision.requires).toBe('human-approval');
+    }
+  });
+
+  test('downstreamAction send-external with position tier 5 → gateDecision refusal', async () => {
+    // Tier 5 is below the framework's refusal floor; trust level does
+    // not matter — REFUSE is universal.
+    cannedResponses.length = 0;
+    cannedResponses.push(cannedTrivialResponse());
+    const result = await runDocketAgent({
+      tenantId: TENANT_A,
+      agentId: AGENT_A,
+      systemPrompt: 'p',
+      userPrompt: 'p',
+      downstreamAction: {
+        actionClass: 'send-external',
+        trustLevel: 4,
+        positionTier: 5,
+      },
+    });
+    expect(result.gateDecision).toBeDefined();
+    expect(result.gateDecision?.allowed).toBe(false);
+    if (result.gateDecision?.allowed === false) {
+      expect(result.gateDecision.requires).toBe('refusal');
+    }
+  });
+
+  test('downstreamAction file → gateDecision blocks regardless of level (ALWAYS_EA)', async () => {
+    cannedResponses.length = 0;
+    cannedResponses.push(cannedTrivialResponse());
+    const result = await runDocketAgent({
+      tenantId: TENANT_A,
+      agentId: AGENT_A,
+      systemPrompt: 'p',
+      userPrompt: 'p',
+      downstreamAction: {
+        actionClass: 'file',
+        trustLevel: 4, // even at L4 firm
+      },
+    });
+    expect(result.gateDecision?.allowed).toBe(false);
+    if (result.gateDecision?.allowed === false) {
+      expect(result.gateDecision.requires).toBe('human-approval');
+    }
+  });
+
+  test('downstreamAction send-external tier 1 at L3 → gateDecision allowed', async () => {
+    cannedResponses.length = 0;
+    cannedResponses.push(cannedTrivialResponse());
+    const result = await runDocketAgent({
+      tenantId: TENANT_A,
+      agentId: AGENT_A,
+      systemPrompt: 'p',
+      userPrompt: 'p',
+      downstreamAction: {
+        actionClass: 'send-external',
+        trustLevel: 3,
+        positionTier: 1,
+      },
+    });
+    expect(result.gateDecision).toEqual({ allowed: true });
+  });
+});
