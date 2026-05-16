@@ -2,7 +2,8 @@
 # .githooks/commit-msg
 #
 # Validates that feat/fix commits include the required protocol trailers
-# (Edge-Cases / Score / Align / Craft / Decisions) per scripts/protocol-gate.ts.
+# (Edge-Cases / Score / Align / Craft / Codex-Reviewed / Decisions /
+# Compliance-Check) per scripts/protocol-gate.ts.
 #
 # To bypass for an emergency: add the trailer
 #   Protocol-Skip: <>=10-char reason>
@@ -10,13 +11,37 @@
 # and surfaces in CI as an audit line.
 #
 # Activated via: git config core.hooksPath .githooks  (run setup once).
+#
+# 2026-05-15 audit caught the prior version silently `exit 0`-ing when
+# bun was missing from PATH. On a fresh Windows dev machine without
+# bun installed, EVERY commit bypassed the protocol-gate trailer
+# enforcement with only a printed warning. Softer than --no-verify,
+# equally invisible. Per the user's mandate "never skip the gates,"
+# missing bun now HARD-FAILS with install instructions.
 
 set -e
 
 if ! command -v bun >/dev/null 2>&1; then
-  echo "[commit-msg] bun not on PATH; skipping protocol-gate validation."
-  echo "[commit-msg] Install bun and re-run, or set core.hooksPath to use a different hook setup."
-  exit 0
+  cat <<'EOM' >&2
+
+[commit-msg] FAIL: bun not on PATH.
+
+The protocol-gate trailer validator runs under bun. The commit-msg
+hook cannot silently skip; the audit caught that pattern as a
+Windows-machine bypass.
+
+Install bun:
+  - macOS / Linux: curl -fsSL https://bun.sh/install | bash
+  - Windows:       powershell -c "irm bun.sh/install.ps1 | iex"
+  - npm fallback:  npm install -g bun
+
+Then re-run the commit. For a genuine emergency where bun cannot be
+installed (CI bootstrap, sandbox without network), use
+`git commit --no-verify` and explain in the commit message body --
+the bypass is auditable in git log + CI.
+
+EOM
+  exit 1
 fi
 
 bun run scripts/protocol-gate.ts --commit-msg "$1"

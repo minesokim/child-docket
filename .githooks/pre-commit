@@ -17,27 +17,72 @@
 #
 # Bypass: `git commit --no-verify` (logged via the commit-msg hook
 # unless that's also bypassed; CI catches both).
+#
+# 2026-05-15 audit (fragility sweep) caught the prior version of this
+# script silently `exit 0`-ing when `bun` or `pnpm` was missing from
+# PATH. On a fresh Windows dev machine without bun installed, EVERY
+# commit was skipping the typecheck + shared-tests gates with only a
+# small console warning the user might miss. Softer bypass than
+# --no-verify, equally invisible. The user's mandate is "never skip
+# the gates" -- so missing tools now HARD-FAIL with clear install
+# instructions instead of silently passing.
 
 set -e
 
 if ! command -v pnpm >/dev/null 2>&1; then
-  echo "[pre-commit] pnpm not on PATH; skipping typecheck."
-else
-  echo "[pre-commit] typecheck (turbo)..."
-  pnpm typecheck >/dev/null 2>&1 || {
-    echo "[pre-commit] typecheck FAILED. Run 'pnpm typecheck' to see errors."
-    exit 1
-  }
+  cat <<'EOM' >&2
+
+[pre-commit] FAIL: pnpm not on PATH.
+
+Typecheck depends on pnpm + turbo. The pre-commit gate cannot silently
+skip; the audit caught that pattern as a Windows-machine bypass.
+
+Install pnpm:
+  - macOS / Linux: curl -fsSL https://get.pnpm.io/install.sh | sh -
+  - Windows:       iwr https://get.pnpm.io/install.ps1 -useb | iex
+  - npm fallback:  npm install -g pnpm@10.32.1
+
+Then re-run the commit. For a genuine emergency where pnpm cannot be
+installed (CI bootstrap, sandbox without network), use
+`git commit --no-verify` and explain in the commit message body --
+the bypass is auditable in git log + CI.
+
+EOM
+  exit 1
 fi
 
+echo "[pre-commit] typecheck (turbo)..."
+pnpm typecheck >/dev/null 2>&1 || {
+  echo "[pre-commit] typecheck FAILED. Run 'pnpm typecheck' to see errors."
+  exit 1
+}
+
 if ! command -v bun >/dev/null 2>&1; then
-  echo "[pre-commit] bun not on PATH; skipping shared tests."
-else
-  echo "[pre-commit] @docket/shared tests (bun)..."
-  ( cd packages/shared && bun test src ) >/dev/null 2>&1 || {
-    echo "[pre-commit] @docket/shared tests FAILED. Run 'cd packages/shared && bun test src' to see errors."
-    exit 1
-  }
+  cat <<'EOM' >&2
+
+[pre-commit] FAIL: bun not on PATH.
+
+The @docket/shared test suite runs under bun (faster than node + has
+the bun:test API). The pre-commit gate cannot silently skip; the
+audit caught that pattern as a Windows-machine bypass.
+
+Install bun:
+  - macOS / Linux: curl -fsSL https://bun.sh/install | bash
+  - Windows:       powershell -c "irm bun.sh/install.ps1 | iex"
+  - npm fallback:  npm install -g bun
+
+Then re-run the commit. For a genuine emergency where bun cannot be
+installed, use `git commit --no-verify` and explain in the commit
+message body -- the bypass is auditable in git log + CI.
+
+EOM
+  exit 1
 fi
+
+echo "[pre-commit] @docket/shared tests (bun)..."
+( cd packages/shared && bun test src ) >/dev/null 2>&1 || {
+  echo "[pre-commit] @docket/shared tests FAILED. Run 'cd packages/shared && bun test src' to see errors."
+  exit 1
+}
 
 echo "[pre-commit] OK."
