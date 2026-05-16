@@ -842,6 +842,22 @@ export async function callClaudeWithFallover(
 }
 
 // ────────────────────────────────────────────────────────────────
+// Top-level exports for consumers that need the failover classifier
+// (notably vision-agent.ts, which mirrors the text-side fallover
+// pattern). Same classifier is the load-bearing decision for BOTH
+// text + vision paths — Anthropic error shapes are identical
+// regardless of which endpoint was called.
+//
+// Session 14 audit (2026-05-16) promoted isTransientAnthropicError
+// from _testOnly to a top-level export so vision-agent.ts can
+// import it cleanly without reaching into a test-namespaced API.
+// bedrockClient is also promoted so vision-agent shares the same
+// singleton (one connection per process; same credentials path;
+// same region resolution).
+// ────────────────────────────────────────────────────────────────
+export { isTransientAnthropicError, bedrockClient };
+
+// ────────────────────────────────────────────────────────────────
 // Test-only export — lets unit tests exercise the classifier and
 // lets smoke-bedrock.ts hit the Bedrock wire directly (bypassing the
 // failover orchestration).

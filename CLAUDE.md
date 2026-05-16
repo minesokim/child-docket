@@ -1173,7 +1173,7 @@ Still open:
 - **`.githooks/pre-commit` + `commit-msg` silent `exit 0` when `bun` is missing from PATH** — softer bypass than `--no-verify`, equally invisible. On a fresh Windows dev machine without bun, every commit skips the typecheck + shared-tests + protocol-gate enforcement. Audit-flagged; fix queued.
 - **MFA enforcement** for `firm_owner`/`preparer`/`reviewer` roles is Clerk-dashboard-config-only, no code-level enforcement. SOC 2 CC6.1 gap.
 - **Master KEK in `process.env.PII_ENCRYPTION_KEY`** — Vercel-env-only. No KMS, no HSM, no split-knowledge. Rotation script exists but is manual.
-- **Vision agent** at `services/orchestrator/src/vision-agent.ts` has NO Bedrock fallover. Anthropic outage = doc-classification pipeline dark.
+- ~~**Vision agent** at `services/orchestrator/src/vision-agent.ts` has NO Bedrock fallover. Anthropic outage = doc-classification pipeline dark.~~ **CLOSED Session 14 (2026-05-16):** `runVisionAgent` now mirrors `callClaudeWithFallover` — tries Anthropic, falls over to Bedrock on transient errors (5xx / 429 / credit-balance 400 / SDK connection failures) via the same `isTransientAnthropicError` classifier the text side uses. Result carries `provider: 'anthropic' | 'bedrock'` for cost telemetry. 7 new fallover tests in `services/orchestrator/src/vision-agent.test.ts`.
 - **ZDR claim** asserted at `apps/client-portal/src/app/trust/page.tsx` + WISP + §7216 consent text + this CLAUDE.md §6, but no SDK header/flag verifies it. Anthropic-account-tier proof must live somewhere; operator action queued.
 
 Operator actions queued (not engineering work):

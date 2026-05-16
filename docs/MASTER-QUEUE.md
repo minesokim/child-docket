@@ -51,7 +51,7 @@ Phase 3 + Phase 4 work per PRODUCT-ROADMAP.md. Mostly engineering items unblocke
 | 13 | Run `reencrypt-legacy` walker against prod | Closes the AAD-less + master-KEK fallback paths (Session 3 audit finding). Needs DB creds. | queued | Operator | Operator access | 5/30 |
 | 14 | Apply Vouch + Embroker E&O+Cyber bundle | $2,500-3,500/yr; per CLAUDE.md §18 + Insurance recommendation. Required for SOC 2 + most enterprise sales. | queued | David | None | 5/30 |
 | 15 | DNS + Resend domain + 3 mailboxes provisioning | Deferred per brand-rename indecision. Resend transactional email queued; the brand decision unblocks. | blocked | David | Brand-name decision | When brand decided |
-| 16 | Vision agent Bedrock fallover | Doc-classification pipeline goes dark on Anthropic outage. Per Session 4 finding. | queued | Claude | None | 6/27 |
+| ~~16~~ | ~~Vision agent Bedrock fallover~~ | ~~Doc-classification pipeline goes dark on Anthropic outage. Per Session 4 finding.~~ | **done Session 14** | — | — | shipped 5/16 |
 
 ## Lower queue — 6-12 weeks (6/27 → 7/30 — V1 launch)
 
@@ -109,6 +109,8 @@ Pruning lower than 14 days old; older work lives in commit history + AUTONOMOUS-
 | D9 | RLS bypass policies (migration 0038) + verify-actions-chain tx wrap | `e344d8b` | 5/16 |
 | D10 | `/prospects` admin CRM page + status-update action | `7faff8b` | 5/16 |
 | D11 | FINANCIALS-FOR-ANTONIO.md + PRODUCT-FOR-ANTONIO.md | `d30f0c3` | 5/16 |
+| D12 | MASTER-QUEUE.md + USER-PREFERENCES.md + CLAUDE.md §22 boot ritual update | `74d4f17` | 5/16 |
+| D13 | Vision agent Bedrock fallover (isTransientAnthropicError + bedrockClient top-level exports + runVisionAgent with fallover + 7 new tests) | this commit | 5/16 |
 
 ---
 
