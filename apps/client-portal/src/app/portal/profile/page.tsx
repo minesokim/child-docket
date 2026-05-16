@@ -134,18 +134,16 @@ export default function PortalProfilePage() {
   const t = buildTheme({ tone: 'editorial', fonts: 'classic' });
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [phone] = useIntakeField<string>('personal.phone', '');
-  const [signed8879] = useIntakeField<boolean>('engagement.signed', false);
-  // Engagement letter + §7216 consent are signed during the intake
-  // flow (apps/client-portal/src/app/(intake)/engagement + /consent).
-  // The intake records boolean flags into the engagement-letter and
-  // consent-7216 paths; pull them here so the Signed Documents card
-  // reflects this client's actual state instead of a hardcoded
-  // "Apr 17, 2026 · 2:14 PM PT" timestamp that the audit caught
-  // rendering for every user.
-  const [engagementLetterSigned] = useIntakeField<boolean>(
-    'engagement.letterSigned',
-    false,
-  );
+  // Engagement letter signed during the intake flow at
+  // apps/client-portal/src/app/(intake)/engagement/page.tsx. That
+  // page writes `engagement.signed = true` after the user signs.
+  // The legacy mock 8879 page ALSO wrote to `engagement.signed`
+  // (overloaded meaning) — that mock was removed 2026-05-15, so
+  // `engagement.signed` now unambiguously means "engagement letter
+  // signed."
+  const [letterSigned] = useIntakeField<boolean>('engagement.signed', false);
+  // §7216 consent signed at apps/client-portal/src/app/(intake)/
+  // consent/page.tsx, writes `consent.signed`.
   const [consent7216Signed] = useIntakeField<boolean>('consent.signed', false);
 
   // No persona-name fallback. If fullName is empty we render an empty
@@ -154,18 +152,30 @@ export default function PortalProfilePage() {
   const initial = fullName.charAt(0).toUpperCase() || '·';
 
   // Signed-document list. Until Phase 2 wires a per-client `signatures`
-  // query (which carries the real signed-at timestamp + audit chain
-  // row + envelope id for re-download), we show signed/pending state
-  // from the intake boolean flags + a deliberately-vague "Signed
+  // table query (which carries the real signed-at timestamp + audit
+  // chain row + envelope id for re-download), we show signed/pending
+  // state from the intake boolean flags + a deliberately-vague "Signed
   // during onboarding" note instead of fabricated timestamps. The
   // prior hardcoded "Apr 17, 2026 · 2:14 PM PT" strings were the same
   // for every user regardless of when they signed — the audit caught
   // this as mock data leaking into a live surface.
+  //
+  // Form 8879 status is hardcoded "Pending signature" regardless of
+  // intake state. The previous code read `engagement.signed` as 8879
+  // status, but that field is set on engagement-letter signing too
+  // (overloaded field name; pre-existing dual meaning). After the
+  // mock 8879 removal (2026-05-15), nothing in the portal data layer
+  // can flip an "8879 signed" flag — the real 8879 signing happens via
+  // the DocuSign envelope flow at /portal/sign-8879/[id]/sign-iframe.tsx,
+  // which writes to the `signatures` table. Until Profile queries that
+  // table directly (V1.5), showing 8879 status from `engagement.signed`
+  // would falsely claim 8879-signed for every user who signed the
+  // engagement letter. Honest pending state until the real wire-up.
   const signedDocs = [
     {
       name: 'Engagement Letter',
-      pending: !engagementLetterSigned,
-      when: engagementLetterSigned ? 'Signed during onboarding' : null,
+      pending: !letterSigned,
+      when: letterSigned ? 'Signed during onboarding' : null,
     },
     {
       name: '§7216 Consent',
@@ -174,8 +184,8 @@ export default function PortalProfilePage() {
     },
     {
       name: 'Form 8879',
-      pending: !signed8879,
-      when: signed8879 ? 'Signed after return ready' : null,
+      pending: true,
+      when: 'Available when your preparer sends the envelope',
     },
   ];
 
@@ -325,7 +335,7 @@ export default function PortalProfilePage() {
                           letterSpacing: 0.3,
                         }}
                       >
-                        {d.pending ? 'Pending signature' : d.when ?? 'Signed'}
+                        {d.pending ? d.when ?? 'Pending signature' : d.when ?? 'Signed'}
                       </div>
                     </div>
                     {d.pending ? (

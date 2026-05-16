@@ -51,15 +51,12 @@ export default function EngagementPage() {
   const owner = useFirmOwner();
   const preparerName = owner?.name ?? DEFAULT_OWNER_NAME;
   const [checked, setChecked] = useIntakeField<boolean>('engagement.checked', false);
+  // `engagement.signed = true` is the canonical "engagement letter
+  // signed" flag, read by the portal Profile tab. The legacy mock
+  // 8879 page used to also write this flag (overloaded meaning) —
+  // that mock was removed 2026-05-15, so `engagement.signed` now
+  // unambiguously means "engagement letter signed."
   const [signed, setSigned] = useIntakeField<boolean>('engagement.signed', false);
-  // engagement.letterSigned is the canonical flag the portal Profile
-  // tab reads to show this document as signed. Kept in sync with
-  // engagement.signed for backward compat with the existing 8879-vs-
-  // letter distinction; v1.5 splits into two distinct fields.
-  const [, setEngagementLetterSigned] = useIntakeField<boolean>(
-    'engagement.letterSigned',
-    false,
-  );
   const [fullName] = useIntakeField<string>('personal.fullName', '');
   const [signError, setSignError] = React.useState<string | null>(null);
 
@@ -101,12 +98,6 @@ export default function EngagementPage() {
     });
     if (result.ok) {
       setSigned(true);
-      // Mirror to engagement.letterSigned so the portal Profile tab's
-      // signed-documents list shows this as signed (the Profile tab
-      // reads letterSigned, not signed, because `signed` is also used
-      // for the 8879 — same field carrying two meanings on the legacy
-      // intake. v1.5 splits these properly.)
-      void setEngagementLetterSigned(true);
     } else {
       setSignError(result.error ?? 'Could not record signature. Please try again.');
     }
