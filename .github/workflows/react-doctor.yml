@@ -73,7 +73,7 @@ jobs:
         # main HEAD when this workflow shipped (2026-05-14 Pacific /
         # 2026-05-15 UTC). Dependabot github-actions ecosystem bumps
         # weekly per .github/dependabot.yml.
-        uses: millionco/react-doctor@71695512513bf12e6021800d59d2162be0170077
+        uses: millionco/react-doctor@831f280000f4319537180e82dc795c3732a2c226
         with:
           # Explicit workspace scope. Without this, the action would
           # prompt to pick a project (CI auto-skips the prompt, so
