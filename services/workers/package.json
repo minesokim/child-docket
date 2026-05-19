@@ -29,7 +29,7 @@
     "@docket/storage": "workspace:*",
     "@docket/tax-graph": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "inngest": "^3.27.4",
+    "inngest": "^4.4.0",
     "postgres": "^3.4.5",
     "zod": "^3.24.1"
   },
