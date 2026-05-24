@@ -43,7 +43,7 @@ These are decisions the founder + AI locked in deliberate sessions. They are NOT
 |---|---|---|---|
 | L1 | **Path 2 commitment**: Docket is the orchestration platform that runs the firm's AI tax stack. Public API + MCP server ship in v1 as **deployable artifacts** (live endpoints, documented, partner-onboarded by direct intro). Self-serve API tier with billing infrastructure ships v1.5 — that's not a retreat from L1, it's an honest scope distinction (clarified 2026-05-11 after `/understand` audit). NOT just "AI-native PM with Path 2 hooks." | 2026-05-09 (clarified 2026-05-11) | Path 2 is the swing-for-unicorn bet; Path 1 is the floor. Hybrid is worst-of-both. v1 = MCP + API exist + first partner integrates; v1.5 = self-serve developers can swipe a card. |
 | L2 | **Category positioning**: "Tax practice operating system" / "the AI-native operating system that runs the entire tax practice and orchestrates every AI tool the firm uses." NEVER call Docket "practice management" externally. The verb is "Docket it." | 2026-05-09 | Category creation requires consistency. PM-language reinforces the wrong category. |
-| L3 | **5 capability pillars**: OmniContext Intelligence + Compliance-First Position Framework + Docket Prep + Strategy/Planning Engine + Year-Round Representation/Monitoring. Headline differentiator is the Position Framework with cited authority + refusal floor. Everything else is supporting cast. | 2026-05-09 | Be undeniably best at ONE thing. Buyer comparison is "60% on every dimension" loses to "100% on Position Framework." |
+| L3 | **4 moats** (Petal v2 architecture, reconciled with sister-Claude brief 2026-05-23, locked). (1) **Defense-by-construction**: defense package built at position-time, not lazily. (2) **Compliance-by-construction**: Verifier blocks render before practitioner sees output; SSTS / Circ 230 / IRC §6694 / §6695 / Form 8867 rulesets enforced. (3) **Deterministic computation with replay traces**: all tax math in `packages/tax-compute`, never LLM-synthesized; every figure has a `computation_traces` row. (4) **Multi-year live ledgers**: basis / NOL / carryforwards / positions / elections as append-only per-client ledgers, reconstructed automatically on engagement open. Supersedes the prior "5 capability pillars" framing (those remain useful as feature groupings; the four moats are the strategic anchor). See §26 for the full architecture + agent-fleet mapping + Phase 0.5 acceptance criteria. See [`docs/RECONCILIATION-PETAL-V2.md`](docs/RECONCILIATION-PETAL-V2.md) for the four re-litigated decisions (RL1-RL4) + the rationale for what was adopted, modified, and rejected from the brief. | 2026-05-23 (swap); originally 2026-05-09 (5 pillars) | Top-1-in-category requires shipping all four moats before any competitor matches them. TaxGPT does not have defense packages. Blue J does not have compliance checks pre-render. CoCounsel does not have ledger reconstruction. The four are the structural moat; everything else (research, drafting, intake automation, browser automation for legacy software) is parity. Win on the four; reach parity on the rest. |
 | L4 | **Memory architecture**: pgvector on Neon (NOT Pinecone — 220x cost difference at scale). Voyage-3-Large embeddings (legal/tax domain specialist, 4-6 pp accuracy advantage). Cohere Rerank v3.5 ($0.002/query). Tiered retention (Hot=current+last year in pgvector full / Warm=years 3-5 quantized / Cold=5+ in R2 metadata-only). Hybrid BM25 + vector with score fusion. Bidirectional client-scoped graph (every chunk has client_id MANDATORY; every retrieval logged to memory_references). Sliding-window summarization for long chat sessions. **8K context for batch agent calls; 50-200K context for interactive chat / Discovery / audit defense.** | 2026-05-09 | Performance-first; ambient feel non-negotiable. Cost optimization happens AROUND that, not instead. |
 | L5 | **Voice transcription**: Deepgram Nova-3 + diarization in v1 ($0.378/hr). Migrate to Gladia Solaria-1 Growth tier in v2 ($0.20/hr with diarization bundled, ~47% cheaper at scale). Real-time streaming uses Gladia from day 1 ($0.144-0.25/hr). | 2026-05-09 | Verified pricing 2026; Deepgram cheapest batch with diarization, Gladia cheapest at $4K/yr commit. |
 | L6 | **Pricing model**: tiered base + active-client metering, NOT per-seat. **Founder tier (first 50 firms only, year 1)**: $250/mo, ≤100 active clients, ALL agents included, 30% lifetime discount on year 2 reversion to standard. **Standard tiers**: Solo $499 (50 included, +$5/active, max $749) / Small $1,499 (150 + $5, max $1,999) / Growing $4,499 (500 + $4, max $5,499) / Mid-market $14,999 (2,000 + $3, max $23,999). **Add-on agents** (Solo + Small): Discovery $199, Strategy/Planning $299, Audit Defense $99, Multi-Entity Optimization $199. **Per-event**: notice $50, rep engagement $99, incorporation $25 + state, BOI $15, SOI $10. **API tier (Path 2)**: Developer free (1K calls/mo), Partner $999 (1M + $0.001 overage), Platform custom. NO per-return fees. Public, transparent pricing. | 2026-05-09 | Per-active-client metering aligns cost with value; per-seat punishes growth. Founder tier honors Antonio's $250 floor while protecting unit economics. |
@@ -1455,4 +1455,101 @@ Quick recap — the load-bearing takeaways:
 
 ---
 
-*Last updated: May 2, 2026 — full reality-pass after the post-audit hardening session, then CEO review later that day shifted scope (5/15 demo path → 7/30 OS v1) and locked the segment posture (mid+down only, franchise networks v1.5 door open, Big 4/F500 deferred 18-24 months). Earlier drafts were partially aspirational; this version describes what's actually in the codebase plus the post-CEO-review forward plan. When a future session handoff disagrees with this doc, the handoff wins until a docs-pass folds it back in. CEO plan with full scope decisions, risks, and success criteria: `~/.gstack/projects/minesokim-child-docket/ceo-plans/2026-05-02-docket-os-v1.md`.*
+## 26. Petal v2 architecture — six agents + four moats
+
+> **Added 2026-05-23** after reconciliation with the sister-Claude implementation brief. Full reconciliation context + the four re-litigated decisions live in [`docs/RECONCILIATION-PETAL-V2.md`](docs/RECONCILIATION-PETAL-V2.md). This section supersedes the older "5 capability pillars" framing (L3 was swapped). Sections 4 (surfaces), 8 (intelligence layers), 9 (agent fleet), 10 (MCP roster), etc. remain in force — §26 adds + refines, doesn't replace them.
+
+### 26.1 The four moats
+
+Top-1-in-category requires shipping all four before any competitor matches:
+
+1. **Defense-by-construction.** Every position the agent or practitioner takes generates a pre-built audit defense package at position-time. TaxGPT does not have this. Blue J does not have this. CoCounsel does not have this.
+2. **Compliance-by-construction.** A Verifier agent runs SSTS, Circular 230, IRC §6694 / §6695 checks before any output reaches the practitioner's review queue. Non-compliant output is BLOCKED, not surfaced.
+3. **Deterministic computation with replay traces.** All tax math runs as deterministic TypeScript functions in `packages/tax-compute`, never inside an LLM. Every number in every output has a structured trace (inputs, function, code section, version) replayable for audit.
+4. **Multi-year live ledgers.** Basis, NOL, capital loss, AMT credit, passive loss, charitable, FTC, §1031 deferred gain persist as append-only ledgers per client across years. Reconstruction on engagement open is automatic.
+
+These are the defensive moat. Everything else (research, drafting, intake automation, browser automation for legacy software) is parity. Win on the four; reach parity on the rest.
+
+### 26.2 The six agents
+
+Each agent is a TypeScript module exposing `run(input: AgentInput<Name>, ctx: AgentContext): Promise<AgentOutput<Name>>`. Today most agents live in `services/workers/src/agents/`; a future pass may consolidate them under `packages/ai/agents/` but the boundary is logical, not enforced.
+
+| Agent | Role | Today's status |
+|---|---|---|
+| Planner | Decompose engagements into ordered steps via state machine. Surface decision gates. | Partial. Inngest orchestration + state-aware code in some agents. **Discrete Planner module is Phase 0.5 work.** |
+| Researcher | Answer a tax-law question with cited authority + confidence tier. | Shipped as `discovery-agent`. Citations-API integration, `PostgresRetriever` (BM25 + Voyage + Cohere Rerank + RRF), trust-gate. |
+| **Computer** | Run deterministic tax math by calling `packages/tax-compute` functions. NEVER calls Claude. | **Doesn't exist. Phase 0.5 priority work.** |
+| **Verifier** | Fact-check output against retrieved authority + run compliance ruleset. Block render on failure. | **Doesn't exist. Phase 0.5 priority work.** |
+| **Adversary** | Play the IRS examiner. Generate strongest counter + defense package per position. | **Doesn't exist. Phase 0.5 priority work — the moat.** |
+| Drafter | Assemble final artifacts from structured outputs. | Partial. `inbox-drafter` + `notice-drafter` shipped. Template-based assembly + 5 Phase-0.5 artifact types pending. |
+
+### 26.3 The orchestrator loop
+
+`services/orchestrator/src/agent-loop.ts` (today's `runDocketAgentWithTools`) + the Phase-0.5 extensions: Plan → execute steps in dep order → Verifier pass → on failure, loop back with corrections (max 2 retries) → Adversary pass on every position requiring defense → Drafter assembles → Verifier again → render OR surface to practitioner review queue → update memory + ledgers. **Render is blocked on any Verifier failure.**
+
+### 26.4 The four ironclad rules (inviolable)
+
+1. **Math never runs in the LLM.** If you find yourself prompting Claude to "calculate X" or "estimate Y" with a dollar value, stop and add a Computer tool instead. The existing Discovery agent's `estimatedImpact.dollars` field is a violation that Phase 0.5 closes (refactor: Discovery proposes a position; Computer computes the impact; trace persists).
+2. **Defense packages are built at position-time.** A position without a defense package fails Verifier. No lazy generation, no "we'll build it if the IRS asks."
+3. **Verifier blocks render.** Compliance failure ≠ warning. The agent must correct OR the engagement surfaces to the practitioner queue with a flag.
+4. **Append-only ledgers.** Corrections are new entries with `reasonCode: 'correction'` reversing the prior entry. NEVER update or delete an existing ledger row. The audit trail is preserved.
+
+### 26.5 Phase 0.5 — 90-day killer slice
+
+Phase 0.5 ships ~September 2026 with:
+
+- Eval harness with ~420 vetted questions (120 existing + 100 from Antonio + 200 scripted from EA SEE / CPA REG / IRS Pubs) — see decision RL4 below for re-scoping from the brief's 1000-question target
+- Discrete Planner module for individual-return state machine
+- Researcher agent at ≥75% accuracy on federal + CA research questions (CA per RL3, not federal-only as the brief proposed)
+- Computer agent with 5 tools (MACRS depreciation / asset basis / individual AMT / NOL carryforward post-TCJA-OBBBA / §199A QBI) at 95% test coverage on IRS published examples
+- Verifier blocking 100% of synthetic non-compliant outputs in test suite
+- Adversary generating complete 7-component defense packages for every Tier 1-3 position
+- Drafter producing 5 artifact types (research memo, 8275 statement, audit response letter, reasonable cause statement, S-corp reasonable comp memo)
+- 10 founder firms (Antonio + 9 from JBH / Latino Tax Pro / NAEA networks — satisfies L14 if drawn from ≥2 distinct networks)
+- First quarterly accuracy report published
+
+See [`docs/MASTER-QUEUE.md`](docs/MASTER-QUEUE.md) for the week-by-week ordered queue.
+
+### 26.6 Phase 0.5 acceptance criteria
+
+Phase 0.5 ships when ALL of these are true. No "ship now and fix later." Re-litigate the criterion or delay launch.
+
+- [ ] Eval harness runs in CI on every PR touching `packages/ai/*`, `packages/tax-graph/*`, `packages/tax-compute/*`, `packages/tax-defense/*`, `packages/tax-compliance/*`. >2% regression on any question type blocks merge. Any new failure on the settled-law subset blocks merge.
+- [ ] Eval set has ≥420 vetted questions (120 existing scaffold + 100 Antonio-vetted + 200 scripted-and-manually-vetted).
+- [ ] Researcher agent ≥75% accuracy on federal + CA research questions.
+- [ ] Computer agent 95% test coverage on all 5 tools. All IRS published examples pass.
+- [ ] Verifier blocks 100% of synthetic non-compliant outputs in test suite.
+- [ ] Adversary generates complete defense packages (all 7 components) for every Tier 1-3 position in the eval suite.
+- [ ] Drafter produces 5 artifact types end-to-end. Each artifact type has ≥10 example outputs reviewed + approved by Antonio.
+- [ ] 10 founder firms running ≥1 full engagement through the agent.
+- [ ] First quarterly accuracy report published (Q4 2026).
+- [ ] OpenTelemetry traces every agent call. Reasoning trace viewer in command-room shows planner plan + retrieval + computations + verifier checks + adversary output.
+
+### 26.7 New tables (migrations 0039+)
+
+- `computation_traces` — every Computer call writes a row with `(tenant_id, tool_name, tool_version, tax_year, inputs, output, code_section)`. Replay-capable.
+- `defense_packages` — adversary output per position. 7 columns matching the brief's §6.5 shape (`examiner_counter`, `highest_risk_facts`, `examiner_likely_authority`, `counter_response_draft`, `form_8275_language`, `settlement_leverage`, `forward_idr_anticipation`).
+- `verification_results` — Verifier output per render attempt. JSON `checks` blob + `failures` array + `passed` boolean.
+- `ledger_entries` — append-only. 8 ledger types (basis / NOL / capital_loss / AMT credit / passive_loss / charitable / FTC / §1031 deferred). Running balances computed at read-time.
+- `positions` (extension) — adds `defense_package_id` FK + `confidence_tier` enum (settled / substantial_authority / reasonable_basis / not_sustainable).
+
+### 26.8 Non-goals (do not build)
+
+Adopted from the brief's §2 + existing §14 explicit NOs:
+
+- No generic chat UI. Chat must be scope-anchored (client / meeting / book per §4) per decision RL2. The Cmd+K command palette is the right surface — task-invocation, not free-floating Q&A.
+- No research-only product. Research is one of six agents, not the product.
+- No big-firm features. ICP is 2-10 preparer firms (per the L16 wedge clarification).
+- No international tax planning beyond the FBAR / 8938 / 5471 / 5472 / 8865 / 8858 starter pack + GILTI / Subpart F core + 70 in-force treaties + OECD model commentary.
+- No outcome prediction ML in-house. Partner with Blue J for v1 if needed; native model is V2+.
+- No tax software integration beyond OLT (Antonio's primary). Drake / Lacerte / ProConnect / UltraTax in v1.5+.
+- **No LLM math.** Computer toolkit only.
+- **No bypass of Verifier.** All output through the gate.
+
+### 26.9 Locks that remain in force
+
+Locks L1, L2, L4, L5, L6, L7, L8, L9, L10, L11, L12, L13, L14, L15, L16 all remain in force. **L3 is the one swapped** (5 pillars → 4 moats). The rest of CLAUDE.md (§4-§25) remains the substrate; §26 layers the new architecture on top. Where the brief silently dropped L1 / L4 / L6 / L13 / L14, see `docs/RECONCILIATION-PETAL-V2.md` for the explicit re-litigation (rejections R2-R5).
+
+---
+
+*Last updated: 2026-05-23 — added §26 Petal v2 architecture (six agents + four moats) after reconciliation with the sister-Claude implementation brief. L3 swapped from 5 pillars to 4 moats. Prior updates: May 2 2026 reality-pass + CEO review (5/15 demo → 7/30 OS v1, mid+down only, franchise networks v1.5, Big 4/F500 deferred). CEO plan: `~/.gstack/projects/minesokim-child-docket/ceo-plans/2026-05-02-docket-os-v1.md`.*
