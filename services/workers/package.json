@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.1",
+    "@anthropic-ai/sdk": "^0.98.0",
     "@docket/db": "workspace:*",
     "@docket/document-processing": "workspace:*",
     "@docket/orchestrator": "workspace:*",
